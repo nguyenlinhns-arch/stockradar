@@ -5,11 +5,13 @@
   "type": "object",
   "required": [
     "recommendation_id", "ticker", "company_name", "sector", "horizon",
-    "recommendation_date", "recommendation_time", "snapshot_id", "market_regime",
+    "publication_date", "publication_time", "snapshot_id", "market_regime",
     "stock_score", "score_coverage_pct", "rank", "recommendation_state",
-    "recommended_buy_low", "recommended_buy_high", "price_at_recommendation",
+    "recommended_buy_low", "recommended_buy_high", "price_at_publication",
     "current_price", "target_price", "risk_level", "thesis", "risks",
-    "invalidation_conditions", "evidence", "data_grade", "status", "is_mock"
+    "invalidation_conditions", "evidence", "data_grade", "status",
+    "generated_at", "published_at", "system_version", "score_version",
+    "publish_status", "record_mode", "adjustment_basis", "is_mock"
   ],
   "properties": {
     "recommendation_id": {"type": "string", "minLength": 1},
@@ -17,20 +19,24 @@
     "company_name": {"type": "string", "minLength": 1},
     "sector": {"type": "string", "minLength": 1},
     "horizon": {"enum": ["SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"]},
-    "recommendation_date": {"type": "string", "format": "date"},
-    "recommendation_time": {"type": "string"},
+    "publication_date": {"type": "string", "format": "date"},
+    "publication_time": {"type": "string"},
     "snapshot_id": {"type": "string", "minLength": 1},
     "market_regime": {"enum": ["GREEN", "YELLOW", "RED", "UNKNOWN"]},
     "stock_score": {"type": "number", "minimum": 0, "maximum": 100},
     "score_coverage_pct": {"type": "number", "minimum": 0, "maximum": 100},
     "rank": {"type": "integer", "minimum": 1},
     "recommendation_state": {
-      "enum": ["WATCH", "WAIT_BUY", "IN_BUY_ZONE", "ACTIVE", "EXTENDED", "INVALIDATED", "TARGET_REACHED", "STOP_REACHED", "EXPIRED", "CLOSED"]
+      "enum": ["WATCH", "WAIT_BUY", "UNACTIVATED", "ACTIVATED", "IN_BUY_ZONE", "ACTIVE", "EXTENDED", "INVALIDATED", "TARGET_REACHED", "STOP_REACHED", "EXPIRED", "CLOSED"]
     },
     "recommended_buy_low": {"type": ["number", "null"]},
     "recommended_buy_high": {"type": ["number", "null"]},
-    "price_at_recommendation": {"type": ["number", "null"]},
+    "price_at_publication": {"type": ["number", "null"]},
+    "activation_timestamp": {"type": ["string", "null"]},
+    "performance_entry_price": {"type": ["number", "null"], "exclusiveMinimum": 0},
     "current_price": {"type": ["number", "null"]},
+    "absolute_return": {"type": ["number", "null"]},
+    "current_return_pct": {"type": ["number", "null"]},
     "target_price": {"type": ["number", "null"]},
     "stop_loss": {"type": ["number", "null"]},
     "upside_pct": {"type": ["number", "null"]},
@@ -44,6 +50,45 @@
     "evidence": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "data_grade": {"enum": ["DECISION_GRADE", "RESEARCH_GRADE", "INSUFFICIENT", "STALE", "MOCK"]},
     "status": {"type": "string"},
+    "generated_at": {"type": "string", "minLength": 1},
+    "published_at": {"type": "string", "minLength": 1},
+    "system_version": {"type": "string", "minLength": 1},
+    "score_version": {"type": "string", "minLength": 1},
+    "publish_status": {"type": "string", "minLength": 1},
+    "record_mode": {"enum": ["BACKTEST", "SHADOW", "LIVE_PUBLISHED"]},
+    "close_price": {"type": ["number", "null"], "exclusiveMinimum": 0},
+    "close_timestamp": {"type": ["string", "null"]},
+    "final_return_pct": {"type": ["number", "null"]},
+    "benchmark_return_pct": {"type": ["number", "null"]},
+    "sector_benchmark_return_pct": {"type": ["number", "null"]},
+    "excess_return_pct": {"type": ["number", "null"]},
+    "adjustment_basis": {"type": "string", "minLength": 1},
+    "corporate_action_refs": {"type": "array", "items": {"type": "string"}},
     "is_mock": {"type": "boolean"}
-  }
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"recommendation_state": {"const": "UNACTIVATED"}}},
+      "then": {
+        "properties": {
+          "activation_timestamp": {"type": "null"},
+          "performance_entry_price": {"type": "null"},
+          "current_return_pct": {"type": "null"},
+          "final_return_pct": {"type": "null"}
+        }
+      }
+    },
+    {
+      "if": {"properties": {"status": {"const": "CLOSED"}}},
+      "then": {
+        "required": ["close_price", "close_timestamp", "final_return_pct"],
+        "properties": {
+          "close_price": {"type": "number", "exclusiveMinimum": 0},
+          "close_timestamp": {"type": "string", "minLength": 1},
+          "final_return_pct": {"type": "number"},
+          "current_return_pct": {"type": "null"}
+        }
+      }
+    }
+  ]
 }

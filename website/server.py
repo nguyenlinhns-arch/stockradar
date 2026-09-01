@@ -22,9 +22,16 @@ ALLOWED_EVENTS = {
     "trial_started", "subscription_started", "return_d1", "return_d7",
     "knowledge_view", "method_view", "horizon_select", "stock_search",
     "stock_report_view", "top10_view", "watchlist_add", "email_view",
-    "checkout_started", "payment_completed"
+    "checkout_started", "payment_completed",
+    "top_view", "horizon_change", "sector_view", "recommendation_list_view",
+    "performance_view", "sample_premium_report_view", "signup_start",
+    "signup_complete", "pro_view", "checkout_start", "payment_complete",
+    "email_open", "email_click", "renewal_complete"
 }
-PROPOSITIONS = {"radar5", "breakout", "risk", "organic"}
+PROPOSITIONS = {
+    "radar5", "breakout", "risk", "organic", "horizon-top", "ticker-search",
+    "recommendation-history", "performance", "stock-report", "email-alert", "account"
+}
 
 
 def connect() -> sqlite3.Connection:

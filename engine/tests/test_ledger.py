@@ -59,7 +59,47 @@ class LedgerTests(unittest.TestCase):
             finally:
                 ledger.close()
 
+    def test_recommendation_and_lifecycle_events_are_append_only(self) -> None:
+        with tempfile.TemporaryDirectory() as temp:
+            ledger = ImmutableLedger(Path(temp) / "ledger.sqlite")
+            try:
+                ledger.initialize()
+                ledger.append_radar(make_radar())
+                record = {
+                    "recommendation_id": "REC-LEDGER-1",
+                    "snapshot_id": "LEDGER-1",
+                    "ticker": "DEMO",
+                    "horizon": "SHORT_TERM",
+                    "publication_date": "2026-09-01",
+                    "publication_time": "15:00:00+07:00",
+                    "recommended_buy_low": 10.0,
+                    "recommended_buy_high": 10.2,
+                    "price_at_publication": 9.9,
+                    "generated_at": "2026-09-01T14:55:00+07:00",
+                    "published_at": "2026-09-01T15:00:00+07:00",
+                    "system_version": "2.0-test",
+                    "score_version": "short-v2-test",
+                    "publish_status": "DEMO_ONLY",
+                    "record_mode": "SHADOW",
+                    "data_grade": "MOCK",
+                    "is_mock": True,
+                }
+                ledger.append_recommendation(record)
+                ledger.append_recommendation_event(
+                    "REC-LEDGER-1", "ACTIVATED", "2026-09-02T10:30:00+07:00",
+                    "ACTIVE", {"performance_entry_price": 10.0}
+                )
+                with self.assertRaises(sqlite3.IntegrityError):
+                    ledger.connection.execute(
+                        "UPDATE recommendations SET price_at_publication=9.5 WHERE recommendation_id='REC-LEDGER-1'"
+                    )
+                with self.assertRaises(sqlite3.IntegrityError):
+                    ledger.connection.execute(
+                        "UPDATE recommendation_events SET performance_entry_price=9.5 WHERE recommendation_id='REC-LEDGER-1'"
+                    )
+            finally:
+                ledger.close()
+
 
 if __name__ == "__main__":
     unittest.main()
-

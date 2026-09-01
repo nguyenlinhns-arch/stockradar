@@ -1,48 +1,42 @@
-# Analytics Event Contract V1
+# Analytics Event Contract V2
 
-Required envelope:
+Required envelope: `event_name`, `occurred_at` (ISO 8601), `session_id`, `page`, `proposition`, `utm`, `properties`.
 
-- `event_name`
-- `occurred_at` in ISO 8601
-- `session_id`
-- `page`
-- `proposition`
-- `utm`
-- `properties`
+## Canonical product events
 
-| Event | Fires when | Key properties |
+| Event | Fires when | Required context |
 | --- | --- | --- |
-| `ad_click` | tracked CTA click where available | creative/content |
-| `landing_view` | page initialized | proposition, UTM |
-| `radar_view` | Radar JSON rendered | status, is_mock |
-| `top5_expand` | user expands evidence/details | ticker, rank |
-| `track_record_view` | history rendered | is_mock, snapshot |
-| `knowledge_view` | Knowledge hub initialized | page |
-| `method_view` | method guide initialized | method |
-| `horizon_select` | user opens a horizon explanation | target |
-| `signup_started` | first meaningful form interaction | proposition |
-| `signup_completed` | backend accepted/recognized lead | proposition |
-| `alert_opt_in` | accepted lead chose alerts | proposition |
-| `pro_page_view` | PRO page initialized | proposition/UTM |
-| `trial_started` | a real trial entitlement is created | plan, price_test |
-| `subscription_started` | payment + entitlement confirmed | plan, amount, currency |
-| `return_d1` | same identity/session family returns after 24h | first_seen |
-| `return_d7` | returns after 7 days | first_seen |
+| `top_view` | a ranked list is rendered | horizon, data grade, mock/live |
+| `horizon_change` | user changes target horizon | from, to |
+| `sector_view` | sector surface opens | horizon when known |
+| `recommendation_list_view` | recommendation lifecycle table renders | mode, mock/live |
+| `performance_view` | performance surface renders | total published, mode |
+| `stock_search` | normalized ticker search is submitted | ticker |
+| `sample_premium_report_view` | full sample report renders | ticker, mock/live |
+| `signup_start` | first meaningful signup interaction | proposition |
+| `signup_complete` | server accepts or recognizes signup | proposition |
+| `pro_view` | Advanced comparison opens | price variant |
+| `checkout_start` | real checkout session is created | plan, amount, currency |
+| `payment_complete` | provider webhook verifies payment | plan, amount, currency |
+| `email_open` | email provider reports an open | message type, campaign |
+| `email_click` | signed email link is clicked | message type, destination |
+| `renewal_complete` | verified payment extends entitlement | plan, new expiry |
 
-The local website implements all client events except entitlement/payment creation. Trial/subscription events must never fire from a lead form.
+Legacy V1 names remain allowlisted only for backward-compatible dashboards while clients migrate. New reports use the canonical V2 names.
 
-## Funnel
+## Funnels
 
-Primary: `landing_view → radar_view → signup_started → signup_completed → alert_opt_in → return_d1 → return_d7 → pro_page_view → trial_started → subscription_started`
+Acquisition: `landing_view → top_view/stock_search/performance_view → signup_start → signup_complete`.
 
-Education-assisted: `landing_view → knowledge_view → method_view → radar_view`
+Commercial: `pro_view → checkout_start → payment_complete → renewal_complete`.
 
-## Quality checks
+Engagement: `email_open → email_click → recommendation_list_view/sample_premium_report_view`.
 
-- deduplicate client retries with event ID in production;
-- exclude internal/QA traffic;
-- validate event names server-side;
-- use server confirmation for signup/trial/payment;
-- retain raw event and derived funnel separately;
-- reconcile Ads platform conversions with first-party events;
-- never send broker credentials, OTP, transcript or portfolio values as analytics properties.
+## Quality and privacy
+
+- server confirmation is mandatory for signup, checkout, payment and renewal;
+- deduplicate retries by event/idempotency key;
+- exclude internal and QA traffic from product decisions;
+- retain raw events separately from derived funnels;
+- never send broker credentials, OTP, password, transcript, holdings or portfolio value;
+- record `is_mock` and `record_mode` so SHADOW traffic cannot be reported as production adoption.

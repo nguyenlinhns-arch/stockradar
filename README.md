@@ -1,12 +1,12 @@
-# StockRadar V1
+# StockRadar V2
 
 **Live static demo:** https://nguyenlinhns-arch.github.io/stockradar/
 
-StockRadar V1 is a deliberately focused validation product:
+StockRadar V2 is a deliberately focused validation product:
 
-`HOSE universe → data gate → horizon-specific ranking → recommendation state → alert → immutable result`
+`HOSE universe → data gate → horizon ranking → recommendation gate → publication → activation → immutable performance`
 
-The repository contains a working validation rules engine, four horizon-specific score profiles, an immutable recommendation contract, append-only SQLite ledger, a mobile-first Vietnamese research portal, Knowledge hub, acquisition contracts, analytics events, six ad concepts in two aspect ratios, and regression tests.
+The repository contains a validation rules engine, four horizon-specific score profiles, a separate recommendation gate, deterministic activation/performance logic, an append-only SQLite ledger, a mobile-first Vietnamese research portal, Knowledge hub, acquisition/analytics contracts and regression tests.
 
 Important status: the included market records are labelled `MOCK`. They demonstrate the product and exercise the legacy five-item gate; they are not a live HOSE scan and can never be presented as a real “Top 10 HOSE”. A real release requires a licensed/current data feed, four validated horizon models, full-universe reconciliation, consent/privacy setup and compliance review.
 
@@ -33,12 +33,12 @@ The Pages artifact deliberately disables signup/event submission because GitHub 
 
 ## Core deliverables
 
-- `STOCKRADAR_PRODUCT_SPEC.md` — product contract and V1 scope.
+- `STOCKRADAR_PRODUCT_SPEC_V2.md` — current product contract and V2 scope.
 - `STOCKRADAR_BUILD_STATUS.md` — evidence-backed status by workstream.
 - `STOCKRADAR_EXPERIMENTS.md` — append-only experiment registry.
 - `engine/` — data gates, scoring, state machine, ranking and ledger.
-- `website/` — Home, Radar, sector matrix, stock analysis, active recommendations, email, watchlist/account contracts, Trigger, Risk, Result History, Knowledge, pricing and signup pages; paths support both project Pages and a custom domain.
-- `docs/UX_BENCHMARK_VI.md` — documented patterns learned from established Vietnamese finance products and the boundaries retained for V1.
+- `website/` — Home, horizon Radar, sector matrix, recommendation lifecycle, nine-question stock report, Performance, email, watchlist/account contracts, Knowledge, pricing and signup pages.
+- `docs/UX_BENCHMARK_VI.md` — patterns learned from established Vietnamese finance products and the boundaries retained for StockRadar.
 - `growth/` — ads, creatives, UTM and analytics.
 - `gpt/` — migration contract for the old GPT prototype.
 
@@ -48,4 +48,6 @@ The Pages artifact deliberately disables signup/event submission because GitHub 
 - “Top 10 HOSE” is allowed only when the full-universe and selected-horizon gates pass.
 - Demo/mock data is visibly labelled in engine output and UI.
 - Published snapshots are immutable; corrections are appended.
+- Publication is not activation; unactivated records have no P/L.
+- Closed results are frozen and BACKTEST/SHADOW/LIVE_PUBLISHED remain separate.
 - StockRadar does not place orders and does not promise returns.

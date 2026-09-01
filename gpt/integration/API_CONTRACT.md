@@ -9,6 +9,8 @@ Minimum read operations:
 - `getSectorRankingByHorizon`
 - `getStockReport`
 - `getActiveRecommendations`
+- `getRecommendationHistory`
+- `getPerformanceSummary`
 - `getBreakoutRadar`
 - `getRiskRadar`
 - `getTrackRecord`
@@ -29,8 +31,12 @@ Every dynamic response must include:
 Recommendation responses additionally include:
 
 - `recommendation_id`, `ticker`, `horizon`, publication time and expiry;
-- immutable buy zone/price at recommendation/target/invalidation;
+- immutable buy zone/price at publication/target/invalidation;
+- separate publication timestamp, activation timestamp and performance entry price;
 - current-price observation with its own timestamp;
+- close price/time/reason/final return for closed records;
+- price/total return basis, corporate-action references, benchmark and excess return;
+- record mode (`BACKTEST`, `SHADOW`, `LIVE_PUBLISHED`) and recommendation mode;
 - evidence score, Coverage and explicit `score_is_probability=false`;
 - thesis, risks, invalidation conditions and public state;
 - action gate results, including unknown/blocked reasons;

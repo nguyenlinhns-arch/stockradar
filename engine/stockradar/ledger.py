@@ -118,6 +118,57 @@ class ImmutableLedger:
                 (snapshot_id, ticker, observed_at, horizon, outcome_pct, mae_pct, mfe_pct, r_multiple),
             )
 
+    def append_recommendation(self, record: dict[str, Any]) -> None:
+        publication_timestamp = f'{record["publication_date"]}T{record["publication_time"]}'
+        with self.connection:
+            self.connection.execute(
+                """
+                INSERT INTO recommendations (
+                    recommendation_id, snapshot_id, ticker, horizon,
+                    publication_timestamp, recommended_buy_low, recommended_buy_high,
+                    price_at_publication, generated_at, published_at, system_version,
+                    score_version, publish_status, record_mode, data_grade,
+                    raw_payload, is_mock
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    record["recommendation_id"], record["snapshot_id"], record["ticker"],
+                    record["horizon"], publication_timestamp, record.get("recommended_buy_low"),
+                    record.get("recommended_buy_high"), record.get("price_at_publication"),
+                    record["generated_at"], record["published_at"], record["system_version"],
+                    record["score_version"], record["publish_status"], record["record_mode"],
+                    record["data_grade"], json.dumps(record, ensure_ascii=False, sort_keys=True),
+                    1 if record.get("is_mock") else 0,
+                ),
+            )
+
+    def append_recommendation_event(
+        self,
+        recommendation_id: str,
+        event_type: str,
+        event_at: str,
+        state: str,
+        payload: dict[str, Any],
+        reason: str | None = None,
+    ) -> None:
+        with self.connection:
+            self.connection.execute(
+                """
+                INSERT INTO recommendation_events (
+                    recommendation_id, event_type, event_at, state,
+                    performance_entry_price, observed_price, current_return_pct,
+                    close_price, final_return_pct, reason, payload_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    recommendation_id, event_type, event_at, state,
+                    payload.get("performance_entry_price"), payload.get("observed_price"),
+                    payload.get("current_return_pct"), payload.get("close_price"),
+                    payload.get("final_return_pct"), reason,
+                    json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                ),
+            )
+
     def snapshot_count(self) -> int:
         return int(self.connection.execute("SELECT COUNT(*) FROM snapshots").fetchone()[0])
 
@@ -132,4 +183,3 @@ class ImmutableLedger:
             """
         ).fetchall()
         return [dict(row) for row in rows]
-

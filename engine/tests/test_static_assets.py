@@ -148,7 +148,8 @@ class StaticAssetTests(unittest.TestCase):
         routes = {
             "nganh": "DỮ LIỆU CHƯA ĐỦ ĐỂ XẾP HẠNG TOÀN HOSE",
             "phan-tich": "Trang demo chỉ có báo cáo cho DEMO1",
-            "khuyen-nghi": "Khuyến nghị đang hiệu lực",
+            "khuyen-nghi": "Công bố không đồng nghĩa đã mua",
+            "hieu-qua": "Đếm đúng trước khi nói hiệu quả",
             "co-phieu/demo1": "KHÔNG PHẢI CỔ PHIẾU THẬT",
             "email": "10:30",
             "theo-doi": "CHƯA LƯU DỮ LIỆU NGƯỜI DÙNG",
@@ -177,6 +178,48 @@ class StaticAssetTests(unittest.TestCase):
             self.assertEqual(item["data_grade"], "MOCK")
             for field in ("recommendation_id", "snapshot_id", "thesis", "risks", "invalidation_conditions"):
                 self.assertTrue(item[field], (item["ticker"], field))
+
+    def test_v2_recommendation_and_performance_surfaces(self) -> None:
+        script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
+        recommendations_page = (WEBSITE / "khuyen-nghi" / "index.html").read_text(encoding="utf-8")
+        performance_page = (WEBSITE / "hieu-qua" / "index.html").read_text(encoding="utf-8")
+        report_page = (WEBSITE / "co-phieu" / "demo1" / "index.html").read_text(encoding="utf-8")
+        for marker in (
+            "CHƯA KÍCH HOẠT", "performance_entry_price", "final_return_pct",
+            "benchmark_return_pct", "recommendation_list_view", "performance_view",
+            "sample_premium_report_view",
+        ):
+            self.assertIn(marker, script)
+        for marker in ("data-recommendation-filter", "entry tính hiệu quả", "không có P/L"):
+            self.assertIn(marker, recommendations_page)
+        self.assertIn("data-performance-summary", performance_page)
+        self.assertIn("SHADOW", performance_page)
+        self.assertIn("Chín câu hỏi", report_page)
+
+        recommendations = json.loads(
+            (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(recommendations["schema_version"], "2.0")
+        self.assertEqual(recommendations["recommendation_mode"], "RESEARCH_ONLY")
+        unactivated = [item for item in recommendations["items"] if item["recommendation_state"] == "UNACTIVATED"]
+        self.assertEqual(len(unactivated), 1)
+        self.assertIsNone(unactivated[0]["performance_entry_price"])
+        self.assertIsNone(unactivated[0]["current_return_pct"])
+        closed = [item for item in recommendations["items"] if item["status"] == "CLOSED"]
+        self.assertTrue(all(item["final_return_pct"] is not None for item in closed))
+        self.assertTrue(all(item["current_return_pct"] is None for item in closed))
+
+    def test_required_v2_contract_documents_exist(self) -> None:
+        names = (
+            "STOCKRADAR_PRODUCT_SPEC_V2.md", "STOCKRADAR_BUILD_STATUS.md",
+            "STOCKRADAR_RECOMMENDATION_SCHEMA.md", "STOCKRADAR_RECOMMENDATION_LIFECYCLE.md",
+            "STOCKRADAR_PERFORMANCE_METHODOLOGY.md", "STOCKRADAR_TRACK_RECORD_SPEC.md",
+            "STOCKRADAR_DATA_RIGHTS.md", "STOCKRADAR_EMAIL_SPEC.md",
+            "STOCKRADAR_SUBSCRIPTION_SPEC.md", "STOCKRADAR_ANALYTICS_SPEC.md",
+            "STOCKRADAR_ADS_EXPERIMENTS.md", "STOCKRADAR_COMPLIANCE_REVIEW.md",
+        )
+        for name in names:
+            self.assertTrue((ROOT / name).is_file(), name)
 
     def test_public_state_vocabulary_and_backend_boundaries(self) -> None:
         script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")

@@ -4,11 +4,11 @@
   "type": "object",
   "required": ["event_name", "occurred_at", "session_id", "page", "proposition"],
   "properties": {
-    "event_name": {"enum": ["ad_click", "landing_view", "radar_view", "top5_expand", "track_record_view", "knowledge_view", "method_view", "horizon_select", "signup_started", "signup_completed", "alert_opt_in", "pro_page_view", "trial_started", "subscription_started", "return_d1", "return_d7"]},
+    "event_name": {"enum": ["top_view", "horizon_change", "sector_view", "recommendation_list_view", "performance_view", "stock_search", "sample_premium_report_view", "signup_start", "signup_complete", "pro_view", "checkout_start", "payment_complete", "email_open", "email_click", "renewal_complete", "ad_click", "landing_view", "radar_view", "top5_expand", "track_record_view", "knowledge_view", "method_view", "horizon_select", "signup_started", "signup_completed", "alert_opt_in", "pro_page_view", "trial_started", "subscription_started", "return_d1", "return_d7"]},
     "occurred_at": {"type": "string", "format": "date-time"},
     "session_id": {"type": "string", "minLength": 1, "maxLength": 100},
     "page": {"type": "string", "maxLength": 200},
-    "proposition": {"enum": ["radar5", "breakout", "risk", "organic"]},
+    "proposition": {"enum": ["horizon-top", "ticker-search", "recommendation-history", "performance", "stock-report", "email-alert", "account", "radar5", "breakout", "risk", "organic"]},
     "utm": {"type": "object"},
     "properties": {"type": "object"}
   },

@@ -3,7 +3,7 @@ import unittest
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 
-from engine.stockradar.models import Horizon, Recommendation
+from engine.stockradar.models import Horizon, Recommendation, RecommendationStatus, TrackRecordMode
 from engine.stockradar.scoring import HORIZON_BUCKET_WEIGHTS, calculate_horizon_score
 
 
@@ -33,6 +33,18 @@ class RecommendationContractTests(unittest.TestCase):
         self.assertTrue(all(record.is_mock for record in records))
         self.assertTrue(all(record.thesis and record.risks and record.invalidation_conditions for record in records))
         self.assertIsNone(next(record for record in records if record.horizon is Horizon.ACCUMULATION).stop_loss)
+        self.assertTrue(all(record.record_mode is TrackRecordMode.SHADOW for record in records))
+
+        unactivated = next(record for record in records if record.recommendation_state is RecommendationStatus.UNACTIVATED)
+        self.assertFalse(unactivated.is_activated)
+        self.assertIsNone(unactivated.performance_entry_price)
+        self.assertIsNone(unactivated.current_return_pct)
+
+        closed = [record for record in records if record.is_closed]
+        self.assertEqual(len(closed), 2)
+        self.assertTrue(all(record.final_return_pct is not None and record.current_return_pct is None for record in closed))
+        self.assertTrue(any(record.final_return_pct > 0 for record in closed))
+        self.assertTrue(any(record.final_return_pct < 0 for record in closed))
         with self.assertRaises(FrozenInstanceError):
             records[0].current_price = 99  # type: ignore[misc]
 

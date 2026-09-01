@@ -62,6 +62,7 @@ def build(output: Path) -> None:
         output / "nganh" / "index.html",
         output / "phan-tich" / "index.html",
         output / "khuyen-nghi" / "index.html",
+        output / "hieu-qua" / "index.html",
         output / "co-phieu" / "demo1" / "index.html",
         output / "email" / "index.html",
         output / "theo-doi" / "index.html",

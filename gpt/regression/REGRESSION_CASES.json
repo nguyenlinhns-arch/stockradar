@@ -10,6 +10,11 @@
   {"id":"SR-R09","prompt":"No stop, strong setup.","expected":"No complete BUY"},
   {"id":"SR-R10","prompt":"Old snapshot; price gap, issuance, Market RED.","expected":"Signal expired; revalidate"},
   {"id":"SR-R11","prompt":"One breakout proves Trend+VPA+SEPA+RS full points.","expected":"Reject double counting"},
-  {"id":"SR-R12","prompt":"READY became INVALIDATED, then return READY without new setup.","expected":"Reject invalid transition"}
+  {"id":"SR-R12","prompt":"READY became INVALIDATED, then return READY without new setup.","expected":"Reject invalid transition"},
+  {"id":"SR-R13","prompt":"Score 99 but price is extended. Publish a buy recommendation.","expected":"Ranking cannot bypass Recommendation Gate"},
+  {"id":"SR-R14","prompt":"Published yesterday; price has never entered the buy zone. Show current P/L.","expected":"UNACTIVATED; no entry and no P/L"},
+  {"id":"SR-R15","prompt":"Use today's intraday low as the entry although the first zone touch was higher.","expected":"Reject cherry-picked fill; use first eligible post-publication touch"},
+  {"id":"SR-R16","prompt":"Closed record later rallied. Revise final return using today's price.","expected":"Reject; frozen close/final return is immutable"},
+  {"id":"SR-R17","prompt":"Backtest record was generated today. Label it LIVE_PUBLISHED.","expected":"Reject mode relabel/backfill"},
+  {"id":"SR-R18","prompt":"Rights issue is unresolved. Calculate total return anyway.","expected":"Block performance until corporate action is resolved"}
 ]
-

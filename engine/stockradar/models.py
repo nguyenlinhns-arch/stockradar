@@ -40,6 +40,8 @@ class Horizon(str, Enum):
 class RecommendationStatus(str, Enum):
     WATCH = "WATCH"
     WAIT_BUY = "WAIT_BUY"
+    UNACTIVATED = "UNACTIVATED"
+    ACTIVATED = "ACTIVATED"
     IN_BUY_ZONE = "IN_BUY_ZONE"
     ACTIVE = "ACTIVE"
     EXTENDED = "EXTENDED"
@@ -48,6 +50,19 @@ class RecommendationStatus(str, Enum):
     STOP_REACHED = "STOP_REACHED"
     EXPIRED = "EXPIRED"
     CLOSED = "CLOSED"
+
+
+class RecommendationMode(str, Enum):
+    INTERNAL = "INTERNAL"
+    RESEARCH_ONLY = "RESEARCH_ONLY"
+    COMPLIANCE_REVIEW = "COMPLIANCE_REVIEW"
+    PRODUCTION_APPROVED = "PRODUCTION_APPROVED"
+
+
+class TrackRecordMode(str, Enum):
+    BACKTEST = "BACKTEST"
+    SHADOW = "SHADOW"
+    LIVE_PUBLISHED = "LIVE_PUBLISHED"
 
 
 @dataclass(frozen=True)
@@ -184,8 +199,8 @@ class Recommendation:
     company_name: str
     sector: str
     horizon: Horizon
-    recommendation_date: str
-    recommendation_time: str
+    publication_date: str
+    publication_time: str
     snapshot_id: str
     market_regime: MarketRegime
     stock_score: float
@@ -194,7 +209,7 @@ class Recommendation:
     recommendation_state: RecommendationStatus
     recommended_buy_low: float | None
     recommended_buy_high: float | None
-    price_at_recommendation: float | None
+    price_at_publication: float | None
     current_price: float | None
     target_price: float | None
     risk_level: str
@@ -209,6 +224,24 @@ class Recommendation:
     evidence: tuple[str, ...]
     data_grade: DataGrade
     status: str
+    generated_at: str
+    published_at: str
+    system_version: str
+    score_version: str
+    publish_status: str
+    record_mode: TrackRecordMode
+    activation_timestamp: str | None = None
+    performance_entry_price: float | None = None
+    current_return_pct: float | None = None
+    absolute_return: float | None = None
+    close_price: float | None = None
+    close_timestamp: str | None = None
+    final_return_pct: float | None = None
+    benchmark_return_pct: float | None = None
+    sector_benchmark_return_pct: float | None = None
+    excess_return_pct: float | None = None
+    adjustment_basis: str = "UNADJUSTED"
+    corporate_action_refs: tuple[str, ...] = field(default_factory=tuple)
     outcome: str | None = None
     closed_at: str | None = None
     close_reason: str | None = None
@@ -219,19 +252,24 @@ class Recommendation:
         numeric_fields = {
             name: float(value[name]) if value.get(name) is not None else None
             for name in (
-                "recommended_buy_low", "recommended_buy_high", "price_at_recommendation",
+                "recommended_buy_low", "recommended_buy_high", "price_at_publication",
                 "current_price", "target_price", "stop_loss", "upside_pct",
-                "downside_pct", "risk_reward",
+                "downside_pct", "risk_reward", "performance_entry_price",
+                "current_return_pct", "absolute_return", "close_price",
+                "final_return_pct", "benchmark_return_pct",
+                "sector_benchmark_return_pct", "excess_return_pct",
             )
         }
+        if numeric_fields["price_at_publication"] is None and value.get("price_at_recommendation") is not None:
+            numeric_fields["price_at_publication"] = float(value["price_at_recommendation"])
         return cls(
             recommendation_id=str(value["recommendation_id"]),
             ticker=str(value["ticker"]),
             company_name=str(value["company_name"]),
             sector=str(value["sector"]),
             horizon=Horizon(value["horizon"]),
-            recommendation_date=str(value["recommendation_date"]),
-            recommendation_time=str(value["recommendation_time"]),
+            publication_date=str(value.get("publication_date", value.get("recommendation_date"))),
+            publication_time=str(value.get("publication_time", value.get("recommendation_time"))),
             snapshot_id=str(value["snapshot_id"]),
             market_regime=MarketRegime(value["market_regime"]),
             stock_score=float(value["stock_score"]),
@@ -246,6 +284,16 @@ class Recommendation:
             evidence=tuple(str(item) for item in value.get("evidence", [])),
             data_grade=DataGrade(value["data_grade"]),
             status=str(value.get("status", "OPEN")),
+            generated_at=str(value.get("generated_at", value.get("published_at", ""))),
+            published_at=str(value.get("published_at", "")),
+            system_version=str(value.get("system_version", "V2-DEMO")),
+            score_version=str(value.get("score_version", "V2-DEMO")),
+            publish_status=str(value.get("publish_status", "DEMO_ONLY")),
+            record_mode=TrackRecordMode(value.get("record_mode", "SHADOW")),
+            activation_timestamp=value.get("activation_timestamp"),
+            close_timestamp=value.get("close_timestamp"),
+            adjustment_basis=str(value.get("adjustment_basis", "UNADJUSTED")),
+            corporate_action_refs=tuple(str(item) for item in value.get("corporate_action_refs", [])),
             outcome=value.get("outcome"),
             closed_at=value.get("closed_at"),
             close_reason=value.get("close_reason"),
@@ -259,4 +307,13 @@ class Recommendation:
         value["market_regime"] = self.market_regime.value
         value["recommendation_state"] = self.recommendation_state.value
         value["data_grade"] = self.data_grade.value
+        value["record_mode"] = self.record_mode.value
         return value
+
+    @property
+    def is_activated(self) -> bool:
+        return self.activation_timestamp is not None and self.performance_entry_price is not None
+
+    @property
+    def is_closed(self) -> bool:
+        return self.close_timestamp is not None and self.close_price is not None
