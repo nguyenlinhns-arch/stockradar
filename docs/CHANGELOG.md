@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-01 — Operational public interface
+
+- Replaced the text-heavy Home with a working dashboard that opens directly to ticker lookup, market state, Radar, Today Changes and performance.
+- Removed public methodology, Knowledge, backend-architecture and product-process explanations from the GitHub Pages artifact.
+- Removed unavailable account, signup, watchlist, email and pricing routes from public deployment until their backends are connected.
+- Reduced Radar, Trigger, Risk, Recommendation, Performance, Sector and History pages to their operative tables, filters and status views.
+- Added state filters for Radar and a risk-alert view sourced from the same Today Changes payload.
+- Kept internal method documents and implementation contracts in the repository; they are no longer part of the customer-facing website.
+- Preserved the MOCK/SHADOW and noindex boundaries because a licensed live HOSE data source is not yet connected.
+
 ## 2026-09-01 — V2.1.2 universal lookup and service-monitoring update
 
 - Applied Change Request V2.1, Execution Priority Addendum V2.1.1 and Change Request V2.1.2 without rebuilding the V2 core.

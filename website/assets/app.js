@@ -4,7 +4,7 @@
     'ad_click', 'landing_view', 'radar_view', 'top5_expand', 'track_record_view',
     'signup_started', 'signup_completed', 'alert_opt_in', 'pro_page_view',
     'trial_started', 'subscription_started', 'return_d1', 'return_d7',
-    'knowledge_view', 'method_view', 'horizon_select', 'stock_search',
+    'horizon_select', 'stock_search',
     'stock_report_view', 'top10_view', 'watchlist_add', 'email_view',
     'checkout_started', 'payment_completed',
     'top_view', 'horizon_change', 'sector_view', 'recommendation_list_view',
@@ -62,7 +62,7 @@
   }
 
   function statusLabel(value) {
-    if (value === 'SHORTLIST_FROM_AVAILABLE_DATA') return 'DANH SÁCH MINH HỌA';
+    if (value === 'SHORTLIST_FROM_AVAILABLE_DATA') return 'DANH SÁCH MẪU';
     return String(value || '—').replaceAll('_', ' ');
   }
 
@@ -111,13 +111,6 @@
     return { label: formatPercent(item.current_return_pct), value: item.current_return_pct, group };
   }
 
-  function pricePosition(item) {
-    if (item.current_price == null) return 'Chưa có quan sát giá mới.';
-    if (item.current_price < item.recommended_buy_low) return 'Giá hiện dưới vùng mua đã công bố; chưa tự động kích hoạt.';
-    if (item.current_price > item.recommended_buy_high) return 'Giá hiện trên vùng mua đã công bố; không suy diễn thành điểm mua mới.';
-    return 'Giá hiện nằm trong vùng mua đã công bố; activation vẫn căn cứ lần chạm đầu tiên sau công bố.';
-  }
-
   function priceRange(low, high) {
     if (low == null || high == null) return '—';
     return `${formatPrice(low)}–${formatPrice(high)}`;
@@ -132,34 +125,56 @@
       const route = location.pathname.replace(/\/+$/, '');
       const items = [
         ['radar5/', 'Radar', '/radar5'],
-        ['kiem-tra-co-phieu/', 'Tra mã', '/kiem-tra-co-phieu'],
+        ['kiem-tra-co-phieu/', 'Tra cứu mã', '/kiem-tra-co-phieu'],
         ['khuyen-nghi/', 'Khuyến nghị', '/khuyen-nghi'],
-        ['thay-doi-hom-nay/', 'Biến động', '/thay-doi-hom-nay'],
+        ['thay-doi-hom-nay/', 'Thay đổi', '/thay-doi-hom-nay'],
         ['hieu-qua/', 'Hiệu quả', '/hieu-qua'],
-        ['theo-doi/', 'Theo dõi', '/theo-doi'],
-        ['tai-khoan/', 'Tài khoản', '/tai-khoan'],
+        ['nganh/', 'Theo ngành', '/nganh'],
       ];
       menu.innerHTML = items.map(([href, label, match]) => {
         const isCurrent = route.endsWith(match)
           || route.includes(`${match}/`)
           || (match === '/kiem-tra-co-phieu' && (route.includes('/co-phieu/') || route.includes('/phan-tich')));
         return `<a href="${href}"${isCurrent ? ' aria-current="page"' : ''}>${label}</a>`;
-      }).join('') + '<a class="button button-primary button-small" href="pro/">Nâng cấp</a>';
+      }).join('');
     }
 
     const utility = document.createElement('div');
     utility.className = 'portal-utility';
-    utility.innerHTML = `<div class="container portal-utility-inner"><span><strong>STOCKRADAR.VN</strong><i></i>Radar cổ phiếu Việt Nam</span><span class="portal-utility-note">HOSE · Ngắn hạn · Trung hạn · Dài hạn · Tích sản</span></div>`;
+    utility.innerHTML = `
+      <div class="container portal-utility-inner">
+        <span><strong>STOCKRADAR.VN</strong><i></i>HOSE</span>
+        <span class="portal-utility-note">Dữ liệu mẫu · Chưa kết nối nguồn thị trường được cấp quyền</span>
+      </div>`;
 
     const tape = document.createElement('section');
     tape.className = 'market-tape';
     tape.setAttribute('aria-label', 'Trạng thái dữ liệu StockRadar');
-    tape.innerHTML = `<div class="container market-tape-inner" aria-live="polite"><div class="tape-heading"><span class="live-dot" aria-hidden="true"></span><span>THỊ TRƯỜNG</span></div><div class="tape-item"><strong data-market>—</strong></div><div class="tape-item tape-snapshot"><span>Cập nhật</span><strong data-snapshot>—</strong></div><div class="tape-disclaimer">Dữ liệu minh họa</div></div>`;
+    tape.innerHTML = `
+      <div class="container market-tape-inner" aria-live="polite">
+        <div class="tape-heading"><span class="live-dot" aria-hidden="true"></span><span>SNAPSHOT</span><strong>MẪU</strong></div>
+        <div class="tape-item"><span>Thị trường</span><strong data-market>—</strong></div>
+        <div class="tape-item"><span>Độ phủ</span><strong data-coverage>—</strong></div>
+        <div class="tape-item tape-snapshot"><span>Cập nhật</span><strong data-snapshot>—</strong></div>
+        <div class="tape-disclaimer">Không dùng cho lệnh giao dịch</div>
+      </div>`;
 
     const subnav = document.createElement('nav');
     subnav.className = 'product-subnav';
-    subnav.setAttribute('aria-label', 'Điều hướng phân tích');
-    subnav.innerHTML = `<div class="container product-subnav-inner"><a href="radar5/">Ngắn hạn</a><a href="kiem-tra-co-phieu/">Trung hạn</a><a href="kiem-tra-co-phieu/">Dài hạn</a><a href="kiem-tra-co-phieu/">Tích sản</a><a href="nganh/">Theo ngành</a><a href="track-record/">Lịch sử</a><a href="pro/">Gói dịch vụ</a></div>`;
+    subnav.setAttribute('aria-label', 'Điều hướng nhanh');
+    subnav.innerHTML = `<div class="container product-subnav-inner">
+      <a href="radar5/">Radar</a><a href="breakout/">Điểm mua</a><a href="risk/">Cảnh báo</a>
+      <a href="khuyen-nghi/">Đang hiệu lực</a><a href="thay-doi-hom-nay/">Thay đổi hôm nay</a>
+      <a href="track-record/">Lịch sử</a><a href="nganh/">Theo ngành</a><a href="hieu-qua/">Hiệu quả</a>
+    </div>`;
+
+    const footer = document.querySelector('.site-footer');
+    if (footer) {
+      const links = footer.querySelector('.footer-links');
+      if (links) links.innerHTML = '<a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a>';
+      const disclaimer = footer.querySelector('.disclaimer');
+      if (disclaimer) disclaimer.textContent = 'Dữ liệu công khai hiện là dữ liệu mẫu, không phải dữ liệu giao dịch thời gian thực hay lời mời mua bán.';
+    }
 
     header.before(utility);
     header.after(tape);
@@ -275,20 +290,21 @@
       </div>`).join('');
   }
 
-  function renderRadarTable(target, data) {
+  function renderRadarTable(target, data, filter = 'ALL') {
     if (!target) return;
+    const items = data.items.filter(item => filter === 'ALL' || item.state === filter);
     target.innerHTML = `
-      <div class="table-row table-head"><span>Hạng</span><span>Mã / thiết lập</span><span>Điểm</span><span>Trạng thái</span><span>Giá demo</span><span>Cách pivot</span><span>Thay đổi</span></div>
-      ${data.items.map(item => `
+      <div class="table-row table-head"><span>Hạng</span><span>Mã / thiết lập</span><span>Điểm</span><span>Trạng thái</span><span>Giá</span><span>Cách pivot</span><span>Thay đổi</span></div>
+      ${items.map(item => `
         <article class="table-row" data-ticker="${item.ticker}">
           <strong class="rank">#${item.rank}</strong>
-          <div><a class="table-ticker ticker-link" href="phan-tich/?ticker=${encodeURIComponent(item.ticker)}">${item.ticker}</a><div class="setup">${item.setup} · ${item.reason}</div></div>
+          <div><a class="table-ticker ticker-link" href="co-phieu/?ticker=${encodeURIComponent(item.ticker)}">${item.ticker}</a><div class="setup">${item.setup} · ${item.reason}</div></div>
           <strong class="score">${item.score}</strong>
           <span><span class="state ${stateClass(item.state)}">${stateLabel(item.state)}</span></span>
           <span class="demo-price">${Number(item.current_price).toLocaleString('vi-VN')}</span>
           <span class="pivot-distance">${Number(item.distance_to_pivot_pct).toLocaleString('vi-VN')}%</span>
           <span class="change ${item.state_change === 'UNCHANGED' ? 'unchanged' : ''}">${item.state_change === 'UNCHANGED' ? stateLabel(item.state_change) : item.state_change.split('→').map(stateLabel).join(' → ')}</span>
-        </article>`).join('')}`;
+        </article>`).join('') || '<div class="empty">Không có mã ở trạng thái này.</div>'}`;
   }
 
   function recommendationLink(item) {
@@ -323,7 +339,6 @@
 
   function renderPerformance(target, data) {
     const summary = data.performance_summary;
-    const activated = data.items.filter(item => lifecycleGroup(item) !== 'UNACTIVATED');
     const horizons = Object.entries(horizonLabels).map(([key, label]) => {
       const records = data.items.filter(item => item.horizon === key);
       const closed = records.filter(item => lifecycleGroup(item) === 'CLOSED');
@@ -352,12 +367,10 @@
         <article><span>Đang mở</span><strong>${summary.open}</strong><small>Mark-to-market</small></article>
         <article><span>Đã đóng</span><strong>${summary.closed}</strong><small>Kết quả đã khóa</small></article>
         <article><span>Tỷ lệ thắng</span><strong>${formatPercent(summary.win_rate_pct, false)}</strong><small>Chỉ record đã đóng</small></article>
-        <article><span>Lợi nhuận đóng TB</span><strong class="${returnClass(summary.average_closed_return_pct)}">${formatPercent(summary.average_closed_return_pct)}</strong><small>Không phải track record thật</small></article>
+        <article><span>Lợi nhuận đóng TB</span><strong class="${returnClass(summary.average_closed_return_pct)}">${formatPercent(summary.average_closed_return_pct)}</strong><small>Dữ liệu mẫu</small></article>
       </section>
-      <section class="performance-method-note"><div><span class="panel-label">PHƯƠNG PHÁP CỐ ĐỊNH</span><h2>Công bố → chạm vùng mua → kích hoạt → đóng</h2><p>Giá entry là giao dịch hợp lệ đầu tiên sau công bố chạm vùng mua. ${activated.length} record đã kích hoạt; record chưa kích hoạt không có P/L và không đi vào mẫu tính tỷ lệ thắng.</p></div><span class="data-pill">${data.record_mode || data.items[0]?.record_mode || 'SHADOW'} · ${data.recommendation_mode}</span></section>
       <section class="performance-breakdown"><header><div><span class="panel-label">THEO CHÂN TRỜI</span><h2>Mỗi mục tiêu là một mẫu riêng</h2></div></header>${horizons}</section>
-      <section class="performance-table"><div class="performance-row performance-head"><span>Mã</span><span>Công bố</span><span>Kích hoạt</span><span>Entry</span><span>Hiện tại / đóng</span><span>Lãi / lỗ</span><span>Benchmark</span><span>Vượt chuẩn</span><span>Trạng thái</span></div>${rows}</section>
-      <p class="performance-footnote">Dữ liệu MOCK/SHADOW chỉ kiểm thử phương pháp. Corporate action được xử lý theo adjustment basis; record đã đóng dùng giá đóng đã khóa và không đổi theo giá hiện tại về sau.</p>`;
+      <section class="performance-table"><div class="performance-row performance-head"><span>Mã</span><span>Công bố</span><span>Kích hoạt</span><span>Entry</span><span>Hiện tại / đóng</span><span>Lãi / lỗ</span><span>Benchmark</span><span>Vượt chuẩn</span><span>Trạng thái</span></div>${rows}</section>`;
   }
 
   function renderPerformanceMini(target, data) {
@@ -368,7 +381,7 @@
         const performance = performanceValue(item);
         return `<a href="co-phieu/?ticker=${encodeURIComponent(item.ticker)}"><span><strong>${item.ticker}</strong><small>${horizonLabels[item.horizon]}</small></span><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span><b class="${returnClass(performance.value)}">${performance.label}</b></a>`;
       }).join('')}</div>
-      <small class="home-proof-note">* Chỉ tính record đã đóng; loại record chưa kích hoạt. Toàn bộ là MOCK/SHADOW.</small>`;
+      <small class="home-proof-note">Dữ liệu mẫu · SHADOW</small>`;
   }
 
   function renderStockReport(target, item, data, stockReport = null) {
@@ -383,14 +396,6 @@
     }).join('');
     const list = values => (values || []).map(value => `<li>${value}</li>`).join('');
     const performance = performanceValue(item);
-    const activationText = item.activation_timestamp
-      ? `Đã kích hoạt lúc ${formatSnapshot(item.activation_timestamp)} tại ${formatPrice(item.performance_entry_price)}.`
-      : 'Chưa có giao dịch hợp lệ sau công bố đi vào vùng mua; chưa phát sinh P/L.';
-    const resultText = performance.group === 'CLOSED'
-      ? `Đã đóng tại ${formatPrice(item.close_price)} ngày ${formatSnapshot(item.close_timestamp)}; kết quả ${formatPercent(item.final_return_pct)} đã được khóa.`
-      : performance.group === 'OPEN'
-        ? `Đang mở với P/L ${formatPercent(item.current_return_pct)} từ entry hiệu quả.`
-        : 'Chưa kích hoạt nên không hiển thị lãi/lỗ.';
     target.innerHTML = `
       <section class="report-overview">
         <div class="report-title"><div><span class="panel-label">BÁO CÁO CỔ PHIẾU · MÔ PHỎNG</span><h1>${item.ticker}</h1><p>${item.company_name} · ${item.sector}</p></div><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span></div>
@@ -420,18 +425,13 @@
           <div><span>Trạng thái review</span><strong>${item.review_status || 'PENDING'}</strong></div>
         </div>
       </section>
-      <section class="report-answers" aria-label="Các câu hỏi kiểm chứng của báo cáo StockRadar">
-        <article><span>01 · ĐÁNH GIÁ</span><h2>Đánh giá hiện tại?</h2><p>${stateLabel(item.recommendation_state)}. ${resultText}</p></article>
-        <article><span>02 · MUA MỚI</span><h2>Nếu chưa có cổ phiếu?</h2><p><strong>${escapeHtml(item.new_position_state)}</strong>. ${escapeHtml(item.new_position_note)}</p></article>
-        <article><span>03 · ĐANG NẮM GIỮ</span><h2>Nếu đang sở hữu?</h2><p><strong>${escapeHtml(item.holding_state)}</strong>. ${escapeHtml(item.holding_note)}</p></article>
-        <article><span>04 · XẾP HẠNG</span><h2>Đứng ở đâu trong mục tiêu?</h2><p>Hạng #${item.rank} của mô hình ${horizonLabels[item.horizon]}, điểm ${formatPrice(item.stock_score)}/100 với độ phủ ${formatPrice(item.score_coverage_pct)}%.</p></article>
-        <article><span>05 · VỊ TRÍ GIÁ</span><h2>Giá đang ở đâu?</h2><p>${pricePosition(item)}</p></article>
-        <article><span>06 · HÀNH ĐỘNG</span><h2>Vùng mua và entry?</h2><p>Vùng ${priceRange(item.recommended_buy_low, item.recommended_buy_high)}. ${activationText}</p></article>
-        <article><span>07 · MỤC TIÊU</span><h2>Mốc nào cần theo dõi?</h2><p>Mục tiêu ${formatPrice(item.target_price)}; ${item.stop_loss == null ? 'điểm vô hiệu theo thay đổi luận điểm.' : `mức quản trị ${formatPrice(item.stop_loss)}.`}</p></article>
-        <article><span>08 · LUẬN ĐIỂM</span><h2>Vì sao được chọn?</h2><ul>${list(item.thesis)}</ul></article>
-        <article class="is-risk"><span>09 · RỦI RO</span><h2>Rủi ro chính là gì?</h2><ul>${list(item.risks)}</ul></article>
-        <article class="is-change"><span>10 · VÔ HIỆU</span><h2>Điều gì làm nhận định đổi?</h2><ul>${list(item.invalidation_conditions)}</ul></article>
-        <article><span>11 · LỊCH SỬ</span><h2>Record trước được lưu thế nào?</h2><p>${resultText} VN-Index ${formatPercent(item.benchmark_return_pct)}; vượt chuẩn ${formatPercent(item.excess_return_pct)}.</p><a class="text-link" href="khuyen-nghi/#nhat-ky">Mở nhật ký bất biến →</a></article>
+      <section class="position-detail-grid">
+        <article><span>MUA MỚI</span><h2>${escapeHtml(item.new_position_state)}</h2><p>${escapeHtml(item.new_position_note)}</p></article>
+        <article><span>ĐANG NẮM GIỮ</span><h2>${escapeHtml(item.holding_state)}</h2><p>${escapeHtml(item.holding_note)}</p></article>
+      </section>
+      <section class="evidence-grid">
+        <article><span class="panel-label">LUẬN ĐIỂM</span><ul>${list(item.thesis)}</ul></article>
+        <article><span class="panel-label">RỦI RO / VÔ HIỆU</span><ul>${list([...(item.risks || []), ...(item.invalidation_conditions || [])])}</ul></article>
       </section>
       <footer class="report-audit"><span>Recommendation ID <strong>${item.recommendation_id}</strong></span><span>Snapshot <strong>${item.snapshot_id}</strong></span><span>System <strong>${item.system_version}</strong></span><span>Score model <strong>${item.score_version}</strong></span><span>Review due <strong>${formatSnapshot(item.review_due_at)}</strong></span><span>Adjustment <strong>${item.adjustment_basis}</strong></span><span>Cập nhật <strong>${formatSnapshot(data.snapshot.as_of)}</strong></span></footer>`;
   }
@@ -578,7 +578,7 @@
         <section class="evidence-grid"><article><span class="panel-label">TẠI SAO?</span><h2>Lý do chính</h2><ul>${(report?.reasons || []).map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Chưa đủ evidence.</li>'}</ul></article><article><span class="panel-label">RỦI RO & ĐIỀU KIỆN ĐỔI</span><h2>Điều cần kiểm tra</h2><ul>${(report?.risks || []).map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Không dùng dữ liệu thiếu cho hành động.</li>'}</ul></article></section>
         <section class="ticker-history"><header><div><span class="panel-label">LỊCH SỬ KHUYẾN NGHỊ CÔNG KHAI</span><h2>Không cherry-pick.</h2></div><a href="hieu-qua/">Xem toàn bộ hiệu quả →</a></header>${recommendationHistoryMarkup(ticker, recommendations)}</section>
         <section class="journal-panel"><header><div><span class="panel-label">NHẬT KÝ BẤT BIẾN</span><h2>${journal.length ? `${journal.length} sự kiện đã ghi` : 'Chưa có sự kiện'}</h2></div></header>${journal.length ? `<ol>${journal.map(item => `<li><time>${formatSnapshot(item.timestamp)}</time><strong>${stateLabel(item.new_state)}</strong><p>${escapeHtml(item.reason)}</p><small>${escapeHtml(item.audit_reference)}</small></li>`).join('')}</ol>` : '<div class="empty">Không có recommendation thì không dựng nhật ký giả.</div>'}</section>
-        <section class="ticker-trial-cta"><div><span class="panel-label">THEO DÕI THEO MÃ</span><h2>Theo dõi ${escapeHtml(ticker)} miễn phí 7 ngày</h2><p>Trial chỉ nhận email sau khi xác minh và đồng ý; Free không nhận email nội dung hằng ngày.</p></div><a class="button button-primary" data-track-event="ticker_trial_cta_clicked" href="signup/?tier=trial&ticker=${encodeURIComponent(ticker)}">Bắt đầu dùng thử</a></section>`;
+        `;
       track('ticker_search_valid', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
       track('quick_report_view', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
       track('four_horizon_view', { ticker });
@@ -591,17 +591,20 @@
   }
 
   async function loadTodayChanges() {
-    const target = document.querySelector('[data-today-changes]');
-    if (!target) return;
+    const targets = document.querySelectorAll('[data-today-changes]');
+    const riskTargets = document.querySelectorAll('[data-risk-alerts]');
+    if (!targets.length && !riskTargets.length) return;
     try {
       const response = await fetch(siteUrl('public/data/today-changes.json'), { cache: 'no-store' });
       if (!response.ok) throw new Error('Không tải được nhật ký thay đổi');
       const data = await response.json();
-      target.innerHTML = data.items.map(item => `<article class="change-card"><time>${formatSnapshot(item.occurred_at)}</time><div><span>${escapeHtml(item.event_type.replaceAll('_', ' '))}</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></div><div class="change-values"><del>${escapeHtml(item.previous_value || '—')}</del><b>→</b><strong>${escapeHtml(item.new_value || '—')}</strong></div></article>`).join('') || '<div class="empty">Hôm nay chưa có thay đổi đủ ý nghĩa để hiển thị.</div>';
+      const markup = items => items.map(item => `<article class="change-card"><time>${formatSnapshot(item.occurred_at)}</time><div><span>${escapeHtml(item.event_type.replaceAll('_', ' '))}</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></div><div class="change-values"><del>${escapeHtml(item.previous_value || '—')}</del><b>→</b><strong>${escapeHtml(item.new_value || '—')}</strong></div></article>`).join('') || '<div class="empty">Không có thay đổi phù hợp.</div>';
+      targets.forEach(target => { target.innerHTML = markup(data.items); });
+      riskTargets.forEach(target => { target.innerHTML = markup(data.items.filter(item => Number(item.importance || 0) >= 3)); });
       document.querySelectorAll('[data-today-updated]').forEach(item => { item.textContent = formatSnapshot(data.as_of); });
       track('today_changes_view', { is_mock: data.is_mock, changes: data.items.length });
     } catch (error) {
-      target.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+      [...targets, ...riskTargets].forEach(target => { target.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; });
     }
   }
 
@@ -690,7 +693,14 @@
       if (!response.ok) throw new Error('Không tải được dữ liệu Radar');
       const data = await response.json();
       document.querySelectorAll('[data-radar-list]').forEach(el => renderMiniRadar(el, data));
-      document.querySelectorAll('[data-radar-table]').forEach(el => renderRadarTable(el, data));
+      let activeFilter = 'ALL';
+      const redrawTables = () => document.querySelectorAll('[data-radar-table]').forEach(el => renderRadarTable(el, data, activeFilter));
+      redrawTables();
+      document.querySelectorAll('[data-radar-filter]').forEach(button => button.addEventListener('click', () => {
+        activeFilter = button.dataset.radarFilter || 'ALL';
+        document.querySelectorAll('[data-radar-filter]').forEach(item => item.classList.toggle('is-active', item === button));
+        redrawTables();
+      }));
       document.querySelectorAll('[data-market]').forEach(el => el.textContent = marketLabel(data.market_regime));
       document.querySelectorAll('[data-coverage]').forEach(el => el.textContent = `${data.snapshot.universe_coverage_pct}%`);
       document.querySelectorAll('[data-snapshot]').forEach(el => el.textContent = formatSnapshot(data.snapshot.as_of));
@@ -825,8 +835,6 @@
     wireNavigation();
     if (/(^|\/)pro\/?$/.test(location.pathname)) { track('pro_page_view'); track('pro_view'); }
     if (/(^|\/)nganh\/?$/.test(location.pathname)) track('sector_view');
-    if (document.body.dataset.pageKind === 'knowledge-hub') track('knowledge_view');
-    if (document.body.dataset.pageKind === 'method') track('method_view', { method: document.body.dataset.method || 'unknown' });
     if (document.body.dataset.pageKind === 'email') track('email_view');
     document.querySelectorAll('.horizon-tab').forEach(el => el.addEventListener('click', () => track('horizon_change', { label: el.textContent.trim() })));
     document.querySelectorAll('[data-track-event]').forEach(el => el.addEventListener('click', () => track(el.dataset.trackEvent, { target: el.getAttribute('href') || '' })));

@@ -58,7 +58,7 @@ Alert worker must provide idempotent events with operation ID, snapshot ID, tick
 
 ## Knowledge surface
 
-`website/kien-thuc/` is static, source-attributed product education. It has no data-write path and cannot change engine decisions. Every article explains method mechanics, StockRadar usage, failure modes and reading sources. Client analytics records only hub/method views through the existing allowlisted event path.
+`website/kien-thuc/` remains an internal, source-attributed method reference. It has no data-write path, cannot change engine decisions and is excluded from the public GitHub Pages artifact.
 
 ## Failure policy
 

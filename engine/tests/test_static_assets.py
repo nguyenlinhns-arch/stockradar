@@ -123,45 +123,60 @@ class StaticAssetTests(unittest.TestCase):
             self.assertIn("data-nav-toggle", source, html)
             self.assertIn("data-nav-menu", source, html)
 
+        for route in (
+            "index.html", "radar5/index.html", "kiem-tra-co-phieu/index.html",
+            "khuyen-nghi/index.html", "thay-doi-hom-nay/index.html",
+            "hieu-qua/index.html", "nganh/index.html", "risk/index.html",
+            "breakout/index.html", "track-record/index.html", "co-phieu/index.html",
+        ):
+            source = (WEBSITE / route).read_text(encoding="utf-8")
+            self.assertNotIn('href="kien-thuc/', source, route)
+
     def test_professional_portal_shell_and_truthful_radar_workspace(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
         radar = (WEBSITE / "radar5" / "index.html").read_text(encoding="utf-8")
         script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
         styles = (WEBSITE / "assets" / "styles.css").read_text(encoding="utf-8")
 
-        for expected in ("product-home-grid", "dashboard-grid", "stock-search-main", "home-actions"):
+        for expected in (
+            "operations-shell", "operations-search", "operations-status-grid",
+            "dashboard-grid", "data-radar-filter", "data-today-changes",
+        ):
             self.assertIn(expected, homepage)
-        for expected in ("radar-workspace-grid", "data-radar-table", "legend-list"):
+        for expected in ("radar-workspace-grid", "data-radar-filter", "data-radar-table"):
             self.assertIn(expected, radar)
-        self.assertIn("Dữ liệu hiện tại dùng để minh họa", radar)
-        self.assertNotIn("BỘ NÃO STOCKRADAR", homepage)
-        self.assertNotIn("CỔNG CÔNG BỐ", radar)
+        for removed in ("BỘ NÃO STOCKRADAR", "TRUNG TÂM KIẾN THỨC", "KIẾN TRÚC 3 TẦNG"):
+            self.assertNotIn(removed, homepage)
+            self.assertNotIn(removed, radar)
         self.assertIn("portal-utility", script)
         self.assertIn("market-tape", script)
         self.assertIn("route.includes('/co-phieu/')", script)
-        self.assertIn("Dữ liệu minh họa", script)
+        self.assertIn("Chưa kết nối nguồn thị trường được cấp quyền", script)
+        self.assertIn("data-radar-filter", script)
         self.assertIn("const stateLabels", script)
         self.assertIn(".market-tape", styles)
-        self.assertIn(".radar-workspace", styles)
+        self.assertIn(".operations-status-grid", styles)
 
     def test_master_product_surfaces_are_present_and_truthful(self) -> None:
         routes = {
-            "nganh": "DỮ LIỆU CHƯA ĐỦ ĐỂ XẾP HẠNG TOÀN HOSE",
-            "phan-tich": "TICKER LOOKUP V2.1.2",
+            "nganh": "horizon-matrix",
+            "phan-tich": "data-stock-search-form",
             "khuyen-nghi": "data-recommendations",
             "hieu-qua": "data-performance-summary",
-            "co-phieu/demo1": "KHÔNG PHẢI CỔ PHIẾU THẬT",
-            "email": "10:30",
-            "theo-doi": "CHƯA LƯU DỮ LIỆU NGƯỜI DÙNG",
-            "tai-khoan": "CHƯA CÓ TÀI KHOẢN THẬT",
+            "co-phieu": "data-dynamic-stock-report",
+            "radar5": "data-radar-table",
+            "risk": "data-risk-alerts",
+            "breakout": "data-radar-filter",
         }
         for route, marker in routes.items():
             source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
             self.assertIn(marker, source, route)
 
-        homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
-        for marker in ("Kiểm tra một mã", "Cổ phiếu đáng chú ý", "Kết quả khuyến nghị"):
-            self.assertIn(marker, homepage)
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "pages"
+            build_pages.build(output)
+            for removed in ("kien-thuc", "email", "theo-doi", "tai-khoan", "signup", "pro"):
+                self.assertFalse((output / removed).exists(), removed)
 
         recommendations = json.loads(
             (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
@@ -190,11 +205,11 @@ class StaticAssetTests(unittest.TestCase):
             "sample_premium_report_view",
         ):
             self.assertIn(marker, script)
-        for marker in ("data-recommendation-filter", "data-recommendations", "data-recommendation-journal"):
+        for marker in ("data-recommendation-filter", "data-recommendations", "NHẬT KÝ TRẠNG THÁI"):
             self.assertIn(marker, recommendations_page)
         self.assertIn("data-performance-summary", performance_page)
-        self.assertIn("dữ liệu mẫu", performance_page)
-        self.assertIn("Bốn góc nhìn", report_page)
+        self.assertIn("SHADOW", performance_page)
+        self.assertIn("data-stock-report", report_page)
 
         recommendations = json.loads(
             (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
@@ -232,31 +247,27 @@ class StaticAssetTests(unittest.TestCase):
             "ĐÓNG KHUYẾN NGHỊ",
         ):
             self.assertIn(label, script)
-        self.assertIn("Dữ liệu minh họa", script)
+        self.assertIn("Chưa kết nối nguồn thị trường được cấp quyền", script)
         self.assertIn("public/data/recommendations.json", script)
-
-        blocked_markers = {
-            "email": "BLOCKED",
-            "theo-doi": "BACKEND REQUIRED",
-            "tai-khoan": "AUTH BLOCKED",
-        }
-        for route, marker in blocked_markers.items():
-            source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
-            self.assertIn(marker, source, route)
+        with tempfile.TemporaryDirectory() as temp:
+            output = Path(temp) / "pages"
+            build_pages.build(output)
+            for route in ("email", "theo-doi", "tai-khoan", "signup", "pro", "kien-thuc"):
+                self.assertFalse((output / route).exists(), route)
 
     def test_public_positioning_matches_current_horizons_and_pricing(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
-        pricing = (WEBSITE / "pro" / "index.html").read_text(encoding="utf-8")
         for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
             self.assertIn(horizon, homepage)
-        self.assertIn("Cổ phiếu đáng chú ý", homepage)
-        self.assertIn("199.000đ", pricing)
-        self.assertIn("299.000đ/30 ngày", pricing)
+        self.assertIn("BẢNG ĐIỀU HÀNH", homepage)
+        self.assertIn("DỮ LIỆU MẪU", homepage)
+        self.assertNotIn("199.000đ", homepage)
+        self.assertNotIn("CHƯA MỞ BÁN", homepage)
 
     def test_v212_lookup_dynamic_report_today_changes_and_journal_surfaces(self) -> None:
         required_pages = {
-            "kiem-tra-co-phieu": "Nhập mã cần kiểm tra",
-            "co-phieu": "Một mã, bốn góc nhìn",
+            "kiem-tra-co-phieu": "data-stock-search-form",
+            "co-phieu": "data-dynamic-stock-report",
             "thay-doi-hom-nay": "data-today-changes",
         }
         for route, marker in required_pages.items():

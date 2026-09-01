@@ -11,7 +11,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WEBSITE = ROOT / "website"
 DEFAULT_OUTPUT = ROOT / ".pages-site"
-EXCLUDED_NAMES = {"server.py", "__pycache__"}
+EXCLUDED_NAMES = {
+    "server.py",
+    "__pycache__",
+    "kien-thuc",
+    "demo1",
+    "email",
+    "theo-doi",
+    "tai-khoan",
+    "signup",
+    "pro",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -63,21 +73,17 @@ def build(output: Path) -> None:
         output / "public" / "data" / "today-changes.json",
         output / "public" / "data" / "recommendation-journal.json",
         output / "track-record" / "index.html",
+        output / "radar5" / "index.html",
+        output / "breakout" / "index.html",
+        output / "risk" / "index.html",
         output / "nganh" / "index.html",
         output / "phan-tich" / "index.html",
         output / "khuyen-nghi" / "index.html",
         output / "hieu-qua" / "index.html",
-        output / "co-phieu" / "demo1" / "index.html",
         output / "co-phieu" / "index.html",
         output / "kiem-tra-co-phieu" / "index.html",
         output / "thay-doi-hom-nay" / "index.html",
         output / "404.html",
-        output / "email" / "index.html",
-        output / "theo-doi" / "index.html",
-        output / "tai-khoan" / "index.html",
-        output / "kien-thuc" / "index.html",
-        output / "kien-thuc" / "quy-trinh-stockradar" / "index.html",
-        output / "kien-thuc" / "quan-tri-rui-ro" / "index.html",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:

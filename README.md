@@ -1,12 +1,12 @@
 # StockRadar V2.1.2
 
-**Live static demo:** https://nguyenlinhns-arch.github.io/stockradar/
+**Public interface:** https://nguyenlinhns-arch.github.io/stockradar/
 
 StockRadar V2.1.2 is a deliberately focused validation product:
 
 `light full-HOSE scan → ticker lookup / ranking → on-demand deep analysis + cache → recommendation gate → activation / review / performance → deduplicated monitoring`
 
-The repository contains a validation engine, four horizon-specific score profiles, separate recommendation gate, dynamic ticker lookup contract, per-horizon report cache, deterministic activation/review/performance logic, append-only SQLite journal, personalization/email entitlements, ticker-level monitor deduplication, a mobile-first Vietnamese research portal, Knowledge hub, analytics contracts and regression tests.
+The repository contains a validation engine, four horizon-specific score profiles, separate recommendation gate, dynamic ticker lookup contract, per-horizon report cache, deterministic activation/review/performance logic, append-only SQLite journal, personalization/email entitlements, ticker-level monitor deduplication, a mobile-first Vietnamese stock dashboard, internal method references, analytics contracts and regression tests.
 
 Important status: the included market records are labelled `MOCK`. They demonstrate the product and exercise the legacy five-item gate; they are not a live HOSE scan and can never be presented as a real “Top 10 HOSE”. A real release requires a licensed/current data feed, four validated horizon models, full-universe reconciliation, consent/privacy setup and compliance review.
 
@@ -29,7 +29,7 @@ python3 scripts/build_pages.py --output .pages-site
 python3 -m http.server 8081 --directory .pages-site
 ```
 
-The Pages artifact deliberately disables signup/event submission because GitHub Pages cannot run the Python API. See `docs/GITHUB_PAGES_DEPLOYMENT.md` for repository, domain and backend gates.
+The Pages artifact publishes only working read-only product surfaces. Knowledge, architecture explanations, signup, account, watchlist, email and pricing routes stay out of the public build until their production dependencies exist. See `docs/GITHUB_PAGES_DEPLOYMENT.md` for repository, domain and backend gates.
 
 ## Core deliverables
 
@@ -37,7 +37,7 @@ The Pages artifact deliberately disables signup/event submission because GitHub 
 - `STOCKRADAR_BUILD_STATUS.md` — evidence-backed status by workstream.
 - `STOCKRADAR_EXPERIMENTS.md` — append-only experiment registry.
 - `engine/` — data gates, scoring, ranking/recommendation, lookup/cache, personalization, monitoring and immutable ledger.
-- `website/` — lookup-first Home, `/kiem-tra-co-phieu/`, dynamic ticker reports, Today Changes, recommendation journal/history, Performance, paid email, watchlist/account contracts, Knowledge, pricing and onboarding.
+- `website/` — operational Home, `/kiem-tra-co-phieu/`, dynamic ticker reports, Radar/Trigger/Risk, Today Changes, recommendation journal/history, Performance and sector views; non-public future surfaces remain as source references only.
 - `docs/UX_BENCHMARK_VI.md` — patterns learned from established Vietnamese finance products and the boundaries retained for StockRadar.
 - `growth/` — ads, creatives, UTM and analytics.
 - `gpt/` — migration contract for the old GPT prototype.

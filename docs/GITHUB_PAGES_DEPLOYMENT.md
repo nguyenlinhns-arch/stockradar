@@ -8,8 +8,9 @@ Default preview URL: `https://nguyenlinhns-arch.github.io/stockradar/`
 
 - V2.1.2 functional release: `3f61ad6f328d7dedf22bf5370778ede875360a01`.
 - Verified workflow run: `33532527570` — SUCCESS.
-- Static artifact: 26 application routes plus `404.html` dynamic ticker redirect.
+- Static artifact: 12 read-only product routes plus `404.html` dynamic ticker redirect.
 - Public artifact: `data-api-mode="disabled"`, `noindex,nofollow`, MOCK/SHADOW only.
+- Public artifact excludes Knowledge/method articles and service routes that still require auth, persistence, email or billing.
 
 ## What the workflow does
 

@@ -20,9 +20,9 @@ Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
 | Free email restriction | PASS | Tier policy, schema/UI/spec and regression | Production enforcement after auth/email connection |
 | Trial/Paid personalization | PASS | Preferences, limits, content prioritization and UI | Managed auth, verification, consent and delivery provider — BLOCKED |
 | Analytics V2.1.2 | PASS | Search/cache/report/onboarding/holding/journal event allowlists/spec | First-party store, identity/bot filtering and consent |
-| Website V2.1.2 | PASS | Live-demo Home; check-ticker, dynamic report and Today Changes routes; public history and pricing boundary | Real-device/mobile matrix before production |
-| Automated regression | PASS | 79/79 tests; 15 JSON files; JS syntax; 813 CSS brace pairs; 26 routes + 404 | Production adapter/E2E tests |
-| Static GitHub Pages | PASS | Actions run `33532527570`; no-write, noindex, MOCK/SHADOW; primary live flows checked | Production data/auth/compliance remain separately BLOCKED |
+| Website V2.1.2 | PASS | Operational Home; ticker lookup; Radar filters; Trigger/Risk; Today Changes; recommendation, performance, sector and history views; public explanatory/blocked routes removed | Real-device/mobile matrix before production |
+| Automated regression | PASS | 79/79 tests; static build; JS syntax; public-route/link checks | Production adapter/E2E tests |
+| Static GitHub Pages | PASS | 12 read-only product routes + 404; no-write, noindex, MOCK/SHADOW; Knowledge and unavailable service routes excluded | Production data/auth/compliance remain separately BLOCKED |
 | Full current HOSE master/data/rights | BLOCKED | Fixture is explicitly `full_universe=false`, `MOCK` | Licensed current master/price/fundamental/event/corporate-action data and reconciliation |
 | Production anonymous rate limit | BLOCKED | Configurable local reference limiter passes tests | Server-side gateway/WAF/rate limiter; Pages cannot enforce |
 | Auth/watchlist persistence | BLOCKED | Schemas, tier limits and honest UI only | Managed auth, secure DB, threat model and privacy operations |
@@ -33,7 +33,7 @@ Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
 
 ## Shipping conclusion
 
-Research-only V2.1.2 implementation: **PASS**. Functional release commit: `3f61ad6f328d7dedf22bf5370778ede875360a01`.
+Research-only V2.1.2 operational interface: **PASS**.
 
 Production StockRadar, “any current HOSE ticker,” live Top HOSE, production recommendations/performance, email delivery, payment and Ads: **BLOCKED**.
 
