@@ -4,6 +4,13 @@ Target account: `nguyenlinhns-arch`
 Recommended repository: public `stockradar`  
 Default preview URL: `https://nguyenlinhns-arch.github.io/stockradar/`
 
+## Current research release
+
+- V2.1.2 functional release: `3f61ad6f328d7dedf22bf5370778ede875360a01`.
+- Verified workflow run: `33532527570` — SUCCESS.
+- Static artifact: 26 application routes plus `404.html` dynamic ticker redirect.
+- Public artifact: `data-api-mode="disabled"`, `noindex,nofollow`, MOCK/SHADOW only.
+
 ## What the workflow does
 
 Every push to `main`:
@@ -46,4 +53,3 @@ Before collecting leads or running Ads, deploy an HTTPS backend with:
 - privacy notice, retention/deletion operations and consent evidence;
 - an analytics endpoint with the event allowlist;
 - a configured API base URL in the public pages build.
-

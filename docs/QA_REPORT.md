@@ -1,38 +1,62 @@
-# QA Report — StockRadar V2
+# QA Report — StockRadar V2.1.2
 
 Date: 2026-09-01 UTC.
 
-## Automated result
+## Release result
 
-`python -m unittest discover -s engine/tests -v`: **57/57 PASS**.
+Research-only V2.1.2: **PASS**.
 
-Coverage includes full-universe/MOCK gates, four distinct horizons, evidence anti-double-count, score/probability boundary, Recommendation Gate, first post-publication activation, no P/L before activation, corporate-action price/total return, unresolved-rights blocking, benchmark/excess fields, frozen closed results, append-only recommendation events, all required V2 contract documents, analytics/server boundaries, metadata/assets, responsive navigation, static Pages build and 23 application routes plus health/API tests.
+- Functional release commit: `3f61ad6f328d7dedf22bf5370778ede875360a01`.
+- GitHub Actions run: `33532527570` — SUCCESS.
+- Live URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
+- Public mode: `RESEARCH_ONLY · MOCK · SHADOW`, no writes, `noindex,nofollow`.
+
+Production data, all-current-HOSE lookup, recommendations, auth, email, billing, Ads and compliance remain BLOCKED by their documented gates.
+
+## Automated verification
+
+`python -m unittest discover -s engine/tests -v`: **79/79 PASS**.
+
+Coverage includes:
+
+- four distinct horizon models and score/probability boundaries;
+- ranking versus recommendation and the valid no-recommendation state;
+- first post-publication activation, no P/L before activation and frozen closed results;
+- independent new-position/holding assessments;
+- mandatory review schedule and append-only correction/event journal;
+- VN-Index matching-window benchmark fields;
+- Free versus Trial/Paid email entitlements and personalized onboarding;
+- ticker normalization, non-original ticker lookup, cache miss/hit/stale refresh and independent horizon TTL;
+- deduplicated monitoring, subscriber fan-out and active intraday-universe union;
+- Today Changes significance filtering, server rate limiting and partial-data API states;
+- static metadata/assets, truthful data boundaries, responsive navigation and Pages build.
 
 Additional checks:
 
+- deterministic demo build: PASS;
+- Python compilation: PASS;
 - `node --check website/assets/app.js`: PASS;
-- CSS opening/closing braces: 669/669;
-- JSON parsing for recommendation, analytics and GPT regression schemas: PASS;
-- Pages build includes `/hieu-qua/`, disables write API and injects `noindex,nofollow`: PASS.
-
-## Deployment
-
-- Repository: `nguyenlinhns-arch/stockradar`.
-- V2 core commit: `020f22c393c606353319de295ed26ed7af419e6c`.
-- GitHub Actions run: `33526215030` — SUCCESS.
-- Live URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
-- All 23 public routes produced a title and H1, no 404 state and no document-level horizontal overflow at the inspected desktop viewport.
+- JSON parsing: 15/15 files PASS;
+- CSS braces: 813/813 pairs PASS;
+- Pages artifact: 26 routes plus `404.html`, API disabled and `noindex,nofollow` PASS.
 
 ## Live interaction review
 
-- Home: V2/RESEARCH_ONLY chrome, seven-task navigation, ticker search, three public recommendation rows and performance summary rendered. DEMO1 search returned the nine-question report CTA.
-- Khuyến nghị: five lifecycle records rendered. Clicking `Chưa kích hoạt · 1` reduced the table to exactly DEMO2; its activation/entry/P&L are blank/CHƯA KÍCH HOẠT. Wide research columns remain contained in the table's own horizontal scroller.
-- Hiệu quả: six summary cards and five records rendered; one unactivated, two open, two closed. Win rate is 50.00% and states explicitly that only closed records form the denominator.
-- DEMO1: nine answer cards, publication price, activation timestamp, performance entry and +0.79% open P/L rendered; no document overflow.
-- No website-origin console error was observed. Browser-extension metadata errors were excluded because their URL was `chrome-extension://`, not the deployed site.
+At the inspected desktop viewport:
+
+- Home rendered the V2.1.2 lookup-first hero, six-value summary, Radar snapshot and public performance preview.
+- Typing `VC` exposed exactly the `VCI` master-driven option; selecting it returned a four-horizon quick result with licensed-data blocking instead of fabricated price/rank/score.
+- The VCI report rendered partial-data explanations, separate new-position/holding states, no fake recommendation and no fake journal.
+- DEMO1 rendered all four horizons, independent position views, public history, review due/status and two immutable journal events.
+- Today Changes rendered three significant MOCK changes.
+- Recommendations rendered five records; the `Chưa kích hoạt` filter reduced the view to exactly DEMO2. Review due/status columns and 11 journal events were present.
+- `/co-phieu/VCI/` redirected to the generic ticker report and preserved the ticker.
+- `signup/?tier=trial&ticker=VCI` selected Trial and prefilled VCI while preserving the verified-consent email boundary.
+- Unknown `ZZZ` produced the explicit incomplete-master boundary; it did not fabricate a report.
+- The live artifact exposed `data-api-mode="disabled"` and `noindex,nofollow`; no website-origin console warning/error was observed.
 
 ## Remaining QA gates
 
-Local cloud-browser access to `127.0.0.1` was unavailable, so live deployment was used for rendered inspection. The responsive CSS/navigation tests pass, but a real-device/mobile screenshot matrix remains required before production launch.
+The cloud browser cannot access the local `127.0.0.1` preview and does not expose a mobile viewport switch. Responsive CSS and navigation regressions pass, but a real-device mobile screenshot matrix is still required before production approval.
 
-Production QA is not possible until licensed HOSE data, a full-universe adapter, corporate-action/benchmark sources, secure auth/privacy, email/billing services and formal compliance approval exist.
+Production QA cannot begin until licensed HOSE/master/benchmark/corporate-action data, secure backend/cache/queue/rate limiting, auth/privacy, email/billing and formal Vietnamese compliance approval exist.
