@@ -1,86 +1,38 @@
-# QA Report — StockRadar V1
+# QA Report — StockRadar V2
+
+Date: 2026-09-01 UTC.
 
 ## Automated result
 
-Command:
+`python -m unittest discover -s engine/tests -v`: **57/57 PASS**.
 
-```bash
-python3 -m unittest discover -s engine/tests -v
-```
+Coverage includes full-universe/MOCK gates, four distinct horizons, evidence anti-double-count, score/probability boundary, Recommendation Gate, first post-publication activation, no P/L before activation, corporate-action price/total return, unresolved-rights blocking, benchmark/excess fields, frozen closed results, append-only recommendation events, all required V2 contract documents, analytics/server boundaries, metadata/assets, responsive navigation, static Pages build and 23 application routes plus health/API tests.
 
-Result: **47/47 PASS** on 2026-09-01.
+Additional checks:
 
-Coverage includes:
+- `node --check website/assets/app.js`: PASS;
+- CSS opening/closing braces: 669/669;
+- JSON parsing for recommendation, analytics and GPT regression schemas: PASS;
+- Pages build includes `/hieu-qua/`, disables write API and injects `noindex,nofollow`: PASS.
 
-- full-universe and MOCK claim gates;
-- stale/missing/exclusion reconciliation;
-- scoring Coverage and anti-double-count;
-- score ≠ probability and OOS calibration conditions;
-- intraday-volume method;
-- state transition validity;
-- extension/Market/R:R/stop/horizon buy gates;
-- immutable snapshots and corrections;
-- twenty-two public website routes, health, signup and event API;
-- HTML metadata/internal assets;
-- accessible mobile navigation on every page;
-- Knowledge hub, six method guides, the StockRadar decision-workflow guide, required source attribution and method sections;
-- four distinct horizon weight profiles and the immutable recommendation record contract;
-- generated MOCK recommendations covering all four horizons;
-- sector, stock search/report, active recommendations, email, watchlist and account boundary surfaces;
-- four-horizon positioning, conditional Top 10 language and 30-day pricing consistency;
-- absence of the old personal brand in public web assets;
-- professional portal shell, shared data-status tape and truthful Radar unavailable states;
-- 6 Feed and 6 Reels image dimensions.
-
-## GitHub Pages deployment QA
+## Deployment
 
 - Repository: `nguyenlinhns-arch/stockradar`.
-- Workflow: `Verify and deploy StockRadar Pages`.
-- Integration commit `f589fa7923cf67dad00818d0e2b43a73a18a9ed6`.
-- Run `33513499399`: **SUCCESS**.
-- Build, 47-test regression suite, static artifact upload and Pages deploy: **PASS**.
+- V2 core commit: `020f22c393c606353319de295ed26ed7af419e6c`.
+- GitHub Actions run: `33526215030` — SUCCESS.
 - Live URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
-- All 22 public routes returned HTTP 200, including sector, search, active recommendations, DEMO1, email, watchlist/account and the decision-workflow guide.
-- Public recommendations JSON contained five records across all four horizons, with `is_mock=true` and Data Grade `MOCK` only.
-- Public Radar payload remained visibly MOCK, `is_top5_hose=false`, and `SHORTLIST_FROM_AVAILABLE_DATA`.
+- All 23 public routes produced a title and H1, no 404 state and no document-level horizontal overflow at the inspected desktop viewport.
 
-## Live browser review of portal redesign
+## Live interaction review
 
-- Home at 1348px: no horizontal overflow; shared utility/header/data tape present; seven task links; five MOCK Radar rows loaded; neutral portal background and dashboard modules rendered.
-- Radar at 1348px: no horizontal overflow; 937px main workspace plus 305px sidebar; dense table fits its panel; five rows, Vietnamese state labels and four publication-gate cards present.
-- Knowledge hub at 1348px: no horizontal overflow; six method cards; active `Kiến thức` navigation and shared snapshot tape rendered.
-- No site-origin JavaScript error was recorded. A browser-extension metadata error was excluded because it did not originate from the deployed website.
+- Home: V2/RESEARCH_ONLY chrome, seven-task navigation, ticker search, three public recommendation rows and performance summary rendered. DEMO1 search returned the nine-question report CTA.
+- Khuyến nghị: five lifecycle records rendered. Clicking `Chưa kích hoạt · 1` reduced the table to exactly DEMO2; its activation/entry/P&L are blank/CHƯA KÍCH HOẠT. Wide research columns remain contained in the table's own horizontal scroller.
+- Hiệu quả: six summary cards and five records rendered; one unactivated, two open, two closed. Win rate is 50.00% and states explicitly that only closed records form the denominator.
+- DEMO1: nine answer cards, publication price, activation timestamp, performance entry and +0.79% open P/L rendered; no document overflow.
+- No website-origin console error was observed. Browser-extension metadata errors were excluded because their URL was `chrome-extension://`, not the deployed site.
 
-## Live browser review of GPT/stock integration
+## Remaining QA gates
 
-- Home at 1348px: no horizontal overflow; seven main tasks, six-step decision pipeline and five asynchronously loaded Radar rows present.
-- Active recommendations at 1348px: no page overflow; five records, approved Vietnamese states, explicit MOCK boundary and horizontally contained research table present.
-- DEMO1 at 1348px: no page overflow; four horizon tabs, six decision metrics, three mandatory questions, immutable recommendation ID and visible non-real-stock banner present.
-- No site-origin JavaScript error was recorded on these routes. Live review found and corrected the DEMO1 main-navigation active-state mapping.
+Local cloud-browser access to `127.0.0.1` was unavailable, so live deployment was used for rendered inspection. The responsive CSS/navigation tests pass, but a real-device/mobile screenshot matrix remains required before production launch.
 
-## Manual creative review
-
-The 6-up contact sheet was inspected. First render failed small-label contrast; generator colors were corrected and all 12 assets were rendered again. Final creative review: **PASS** for legibility at source resolution and consistent disclaimer.
-
-## Website visual screenshot blocker
-
-The runtime contains the Playwright package but no Chromium executable. The new responsive layout therefore still requires live-browser inspection after deployment; local screenshot QA is **BLOCKED**, not claimed as PASS.
-
-Static and integration checks still passed. Run:
-
-```bash
-python3 website/server.py --port 8765
-STOCKRADAR_QA_URL=http://127.0.0.1:8765 node scripts/visual_qa.cjs
-```
-
-in an environment with Chromium installed. The script checks all 22 public routes at 1440×1000 and 390×844, captures 44 screenshots and fails on console errors or horizontal overflow.
-
-## Production QA not yet possible
-
-- live HOSE data semantic correctness;
-- full-universe reconciliation against an official/current master;
-- alert delivery/idempotency;
-- hosted privacy/consent deletion flow;
-- production analytics attribution;
-- Meta Ads delivery/policy result;
-- custom-domain ownership, DNS and HTTPS configuration for `stockradar.vn`.
+Production QA is not possible until licensed HOSE data, a full-universe adapter, corporate-action/benchmark sources, secure auth/privacy, email/billing services and formal compliance approval exist.

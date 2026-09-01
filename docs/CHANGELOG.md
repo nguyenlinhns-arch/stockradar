@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-09-01 — V2 recommendation lifecycle and performance
+
+- Separated research ranking from recommendation publication with a dedicated gate and fail-closed mode controls.
+- Added immutable publication fields, deterministic first-zone-touch activation, performance entry, open/final/benchmark/excess returns and corporate-action handling.
+- Added append-only recommendation/events/corporate-action/benchmark/manual-override tables and regression coverage for mutation attempts.
+- Rebuilt public value around ticker search, recommendation lifecycle filters, a standalone Performance page and a nine-question stock report.
+- Expanded Knowledge with publication-versus-activation, price/total return, benchmark, track-mode and anti-bias explanations.
+- Added the twelve required V2 product, schema, lifecycle, methodology, rights, email, subscription, analytics, Ads and compliance documents.
+- Replaced the first Ads round with Horizon Top, Ticker Search and Recommendation History; retained V1 Breakout/Risk creative only as historical assets.
+- Migrated GPT instructions/API contract/regressions and analytics events to V2.
+- Expanded regression to 57 tests and live route review to 23 pages.
+
 ## 2026-09-01 — GPT/stock-project integration
 
 - Turned the GPT prototype into a constrained explanation layer over the same Data Grade, horizon, decision-gate and immutable-record contracts used by the engine.

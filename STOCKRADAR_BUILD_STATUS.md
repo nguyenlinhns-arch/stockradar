@@ -1,36 +1,33 @@
-# STOCKRADAR BUILD STATUS
+# STOCKRADAR BUILD STATUS V2
 
-Updated: 2026-09-01 UTC  
-Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`.
+Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`.
 
-| Workstream | Status | Completed | Tested | Failed | Blocked | Next action | Evidence | Files changed |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Source audit | PASS | GPT package, method reference, OS V3.0 changelog and migration commands audited | Source inventory and gap classification | None | Some private GPT/Drive content may be inaccessible | Re-audit only when new source is supplied | `docs/AUDIT_AND_GAP_ANALYSIS.md` | audit docs |
-| Product | PASS | V1.2 freezes four horizons, conditional Top 10/sector ranking, immutable recommendations, stock report, email/watchlist/account contracts, Knowledge and 30-day pricing | Scope checked against current master command | None | Real user data not yet available | Validate the three user jobs with real users | `STOCKRADAR_PRODUCT_SPEC.md` | product spec/website |
-| Minimum engine | PASS | Models, four horizon score profiles, Coverage, anti-double-count, state machine, ranking, buy gate, volume, probability boundary and recommendation schema | 47 automated tests PASS | None | No production data adapter or horizon-matched calibration | Connect licensed provider; calibrate and regression-test each horizon | `engine/stockradar/*`, `engine/schemas/recommendation-record.schema.json`, test output | engine source/schema/tests |
-| Full HOSE data/scanner | BLOCKED | Contract and legacy five-item gate implemented | MOCK is correctly blocked from real Top 10 claims | No production scan attempted | Provider, license, security master, four models and current data absent | Implement adapter/reconciliation, horizon ranking and Top 10 migration | `engine/stockradar/ranking.py`, Product Spec §6–7 | schema/fixture/spec |
-| Track Record | PASS | Immutable SQLite schema, corrections and performance observations | Update/delete and duplicate snapshot tests PASS | None | Real live/shadow history absent | Start shadow ledger after production snapshot | `track-record/schema.sql`, `artifacts/stockradar_demo.sqlite` | ledger/schema |
-| Website MVP local | PASS | Professional finance portal plus sector matrix, stock search, four-horizon DEMO1 report, active recommendations, email schedule, watchlist/account contract, Knowledge hub + 7 guides, Radar/Trigger/Risk/Results/pricing/signup | 47 tests cover 22 public routes, health, assets, metadata, product boundaries, recommendation records and static build; JS syntax/CSS braces PASS | None | Live market data and every auth/email/billing write still require separate services | Deploy and run live route/visual checks | `website/*`, `docs/UX_BENCHMARK_VI.md`, web tests | HTML/CSS/JS/server/docs |
-| Email architecture | PASS | Before/in-session/after/weekly windows, 10:30/11:15/13:30/14:15 scans, P0–P3, idempotency, consent and suppression contract | Static UI/boundary tests PASS | None | Sender, consent operations, unsubscribe, bounce handling and worker absent | Select provider only after privacy/compliance sign-off | `website/email/index.html`, `email/ARCHITECTURE.md` | UI/contract |
-| Auth/watchlist/billing contracts | PASS | Minimal user/consent/session/watchlist schema and append-only verified 30-day grant schema documented | Static UI/boundary tests PASS | None | Managed auth, production DB, payment provider and security review absent | Threat-model and implement on a separate HTTPS backend | `auth/schema.sql`, `billing/schema.sql`, account/watchlist pages | schemas/UI |
-| Lead + event API local | PASS | Consent validation, minimal lead storage, event allowlist | 201/202 success and 400 consent tests PASS | None | Production DB/access controls/privacy operations absent | Choose production backend and retention policy | `website/server.py` | server/tests |
-| Website screenshot QA | TESTING | Earlier Home, Radar and Knowledge hub inspected live at 1348px; 22-route desktop/mobile capture matrix is configured; new surfaces pass structural/responsive regression checks | 47 automated checks PASS; JS syntax and CSS structure PASS | None in automated checks | Local Chromium absent; 44-shot execution unavailable locally | Inspect the deployed new Home, recommendations and DEMO1 report; run the full matrix where Chromium is installed before production launch | `scripts/visual_qa.cjs`, `docs/QA_REPORT.md` | QA script/new portal UI |
-| Creative assets | PASS | 6 concepts × Feed 4:5 + Reels 9:16; contact sheet | Dimensions/content count automated; contact sheet visually inspected and contrast fixed | First label contrast iteration corrected | None | Upload only after ad-account policy gate | `growth/creatives/output/*` | manifest/generator/12 PNGs |
-| Analytics/UTM | PASS | Event schema, funnel, UTM naming, local collector | Server validation and client wiring tested | None | Production analytics destination absent | Connect first-party store + Meta event mapping | `growth/analytics/*` | schema/docs/app.js |
-| Fanpage/organic content | PASS | Brand kit, bio, cover copy, pinned post, 8 seed topics | Old personal brand absent from public website | None | Fanpage creation/account access not used | Create/configure Fanpage in authorized account | `growth/fanpage/*` | brand/pinned post |
-| Ads experiment package | PASS | 3 cells, 6 creatives, 3.15m media plan, reserve, D7 decision rule | Budget/funnel consistency reviewed | None | Ads not launched; account/policy eligibility unknown | Verify Meta account, then launch all cells together | `growth/facebook-ads/*`, matrix | plan/CSV/copy |
-| Ads execution | BLOCKED | Nothing falsely claimed as launched | N/A | None | No authorized Meta Ads execution in this workflow | User/account owner performs or grants appropriate connector | Experiment log remains NOT_STARTED | none |
-| GPT migration | PASS | V1.2 client instructions enforce horizon routing, Top 10 gates, public states, three-question explanation, immutable records and unknown=no action; API contract includes report/recommendation/sector endpoints | Logic aligned with engine and Knowledge workflow | None | No real HTTPS API/Action | Build API, then update the configured GPT from versioned project source | `gpt/*`, decision-workflow guide | GPT docs/website |
-| Legal/compliance | BLOCKED | Product boundary, disclaimer and official-source checklist documented | Primary official sources checked | None | Formal legal opinion/license determination absent | Obtain Vietnamese securities counsel/compliance sign-off | `docs/COMPLIANCE.md` | compliance docs/footer |
-| GitHub Pages deployment | PASS | GPT/stock integration deployed from core commit `f589fa7`; route-active fix follows the same protected build | 47 tests PASS; workflow run 33513499399 SUCCESS; 22/22 live routes HTTP 200; Home/recommendations/DEMO1 browser checks PASS; MOCK-only payload verified | Initial historical run failed because Pages was not enabled; resolved | Lead/event/auth/email/billing writes intentionally disabled on static hosting | Keep workflow green on every `main` update | repository, live URL and run 33513499399 | deploy workflow/source/status docs |
-| Custom domain | BLOCKED | GitHub Pages DNS/verification runbook documented | `stockradar.vn` did not return a verifiable live site in audit | None | Ownership, account verification and DNS access unknown | Verify ownership; attach domain before changing DNS; enable HTTPS | `docs/GITHUB_PAGES_DEPLOYMENT.md` | documentation only |
-| Brand clearance | BLOCKED | Name used per user decision; collision risk logged | Similar international finance brands identified | None | Trademark/confusion search not completed in Vietnam | Conduct name/trademark clearance before scale | decision/audit docs | no external mutation |
+| Workstream | Status | Evidence | Remaining production gate |
+| --- | --- | --- | --- |
+| V2 product contract | PASS | `STOCKRADAR_PRODUCT_SPEC_V2.md` plus the eleven required lifecycle/performance/rights/email/subscription/analytics/ads/compliance specs | Validate with real users without widening claims |
+| Four horizon scoring | PASS | Distinct 100-point profiles and anti-double-count/probability tests | Licensed data and horizon-matched OOS calibration |
+| Recommendation Gate | PASS | Ranking is separated from publish eligibility; extension/data/market/liquidity/event/evidence/horizon gates tested | Calibrate thresholds on approved HOSE dataset |
+| Publication/activation lifecycle | PASS | Deterministic first eligible post-publication zone-touch; unactivated has no entry/P&L | Production timestamp/bar specification and exchange calendar |
+| Performance/corporate action | PASS | Open/final/excess return implementation; split/cash handling; unresolved rights blocks; closed result frozen | Approved corporate-action and benchmark provider |
+| Append-only track record | PASS | Immutable recommendations/events/corrections/manual overrides in SQLite; mutation tests pass | Production database, access control, backups and monitoring |
+| Website V2 | PASS | Home public search/proof, recommendation filters, Performance, nine-question report, sector/Knowledge/email/account/pricing; 23 routes | Live market adapter and production services |
+| Static GitHub Pages | PASS | Core commit `020f22c393c606353319de295ed26ed7af419e6c`; workflow `33526215030` SUCCESS; 23/23 public routes checked; MOCK/SHADOW/noindex/no-write | None for research demo; not a production backend |
+| Automated regression | PASS | 57/57 tests; JS syntax; CSS brace parity; static build | Add production adapter and end-to-end service tests |
+| Live browser QA | PASS | Home, lifecycle filter, Performance and DEMO1 interaction checked; no page overflow at desktop viewport; only browser-extension-origin metadata errors observed | Real-device/mobile visual matrix before production launch |
+| GPT client V2 | PASS | Nine-question explanation, recommendation/activation/performance/mode rules and six new regressions | HTTPS authenticated read API/Action |
+| Analytics V2 | PASS | Canonical event schema/client/server allowlist and privacy rules | Production first-party store, identity/dedup and consent controls |
+| Email architecture | PASS | Pre-session primary email, event/post-session/weekly contracts and scan checkpoints | Sender/provider, consent, unsubscribe, bounce/complaint and worker — BLOCKED |
+| Auth/watchlist | BLOCKED | Minimal schemas and honest unavailable UI | Managed auth, secure production DB, threat model and privacy operations |
+| Billing/subscription | BLOCKED | Free/Advanced entitlements and exact 30-day grant contract; 199k/299k hypotheses | Provider/webhooks, reconciliation, tax/refund/security/compliance |
+| Full HOSE data/rights | BLOCKED | Rights registry/provenance/fail-closed contract | Licensed current data, redistribution/derived-data approval and reconciliation |
+| Compliance/legal | BLOCKED | RESEARCH_ONLY mode and formal review checklist | Authorized Vietnamese legal/compliance approval and documented conditions |
+| Ads first round | BLOCKED | V2 propositions, equal-budget plan and copy draft; old Breakout/Risk retired from first round | Six new approved assets, production events, data rights, compliance and account eligibility |
+| Custom domain/brand | BLOCKED | Pages URL works; brand boundary documented | Domain ownership/DNS/HTTPS and trademark/confusion clearance |
 
 ## Shipping conclusion
 
-Local validation MVP: **PASS**.  
-Production StockRadar / real Top 10 HOSE / production alerts / paid Advanced: **BLOCKED**.
+Research-only V2 demo: **PASS**.
 
-The next critical path is:
+Production StockRadar, live Top HOSE, production recommendations/performance, email delivery, paid Advanced and Ads: **BLOCKED**.
 
-`licensed HOSE data → full-universe adapter → four horizon calibration/Top 10 → one shadow snapshot → production auth/email/privacy → compliance/Meta eligibility → Ads test`.
+Critical path: `licensed data/rights → full-universe reconciliation → four-horizon calibration → forward SHADOW history → secure auth/email/billing/privacy → formal compliance → PRODUCTION_APPROVED`.
