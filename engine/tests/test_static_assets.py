@@ -111,6 +111,25 @@ class StaticAssetTests(unittest.TestCase):
             self.assertIn("data-nav-menu", source, html)
             self.assertIn('href="kien-thuc/"', source, html)
 
+    def test_professional_portal_shell_and_truthful_radar_workspace(self) -> None:
+        homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
+        radar = (WEBSITE / "radar5" / "index.html").read_text(encoding="utf-8")
+        script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
+        styles = (WEBSITE / "assets" / "styles.css").read_text(encoding="utf-8")
+
+        for expected in ("dashboard-grid", "content-columns", "research-list", "sector-panel"):
+            self.assertIn(expected, homepage)
+        for expected in ("radar-workspace-grid", "truth-strip", "gate-grid"):
+            self.assertIn(expected, radar)
+        self.assertIn("Không phải dữ liệu cổ phiếu thật", radar)
+        self.assertIn("Không dựng thứ hạng giả", homepage)
+        self.assertIn("portal-utility", script)
+        self.assertIn("market-tape", script)
+        self.assertIn("Chưa kết nối dữ liệu thị trường thật", script)
+        self.assertIn("const stateLabels", script)
+        self.assertIn(".market-tape", styles)
+        self.assertIn(".radar-workspace", styles)
+
     def test_public_positioning_matches_current_horizons_and_pricing(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
         pricing = (WEBSITE / "pro" / "index.html").read_text(encoding="utf-8")

@@ -7,6 +7,88 @@
     'knowledge_view', 'method_view', 'horizon_select'
   ]);
 
+  const stateLabels = {
+    WATCH: 'THEO DÕI',
+    NEAR_TRIGGER: 'GẦN KÍCH HOẠT',
+    READY: 'SẴN SÀNG',
+    TRIGGERED: 'ĐÃ KÍCH HOẠT',
+    INVALIDATED: 'MẤT HIỆU LỰC',
+    EXTENDED: 'KÉO GIÃN',
+    EXPIRED: 'HẾT HẠN',
+    UNCHANGED: 'KHÔNG ĐỔI'
+  };
+
+  const marketLabels = {
+    GREEN: 'XANH · THUẬN LỢI',
+    YELLOW: 'VÀNG · THẬN TRỌNG',
+    RED: 'ĐỎ · PHÒNG THỦ'
+  };
+
+  function stateLabel(value) {
+    return stateLabels[value] || String(value || '—').replaceAll('_', ' ');
+  }
+
+  function marketLabel(value) {
+    return marketLabels[value] || String(value || '—').replaceAll('_', ' ');
+  }
+
+  function statusLabel(value) {
+    if (value === 'SHORTLIST_FROM_AVAILABLE_DATA') return 'DANH SÁCH MINH HỌA';
+    return String(value || '—').replaceAll('_', ' ');
+  }
+
+  function formatSnapshot(value) {
+    if (!value) return '—';
+    return new Intl.DateTimeFormat('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: false
+    }).format(new Date(value));
+  }
+
+  function mountPortalShell() {
+    const header = document.querySelector('.site-header');
+    if (!header || document.querySelector('.portal-utility')) return;
+
+    const menu = header.querySelector('[data-nav-menu]');
+    if (menu) {
+      const route = location.pathname.replace(/\/+$/, '');
+      const items = [
+        ['radar5/', 'Radar cổ phiếu', '/radar5'],
+        ['breakout/', 'Điểm kích hoạt', '/breakout'],
+        ['risk/', 'Cảnh báo', '/risk'],
+        ['kien-thuc/', 'Kiến thức', '/kien-thuc'],
+        ['track-record/', 'Kết quả', '/track-record'],
+        ['pro/', 'Gói PRO', '/pro']
+      ];
+      menu.innerHTML = items.map(([href, label, match]) =>
+        `<a href="${href}"${route.endsWith(match) || route.includes(`${match}/`) ? ' aria-current="page"' : ''}>${label}</a>`
+      ).join('') + '<a class="button button-primary button-small" href="radar5/">Mở Radar</a>';
+    }
+
+    const utility = document.createElement('div');
+    utility.className = 'portal-utility';
+    utility.innerHTML = `
+      <div class="container portal-utility-inner">
+        <span><strong>STOCKRADAR RESEARCH</strong><i></i>Sàng lọc cổ phiếu HOSE theo mục tiêu</span>
+        <span class="portal-utility-note">V1 kiểm chứng sản phẩm · Không phải khuyến nghị đầu tư</span>
+      </div>`;
+
+    const tape = document.createElement('section');
+    tape.className = 'market-tape';
+    tape.setAttribute('aria-label', 'Trạng thái dữ liệu StockRadar');
+    tape.innerHTML = `
+      <div class="container market-tape-inner" aria-live="polite">
+        <div class="tape-heading"><span class="live-dot" aria-hidden="true"></span><span>RADAR SNAPSHOT</span><strong>MÔ PHỎNG</strong></div>
+        <div class="tape-item"><span>Trạng thái demo</span><strong data-market>—</strong></div>
+        <div class="tape-item"><span>Độ phủ fixture</span><strong data-coverage>—</strong></div>
+        <div class="tape-item tape-snapshot"><span>Cập nhật</span><strong data-snapshot>—</strong></div>
+        <div class="tape-disclaimer">Chưa kết nối dữ liệu thị trường thật</div>
+      </div>`;
+
+    header.before(utility);
+    header.after(tape);
+  }
+
   function siteUrl(path) {
     return new URL(String(path).replace(/^\/+/, ''), document.baseURI).toString();
   }
@@ -84,26 +166,28 @@
       <div class="radar-row">
         <span class="rank">${item.rank}</span>
         <div><div class="ticker">${item.ticker}</div><div class="setup">${item.setup}</div></div>
-        <div style="text-align:right"><div class="score">${item.score}</div><span class="state ${stateClass(item.state)}">${item.state.replaceAll('_', ' ')}</span></div>
+        <div class="radar-row-status"><div class="score">${item.score}</div><span class="state ${stateClass(item.state)}">${stateLabel(item.state)}</span></div>
       </div>`).join('');
   }
 
   function renderRadarTable(target, data) {
     if (!target) return;
     target.innerHTML = `
-      <div class="table-row table-head"><span>Hạng</span><span>Mã / Setup</span><span>Score</span><span>State</span><span>Thay đổi</span></div>
+      <div class="table-row table-head"><span>Hạng</span><span>Mã / thiết lập</span><span>Điểm</span><span>Trạng thái</span><span>Giá demo</span><span>Cách pivot</span><span>Thay đổi</span></div>
       ${data.items.map(item => `
         <article class="table-row" data-ticker="${item.ticker}">
           <strong class="rank">#${item.rank}</strong>
           <div><div class="table-ticker">${item.ticker}</div><div class="setup">${item.setup} · ${item.reason}</div></div>
           <strong class="score">${item.score}</strong>
-          <span class="state ${stateClass(item.state)}">${item.state.replaceAll('_', ' ')}</span>
-          <span class="change ${item.state_change === 'UNCHANGED' ? 'unchanged' : ''}">${item.state_change.replaceAll('_', ' ')}</span>
+          <span><span class="state ${stateClass(item.state)}">${stateLabel(item.state)}</span></span>
+          <span class="demo-price">${Number(item.current_price).toLocaleString('vi-VN')}</span>
+          <span class="pivot-distance">${Number(item.distance_to_pivot_pct).toLocaleString('vi-VN')}%</span>
+          <span class="change ${item.state_change === 'UNCHANGED' ? 'unchanged' : ''}">${item.state_change === 'UNCHANGED' ? stateLabel(item.state_change) : item.state_change.split('→').map(stateLabel).join(' → ')}</span>
         </article>`).join('')}`;
   }
 
   async function loadRadar() {
-    const targets = document.querySelectorAll('[data-radar-list], [data-radar-table]');
+    const targets = document.querySelectorAll('[data-radar-list], [data-radar-table], [data-market], [data-coverage], [data-snapshot], [data-grade], [data-status]');
     if (!targets.length) return;
     try {
       const response = await fetch(siteUrl('public/data/radar.json'), { cache: 'no-store' });
@@ -111,11 +195,11 @@
       const data = await response.json();
       document.querySelectorAll('[data-radar-list]').forEach(el => renderMiniRadar(el, data));
       document.querySelectorAll('[data-radar-table]').forEach(el => renderRadarTable(el, data));
-      document.querySelectorAll('[data-market]').forEach(el => el.textContent = data.market_regime);
+      document.querySelectorAll('[data-market]').forEach(el => el.textContent = marketLabel(data.market_regime));
       document.querySelectorAll('[data-coverage]').forEach(el => el.textContent = `${data.snapshot.universe_coverage_pct}%`);
-      document.querySelectorAll('[data-snapshot]').forEach(el => el.textContent = new Date(data.snapshot.as_of).toLocaleString('vi-VN'));
+      document.querySelectorAll('[data-snapshot]').forEach(el => el.textContent = formatSnapshot(data.snapshot.as_of));
       document.querySelectorAll('[data-grade]').forEach(el => el.textContent = data.snapshot.data_grade);
-      document.querySelectorAll('[data-status]').forEach(el => el.textContent = data.status.replaceAll('_', ' '));
+      document.querySelectorAll('[data-status]').forEach(el => el.textContent = statusLabel(data.status));
       track('radar_view', { status: data.status, is_mock: data.is_mock });
     } catch (error) {
       targets.forEach(el => el.innerHTML = `<div class="empty">${error.message}</div>`);
@@ -129,13 +213,13 @@
       const response = await fetch(siteUrl('public/data/track-record.json'), { cache: 'no-store' });
       const data = await response.json();
       target.innerHTML = `
-        <div class="table-row table-head"><span>Hạng</span><span>Mã</span><span>Score</span><span>State</span><span>Snapshot</span></div>
+        <div class="table-row history-row table-head"><span>Hạng</span><span>Mã</span><span>Điểm</span><span>Trạng thái</span><span>Snapshot</span></div>
         ${data.rows.map(row => `
-          <div class="table-row">
+          <div class="table-row history-row">
             <strong class="rank">#${row.rank}</strong>
-            <div><div class="table-ticker">${row.ticker}</div><div class="setup">${row.release_status}</div></div>
+            <div><div class="table-ticker">${row.ticker}</div><div class="setup">${statusLabel(row.release_status)}</div></div>
             <strong class="score">${row.score}</strong>
-            <span class="state ${stateClass(row.state)}">${row.state.replaceAll('_', ' ')}</span>
+            <span><span class="state ${stateClass(row.state)}">${stateLabel(row.state)}</span></span>
             <span class="change">${new Date(row.as_of).toLocaleDateString('vi-VN')}</span>
           </div>`).join('')}`;
       track('track_record_view', { is_mock: data.is_mock });
@@ -215,6 +299,7 @@
   document.addEventListener('DOMContentLoaded', () => {
     getUtm(); retentionEvents();
     track('landing_view');
+    mountPortalShell();
     wireNavigation();
     if (/(^|\/)pro\/?$/.test(location.pathname)) track('pro_page_view');
     if (document.body.dataset.pageKind === 'knowledge-hub') track('knowledge_view');

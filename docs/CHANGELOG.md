@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-01 — Professional finance-portal interface
+
+- Rebuilt the visual system from a dark marketing layout into a compact Vietnamese finance-research portal with a neutral canvas, navy information hierarchy and restrained status colors.
+- Added a shared utility bar, consistent task navigation and a data-status tape to every route.
+- Redesigned Home around a Radar workspace, market-state sidebar, four goal tabs, research feed and an honest locked sector-ranking module.
+- Redesigned Radar with a dense seven-column research table, Vietnamese state labels, legend, snapshot metadata and an explicit four-part Top 10 publication gate.
+- Kept all fixture values visibly MOCK and avoided fake indices, fake news or inferred real-market rankings.
+- Added regression checks for the portal shell, Radar workspace and truthful unavailable states.
+
 ## 2026-09-01 — Four-horizon positioning and Knowledge hub
 
 - Reframed the homepage around Short, Medium, Long and Accumulation goals.

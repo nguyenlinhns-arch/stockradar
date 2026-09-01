@@ -1,16 +1,76 @@
 <!doctype html>
-<html lang="vi" data-api-mode="auto"><head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Radar ưu tiên StockRadar — danh sách chọn lọc theo mục tiêu đầu tư, chỉ công bố Top 10 khi dữ liệu toàn HOSE đạt chuẩn."><title>Radar ưu tiên — StockRadar</title><link rel="icon" href="assets/logo.svg"><link rel="stylesheet" href="assets/styles.css"><script src="assets/app.js" defer></script></head>
+<html lang="vi" data-api-mode="auto">
+<head>
+  <base href="../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Radar ưu tiên StockRadar — danh sách nghiên cứu theo mục tiêu, chỉ công bố Top 10 khi dữ liệu toàn HOSE đạt chuẩn.">
+  <title>Radar cổ phiếu — StockRadar</title>
+  <link rel="icon" href="assets/logo.svg">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
 <body data-proposition="radar5">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
-  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/" aria-current="page">Radar</a><a href="kien-thuc/">Kiến thức</a><a href="risk/">Cảnh báo</a><a href="track-record/">Kết quả</a><a href="pro/">Gói PRO</a><a class="button button-primary button-small" href="signup/?proposition=radar5">Nhận Radar</a></nav></div></header>
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button>
+      <nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/" aria-current="page">Radar cổ phiếu</a><a href="breakout/">Điểm kích hoạt</a><a href="risk/">Cảnh báo</a><a href="kien-thuc/">Kiến thức</a><a href="track-record/">Kết quả</a><a href="pro/">Gói PRO</a><a class="button button-primary button-small" href="signup/?proposition=radar5">Nhận Radar</a></nav>
+    </div>
+  </header>
+
   <main id="content">
-    <section class="page-hero"><div class="container"><span class="eyebrow">Radar ưu tiên</span><h1>Ít cổ phiếu.<br><span>Đủ bằng chứng.</span></h1><p>Mục tiêu sản phẩm là Top 10 riêng cho Ngắn hạn, Trung hạn, Dài hạn và Tích sản. Chỉ được gọi “Top 10 HOSE” khi độ phủ toàn sàn, độ mới, cùng snapshot, điều chỉnh giá và nhật ký loại trừ đều đạt chuẩn.</p><div class="status-banner"><strong>BẢN DEMO:</strong> dữ liệu hiện tại chỉ minh hoạ 5 mã, không phải dữ liệu HOSE thật. Engine chủ động trả <span data-status>DANH SÁCH RÚT GỌN</span>, không gọi Top 10.</div></div></section>
-    <section class="section" style="padding-top:28px"><div class="container">
-      <div class="data-meta"><div class="stat-card"><div class="stat-label">Market</div><div class="stat-value" data-market>—</div></div><div class="stat-card"><div class="stat-label">Universe coverage</div><div class="stat-value" data-coverage>—</div></div><div class="stat-card"><div class="stat-label">Data grade</div><div class="stat-value" data-grade>—</div></div><div class="stat-card"><div class="stat-label">Snapshot</div><div class="stat-value" data-snapshot>—</div></div></div>
-      <div class="radar-table loading" data-radar-table><div class="empty">Đang tải Radar…</div></div>
-      <div class="hero-actions" style="margin-top:28px"><a class="button button-primary" href="signup/?proposition=radar5">Nhận Radar sau phiên</a><a class="button button-secondary" href="kien-thuc/">Hiểu phương pháp</a><a class="button button-secondary" href="track-record/">Kiểm tra lịch sử</a></div>
-    </div></section>
-    <section class="section section-muted"><div class="container"><span class="eyebrow">Cổng công khai</span><h2>Không đủ dữ liệu thì không mượn chữ “Top 10”.</h2><div class="grid-3"><div class="feature-card"><div class="feature-number">1</div><h3>Toàn bộ HOSE</h3><p>Đủ danh mục chứng khoán, đối soát, nhật ký loại trừ và độ phủ.</p></div><div class="feature-card"><div class="feature-number">2</div><h3>Cùng thời điểm</h3><p>Giá, khối lượng, lịch giao dịch và sự kiện doanh nghiệp cùng snapshot.</p></div><div class="feature-card"><div class="feature-number">3</div><h3>Đủ bằng chứng</h3><p>Điểm có độ phủ, không đếm trùng và không giả thành xác suất thắng.</p></div></div></div></section>
+    <section class="page-heading">
+      <div class="container page-heading-inner">
+        <div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Radar cổ phiếu</span></nav><h1>Radar cổ phiếu theo mục tiêu</h1><p>Thu hẹp danh sách nghiên cứu bằng điểm số, trạng thái và lý do có thể kiểm tra.</p></div>
+        <div class="page-heading-actions"><span class="data-pill">Dữ liệu mô phỏng</span><a class="button button-primary button-small" href="signup/?proposition=radar5">Nhận cập nhật</a></div>
+      </div>
+    </section>
+
+    <section class="radar-workspace">
+      <div class="container radar-workspace-grid">
+        <div class="workspace-panel">
+          <header class="radar-toolbar">
+            <div><span class="panel-label">BỘ XẾP HẠNG</span><h2>Ưu tiên ngắn hạn · 5–20 phiên</h2></div>
+            <div class="toolbar-meta"><span>Trạng thái <strong data-status>Đang tải</strong></span><span>Data grade <strong data-grade>—</strong></span></div>
+          </header>
+          <div class="horizon-tabs horizon-tabs-wide" aria-label="Chọn mục tiêu đầu tư">
+            <a class="horizon-tab is-active" href="radar5/" aria-current="page"><span>5–20 phiên</span>Ngắn hạn</a>
+            <a class="horizon-tab" href="kien-thuc/#trung-han"><span>1–6 tháng</span>Trung hạn <b>Phương pháp</b></a>
+            <a class="horizon-tab" href="kien-thuc/#dai-han"><span>6–18 tháng</span>Dài hạn <b>Phương pháp</b></a>
+            <a class="horizon-tab" href="kien-thuc/#tich-san"><span>2–5 năm+</span>Tích sản <b>Phương pháp</b></a>
+          </div>
+          <div class="truth-strip"><div><strong>BẢN DEMO · 5 MÃ FIXTURE</strong><span>Không phải dữ liệu cổ phiếu thật, không phải Top 10 HOSE.</span></div><a href="#cong-du-lieu">Kiểm tra cổng công bố</a></div>
+          <div class="radar-table loading" data-radar-table><div class="empty">Đang tải Radar…</div></div>
+          <footer class="panel-foot"><span>Snapshot <strong data-snapshot>—</strong></span><span>Độ phủ fixture <strong data-coverage>—</strong></span><span>Sàn mục tiêu <strong>HOSE</strong></span></footer>
+        </div>
+
+        <aside class="dashboard-sidebar radar-sidebar">
+          <section class="side-panel market-regime-panel"><div class="side-panel-head"><span>BUY GATE MÔ PHỎNG</span><i class="status-light"></i></div><strong class="regime-value" data-market>—</strong><p>Trạng thái chỉ minh hoạ cách hệ thống tăng hoặc giảm mức ưu tiên khi bối cảnh đổi.</p></section>
+          <section class="side-panel legend-panel"><div class="side-panel-head"><span>CHÚ GIẢI TRẠNG THÁI</span></div><div class="legend-list"><div><span class="state state-watch">THEO DÕI</span><p>Cần thêm bằng chứng.</p></div><div><span class="state state-near-trigger">GẦN KÍCH HOẠT</span><p>Đang tiến gần pivot.</p></div><div><span class="state state-ready">SẴN SÀNG</span><p>Đã qua các cổng hiện tại.</p></div><div><span class="state state-invalidated">MẤT HIỆU LỰC</span><p>Điều kiện không còn đúng.</p></div></div></section>
+          <section class="side-panel"><div class="side-panel-head"><span>ĐỌC ĐÚNG ĐIỂM</span></div><strong>Score = độ mạnh bằng chứng</strong><p>Điểm cao hơn giúp ưu tiên nghiên cứu. Nó không phải xác suất tăng giá hay cam kết lợi nhuận.</p><a href="kien-thuc/">Hiểu phương pháp →</a></section>
+        </aside>
+      </div>
+    </section>
+
+    <section class="portal-section section-muted" id="cong-du-lieu">
+      <div class="container">
+        <header class="section-title-row"><div><span class="panel-label">CỔNG CÔNG BỐ</span><h2>Khi nào mới được gọi “Top 10 HOSE”?</h2><p>Mọi điều kiện dưới đây phải cùng đạt, không chỉ riêng mô hình xếp hạng.</p></div></header>
+        <div class="gate-grid">
+          <article><span>01</span><h3>Universe đầy đủ</h3><p>Danh mục HOSE, mã niêm yết, lịch giao dịch và nhật ký loại trừ được đối soát.</p><b>Hiện tại: CHƯA ĐẠT</b></article>
+          <article><span>02</span><h3>Snapshot đồng nhất</h3><p>Giá, khối lượng, sự kiện doanh nghiệp và dữ liệu cơ bản phải cùng thời điểm.</p><b>Hiện tại: CHƯA ĐẠT</b></article>
+          <article><span>03</span><h3>Decision grade</h3><p>Dữ liệu có nguồn, độ mới, điều chỉnh giá và kiểm tra chất lượng đủ để ra quyết định.</p><b>Hiện tại: MOCK</b></article>
+          <article><span>04</span><h3>Lịch sử bất biến</h3><p>Mọi thay đổi và bản sửa được ghi lại; không sửa kết quả sau khi đã biết diễn biến.</p><b>Khung kỹ thuật: SẴN SÀNG</b></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="portal-section">
+      <div class="container compact-cta"><div><span class="panel-label">BƯỚC TIẾP THEO</span><h2>Hiểu vì sao mã được chọn trước khi theo dõi.</h2></div><div><a class="button button-secondary" href="kien-thuc/">Đọc phương pháp</a><a class="button button-primary" href="track-record/">Kiểm tra kết quả</a></div></div>
+    </section>
   </main>
+
   <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="kien-thuc/">Kiến thức</a><a href="track-record/">Lịch sử kết quả</a><a href="pro/">Gói dịch vụ</a></div></div><p class="disclaimer">Bản demo chỉ minh hoạ luồng sản phẩm, không chứa Top 10 HOSE thật và không phải khuyến nghị mua bán.</p></div></footer>
-</body></html>
+</body>
+</html>

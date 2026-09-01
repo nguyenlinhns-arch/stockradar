@@ -8,7 +8,7 @@ Command:
 python3 -m unittest discover -s engine/tests -v
 ```
 
-Result: **41/41 PASS** on 2026-09-01.
+Result: **42/42 PASS** on 2026-09-01.
 
 Coverage includes:
 
@@ -26,6 +26,7 @@ Coverage includes:
 - Knowledge hub, six method guides, required source attribution and method sections;
 - four-horizon positioning, conditional Top 10 language and 30-day pricing consistency;
 - absence of the old personal brand in public web assets;
+- professional portal shell, shared data-status tape and truthful Radar unavailable states;
 - 6 Feed and 6 Reels image dimensions.
 
 ## GitHub Pages deployment QA
@@ -40,13 +41,15 @@ Coverage includes:
 - Public homepage contained the expected four-horizon/Top 10/pricing copy and had `data-api-mode="disabled"` plus `noindex,nofollow`.
 - Public Radar payload remained visibly MOCK, `is_top5_hose=false`, and `SHORTLIST_FROM_AVAILABLE_DATA`.
 
-## Live browser review
+## Previous live browser review
 
 - Home at 1363×936: no horizontal overflow; expected title/H1; four horizon cards; six method links; five MOCK Radar rows; desktop task navigation visible.
 - Knowledge hub: no horizontal overflow; six method cards; four horizon explanations; five method-to-engine table rows.
 - CANSLIM/SEPA article: no horizontal overflow; five contents links; five article sections; StockRadar-application and source sections present.
 - Navigation from Home → Knowledge → CANSLIM/SEPA succeeded through visible links.
 - No site-origin JavaScript error was recorded. Browser-extension metadata errors were excluded because they did not originate from the deployed website.
+
+The professional portal redesign introduced afterward requires a fresh live Home/Radar review after its deployment; the previous visual result is not reused as evidence for the new interface.
 
 ## Manual creative review
 
