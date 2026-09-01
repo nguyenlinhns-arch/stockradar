@@ -314,7 +314,7 @@
   function renderRecommendations(target, data, filter = 'ALL') {
     const items = data.items.filter(item => filter === 'ALL' || lifecycleGroup(item) === filter);
     target.innerHTML = `
-      <div class="rec-row rec-head"><span>Mã</span><span>Kỳ hạn</span><span>Công bố</span><span>Kích hoạt</span><span>Vùng mua</span><span>Entry hiệu quả</span><span>Giá hiện tại / đóng</span><span>Lãi / lỗ</span><span>Mục tiêu</span><span>Rủi ro</span><span>Trạng thái</span></div>
+      <div class="rec-row rec-head"><span>Mã</span><span>Kỳ hạn</span><span>Công bố</span><span>Kích hoạt</span><span>Vùng mua</span><span>Entry hiệu quả</span><span>Giá hiện tại / đóng</span><span>Lãi / lỗ</span><span>Mục tiêu</span><span>Rủi ro</span><span>Review due</span><span>Review</span><span>Trạng thái</span></div>
       ${items.map(item => {
         const performance = performanceValue(item);
         const displayPrice = performance.group === 'CLOSED' ? item.close_price : item.current_price;
@@ -330,6 +330,8 @@
             <strong class="performance-cell ${returnClass(performance.value)}">${performance.label}</strong>
             <span>${formatPrice(item.target_price)}</span>
             <span>${item.stop_loss == null ? 'Theo luận điểm' : formatPrice(item.stop_loss)}<small>${item.risk_level}</small></span>
+            <span>${formatSnapshot(item.review_due_at)}</span>
+            <span>${escapeHtml(item.review_status || 'PENDING')}<small>${escapeHtml(item.review_decision || 'Chưa có quyết định')}</small></span>
             <span><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span></span>
           </article>`;
       }).join('') || '<div class="empty">Không có record trong nhóm này.</div>'}`;
@@ -539,7 +541,17 @@
     if (!items.length) return '<div class="empty">Chưa có recommendation được công bố cho mã này. Không tạo record để lấp chỗ trống.</div>';
     return `<div class="ticker-history-list">${items.map(item => {
       const performance = performanceValue(item);
-      return `<article><div><strong>${escapeHtml(item.ticker)}</strong><span>${horizonLabels[item.horizon]}</span></div><span>${formatDate(item.publication_date)}</span><span>${item.activation_timestamp ? formatDate(item.activation_timestamp) : 'Chưa kích hoạt'}</span><span>${formatPrice(item.performance_entry_price)}</span><span>${formatPrice(performance.group === 'CLOSED' ? item.close_price : item.current_price)}</span><b class="${returnClass(performance.value)}">${performance.label}</b><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span></article>`;
+      return `<article>
+        <div><span>Mã / kỳ hạn</span><strong>${escapeHtml(item.ticker)}</strong><small>${horizonLabels[item.horizon]}</small></div>
+        <div><span>Công bố</span><strong>${formatDate(item.publication_date)}</strong></div>
+        <div><span>Kích hoạt</span><strong>${item.activation_timestamp ? formatDate(item.activation_timestamp) : 'Chưa kích hoạt'}</strong></div>
+        <div><span>Entry</span><strong>${formatPrice(item.performance_entry_price)}</strong></div>
+        <div><span>Hiện tại / đóng</span><strong>${formatPrice(performance.group === 'CLOSED' ? item.close_price : item.current_price)}</strong></div>
+        <div><span>Kết quả</span><b class="${returnClass(performance.value)}">${performance.label}</b></div>
+        <div><span>Review due</span><strong>${formatSnapshot(item.review_due_at)}</strong></div>
+        <div><span>Review</span><strong>${escapeHtml(item.review_status || 'PENDING')}</strong><small>${escapeHtml(item.review_decision || 'Chưa có quyết định')}</small></div>
+        <div><span>Trạng thái</span><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span></div>
+      </article>`;
     }).join('')}</div>`;
   }
 

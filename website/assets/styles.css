@@ -403,7 +403,7 @@ img { max-width: 100%; }
 .recommendation-filters { margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 7px; }
 .recommendation-filters button { min-height: 35px; padding: 0 13px; border: 1px solid var(--line-dark); border-radius: 3px; color: #43586a; background: #fff; font-size: 10px; font-weight: 820; cursor: pointer; }
 .recommendation-filters button:hover, .recommendation-filters button.is-active { border-color: var(--navy); color: #fff; background: var(--navy); }
-.rec-row { min-width: 1450px; min-height: 72px; padding: 0 14px; display: grid; grid-template-columns: 90px 100px 105px 130px 95px 90px 110px 115px 75px 105px 170px; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); color: #3f5365; font-size: 11px; }
+.rec-row { min-width: 1740px; min-height: 72px; padding: 0 14px; display: grid; grid-template-columns: 90px 100px 105px 130px 95px 90px 110px 115px 75px 105px 130px 120px 170px; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); color: #3f5365; font-size: 11px; }
 .rec-row:last-child { border-bottom: 0; }
 .rec-row:hover:not(.rec-head) { background: #f8fafc; }
 .rec-row.rec-head { min-height: 40px; color: #d8e5ef; background: var(--navy); font-size: 8px; font-weight: 850; letter-spacing: .06em; text-transform: uppercase; }
@@ -896,8 +896,10 @@ img { max-width: 100%; }
 .ticker-history h2, .journal-panel h2, .public-journal h2 { margin: 4px 0 5px; color: var(--navy); }
 .ticker-history header a { color: var(--blue); font-size: 11px; font-weight: 800; }
 .ticker-history-list { margin-top: 14px; overflow-x: auto; }
-.ticker-history-list article { min-width: 900px; min-height: 58px; padding: 0 12px; display: grid; grid-template-columns: 120px 90px 110px 90px 90px 90px 170px; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); font-size: 10px; }
-.ticker-history-list article > div span { display: block; color: var(--muted); font-size: 8px; }
+.ticker-history-list article { min-width: 1240px; min-height: 72px; padding: 0 12px; display: grid; grid-template-columns: 120px 100px 115px 80px 110px 90px 145px 130px 175px; gap: 12px; align-items: center; border-bottom: 1px solid var(--line); font-size: 10px; }
+.ticker-history-list article > div > span:first-child { display: block; margin-bottom: 4px; color: var(--muted); font-size: 8px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+.ticker-history-list article > div strong, .ticker-history-list article > div b { display: block; color: var(--navy); }
+.ticker-history-list article > div small { display: block; margin-top: 2px; color: var(--muted-2); font-size: 8px; }
 .journal-panel ol, .journal-timeline ol { margin: 15px 0 0; padding: 0; list-style: none; }
 .journal-panel li { min-height: 74px; padding: 12px 0 12px 155px; position: relative; border-bottom: 1px solid var(--line); }
 .journal-panel time { position: absolute; left: 0; top: 15px; color: var(--muted); font-size: 10px; }
