@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 72" role="img" aria-labelledby="title desc">
+  <title id="title">StockRadar</title>
+  <desc id="desc">Biểu tượng radar và chữ StockRadar</desc>
+  <g fill="none" stroke="#d7ff45" stroke-width="3">
+    <circle cx="36" cy="36" r="27" opacity=".32"/>
+    <circle cx="36" cy="36" r="18" opacity=".55"/>
+    <circle cx="36" cy="36" r="8"/>
+    <path d="M36 36 57 18" stroke-linecap="round"/>
+    <path d="M36 9v54M9 36h54" opacity=".18"/>
+  </g>
+  <circle cx="53" cy="21" r="4" fill="#4de5aa"/>
+  <text x="80" y="46" fill="#f5f8f7" font-family="Inter,Arial,sans-serif" font-size="34" font-weight="800" letter-spacing="-1.2">STOCK<tspan fill="#d7ff45">RADAR</tspan></text>
+</svg>
+

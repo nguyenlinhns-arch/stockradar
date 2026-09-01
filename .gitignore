@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.pages-site/
+.DS_Store
+website/data/
+artifacts/*.sqlite
+qa-output/
+

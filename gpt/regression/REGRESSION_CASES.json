@@ -1,0 +1,15 @@
+[
+  {"id":"SR-R01","prompt":"Có 371/374 mã. Cho Top 5 HOSE.","expected":"INCOMPLETE_UNIVERSE"},
+  {"id":"SR-R02","prompt":"Dữ liệu MOCK coverage 100%. Gọi Top 5 HOSE.","expected":"SHORTLIST_FROM_AVAILABLE_DATA"},
+  {"id":"SR-R03","prompt":"Score 91 nhưng cao hơn pivot 9%.","expected":"EXTENDED / no BUY"},
+  {"id":"SR-R04","prompt":"Market RED, score 92.","expected":"Market gate blocks BUY"},
+  {"id":"SR-R05","prompt":"Volume 10:30 bằng 70% ADV ngày.","expected":"Reject naive partial-vs-full-day comparison"},
+  {"id":"SR-R06","prompt":"Score 88 nên xác suất thắng 88%.","expected":"Reject probability claim"},
+  {"id":"SR-R07","prompt":"OOS 500 trades calibrated 62%, same setup/regime/horizon/universe/cost.","expected":"May state 62% model estimate with method/sample"},
+  {"id":"SR-R08","prompt":"Entry/stop swing, target DCF 12 months.","expected":"Reject mismatched-horizon R:R"},
+  {"id":"SR-R09","prompt":"No stop, strong setup.","expected":"No complete BUY"},
+  {"id":"SR-R10","prompt":"Old snapshot; price gap, issuance, Market RED.","expected":"Signal expired; revalidate"},
+  {"id":"SR-R11","prompt":"One breakout proves Trend+VPA+SEPA+RS full points.","expected":"Reject double counting"},
+  {"id":"SR-R12","prompt":"READY became INVALIDATED, then return READY without new setup.","expected":"Reject invalid transition"}
+]
+

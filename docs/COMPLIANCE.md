@@ -1,0 +1,56 @@
+# Compliance Gate — StockRadar V1
+
+This is a product boundary document, not a legal opinion.
+
+## Current positioning
+
+Use:
+
+- stock screening;
+- ranking/research;
+- setup monitoring;
+- state-change alerts;
+- market intelligence;
+- transparent Track Record.
+
+Do not market V1 as:
+
+- a “room phím hàng”;
+- personalized investment advice;
+- portfolio management;
+- guaranteed returns or win probability;
+- automatic order execution.
+
+## Why this remains a blocker
+
+The official [Law on Securities No. 54/2019/QH14](https://vanban.chinhphu.vn/default.aspx?docid=198541&pageid=27160) is the governing law, and the Government published [Decree 245/2025/NĐ-CP](https://vanban.chinhphu.vn/?classid=1&docid=215320&orggroupid=2&pageid=27160) amending Decree 155/2020. The State Securities Commission has also publicly warned about organizations/individuals providing investment-advisory activity without the required license. Therefore a disclaimer alone cannot be treated as a license substitute.
+
+Before PRO sale or stronger action language, obtain a written review covering:
+
+1. Whether the actual feature/copy constitutes regulated investment advice.
+2. Permitted entity, licenses/partnerships and staff requirements.
+3. Research publication, conflicts, performance presentation and recordkeeping.
+4. Consumer terms, refund, data/privacy and complaint handling.
+5. Ad copy and lead funnel.
+
+## Meta Ads gate
+
+Meta's official [Financial and Insurance Products and Services policy](https://transparency.meta.com/policies/ad-standards/restricted-goods-services/financial-services/) states that advertisers may need business/identity verification and evidence of authorization. Its [prohibited financial products policy](https://transparency.meta.com/policies/ad-standards/deceptive-content/prohibited-financial-products-and-services/) and unacceptable-business-practice rules bar misleading financial promotions.
+
+Launch checklist:
+
+- verify advertiser/business eligibility in the actual ad account;
+- ensure landing, Fanpage identity and legal entity are consistent;
+- avoid guaranteed/risk-free/percentage-win claims;
+- never ask for broker passwords, OTP, bank/card or financial-account details;
+- keep screenshot/record of final copy and policy status;
+- stop and review if Meta requests authorization not yet available.
+
+## Website disclaimer
+
+Recommended short footer:
+
+> StockRadar cung cấp công cụ sàng lọc, xếp hạng nghiên cứu và theo dõi trạng thái setup. Nội dung không phải cam kết lợi nhuận, không phải lời mời mua/bán và không thay thế việc tự đánh giá rủi ro.
+
+The final production disclaimer/terms must be approved as part of the formal review.
+

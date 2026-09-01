@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="vi" data-api-mode="auto">
+<head>
+  <base href="./">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="StockRadar quét HOSE, chắt lọc ít setup đáng theo dõi và báo khi trạng thái thay đổi.">
+  <title>StockRadar — Quét HOSE, chắt lọc setup</title>
+  <link rel="icon" href="assets/logo.svg">
+  <link rel="stylesheet" href="assets/styles.css">
+  <script src="assets/app.js" defer></script>
+</head>
+<body data-proposition="organic">
+  <header class="site-header">
+    <div class="container nav">
+      <a class="brand" href="./" aria-label="StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
+      <nav class="nav-links" aria-label="Điều hướng chính">
+        <a href="radar5/">Radar 5</a><a href="breakout/">Breakout</a><a href="risk/">Risk Radar</a><a href="track-record/">Track Record</a><a href="pro/">PRO</a>
+        <a class="button button-primary button-small" href="signup/">Xem miễn phí</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">Không cần xem hàng trăm cổ phiếu</span>
+          <h1>Quét HOSE.<br><span>Giữ lại tín hiệu.</span></h1>
+          <p class="hero-copy">StockRadar chắt lọc rất ít setup đáng theo dõi — rồi báo khi chúng chuyển từ WATCH sang READY, TRIGGERED hoặc INVALIDATED.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="radar5/" data-track-event="ad_click">Xem Radar hôm nay →</a>
+            <a class="button button-secondary" href="track-record/">Xem Track Record</a>
+          </div>
+          <p class="hero-note">Bản V1 đang ở giai đoạn kiểm chứng nhu cầu. Không cam kết lợi nhuận, không đặt lệnh thay người dùng.</p>
+        </div>
+
+        <div class="radar-visual" aria-label="Mô phỏng Radar 5">
+          <div class="radar-orbit" aria-hidden="true"></div>
+          <div class="radar-card">
+            <div class="radar-card-head">
+              <div><span class="eyebrow">Radar 5</span><h2>Setup đáng theo dõi</h2></div>
+              <span class="data-pill">Dữ liệu demo</span>
+            </div>
+            <div class="radar-list loading" data-radar-list><div class="empty">Đang tải Radar…</div></div>
+            <div class="market-strip"><span>Market: <strong data-market>—</strong></span><span>Coverage: <strong data-coverage>—</strong></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-muted" id="product">
+      <div class="container">
+        <span class="eyebrow">Ba ngách cần dữ liệu thật trả lời</span>
+        <h2>Một engine. Ba lý do để quay lại.</h2>
+        <p class="section-lead">Chưa mặc định ngách nào thắng. Mỗi proposition có landing, creative và event riêng để đo activated user, retention và ý định trả phí.</p>
+        <div class="grid-3">
+          <a class="feature-card" href="radar5/">
+            <div class="feature-number">5</div><h3>StockRadar 5</h3>
+            <p>Acquisition: quét full HOSE và chỉ giữ lại 5 setup khi Universe Gate thực sự PASS.</p>
+          </a>
+          <a class="feature-card is-breakout" href="breakout/">
+            <div class="feature-number">↗</div><h3>Breakout Radar</h3>
+            <p>Timing: theo dõi setup gần vùng kích hoạt nhưng chưa bị kéo giãn khỏi pivot.</p>
+          </a>
+          <a class="feature-card is-risk" href="risk/">
+            <div class="feature-number">!</div><h3>Risk Radar</h3>
+            <p>Retention: báo khi setup tốt bắt đầu xấu đi, mất hiệu lực hoặc Market đổi trạng thái.</p>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container track-strip">
+        <div>
+          <span class="eyebrow">Không cherry-pick</span>
+          <h2>Niềm tin đến từ lịch sử không sửa lại.</h2>
+          <p class="section-lead">Mỗi Radar được đóng băng theo snapshot. Nếu dữ liệu sai, StockRadar tạo correction log — không ghi đè sau khi đã biết kết quả.</p>
+          <div class="hero-actions"><a class="button button-secondary" href="track-record/">Mở Track Record →</a></div>
+        </div>
+        <div class="track-points">
+          <div class="track-point">Snapshot, timestamp, Coverage và Market Regime được lưu cùng tín hiệu.</div>
+          <div class="track-point">Theo dõi MAE, MFE, outcome và R-multiple theo cùng horizon.</div>
+          <div class="track-point">Score không được đổi thành “xác suất thắng” khi chưa có calibration OOS phù hợp.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-muted">
+      <div class="container">
+        <span class="eyebrow">FREE / PRO</span>
+        <h2>Cho thấy giá trị trước khi yêu cầu đăng ký.</h2>
+        <div class="grid-2">
+          <div class="price-card"><span class="tag">FREE</span><div class="price">0đ</div><p>Xem Radar sau phiên và lịch sử công khai.</p><ul class="price-list"><li>Radar 5 sau phiên</li><li>Market Regime + state</li><li>Track Record cơ bản</li></ul><a class="button button-secondary" href="radar5/">Xem bản demo</a></div>
+          <div class="price-card featured"><span class="tag">PRO · Giá test</span><div class="price">199–299k <small>/ tháng</small></div><p>Trả tiền cho thay đổi quan trọng, không phải thêm hàng trăm biểu đồ.</p><ul class="price-list"><li>READY / TRIGGERED alert</li><li>INVALIDATED + Risk Radar</li><li>Mã mới vào/rời Radar</li></ul><a class="button button-primary" href="signup/?proposition=risk">Đăng ký thử nghiệm</a></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container cta-panel"><div><h2>Ít tín hiệu hơn. Rõ trạng thái hơn.</h2><p>Đăng ký bản thử nghiệm để giúp chọn đúng ngách StockRadar nên xây sâu.</p></div><a class="button button-primary" href="signup/">Tham gia FREE →</a></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar 5</a><a href="track-record/">Track Record</a><a href="pro/">FREE / PRO</a></div></div><p class="disclaimer">StockRadar cung cấp công cụ sàng lọc, xếp hạng nghiên cứu và theo dõi trạng thái setup. Nội dung không phải cam kết lợi nhuận, không phải lời mời mua/bán và không thay thế việc tự đánh giá rủi ro. Phạm vi thương mại phải qua compliance review trước khi mở bán.</p></div>
+  </footer>
+</body>
+</html>

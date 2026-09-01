@@ -1,0 +1,57 @@
+[
+  {
+    "id": "R5-A",
+    "proposition": "radar5",
+    "kicker": "STOCKRADAR 5",
+    "title": "Không cần xem\nhàng trăm cổ phiếu.",
+    "subtitle": "Quét HOSE. Giữ lại rất ít setup đáng theo dõi.",
+    "cta": "XEM RADAR MIỄN PHÍ",
+    "accent": "#D7FF45"
+  },
+  {
+    "id": "R5-B",
+    "proposition": "radar5",
+    "kicker": "FULL-UNIVERSE GATE",
+    "title": "Đủ dữ liệu mới\ngọi Top 5 HOSE.",
+    "subtitle": "Coverage, snapshot và exclusion log được công khai.",
+    "cta": "KIỂM TRA RADAR 5",
+    "accent": "#D7FF45"
+  },
+  {
+    "id": "BO-A",
+    "proposition": "breakout",
+    "kicker": "BREAKOUT RADAR",
+    "title": "Đừng tìm sau khi\ngiá đã chạy quá xa.",
+    "subtitle": "Theo dõi setup gần trigger nhưng chưa bị extended.",
+    "cta": "XEM BREAKOUT RADAR",
+    "accent": "#4DE5AA"
+  },
+  {
+    "id": "BO-B",
+    "proposition": "breakout",
+    "kicker": "STATE CHANGE ALERT",
+    "title": "WATCH → READY\ntrước BREAKOUT.",
+    "subtitle": "Volume, pivot, extension và Market vẫn phải cùng PASS.",
+    "cta": "NHẬN ALERT READY",
+    "accent": "#4DE5AA"
+  },
+  {
+    "id": "RR-A",
+    "proposition": "risk",
+    "kicker": "RISK RADAR",
+    "title": "Setup đẹp vẫn có thể\nmất hiệu lực.",
+    "subtitle": "Biết khi READY chuyển sang INVALIDATED.",
+    "cta": "THEO DÕI RỦI RO",
+    "accent": "#FF6B72"
+  },
+  {
+    "id": "RR-B",
+    "proposition": "risk",
+    "kicker": "STALE SIGNAL GATE",
+    "title": "Tín hiệu cũ không còn\nđúng ở snapshot mới.",
+    "subtitle": "Báo khi Market, giá hoặc sự kiện làm luận điểm thay đổi.",
+    "cta": "XEM RISK RADAR",
+    "accent": "#FF6B72"
+  }
+]
+

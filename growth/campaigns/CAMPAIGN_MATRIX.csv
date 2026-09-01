@@ -1,0 +1,8 @@
+campaign,adset,proposition,creative_id,format,daily_budget_vnd,days,landing,utm_campaign,utm_content,status
+SR_PROP_TEST_V1,SR_RADAR5,radar5,R5-A,feed_4x5,150000,7,/radar5,sr_prop_test_v1,r5_a_feed,PLANNED
+SR_PROP_TEST_V1,SR_RADAR5,radar5,R5-B,reels_9x16,150000,7,/radar5,sr_prop_test_v1,r5_b_reels,PLANNED
+SR_PROP_TEST_V1,SR_BREAKOUT,breakout,BO-A,feed_4x5,150000,7,/breakout,sr_prop_test_v1,bo_a_feed,PLANNED
+SR_PROP_TEST_V1,SR_BREAKOUT,breakout,BO-B,reels_9x16,150000,7,/breakout,sr_prop_test_v1,bo_b_reels,PLANNED
+SR_PROP_TEST_V1,SR_RISK,risk,RR-A,feed_4x5,150000,7,/risk,sr_prop_test_v1,rr_a_feed,PLANNED
+SR_PROP_TEST_V1,SR_RISK,risk,RR-B,reels_9x16,150000,7,/risk,sr_prop_test_v1,rr_b_reels,PLANNED
+
