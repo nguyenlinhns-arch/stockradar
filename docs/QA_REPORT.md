@@ -8,7 +8,7 @@ Command:
 python3 -m unittest discover -s engine/tests -v
 ```
 
-Result: **42/42 PASS** on 2026-09-01.
+Result: **47/47 PASS** on 2026-09-01.
 
 Coverage includes:
 
@@ -20,16 +20,19 @@ Coverage includes:
 - state transition validity;
 - extension/Market/R:R/stop/horizon buy gates;
 - immutable snapshots and corrections;
-- fourteen website routes, health, signup and event API;
+- twenty-two public website routes, health, signup and event API;
 - HTML metadata/internal assets;
 - accessible mobile navigation on every page;
-- Knowledge hub, six method guides, required source attribution and method sections;
+- Knowledge hub, six method guides, the StockRadar decision-workflow guide, required source attribution and method sections;
+- four distinct horizon weight profiles and the immutable recommendation record contract;
+- generated MOCK recommendations covering all four horizons;
+- sector, stock search/report, active recommendations, email, watchlist and account boundary surfaces;
 - four-horizon positioning, conditional Top 10 language and 30-day pricing consistency;
 - absence of the old personal brand in public web assets;
 - professional portal shell, shared data-status tape and truthful Radar unavailable states;
 - 6 Feed and 6 Reels image dimensions.
 
-## GitHub Pages deployment QA
+## Previous GitHub Pages deployment QA
 
 - Repository: `nguyenlinhns-arch/stockradar`.
 - Workflow: `Verify and deploy StockRadar Pages`.
@@ -40,6 +43,8 @@ Coverage includes:
 - All 14 public routes returned HTTP 200, including the Knowledge hub and six method guides.
 - Public homepage contained the new dashboard, research feed, four horizons, locked sector module and truthful Top 10/pricing language.
 - Public Radar payload remained visibly MOCK, `is_top5_hose=false`, and `SHORTLIST_FROM_AVAILABLE_DATA`.
+
+The GPT/stock-project integration described above is locally verified and is rechecked by the Pages workflow on deployment. The current release must not be marked live until that workflow and the new-route HTTP checks succeed.
 
 ## Live browser review of portal redesign
 
@@ -63,7 +68,7 @@ python3 website/server.py --port 8765
 STOCKRADAR_QA_URL=http://127.0.0.1:8765 node scripts/visual_qa.cjs
 ```
 
-in an environment with Chromium installed. The script checks fourteen routes at 1440×1000 and 390×844, captures 28 screenshots and fails on console errors or horizontal overflow.
+in an environment with Chromium installed. The script checks all 22 public routes at 1440×1000 and 390×844, captures 44 screenshots and fails on console errors or horizontal overflow.
 
 ## Production QA not yet possible
 

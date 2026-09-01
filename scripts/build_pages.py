@@ -57,8 +57,17 @@ def build(output: Path) -> None:
         output / "index.html",
         output / "assets" / "app.js",
         output / "public" / "data" / "radar.json",
+        output / "public" / "data" / "recommendations.json",
         output / "track-record" / "index.html",
+        output / "nganh" / "index.html",
+        output / "phan-tich" / "index.html",
+        output / "khuyen-nghi" / "index.html",
+        output / "co-phieu" / "demo1" / "index.html",
+        output / "email" / "index.html",
+        output / "theo-doi" / "index.html",
+        output / "tai-khoan" / "index.html",
         output / "kien-thuc" / "index.html",
+        output / "kien-thuc" / "quy-trinh-stockradar" / "index.html",
         output / "kien-thuc" / "quan-tri-rui-ro" / "index.html",
     ]
     missing = [str(path) for path in required if not path.is_file()]

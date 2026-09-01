@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stockradar.vn/schemas/recommendation-record.schema.json",
+  "title": "StockRadar Immutable Recommendation Record",
+  "type": "object",
+  "required": [
+    "recommendation_id", "ticker", "company_name", "sector", "horizon",
+    "recommendation_date", "recommendation_time", "snapshot_id", "market_regime",
+    "stock_score", "score_coverage_pct", "rank", "recommendation_state",
+    "recommended_buy_low", "recommended_buy_high", "price_at_recommendation",
+    "current_price", "target_price", "risk_level", "thesis", "risks",
+    "invalidation_conditions", "evidence", "data_grade", "status", "is_mock"
+  ],
+  "properties": {
+    "recommendation_id": {"type": "string", "minLength": 1},
+    "ticker": {"type": "string", "pattern": "^[A-Z0-9]{3,12}$"},
+    "company_name": {"type": "string", "minLength": 1},
+    "sector": {"type": "string", "minLength": 1},
+    "horizon": {"enum": ["SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"]},
+    "recommendation_date": {"type": "string", "format": "date"},
+    "recommendation_time": {"type": "string"},
+    "snapshot_id": {"type": "string", "minLength": 1},
+    "market_regime": {"enum": ["GREEN", "YELLOW", "RED", "UNKNOWN"]},
+    "stock_score": {"type": "number", "minimum": 0, "maximum": 100},
+    "score_coverage_pct": {"type": "number", "minimum": 0, "maximum": 100},
+    "rank": {"type": "integer", "minimum": 1},
+    "recommendation_state": {
+      "enum": ["WATCH", "WAIT_BUY", "IN_BUY_ZONE", "ACTIVE", "EXTENDED", "INVALIDATED", "TARGET_REACHED", "STOP_REACHED", "EXPIRED", "CLOSED"]
+    },
+    "recommended_buy_low": {"type": ["number", "null"]},
+    "recommended_buy_high": {"type": ["number", "null"]},
+    "price_at_recommendation": {"type": ["number", "null"]},
+    "current_price": {"type": ["number", "null"]},
+    "target_price": {"type": ["number", "null"]},
+    "stop_loss": {"type": ["number", "null"]},
+    "upside_pct": {"type": ["number", "null"]},
+    "downside_pct": {"type": ["number", "null"]},
+    "risk_reward": {"type": ["number", "null"]},
+    "risk_level": {"type": "string"},
+    "expiry_date": {"type": ["string", "null"]},
+    "thesis": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "risks": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "invalidation_conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "evidence": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "data_grade": {"enum": ["DECISION_GRADE", "RESEARCH_GRADE", "INSUFFICIENT", "STALE", "MOCK"]},
+    "status": {"type": "string"},
+    "is_mock": {"type": "boolean"}
+  }
+}

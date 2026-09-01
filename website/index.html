@@ -33,7 +33,7 @@
           <div class="section-kicker"><span>STOCKRADAR INSIGHT</span><time datetime="2026-09-01">Bản thử nghiệm V1</time></div>
           <h1>Chọn cổ phiếu bằng<br><span>luận điểm có điều kiện.</span></h1>
           <p class="hero-copy">Một cổng nghiên cứu gọn để quét HOSE, xếp hạng theo thời gian nắm giữ, theo dõi điểm kích hoạt và nhận biết khi rủi ro làm luận điểm thay đổi.</p>
-          <div class="hero-actions"><a class="button button-primary" href="radar5/" data-track-event="ad_click">Xem Radar mô phỏng</a><a class="button button-secondary" href="kien-thuc/">Đọc phương pháp</a></div>
+          <div class="hero-actions"><a class="button button-primary" href="radar5/" data-track-event="ad_click">Xem Radar mô phỏng</a><a class="button button-secondary" href="phan-tich/">Phân tích một mã</a><a class="button button-secondary" href="kien-thuc/">Đọc phương pháp</a></div>
         </div>
         <aside class="hero-brief" aria-label="Nguyên tắc vận hành">
           <div class="brief-title"><span>QUY TẮC CÔNG BỐ</span><strong>Minh bạch trước hiệu suất</strong></div>
@@ -80,10 +80,25 @@
           <section class="side-panel alert-preview">
             <div class="side-panel-head"><span>CẢNH BÁO MẪU</span><span class="tag tag-red">DEMO</span></div>
             <strong>Trạng thái thay đổi, không gửi nhiễu</strong>
-            <p>Ưu tiên SẴN SÀNG, MẤT HIỆU LỰC, mã mới vào hoặc rời danh sách.</p>
+            <p>Ưu tiên ĐẠT VÙNG MUA, KHÔNG CÒN ĐẠT ĐIỀU KIỆN, mã mới vào hoặc rời danh sách.</p>
             <a href="risk/">Mở Radar rủi ro →</a>
           </section>
         </aside>
+      </div>
+    </section>
+
+    <section class="portal-section section-muted">
+      <div class="container">
+        <header class="section-title-row"><div><span class="panel-label">BỘ NÃO STOCKRADAR</span><h2>GPT giải thích; engine quyết định giới hạn được phép nói.</h2><p>Mỗi kết luận phải đi qua cùng một chuỗi có thể kiểm tra, không phụ thuộc cách đặt câu hỏi của người dùng.</p></div><a href="kien-thuc/quy-trinh-stockradar/">Đọc toàn bộ quy trình →</a></header>
+        <div class="decision-pipeline">
+          <article><span>01 · SNAPSHOT</span><h3>Đóng băng dữ liệu</h3><p>Universe, giá, nguồn, thời điểm và cơ sở điều chỉnh.</p></article>
+          <article><span>02 · DATA GRADE</span><h3>Chấm chất lượng</h3><p>Đủ dữ liệu, tham khảo, thiếu, cũ hoặc mô phỏng.</p></article>
+          <article><span>03 · 4 MODELS</span><h3>Chọn đúng mục tiêu</h3><p>Ngắn, Trung, Dài và Tích sản có trọng số riêng.</p></article>
+          <article><span>04 · GATES</span><h3>Kiểm tra hành động</h3><p>Market, volume, extension, sự kiện, R:R và điểm vô hiệu.</p></article>
+          <article><span>05 · RECORD</span><h3>Khóa kế hoạch</h3><p>Vùng mua, mục tiêu, rủi ro và thời hạn không bị viết lại.</p></article>
+          <article><span>06 · ALERT</span><h3>Báo khi thay đổi</h3><p>Email có xác nhận, chống trùng và cooldown.</p></article>
+        </div>
+        <div class="workflow-note"><span><strong>Quy tắc cứng:</strong> unknown = không mua · score ≠ xác suất · stale = không dùng cho hành động hiện tại · tăng quá vùng mua = không đuổi giá.</span><a href="khuyen-nghi/">Xem record mẫu →</a></div>
       </div>
     </section>
 
@@ -117,9 +132,9 @@
       <div class="container">
         <header class="section-title-row"><div><span class="panel-label">QUY TRÌNH STOCKRADAR</span><h2>Ba tác vụ thay cho một bảng điện dày đặc.</h2></div></header>
         <div class="service-grid">
-          <a class="service-card" href="radar5/"><span>01</span><div><h3>Radar ưu tiên</h3><p>Thu hẹp danh sách theo bốn chân trời, nêu lý do và độ phủ bằng chứng.</p></div><b>Khám phá →</b></a>
-          <a class="service-card" href="breakout/"><span>02</span><div><h3>Điểm kích hoạt</h3><p>Theo dõi thiết lập gần vùng mua nhưng chưa bị kéo giãn quá xa.</p></div><b>Theo dõi →</b></a>
-          <a class="service-card" href="risk/"><span>03</span><div><h3>Cảnh báo rủi ro</h3><p>Báo khi thiết lập mất hiệu lực hoặc trạng thái thị trường đổi.</p></div><b>Kiểm soát →</b></a>
+          <a class="service-card" href="phan-tich/"><span>01</span><div><h3>Phân tích một mã</h3><p>Trả lời vì sao chọn, rủi ro gì và điều gì làm nhận định thay đổi.</p></div><b>Tra cứu →</b></a>
+          <a class="service-card" href="khuyen-nghi/"><span>02</span><div><h3>Kế hoạch đang hiệu lực</h3><p>Tách giá khuyến nghị, giá hiện tại, mục tiêu và điều kiện vô hiệu.</p></div><b>Kiểm tra →</b></a>
+          <a class="service-card" href="email/"><span>03</span><div><h3>Cảnh báo qua email</h3><p>Báo thay đổi quan trọng để người dùng không phải nhìn bảng điện liên tục.</p></div><b>Xem luồng →</b></a>
         </div>
       </div>
     </section>

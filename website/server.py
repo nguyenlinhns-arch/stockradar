@@ -20,7 +20,9 @@ ALLOWED_EVENTS = {
     "ad_click", "landing_view", "radar_view", "top5_expand", "track_record_view",
     "signup_started", "signup_completed", "alert_opt_in", "pro_page_view",
     "trial_started", "subscription_started", "return_d1", "return_d7",
-    "knowledge_view", "method_view", "horizon_select"
+    "knowledge_view", "method_view", "horizon_select", "stock_search",
+    "stock_report_view", "top10_view", "watchlist_add", "email_view",
+    "checkout_started", "payment_completed"
 }
 PROPOSITIONS = {"radar5", "breakout", "risk", "organic"}
 

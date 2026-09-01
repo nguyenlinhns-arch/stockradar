@@ -30,6 +30,26 @@ class SetupState(str, Enum):
     EXPIRED = "EXPIRED"
 
 
+class Horizon(str, Enum):
+    SHORT_TERM = "SHORT_TERM"
+    MEDIUM_TERM = "MEDIUM_TERM"
+    LONG_TERM = "LONG_TERM"
+    ACCUMULATION = "ACCUMULATION"
+
+
+class RecommendationStatus(str, Enum):
+    WATCH = "WATCH"
+    WAIT_BUY = "WAIT_BUY"
+    IN_BUY_ZONE = "IN_BUY_ZONE"
+    ACTIVE = "ACTIVE"
+    EXTENDED = "EXTENDED"
+    INVALIDATED = "INVALIDATED"
+    TARGET_REACHED = "TARGET_REACHED"
+    STOP_REACHED = "STOP_REACHED"
+    EXPIRED = "EXPIRED"
+    CLOSED = "CLOSED"
+
+
 @dataclass(frozen=True)
 class Exclusion:
     ticker: str
@@ -156,3 +176,87 @@ class Candidate:
             value["rank"] = rank
         return value
 
+
+@dataclass(frozen=True)
+class Recommendation:
+    recommendation_id: str
+    ticker: str
+    company_name: str
+    sector: str
+    horizon: Horizon
+    recommendation_date: str
+    recommendation_time: str
+    snapshot_id: str
+    market_regime: MarketRegime
+    stock_score: float
+    score_coverage_pct: float
+    rank: int
+    recommendation_state: RecommendationStatus
+    recommended_buy_low: float | None
+    recommended_buy_high: float | None
+    price_at_recommendation: float | None
+    current_price: float | None
+    target_price: float | None
+    risk_level: str
+    stop_loss: float | None
+    upside_pct: float | None
+    downside_pct: float | None
+    risk_reward: float | None
+    expiry_date: str | None
+    thesis: tuple[str, ...]
+    risks: tuple[str, ...]
+    invalidation_conditions: tuple[str, ...]
+    evidence: tuple[str, ...]
+    data_grade: DataGrade
+    status: str
+    outcome: str | None = None
+    closed_at: str | None = None
+    close_reason: str | None = None
+    is_mock: bool = False
+
+    @classmethod
+    def from_dict(cls, value: dict[str, Any]) -> "Recommendation":
+        numeric_fields = {
+            name: float(value[name]) if value.get(name) is not None else None
+            for name in (
+                "recommended_buy_low", "recommended_buy_high", "price_at_recommendation",
+                "current_price", "target_price", "stop_loss", "upside_pct",
+                "downside_pct", "risk_reward",
+            )
+        }
+        return cls(
+            recommendation_id=str(value["recommendation_id"]),
+            ticker=str(value["ticker"]),
+            company_name=str(value["company_name"]),
+            sector=str(value["sector"]),
+            horizon=Horizon(value["horizon"]),
+            recommendation_date=str(value["recommendation_date"]),
+            recommendation_time=str(value["recommendation_time"]),
+            snapshot_id=str(value["snapshot_id"]),
+            market_regime=MarketRegime(value["market_regime"]),
+            stock_score=float(value["stock_score"]),
+            score_coverage_pct=float(value.get("score_coverage_pct", 0)),
+            rank=int(value["rank"]),
+            recommendation_state=RecommendationStatus(value["recommendation_state"]),
+            risk_level=str(value["risk_level"]),
+            expiry_date=value.get("expiry_date"),
+            thesis=tuple(str(item) for item in value.get("thesis", [])),
+            risks=tuple(str(item) for item in value.get("risks", [])),
+            invalidation_conditions=tuple(str(item) for item in value.get("invalidation_conditions", [])),
+            evidence=tuple(str(item) for item in value.get("evidence", [])),
+            data_grade=DataGrade(value["data_grade"]),
+            status=str(value.get("status", "OPEN")),
+            outcome=value.get("outcome"),
+            closed_at=value.get("closed_at"),
+            close_reason=value.get("close_reason"),
+            is_mock=bool(value.get("is_mock", False)),
+            **numeric_fields,
+        )
+
+    def to_dict(self) -> dict[str, Any]:
+        value = asdict(self)
+        value["horizon"] = self.horizon.value
+        value["market_regime"] = self.market_regime.value
+        value["recommendation_state"] = self.recommendation_state.value
+        value["data_grade"] = self.data_grade.value
+        return value

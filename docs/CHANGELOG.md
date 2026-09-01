@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-01 — GPT/stock-project integration
+
+- Turned the GPT prototype into a constrained explanation layer over the same Data Grade, horizon, decision-gate and immutable-record contracts used by the engine.
+- Added four distinct horizon score profiles and an immutable recommendation model/schema with five visibly MOCK records across all four horizons.
+- Added sector × horizon, stock search, DEMO1 stock report, active recommendations, email schedule, watchlist and account/subscription contract pages.
+- Added the original “Quy trình StockRadar” Knowledge guide covering data gates, score ≠ probability, anti-double-counting, twelve action gates, state lifecycle and email controls.
+- Added email, authentication/watchlist and 30-day billing architecture contracts while keeping every production write blocked on GitHub Pages.
+- Expanded automated coverage to 47 tests and 22 public routes plus health/API contract checks.
+
 ## 2026-09-01 — Professional finance-portal interface
 
 - Rebuilt the visual system from a dark marketing layout into a compact Vietnamese finance-research portal with a neutral canvas, navy information hierarchy and restrained status colors.

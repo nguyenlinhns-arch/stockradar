@@ -1,6 +1,6 @@
-# STOCKRADAR PRODUCT SPEC V1.1
+# STOCKRADAR PRODUCT SPEC V1.2
 
-Version: 1.1  
+Version: 1.2  
 Status: public validation website with MOCK-labelled data; production data/auth/email/billing blocked  
 Brand: **STOCKRADAR** / **stockradar.vn**
 
@@ -46,7 +46,7 @@ Included or specified:
 11. Knowledge hub that explains the methods and their limitations.
 12. Analytics/UTM and acquisition experiment contracts.
 
-Current public implementation includes Home, a five-item MOCK Radar preview, Trigger Radar, Risk Radar, Result History, Knowledge, pricing scope and a disabled-on-Pages signup form. Missing production surfaces remain explicit in `STOCKRADAR_BUILD_STATUS.md`.
+Current public implementation includes Home, a five-item MOCK Radar preview, sector matrix shell, stock search, a four-horizon DEMO1 report, active-recommendation records, Trigger Radar, Risk Radar, email schedule, watchlist/account contracts, Result History, Knowledge, pricing scope and a disabled-on-Pages signup form. Search, watchlist, auth, email and billing remain visibly blocked wherever a production backend or licensed data is required.
 
 Excluded from V1:
 
@@ -77,12 +77,15 @@ Internal enums remain stable for API compatibility; public labels are Vietnamese
 | Internal | Public label |
 | --- | --- |
 | `WATCH` | THEO DÕI |
-| `NEAR_TRIGGER` | GẦN KÍCH HOẠT |
-| `READY` | SẴN SÀNG |
-| `TRIGGERED` | ĐÃ KÍCH HOẠT |
-| `INVALIDATED` | MẤT HIỆU LỰC |
-| `EXTENDED` | KÉO GIÃN |
-| `EXPIRED` | HẾT HẠN |
+| `NEAR_TRIGGER` / `WAIT_BUY` | CHỜ MUA |
+| `READY` / `IN_BUY_ZONE` | ĐẠT VÙNG MUA |
+| `TRIGGERED` / `ACTIVE` | ĐANG CÓ HIỆU LỰC |
+| `EXTENDED` | TĂNG QUÁ VÙNG MUA |
+| `INVALIDATED` | KHÔNG CÒN ĐẠT ĐIỀU KIỆN |
+| `TARGET_REACHED` | ĐẠT MỤC TIÊU |
+| `STOP_REACHED` | CHẠM MỨC CẮT LỖ |
+| `EXPIRED` | HẾT THỜI HẠN |
+| `CLOSED` | ĐÓNG KHUYẾN NGHỊ |
 
 High-value transitions include readiness, activation, invalidation, extension, entering/leaving a ranking and market-regime change. `INVALIDATED → READY` on the same setup identity is rejected; a new thesis requires a new record lineage.
 
@@ -118,7 +121,7 @@ Rules common to all models:
 - ranking compares candidates from the same snapshot, basis, horizon and framework;
 - market regime changes action/priority and can block a new position without rewriting research history.
 
-The implemented V1 engine weight table is a short-term validation baseline. Separate production models require data, calibration and regression evidence before release.
+The engine now contains four distinct validation weight profiles and regression checks that each profile totals 100. They are product-contract implementations, not market-calibrated production models. Release still requires licensed inputs, horizon-matched backtests, out-of-sample calibration and regression evidence.
 
 ## 8. Immutable recommendation record
 
@@ -208,7 +211,7 @@ Production V1 additionally requires:
 
 - licensed/current HOSE data and full-universe reconciliation;
 - four validated horizon score models and Top 10/sector rankings;
-- stock-detail/active-recommendation/watchlist flows;
+- stock-detail/active-recommendation/watchlist flows connected to live data and authenticated persistence;
 - authentication, production database and privacy operations;
 - scheduler and idempotent email delivery;
 - 30-day billing/subscription lifecycle;

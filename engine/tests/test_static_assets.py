@@ -1,4 +1,5 @@
 import struct
+import json
 import tempfile
 import unittest
 from html.parser import HTMLParser
@@ -103,6 +104,18 @@ class StaticAssetTests(unittest.TestCase):
             for expected in sources:
                 self.assertIn(expected, source, path)
 
+        workflow = WEBSITE / "kien-thuc" / "quy-trinh-stockradar" / "index.html"
+        self.assertTrue(workflow.is_file())
+        source = workflow.read_text(encoding="utf-8")
+        for expected in (
+            "Bốn mục tiêu, bốn bộ điểm",
+            "Score ≠ xác suất",
+            "Không đếm trùng",
+            "unknown = không mua",
+            "10:30, 11:15, 13:30 và 14:15",
+        ):
+            self.assertIn(expected, source)
+
     def test_all_pages_have_accessible_mobile_navigation(self) -> None:
         for html in WEBSITE.rglob("index.html"):
             source = html.read_text(encoding="utf-8")
@@ -129,6 +142,61 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("const stateLabels", script)
         self.assertIn(".market-tape", styles)
         self.assertIn(".radar-workspace", styles)
+
+    def test_master_product_surfaces_are_present_and_truthful(self) -> None:
+        routes = {
+            "nganh": "DỮ LIỆU CHƯA ĐỦ ĐỂ XẾP HẠNG TOÀN HOSE",
+            "phan-tich": "Trang demo chỉ có báo cáo cho DEMO1",
+            "khuyen-nghi": "Khuyến nghị đang hiệu lực",
+            "co-phieu/demo1": "KHÔNG PHẢI CỔ PHIẾU THẬT",
+            "email": "10:30",
+            "theo-doi": "CHƯA LƯU DỮ LIỆU NGƯỜI DÙNG",
+            "tai-khoan": "CHƯA CÓ TÀI KHOẢN THẬT",
+        }
+        for route, marker in routes.items():
+            source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
+            self.assertIn(marker, source, route)
+
+        homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
+        for marker in ("BỘ NÃO STOCKRADAR", "04 · GATES", "score ≠ xác suất"):
+            self.assertIn(marker, homepage)
+
+        recommendations = json.loads(
+            (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
+        )
+        self.assertTrue(recommendations["is_mock"])
+        self.assertIn("mô phỏng", recommendations["notice"])
+        self.assertEqual(len(recommendations["items"]), 5)
+        self.assertEqual(
+            {item["horizon"] for item in recommendations["items"]},
+            {"SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"},
+        )
+        for item in recommendations["items"]:
+            self.assertTrue(item["is_mock"])
+            self.assertEqual(item["data_grade"], "MOCK")
+            for field in ("recommendation_id", "snapshot_id", "thesis", "risks", "invalidation_conditions"):
+                self.assertTrue(item[field], (item["ticker"], field))
+
+    def test_public_state_vocabulary_and_backend_boundaries(self) -> None:
+        script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
+        for label in (
+            "THEO DÕI", "CHỜ MUA", "ĐẠT VÙNG MUA", "ĐANG CÓ HIỆU LỰC",
+            "TĂNG QUÁ VÙNG MUA", "KHÔNG CÒN ĐẠT ĐIỀU KIỆN",
+            "ĐẠT MỤC TIÊU", "CHẠM MỨC CẮT LỖ", "HẾT THỜI HẠN",
+            "ĐÓNG KHUYẾN NGHỊ",
+        ):
+            self.assertIn(label, script)
+        self.assertIn("Chưa kết nối dữ liệu thị trường thật", script)
+        self.assertIn("public/data/recommendations.json", script)
+
+        blocked_markers = {
+            "email": "BLOCKED",
+            "theo-doi": "BACKEND REQUIRED",
+            "tai-khoan": "AUTH BLOCKED",
+        }
+        for route, marker in blocked_markers.items():
+            source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
+            self.assertIn(marker, source, route)
 
     def test_public_positioning_matches_current_horizons_and_pricing(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")

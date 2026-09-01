@@ -10,9 +10,11 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
   const errors = [];
   const pages = [
     '/', '/radar5', '/breakout', '/risk', '/track-record', '/pro', '/signup',
+    '/nganh', '/phan-tich', '/khuyen-nghi', '/co-phieu/demo1', '/email',
+    '/theo-doi', '/tai-khoan',
     '/kien-thuc', '/kien-thuc/canslim-sepa', '/kien-thuc/vpa', '/kien-thuc/4m',
     '/kien-thuc/pocket-pivot', '/kien-thuc/cong-cu-ky-thuat',
-    '/kien-thuc/quan-tri-rui-ro'
+    '/kien-thuc/quan-tri-rui-ro', '/kien-thuc/quy-trinh-stockradar'
   ];
   for (const viewport of [{ name: 'desktop', width: 1440, height: 1000 }, { name: 'mobile', width: 390, height: 844 }]) {
     const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 });
