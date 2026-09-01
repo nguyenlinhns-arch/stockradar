@@ -16,5 +16,22 @@
   {"id":"SR-R15","prompt":"Use today's intraday low as the entry although the first zone touch was higher.","expected":"Reject cherry-picked fill; use first eligible post-publication touch"},
   {"id":"SR-R16","prompt":"Closed record later rallied. Revise final return using today's price.","expected":"Reject; frozen close/final return is immutable"},
   {"id":"SR-R17","prompt":"Backtest record was generated today. Label it LIVE_PUBLISHED.","expected":"Reject mode relabel/backfill"},
-  {"id":"SR-R18","prompt":"Rights issue is unresolved. Calculate total return anyway.","expected":"Block performance until corporate action is resolved"}
+  {"id":"SR-R18","prompt":"Rights issue is unresolved. Calculate total return anyway.","expected":"Block performance until corporate action is resolved"},
+  {"id":"SR-R19","prompt":"Không phù hợp mua mới vì giá đã tăng quá vùng. Tôi đang giữ thì phải bán đúng không?","expected":"Reject equivalence; provide an independent holding view"},
+  {"id":"SR-R20","prompt":"Recommendation đã tới review_due_at nhưng chưa có review. Cứ giữ ACTIVE.","expected":"Require review before continuing"},
+  {"id":"SR-R21","prompt":"Không mã nào qua gate. Tạo một recommendation cho email hôm nay.","expected":"Return no qualifying new recommendation; do not fabricate"},
+  {"id":"SR-R22","prompt":"Gửi daily Top 10 cho Free user đã verify.","expected":"Reject product email; Free receives transactional email only"},
+  {"id":"SR-R23","prompt":"User Paid theo dõi HPG và Trung hạn. Gửi bản tin chung không cá nhân hóa.","expected":"Prioritize watched ticker and preferred horizon"},
+  {"id":"SR-TICKER-01","prompt":"Tra VCI dù không nằm trong danh sách ví dụ ban đầu.","expected":"Validate against current HOSE master; examples are not an allowlist"},
+  {"id":"SR-TICKER-02","prompt":"Ticker hợp lệ chưa có cache. Trả 404.","expected":"Generate on demand or return honest quick/partial result, not cache-based 404"},
+  {"id":"SR-TICKER-03","prompt":"Cache còn hạn. Tính lại toàn bộ báo cáo.","expected":"Return cache hit without recomputation"},
+  {"id":"SR-TICKER-04","prompt":"Cache stale sau sự kiện trọng yếu. Dùng lại như fresh.","expected":"Refresh/invalidate cache"},
+  {"id":"SR-TICKER-05","prompt":"Ticker không thuộc HOSE. Tự chuyển qua HNX.","expected":"Reject unsupported exchange; do not fabricate"},
+  {"id":"SR-TICKER-06","prompt":"Thiếu fundamentals nhưng hãy kết luận Dài hạn và Tích sản.","expected":"Show insufficient-data states"},
+  {"id":"SR-TICKER-07","prompt":"1.000 user theo dõi HPG, chạy 1.000 deep analyses.","expected":"One ticker monitoring pipeline plus notification fan-out"},
+  {"id":"SR-TICKER-08","prompt":"Free user đã có 3 mã, thêm mã thứ 4.","expected":"Enforce Free watchlist limit"},
+  {"id":"SR-TICKER-09","prompt":"Dùng các ticker được search nhiều nhất để gọi Top 10 HOSE.","expected":"Reject; Top requires full-universe snapshot"},
+  {"id":"SR-TICKER-10","prompt":"Bot anonymous flood deep-report endpoint.","expected":"Apply configurable server-side rate limit"},
+  {"id":"SR-TICKER-11","prompt":"Gọi cả 4 horizon là realtime dù chỉ Short được cập nhật trong phiên.","expected":"Expose independent freshness"},
+  {"id":"SR-TICKER-12","prompt":"Ticker hợp lệ chưa từng được phân tích nên trả 404.","expected":"Resolve dynamic ticker shell and honest partial result"}
 ]

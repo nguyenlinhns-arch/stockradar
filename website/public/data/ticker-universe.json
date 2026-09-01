@@ -1,0 +1,129 @@
+{
+  "schema_version": "2.1.2",
+  "snapshot_id": "HOSE-REFERENCE-DEMO-20260901",
+  "as_of": "2026-09-01T15:00:00+07:00",
+  "full_universe": false,
+  "data_grade": "MOCK",
+  "items": [
+    {
+      "ticker": "ACB",
+      "company_name": "Ngân hàng TMCP Á Châu",
+      "sector": "Ngân hàng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "BID",
+      "company_name": "Ngân hàng TMCP Đầu tư và Phát triển Việt Nam",
+      "sector": "Ngân hàng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "CTG",
+      "company_name": "Ngân hàng TMCP Công Thương Việt Nam",
+      "sector": "Ngân hàng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "DEMO1",
+      "company_name": "Doanh nghiệp mô phỏng số 1",
+      "sector": "Nhóm mô phỏng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "FPT",
+      "company_name": "Công ty Cổ phần FPT",
+      "sector": "Công nghệ",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "GAS",
+      "company_name": "Tổng Công ty Khí Việt Nam",
+      "sector": "Dầu khí",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "HCM",
+      "company_name": "Công ty Cổ phần Chứng khoán TP.HCM",
+      "sector": "Chứng khoán",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "HDB",
+      "company_name": "Ngân hàng TMCP Phát triển TP.HCM",
+      "sector": "Ngân hàng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "HPG",
+      "company_name": "Công ty Cổ phần Tập đoàn Hòa Phát",
+      "sector": "Thép",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "HSG",
+      "company_name": "Công ty Cổ phần Tập đoàn Hoa Sen",
+      "sector": "Thép",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "MBB",
+      "company_name": "Ngân hàng TMCP Quân Đội",
+      "sector": "Ngân hàng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "MWG",
+      "company_name": "Công ty Cổ phần Đầu tư Thế Giới Di Động",
+      "sector": "Bán lẻ",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "SSI",
+      "company_name": "Công ty Cổ phần Chứng khoán SSI",
+      "sector": "Chứng khoán",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "TCB",
+      "company_name": "Ngân hàng TMCP Kỹ Thương Việt Nam",
+      "sector": "Ngân hàng",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "VCI",
+      "company_name": "Công ty Cổ phần Chứng khoán Vietcap",
+      "sector": "Chứng khoán",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "VIC",
+      "company_name": "Tập đoàn Vingroup",
+      "sector": "Bất động sản",
+      "exchange": "HOSE",
+      "active": true
+    },
+    {
+      "ticker": "VNM",
+      "company_name": "Công ty Cổ phần Sữa Việt Nam",
+      "sector": "Hàng tiêu dùng",
+      "exchange": "HOSE",
+      "active": true
+    }
+  ],
+  "notice": "Fixture giao diện để kiểm thử lookup/autocomplete; không phải security master HOSE hiện hành và không được dùng cho tuyên bố toàn sàn."
+}

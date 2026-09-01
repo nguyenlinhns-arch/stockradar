@@ -128,8 +128,10 @@ class ImmutableLedger:
                     publication_timestamp, recommended_buy_low, recommended_buy_high,
                     price_at_publication, generated_at, published_at, system_version,
                     score_version, publish_status, record_mode, data_grade,
-                    raw_payload, is_mock
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    review_due_at, review_status, review_decision,
+                    new_position_state, holding_state, vnindex_at_activation,
+                    vnindex_current_or_close, raw_payload, is_mock
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     record["recommendation_id"], record["snapshot_id"], record["ticker"],
@@ -137,7 +139,12 @@ class ImmutableLedger:
                     record.get("recommended_buy_high"), record.get("price_at_publication"),
                     record["generated_at"], record["published_at"], record["system_version"],
                     record["score_version"], record["publish_status"], record["record_mode"],
-                    record["data_grade"], json.dumps(record, ensure_ascii=False, sort_keys=True),
+                    record["data_grade"], record.get("review_due_at"),
+                    record.get("review_status", "PENDING"), record.get("review_decision"),
+                    record.get("new_position_state", "NOT_ASSESSED"),
+                    record.get("holding_state", "NOT_ASSESSED"),
+                    record.get("vnindex_at_activation"), record.get("vnindex_current_or_close"),
+                    json.dumps(record, ensure_ascii=False, sort_keys=True),
                     1 if record.get("is_mock") else 0,
                 ),
             )
@@ -150,22 +157,79 @@ class ImmutableLedger:
         state: str,
         payload: dict[str, Any],
         reason: str | None = None,
+        *,
+        previous_state: str | None = None,
+        created_by: str = "SYSTEM",
+        audit_reference: str | None = None,
+        correction_of: int | None = None,
     ) -> None:
+        recommendation = self.connection.execute(
+            "SELECT snapshot_id, system_version FROM recommendations WHERE recommendation_id = ?",
+            (recommendation_id,),
+        ).fetchone()
+        if recommendation is None:
+            raise ValueError(f"Unknown recommendation: {recommendation_id}")
         with self.connection:
             self.connection.execute(
                 """
                 INSERT INTO recommendation_events (
-                    recommendation_id, event_type, event_at, state,
+                    recommendation_id, event_type, event_at, previous_state,
+                    new_state, state, old_value, new_value, snapshot_id,
+                    system_version, created_by, audit_reference, correction_of,
                     performance_entry_price, observed_price, current_return_pct,
                     close_price, final_return_pct, reason, payload_json
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
-                    recommendation_id, event_type, event_at, state,
+                    recommendation_id, event_type, event_at,
+                    previous_state or payload.get("previous_state"),
+                    state, state, payload.get("old_value"), payload.get("new_value"),
+                    payload.get("snapshot_id", recommendation["snapshot_id"]),
+                    payload.get("system_version", recommendation["system_version"]),
+                    created_by, audit_reference, correction_of,
                     payload.get("performance_entry_price"), payload.get("observed_price"),
                     payload.get("current_return_pct"), payload.get("close_price"),
                     payload.get("final_return_pct"), reason,
                     json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                ),
+            )
+
+    def append_review_schedule(
+        self,
+        recommendation_id: str,
+        review_due_at: str,
+        review_status: str = "PENDING",
+    ) -> None:
+        with self.connection:
+            self.connection.execute(
+                """
+                INSERT INTO review_schedule (recommendation_id, review_due_at, review_status)
+                VALUES (?, ?, ?)
+                """,
+                (recommendation_id, review_due_at, review_status),
+            )
+
+    def append_benchmark_record(
+        self,
+        recommendation_id: str,
+        start_value: float,
+        current_or_close_value: float,
+        stock_return_pct: float,
+        calculated_at: str,
+        benchmark: str = "VNINDEX",
+    ) -> None:
+        benchmark_return = (current_or_close_value / start_value - 1) * 100
+        with self.connection:
+            self.connection.execute(
+                """
+                INSERT INTO benchmark_records (
+                    recommendation_id, benchmark, start_value, current_or_close_value,
+                    return_pct, excess_return_pct, calculated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    recommendation_id, benchmark, start_value, current_or_close_value,
+                    benchmark_return, stock_return_pct - benchmark_return, calculated_at,
                 ),
             )
 

@@ -11,6 +11,14 @@
     'performance_view', 'sample_premium_report_view', 'signup_start',
     'signup_complete', 'pro_view', 'checkout_start', 'payment_complete',
     'email_open', 'email_click', 'renewal_complete'
+    , 'ticker_search', 'four_horizon_view', 'holding_view', 'recommendation_public_view'
+    , 'recommendation_history_view', 'today_changes_view', 'benchmark_view'
+    , 'onboarding_horizon_selected', 'onboarding_sector_selected', 'onboarding_ticker_added'
+    , 'paid_email_preference_changed', 'ticker_input_started', 'ticker_autocomplete_selected'
+    , 'ticker_search_submitted', 'ticker_search_valid', 'ticker_search_invalid'
+    , 'ticker_cache_hit', 'ticker_cache_miss', 'quick_report_view', 'full_report_requested'
+    , 'report_generation_completed', 'report_generation_failed', 'ticker_trial_cta_clicked'
+    , 'ticker_watch_started'
   ]);
 
   const stateLabels = {
@@ -126,14 +134,15 @@
         ['radar5/', 'Cổ phiếu nổi bật', '/radar5'],
         ['nganh/', 'Theo ngành', '/nganh'],
         ['khuyen-nghi/', 'Khuyến nghị', '/khuyen-nghi'],
-        ['phan-tich/', 'Phân tích cổ phiếu', '/phan-tich'],
+        ['thay-doi-hom-nay/', 'Hôm nay thay đổi', '/thay-doi-hom-nay'],
+        ['kiem-tra-co-phieu/', 'Phân tích cổ phiếu', '/kiem-tra-co-phieu'],
         ['hieu-qua/', 'Hiệu quả', '/hieu-qua'],
         ['tai-khoan/', 'Tài khoản', '/tai-khoan'],
       ];
       menu.innerHTML = items.map(([href, label, match]) => {
         const isCurrent = route.endsWith(match)
           || route.includes(`${match}/`)
-          || (match === '/phan-tich' && route.includes('/co-phieu/'));
+          || (match === '/kiem-tra-co-phieu' && (route.includes('/co-phieu/') || route.includes('/phan-tich')));
         return `<a href="${href}"${isCurrent ? ' aria-current="page"' : ''}>${label}</a>`;
       }).join('') + '<a class="button button-primary button-small" href="pro/">Nâng cấp</a>';
     }
@@ -143,7 +152,7 @@
     utility.innerHTML = `
       <div class="container portal-utility-inner">
         <span><strong>STOCKRADAR RESEARCH</strong><i></i>Xếp hạng nghiên cứu theo bốn mục tiêu</span>
-        <span class="portal-utility-note">V2 · RESEARCH_ONLY · Không phải khuyến nghị đầu tư</span>
+        <span class="portal-utility-note">V2.1.2 · RESEARCH_ONLY · Không phải khuyến nghị đầu tư</span>
       </div>`;
 
     const tape = document.createElement('section');
@@ -164,7 +173,7 @@
     subnav.innerHTML = `<div class="container product-subnav-inner">
       <a href="radar5/">Ngắn hạn</a><a href="kien-thuc/#trung-han">Trung hạn</a>
       <a href="kien-thuc/#dai-han">Dài hạn</a><a href="kien-thuc/#tich-san">Tích sản</a>
-      <a href="kien-thuc/">Kiến thức</a><a href="track-record/">Nhật ký công bố</a>
+      <a href="thay-doi-hom-nay/">Hôm nay thay đổi</a><a href="kien-thuc/">Kiến thức</a><a href="track-record/">Nhật ký công bố</a>
       <a href="email/">Email trước phiên</a><a href="theo-doi/">Mã đang theo dõi</a>
     </div>`;
 
@@ -181,6 +190,34 @@
     if (apiMode === 'disabled') return null;
     const configuredBase = document.documentElement.dataset.apiBase;
     return new URL(String(path).replace(/^\/+/, ''), configuredBase || document.baseURI).toString();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"]/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'
+    }[character]));
+  }
+
+  let tickerAssetsPromise;
+  function loadTickerAssets() {
+    if (!tickerAssetsPromise) {
+      tickerAssetsPromise = Promise.all([
+        fetch(siteUrl('public/data/ticker-universe.json'), { cache: 'no-store' }).then(response => {
+          if (!response.ok) throw new Error('Không tải được ticker master');
+          return response.json();
+        }),
+        fetch(siteUrl('public/data/stock-reports.json'), { cache: 'no-store' }).then(response => {
+          if (!response.ok) throw new Error('Không tải được lớp báo cáo');
+          return response.json();
+        })
+      ]).then(([master, reports]) => ({
+        master,
+        reports,
+        securityByTicker: new Map(master.items.map(item => [item.ticker, item])),
+        reportByTicker: new Map(reports.items.map(item => [item.ticker, item]))
+      }));
+    }
+    return tickerAssetsPromise;
   }
 
   function sessionId() {
@@ -271,8 +308,7 @@
   }
 
   function recommendationLink(item) {
-    if (item.ticker === 'DEMO1') return `<a class="table-ticker ticker-link" href="co-phieu/demo1/">${item.ticker}</a>`;
-    return `<span class="table-ticker">${item.ticker}</span>`;
+    return `<a class="table-ticker ticker-link" href="co-phieu/?ticker=${encodeURIComponent(item.ticker)}">${item.ticker}</a>`;
   }
 
   function renderRecommendations(target, data, filter = 'ALL') {
@@ -318,7 +354,7 @@
         <span>${formatPrice(item.performance_entry_price)}</span>
         <span>${formatPrice(finalPrice)}</span>
         <strong class="${returnClass(performance.value)}">${performance.label}</strong>
-        <span>${formatPercent(item.benchmark_return_pct)}</span>
+        <span>${formatPercent(item.benchmark_return_pct)}<small>${item.vnindex_at_activation == null ? 'Chưa đủ dữ liệu' : `VN-Index ${formatPrice(item.vnindex_at_activation)} → ${formatPrice(item.vnindex_current_or_close)}`}</small></span>
         <strong class="${returnClass(item.excess_return_pct)}">${formatPercent(item.excess_return_pct)}</strong>
         <span><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span></span>
       </article>`;
@@ -344,16 +380,21 @@
       <div class="home-proof-stats"><div><span>Công bố</span><strong>${summary.total_published}</strong></div><div><span>Chưa kích hoạt</span><strong>${summary.unactivated}</strong></div><div><span>Đã đóng</span><strong>${summary.closed}</strong></div><div><span>Tỷ lệ thắng*</span><strong>${formatPercent(summary.win_rate_pct, false)}</strong></div></div>
       <div class="home-proof-list">${data.items.slice(0, 3).map(item => {
         const performance = performanceValue(item);
-        return `<a href="${item.ticker === 'DEMO1' ? 'co-phieu/demo1/' : 'khuyen-nghi/'}"><span><strong>${item.ticker}</strong><small>${horizonLabels[item.horizon]}</small></span><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span><b class="${returnClass(performance.value)}">${performance.label}</b></a>`;
+        return `<a href="co-phieu/?ticker=${encodeURIComponent(item.ticker)}"><span><strong>${item.ticker}</strong><small>${horizonLabels[item.horizon]}</small></span><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span><b class="${returnClass(performance.value)}">${performance.label}</b></a>`;
       }).join('')}</div>
       <small class="home-proof-note">* Chỉ tính record đã đóng; loại record chưa kích hoạt. Toàn bộ là MOCK/SHADOW.</small>`;
   }
 
-  function renderStockReport(target, item, data) {
-    const horizonTabs = Object.entries(horizonLabels).map(([value, label]) => `
+  function renderStockReport(target, item, data, stockReport = null) {
+    const views = new Map((stockReport?.horizon_views || []).map(view => [view.horizon, view]));
+    const horizonTabs = Object.entries(horizonLabels).map(([value, label]) => {
+      const view = views.get(value);
+      return `
       <div class="report-horizon ${value === item.horizon ? 'is-active' : ''}">
-        <strong>${label}</strong><span>${value === item.horizon ? 'Record demo hiện tại' : 'Chưa có record demo'}</span>
-      </div>`).join('');
+        <strong>${label}</strong><span>${escapeHtml(view?.assessment || (value === item.horizon ? 'Record demo hiện tại' : 'Chưa đủ dữ liệu'))}</span>
+        <small>${view?.evaluated_at ? formatSnapshot(view.evaluated_at) : 'Chưa đánh giá'}</small>
+      </div>`;
+    }).join('');
     const list = values => (values || []).map(value => `<li>${value}</li>`).join('');
     const performance = performanceValue(item);
     const activationText = item.activation_timestamp
@@ -389,20 +430,24 @@
           <div><span>Mục tiêu / giá trị hợp lý</span><strong>${formatPrice(item.target_price)}</strong></div>
           <div><span>Cắt lỗ / điểm vô hiệu</span><strong>${item.stop_loss == null ? 'Theo luận điểm' : formatPrice(item.stop_loss)}</strong></div>
           <div><span>Tỷ lệ lợi nhuận/rủi ro</span><strong>${item.risk_reward == null ? 'Không áp dụng máy móc' : `${formatPrice(item.risk_reward)}:1`}</strong></div>
+          <div><span>Đánh giá lại chậm nhất</span><strong>${formatSnapshot(item.review_due_at)}</strong></div>
+          <div><span>Trạng thái review</span><strong>${item.review_status || 'PENDING'}</strong></div>
         </div>
       </section>
-      <section class="report-answers" aria-label="Chín câu hỏi của báo cáo StockRadar">
+      <section class="report-answers" aria-label="Các câu hỏi kiểm chứng của báo cáo StockRadar">
         <article><span>01 · ĐÁNH GIÁ</span><h2>Đánh giá hiện tại?</h2><p>${stateLabel(item.recommendation_state)}. ${resultText}</p></article>
-        <article><span>02 · XẾP HẠNG</span><h2>Đứng ở đâu trong mục tiêu?</h2><p>Hạng #${item.rank} của mô hình ${horizonLabels[item.horizon]}, điểm ${formatPrice(item.stock_score)}/100 với độ phủ ${formatPrice(item.score_coverage_pct)}%.</p></article>
-        <article><span>03 · VỊ TRÍ GIÁ</span><h2>Giá đang ở đâu?</h2><p>${pricePosition(item)}</p></article>
-        <article><span>04 · HÀNH ĐỘNG</span><h2>Vùng mua và entry?</h2><p>Vùng ${priceRange(item.recommended_buy_low, item.recommended_buy_high)}. ${activationText}</p></article>
-        <article><span>05 · MỤC TIÊU</span><h2>Mốc nào cần theo dõi?</h2><p>Mục tiêu ${formatPrice(item.target_price)}; ${item.stop_loss == null ? 'điểm vô hiệu theo thay đổi luận điểm.' : `mức quản trị ${formatPrice(item.stop_loss)}.`}</p></article>
-        <article><span>06 · LUẬN ĐIỂM</span><h2>Vì sao được chọn?</h2><ul>${list(item.thesis)}</ul></article>
-        <article class="is-risk"><span>07 · RỦI RO</span><h2>Rủi ro chính là gì?</h2><ul>${list(item.risks)}</ul></article>
-        <article class="is-change"><span>08 · VÔ HIỆU</span><h2>Điều gì làm nhận định đổi?</h2><ul>${list(item.invalidation_conditions)}</ul></article>
-        <article><span>09 · LỊCH SỬ</span><h2>Record trước được lưu thế nào?</h2><p>${resultText} Benchmark ${formatPercent(item.benchmark_return_pct)}; vượt chuẩn ${formatPercent(item.excess_return_pct)}.</p></article>
+        <article><span>02 · MUA MỚI</span><h2>Nếu chưa có cổ phiếu?</h2><p><strong>${escapeHtml(item.new_position_state)}</strong>. ${escapeHtml(item.new_position_note)}</p></article>
+        <article><span>03 · ĐANG NẮM GIỮ</span><h2>Nếu đang sở hữu?</h2><p><strong>${escapeHtml(item.holding_state)}</strong>. ${escapeHtml(item.holding_note)}</p></article>
+        <article><span>04 · XẾP HẠNG</span><h2>Đứng ở đâu trong mục tiêu?</h2><p>Hạng #${item.rank} của mô hình ${horizonLabels[item.horizon]}, điểm ${formatPrice(item.stock_score)}/100 với độ phủ ${formatPrice(item.score_coverage_pct)}%.</p></article>
+        <article><span>05 · VỊ TRÍ GIÁ</span><h2>Giá đang ở đâu?</h2><p>${pricePosition(item)}</p></article>
+        <article><span>06 · HÀNH ĐỘNG</span><h2>Vùng mua và entry?</h2><p>Vùng ${priceRange(item.recommended_buy_low, item.recommended_buy_high)}. ${activationText}</p></article>
+        <article><span>07 · MỤC TIÊU</span><h2>Mốc nào cần theo dõi?</h2><p>Mục tiêu ${formatPrice(item.target_price)}; ${item.stop_loss == null ? 'điểm vô hiệu theo thay đổi luận điểm.' : `mức quản trị ${formatPrice(item.stop_loss)}.`}</p></article>
+        <article><span>08 · LUẬN ĐIỂM</span><h2>Vì sao được chọn?</h2><ul>${list(item.thesis)}</ul></article>
+        <article class="is-risk"><span>09 · RỦI RO</span><h2>Rủi ro chính là gì?</h2><ul>${list(item.risks)}</ul></article>
+        <article class="is-change"><span>10 · VÔ HIỆU</span><h2>Điều gì làm nhận định đổi?</h2><ul>${list(item.invalidation_conditions)}</ul></article>
+        <article><span>11 · LỊCH SỬ</span><h2>Record trước được lưu thế nào?</h2><p>${resultText} VN-Index ${formatPercent(item.benchmark_return_pct)}; vượt chuẩn ${formatPercent(item.excess_return_pct)}.</p><a class="text-link" href="khuyen-nghi/#nhat-ky">Mở nhật ký bất biến →</a></article>
       </section>
-      <footer class="report-audit"><span>Recommendation ID <strong>${item.recommendation_id}</strong></span><span>Snapshot <strong>${item.snapshot_id}</strong></span><span>System <strong>${item.system_version}</strong></span><span>Score model <strong>${item.score_version}</strong></span><span>Adjustment <strong>${item.adjustment_basis}</strong></span><span>Cập nhật <strong>${formatSnapshot(data.snapshot.as_of)}</strong></span></footer>`;
+      <footer class="report-audit"><span>Recommendation ID <strong>${item.recommendation_id}</strong></span><span>Snapshot <strong>${item.snapshot_id}</strong></span><span>System <strong>${item.system_version}</strong></span><span>Score model <strong>${item.score_version}</strong></span><span>Review due <strong>${formatSnapshot(item.review_due_at)}</strong></span><span>Adjustment <strong>${item.adjustment_basis}</strong></span><span>Cập nhật <strong>${formatSnapshot(data.snapshot.as_of)}</strong></span></footer>`;
   }
 
   async function loadRecommendations() {
@@ -412,7 +457,10 @@
     const performanceMiniTargets = document.querySelectorAll('[data-performance-mini]');
     if (!tables.length && !reports.length && !performanceTargets.length && !performanceMiniTargets.length) return;
     try {
-      const response = await fetch(siteUrl('public/data/recommendations.json'), { cache: 'no-store' });
+      const [response, tickerAssets] = await Promise.all([
+        fetch(siteUrl('public/data/recommendations.json'), { cache: 'no-store' }),
+        loadTickerAssets().catch(() => null)
+      ]);
       if (!response.ok) throw new Error('Không tải được dữ liệu khuyến nghị');
       const data = await response.json();
       let activeFilter = 'ALL';
@@ -427,18 +475,149 @@
         const ticker = String(target.dataset.stockReport || '').toUpperCase();
         const item = data.items.find(record => record.ticker === ticker);
         target.innerHTML = item ? '' : '<div class="empty">Chưa có báo cáo mô phỏng cho mã này.</div>';
-        if (item) renderStockReport(target, item, data);
+        if (item) renderStockReport(target, item, data, tickerAssets?.reportByTicker.get(ticker));
       });
       performanceTargets.forEach(target => renderPerformance(target, data));
       performanceMiniTargets.forEach(target => renderPerformanceMini(target, data));
-      if (tables.length) track('recommendation_list_view', { is_mock: data.is_mock, record_mode: data.items[0]?.record_mode });
+      if (tables.length) {
+        track('recommendation_list_view', { is_mock: data.is_mock, record_mode: data.items[0]?.record_mode });
+        track('recommendation_public_view', { is_mock: data.is_mock, records: data.items.length });
+      }
       if (reports.length) {
         track('stock_report_view', { ticker: reports[0].dataset.stockReport || '', is_mock: data.is_mock });
         track('sample_premium_report_view', { ticker: reports[0].dataset.stockReport || '', is_mock: data.is_mock });
       }
-      if (performanceTargets.length) track('performance_view', { is_mock: data.is_mock, total_published: data.performance_summary.total_published });
+      if (performanceTargets.length) {
+        track('performance_view', { is_mock: data.is_mock, total_published: data.performance_summary.total_published });
+        track('benchmark_view', { benchmark: 'VNINDEX', is_mock: data.is_mock });
+      }
     } catch (error) {
       [...tables, ...reports, ...performanceTargets, ...performanceMiniTargets].forEach(target => target.innerHTML = `<div class="empty">${error.message}</div>`);
+    }
+  }
+
+  function normalizeLookupTicker(value) {
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+  }
+
+  function horizonCards(report) {
+    return Object.entries(horizonLabels).map(([horizon, label]) => {
+      const view = (report?.horizon_views || []).find(item => item.horizon === horizon);
+      return `<article class="lookup-horizon-card">
+        <span>${label}</span>
+        <strong>${escapeHtml(view?.assessment || 'CHƯA ĐỦ DỮ LIỆU')}</strong>
+        <p>${escapeHtml(view?.summary || 'Không bịa kết luận khi chưa đủ bằng chứng.')}</p>
+        <small>${view?.evaluated_at ? `Đánh giá: ${formatSnapshot(view.evaluated_at)}` : 'Chưa có lần đánh giá đạt chuẩn'} · ${escapeHtml(view?.freshness || 'UNKNOWN')}</small>
+      </article>`;
+    }).join('');
+  }
+
+  function quickLookupMarkup(report, security, compact = false) {
+    const item = report || {
+      ticker: security.ticker,
+      company_name: security.company_name,
+      sector: security.sector,
+      current_price: null,
+      rank: null,
+      sector_rank: null,
+      score: null,
+      data_status: 'INSUFFICIENT',
+      horizon_views: [],
+      new_position_state: 'CHƯA ĐỦ DỮ LIỆU',
+      holding_state: 'CHƯA ĐỦ DỮ LIỆU'
+    };
+    return `<div class="quick-lookup ${compact ? 'is-compact' : ''}">
+      <header><div><span class="panel-label">ĐÁNH GIÁ NHANH · ${escapeHtml(item.data_status)}</span><h2>${escapeHtml(item.ticker)}</h2><p>${escapeHtml(item.company_name)} · ${escapeHtml(item.sector)}</p></div><span class="data-pill">${item.current_price == null ? 'CHƯA CÓ GIÁ ĐƯỢC CẤP QUYỀN' : `MOCK ${formatPrice(item.current_price)}`}</span></header>
+      <div class="quick-metrics"><div><span>Giá hiện tại</span><strong>${formatPrice(item.current_price)}</strong></div><div><span>Cập nhật</span><strong>${formatSnapshot(item.updated_at)}</strong></div><div><span>Xếp hạng</span><strong>${item.rank == null ? '—' : `#${item.rank}`}</strong></div><div><span>Hạng ngành</span><strong>${item.sector_rank == null ? '—' : `#${item.sector_rank}`}</strong></div><div><span>Điểm</span><strong>${item.score == null ? '—' : `${item.score}/100`}</strong></div></div>
+      <div class="lookup-horizon-grid">${horizonCards(item)}</div>
+      <div class="position-summary"><div><span>MUA MỚI</span><strong>${escapeHtml(item.new_position_state)}</strong></div><div><span>ĐANG NẮM GIỮ</span><strong>${escapeHtml(item.holding_state)}</strong></div></div>
+    </div>`;
+  }
+
+  function recommendationHistoryMarkup(ticker, recommendations) {
+    const items = recommendations.filter(item => item.ticker === ticker);
+    if (!items.length) return '<div class="empty">Chưa có recommendation được công bố cho mã này. Không tạo record để lấp chỗ trống.</div>';
+    return `<div class="ticker-history-list">${items.map(item => {
+      const performance = performanceValue(item);
+      return `<article><div><strong>${escapeHtml(item.ticker)}</strong><span>${horizonLabels[item.horizon]}</span></div><span>${formatDate(item.publication_date)}</span><span>${item.activation_timestamp ? formatDate(item.activation_timestamp) : 'Chưa kích hoạt'}</span><span>${formatPrice(item.performance_entry_price)}</span><span>${formatPrice(performance.group === 'CLOSED' ? item.close_price : item.current_price)}</span><b class="${returnClass(performance.value)}">${performance.label}</b><span class="state ${stateClass(item.recommendation_state)}">${stateLabel(item.recommendation_state)}</span></article>`;
+    }).join('')}</div>`;
+  }
+
+  async function loadDynamicStockReport() {
+    const target = document.querySelector('[data-dynamic-stock-report]');
+    if (!target) return;
+    const pathParts = location.pathname.split('/').filter(Boolean);
+    const routeTicker = pathParts[pathParts.length - 1] !== 'co-phieu' ? pathParts[pathParts.length - 1] : '';
+    const ticker = normalizeLookupTicker(new URLSearchParams(location.search).get('ticker') || routeTicker);
+    if (!ticker) {
+      target.innerHTML = '<div class="empty">Nhập một mã từ trang Kiểm tra cổ phiếu để bắt đầu.</div>';
+      return;
+    }
+    try {
+      const [assets, recommendationResponse, journalResponse] = await Promise.all([
+        loadTickerAssets(),
+        fetch(siteUrl('public/data/recommendations.json'), { cache: 'no-store' }),
+        fetch(siteUrl('public/data/recommendation-journal.json'), { cache: 'no-store' })
+      ]);
+      const security = assets.securityByTicker.get(ticker);
+      if (!security) {
+        const boundary = assets.master.full_universe
+          ? 'Mã này hiện không thuộc phạm vi cổ phiếu HOSE mà StockRadar hỗ trợ.'
+          : 'Fixture công khai chưa phải security master HOSE đầy đủ, nên StockRadar chưa thể xác minh mã này trên bản tĩnh.';
+        target.innerHTML = `<div class="blocked-banner"><div><strong>KHÔNG TẠO BÁO CÁO</strong>${escapeHtml(boundary)}</div><span>DATA GATE</span></div><div class="compact-cta"><div><h2>Tra mã khác</h2><p>Không tự chuyển sang HNX/UPCOM và không bịa dữ liệu.</p></div><a class="button button-primary" href="kiem-tra-co-phieu/">Mở tra cứu</a></div>`;
+        track('ticker_search_invalid', { ticker, full_universe: assets.master.full_universe });
+        return;
+      }
+      const report = assets.reportByTicker.get(ticker);
+      const recommendations = recommendationResponse.ok ? (await recommendationResponse.json()).items : [];
+      const journalPayload = journalResponse.ok ? await journalResponse.json() : { items: [] };
+      const journal = journalPayload.items.filter(item => item.ticker === ticker);
+      document.title = `${ticker} — Bốn góc nhìn StockRadar`;
+      target.innerHTML = `
+        ${quickLookupMarkup(report, security)}
+        <section class="position-detail-grid">
+          <article><span>MUA MỚI</span><h2>${escapeHtml(report?.new_position_state || 'CHƯA ĐỦ DỮ LIỆU')}</h2><p>${escapeHtml(report?.new_position_note || 'Chưa có dữ liệu để đánh giá điểm mua mới.')}</p></article>
+          <article><span>ĐANG NẮM GIỮ</span><h2>${escapeHtml(report?.holding_state || 'CHƯA ĐỦ DỮ LIỆU')}</h2><p>${escapeHtml(report?.holding_note || 'Không suy luận “không mua mới” thành “phải bán”.')}</p></article>
+        </section>
+        <section class="evidence-grid"><article><span class="panel-label">TẠI SAO?</span><h2>Lý do chính</h2><ul>${(report?.reasons || []).map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Chưa đủ evidence.</li>'}</ul></article><article><span class="panel-label">RỦI RO & ĐIỀU KIỆN ĐỔI</span><h2>Điều cần kiểm tra</h2><ul>${(report?.risks || []).map(item => `<li>${escapeHtml(item)}</li>`).join('') || '<li>Không dùng dữ liệu thiếu cho hành động.</li>'}</ul></article></section>
+        <section class="ticker-history"><header><div><span class="panel-label">LỊCH SỬ KHUYẾN NGHỊ CÔNG KHAI</span><h2>Không cherry-pick.</h2></div><a href="hieu-qua/">Xem toàn bộ hiệu quả →</a></header>${recommendationHistoryMarkup(ticker, recommendations)}</section>
+        <section class="journal-panel"><header><div><span class="panel-label">NHẬT KÝ BẤT BIẾN</span><h2>${journal.length ? `${journal.length} sự kiện đã ghi` : 'Chưa có sự kiện'}</h2></div></header>${journal.length ? `<ol>${journal.map(item => `<li><time>${formatSnapshot(item.timestamp)}</time><strong>${stateLabel(item.new_state)}</strong><p>${escapeHtml(item.reason)}</p><small>${escapeHtml(item.audit_reference)}</small></li>`).join('')}</ol>` : '<div class="empty">Không có recommendation thì không dựng nhật ký giả.</div>'}</section>
+        <section class="ticker-trial-cta"><div><span class="panel-label">THEO DÕI THEO MÃ</span><h2>Theo dõi ${escapeHtml(ticker)} miễn phí 7 ngày</h2><p>Trial chỉ nhận email sau khi xác minh và đồng ý; Free không nhận email nội dung hằng ngày.</p></div><a class="button button-primary" data-track-event="ticker_trial_cta_clicked" href="signup/?tier=trial&ticker=${encodeURIComponent(ticker)}">Bắt đầu dùng thử</a></section>`;
+      track('ticker_search_valid', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
+      track('quick_report_view', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
+      track('four_horizon_view', { ticker });
+      track('holding_view', { ticker });
+      if (journal.length) track('recommendation_history_view', { ticker, events: journal.length });
+    } catch (error) {
+      target.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+      track('report_generation_failed', { ticker });
+    }
+  }
+
+  async function loadTodayChanges() {
+    const target = document.querySelector('[data-today-changes]');
+    if (!target) return;
+    try {
+      const response = await fetch(siteUrl('public/data/today-changes.json'), { cache: 'no-store' });
+      if (!response.ok) throw new Error('Không tải được nhật ký thay đổi');
+      const data = await response.json();
+      target.innerHTML = data.items.map(item => `<article class="change-card"><time>${formatSnapshot(item.occurred_at)}</time><div><span>${escapeHtml(item.event_type.replaceAll('_', ' '))}</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></div><div class="change-values"><del>${escapeHtml(item.previous_value || '—')}</del><b>→</b><strong>${escapeHtml(item.new_value || '—')}</strong></div></article>`).join('') || '<div class="empty">Hôm nay chưa có thay đổi đủ ý nghĩa để hiển thị.</div>';
+      document.querySelectorAll('[data-today-updated]').forEach(item => { item.textContent = formatSnapshot(data.as_of); });
+      track('today_changes_view', { is_mock: data.is_mock, changes: data.items.length });
+    } catch (error) {
+      target.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`;
+    }
+  }
+
+  async function loadRecommendationJournal() {
+    const target = document.querySelector('[data-recommendation-journal]');
+    if (!target) return;
+    try {
+      const response = await fetch(siteUrl('public/data/recommendation-journal.json'), { cache: 'no-store' });
+      const data = await response.json();
+      target.innerHTML = `<ol>${data.items.slice().reverse().map(item => `<li><time>${formatSnapshot(item.timestamp)}</time><div><strong>${escapeHtml(item.ticker)} · ${stateLabel(item.new_state)}</strong><p>${escapeHtml(item.reason)}</p><small>${escapeHtml(item.audit_reference)} · ${escapeHtml(item.system_version)}</small></div></li>`).join('')}</ol>`;
+    } catch (_) {
+      target.innerHTML = '<div class="empty">Chưa có journal công khai.</div>';
     }
   }
 
@@ -446,21 +625,63 @@
     document.querySelectorAll('[data-stock-search-form]').forEach(form => {
       const result = form.parentElement.querySelector('[data-stock-search-result]');
       const input = form.querySelector('input[name="ticker"]');
-      const show = value => {
-        const ticker = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+      const suggestions = document.createElement('div');
+      suggestions.className = 'ticker-suggestions';
+      suggestions.setAttribute('role', 'listbox');
+      input.after(suggestions);
+      let inputStarted = false;
+
+      const submitTicker = async value => {
+        const ticker = normalizeLookupTicker(value);
         if (!ticker) return;
         track('stock_search', { ticker });
-        if (ticker === 'DEMO1') {
-          result.className = 'search-result is-available';
-          result.innerHTML = '<strong>Đã có báo cáo mẫu DEMO1.</strong><span>Báo cáo trả lời chín câu hỏi từ xếp hạng, vùng mua, activation đến lịch sử hiệu quả.</span><a class="button button-primary button-small" href="co-phieu/demo1/">Mở báo cáo mẫu</a>';
-        } else {
+        track('ticker_search');
+        track('ticker_search_submitted', { ticker });
+        suggestions.innerHTML = '';
+        try {
+          const assets = await loadTickerAssets();
+          const security = assets.securityByTicker.get(ticker);
+          if (!security) {
+            result.className = 'search-result is-unavailable';
+            const message = assets.master.full_universe
+              ? 'Mã này hiện không thuộc phạm vi cổ phiếu HOSE mà StockRadar hỗ trợ.'
+              : 'Bản tĩnh đang dùng fixture lookup, chưa phải security master HOSE đầy đủ. Không thể xác minh mã này và không tạo dữ liệu giả.';
+            result.innerHTML = `<strong>${escapeHtml(ticker)}: chưa thể xác minh.</strong><span>${escapeHtml(message)}</span><a href="kiem-tra-co-phieu/">Xem phạm vi dữ liệu →</a>`;
+            track('ticker_search_invalid', { ticker, full_universe: assets.master.full_universe });
+            return;
+          }
+          const report = assets.reportByTicker.get(ticker);
+          result.className = 'search-result is-available has-quick-result';
+          result.innerHTML = `${quickLookupMarkup(report, security, true)}<a class="button button-primary button-small" href="co-phieu/?ticker=${encodeURIComponent(ticker)}">Xem báo cáo ${escapeHtml(ticker)}</a>`;
+          track('ticker_search_valid', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
+          track('quick_report_view', { ticker, surface: location.pathname });
+        } catch (error) {
           result.className = 'search-result is-unavailable';
-          result.innerHTML = `<strong>${ticker}: chưa có dữ liệu thị trường thật.</strong><span>StockRadar không tự dựng giá, điểm hay khuyến nghị cho mã chưa có snapshot đạt chuẩn.</span><a href="co-phieu/demo1/">Xem cấu trúc báo cáo DEMO1 →</a>`;
+          result.innerHTML = `<strong>Không tải được lớp tra cứu.</strong><span>${escapeHtml(error.message)}</span>`;
         }
       };
-      form.addEventListener('submit', event => { event.preventDefault(); show(input.value); });
+
+      input.addEventListener('input', async () => {
+        if (!inputStarted) { inputStarted = true; track('ticker_input_started'); }
+        const query = normalizeLookupTicker(input.value);
+        if (!query) { suggestions.innerHTML = ''; return; }
+        try {
+          const assets = await loadTickerAssets();
+          const matches = assets.master.items.filter(item => item.ticker.startsWith(query) || item.company_name.toUpperCase().includes(query)).slice(0, 8);
+          suggestions.innerHTML = matches.map(item => `<button type="button" role="option" data-ticker-value="${escapeHtml(item.ticker)}"><strong>${escapeHtml(item.ticker)}</strong><span>${escapeHtml(item.company_name)}</span><small>${escapeHtml(item.sector)}</small></button>`).join('');
+        } catch (_) { suggestions.innerHTML = ''; }
+      });
+      suggestions.addEventListener('click', event => {
+        const option = event.target.closest('[data-ticker-value]');
+        if (!option) return;
+        input.value = option.dataset.tickerValue;
+        suggestions.innerHTML = '';
+        track('ticker_autocomplete_selected', { ticker: input.value });
+        submitTicker(input.value);
+      });
+      form.addEventListener('submit', event => { event.preventDefault(); submitTicker(input.value); });
       const preset = new URLSearchParams(location.search).get('ticker');
-      if (preset) { input.value = preset; show(preset); }
+      if (preset) { input.value = preset; submitTicker(preset); }
     });
   }
 
@@ -512,6 +733,19 @@
 
   function wireForms() {
     document.querySelectorAll('[data-signup-form]').forEach(form => {
+      const params = new URLSearchParams(location.search);
+      const requestedTicker = normalizeLookupTicker(params.get('ticker'));
+      if (requestedTicker && form.elements.watch_tickers) form.elements.watch_tickers.value = requestedTicker;
+      if (params.get('tier') === 'trial' && form.elements.requested_tier) form.elements.requested_tier.value = 'TRIAL';
+      form.querySelectorAll('input[name="preferred_sectors"]').forEach(input => input.addEventListener('change', () => {
+        const checked = form.querySelectorAll('input[name="preferred_sectors"]:checked');
+        if (checked.length > 3) {
+          input.checked = false;
+          const message = form.querySelector('[data-form-message]');
+          message.className = 'form-message error';
+          message.textContent = 'Onboarding chỉ cho phép chọn tối đa 3 ngành.';
+        }
+      }));
       let started = false;
       form.addEventListener('input', () => {
         if (!started) { started = true; track('signup_started'); track('signup_start'); }
@@ -519,10 +753,19 @@
       form.addEventListener('submit', async event => {
         event.preventDefault();
         const message = form.querySelector('[data-form-message]');
-        const data = Object.fromEntries(new FormData(form).entries());
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+        data.preferred_horizons = formData.getAll('preferred_horizons');
+        data.preferred_sectors = formData.getAll('preferred_sectors');
+        data.watch_tickers = String(formData.get('watch_tickers') || '').split(',').map(item => normalizeLookupTicker(item)).filter(Boolean).slice(0, 3);
         data.consent = form.querySelector('[name="consent"]')?.checked || false;
         data.alert_opt_in = form.querySelector('[name="alert_opt_in"]')?.checked || false;
+        data.product_email_consent = form.querySelector('[name="product_email_consent"]')?.checked || false;
+        if (data.requested_tier === 'FREE') data.product_email_consent = false;
         data.utm = getUtm();
+        data.preferred_horizons.forEach(horizon => track('onboarding_horizon_selected', { horizon }));
+        data.preferred_sectors.forEach(sector => track('onboarding_sector_selected', { sector }));
+        data.watch_tickers.forEach(ticker => track('onboarding_ticker_added', { ticker }));
         message.className = 'form-message';
         const endpoint = apiUrl('api/signup');
         if (!endpoint) {
@@ -591,6 +834,7 @@
     if (document.body.dataset.pageKind === 'email') track('email_view');
     document.querySelectorAll('.horizon-tab').forEach(el => el.addEventListener('click', () => track('horizon_change', { label: el.textContent.trim() })));
     document.querySelectorAll('[data-track-event]').forEach(el => el.addEventListener('click', () => track(el.dataset.trackEvent, { target: el.getAttribute('href') || '' })));
-    loadRadar(); loadTrackRecord(); loadRecommendations(); wireStockSearch(); wireForms();
+    loadRadar(); loadTrackRecord(); loadRecommendations(); loadDynamicStockReport();
+    loadTodayChanges(); loadRecommendationJournal(); wireStockSearch(); wireForms();
   });
 })();

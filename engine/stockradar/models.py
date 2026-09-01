@@ -65,6 +65,20 @@ class TrackRecordMode(str, Enum):
     LIVE_PUBLISHED = "LIVE_PUBLISHED"
 
 
+class ReviewStatus(str, Enum):
+    PENDING = "PENDING"
+    DUE = "DUE"
+    COMPLETED = "COMPLETED"
+    OVERDUE = "OVERDUE"
+
+
+class ReviewDecision(str, Enum):
+    CONTINUE = "CONTINUE"
+    ADJUST = "ADJUST"
+    NO_LONGER_ELIGIBLE = "NO_LONGER_ELIGIBLE"
+    CLOSE = "CLOSE"
+
+
 @dataclass(frozen=True)
 class Exclusion:
     ticker: str
@@ -245,6 +259,15 @@ class Recommendation:
     outcome: str | None = None
     closed_at: str | None = None
     close_reason: str | None = None
+    review_due_at: str | None = None
+    review_status: ReviewStatus = ReviewStatus.PENDING
+    review_decision: ReviewDecision | None = None
+    new_position_state: str = "NOT_ASSESSED"
+    new_position_note: str = ""
+    holding_state: str = "NOT_ASSESSED"
+    holding_note: str = ""
+    vnindex_at_activation: float | None = None
+    vnindex_current_or_close: float | None = None
     is_mock: bool = False
 
     @classmethod
@@ -258,6 +281,7 @@ class Recommendation:
                 "current_return_pct", "absolute_return", "close_price",
                 "final_return_pct", "benchmark_return_pct",
                 "sector_benchmark_return_pct", "excess_return_pct",
+                "vnindex_at_activation", "vnindex_current_or_close",
             )
         }
         if numeric_fields["price_at_publication"] is None and value.get("price_at_recommendation") is not None:
@@ -297,6 +321,16 @@ class Recommendation:
             outcome=value.get("outcome"),
             closed_at=value.get("closed_at"),
             close_reason=value.get("close_reason"),
+            review_due_at=value.get("review_due_at", value.get("review_due_date")),
+            review_status=ReviewStatus(value.get("review_status", "PENDING")),
+            review_decision=(
+                ReviewDecision(value["review_decision"])
+                if value.get("review_decision") else None
+            ),
+            new_position_state=str(value.get("new_position_state", "NOT_ASSESSED")),
+            new_position_note=str(value.get("new_position_note", "")),
+            holding_state=str(value.get("holding_state", "NOT_ASSESSED")),
+            holding_note=str(value.get("holding_note", "")),
             is_mock=bool(value.get("is_mock", False)),
             **numeric_fields,
         )
@@ -308,6 +342,8 @@ class Recommendation:
         value["recommendation_state"] = self.recommendation_state.value
         value["data_grade"] = self.data_grade.value
         value["record_mode"] = self.record_mode.value
+        value["review_status"] = self.review_status.value
+        value["review_decision"] = self.review_decision.value if self.review_decision else None
         return value
 
     @property

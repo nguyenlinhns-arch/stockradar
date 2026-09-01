@@ -11,7 +11,8 @@
     "current_price", "target_price", "risk_level", "thesis", "risks",
     "invalidation_conditions", "evidence", "data_grade", "status",
     "generated_at", "published_at", "system_version", "score_version",
-    "publish_status", "record_mode", "adjustment_basis", "is_mock"
+    "publish_status", "record_mode", "review_due_at", "review_status",
+    "new_position_state", "holding_state", "adjustment_basis", "is_mock"
   ],
   "properties": {
     "recommendation_id": {"type": "string", "minLength": 1},
@@ -44,6 +45,13 @@
     "risk_reward": {"type": ["number", "null"]},
     "risk_level": {"type": "string"},
     "expiry_date": {"type": ["string", "null"]},
+    "review_due_at": {"type": ["string", "null"]},
+    "review_status": {"enum": ["PENDING", "DUE", "COMPLETED", "OVERDUE"]},
+    "review_decision": {"type": ["string", "null"], "enum": ["CONTINUE", "ADJUST", "NO_LONGER_ELIGIBLE", "CLOSE", null]},
+    "new_position_state": {"type": "string", "minLength": 1},
+    "new_position_note": {"type": "string"},
+    "holding_state": {"type": "string", "minLength": 1},
+    "holding_note": {"type": "string"},
     "thesis": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "risks": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "invalidation_conditions": {"type": "array", "minItems": 1, "items": {"type": "string"}},
@@ -60,6 +68,8 @@
     "close_timestamp": {"type": ["string", "null"]},
     "final_return_pct": {"type": ["number", "null"]},
     "benchmark_return_pct": {"type": ["number", "null"]},
+    "vnindex_at_activation": {"type": ["number", "null"]},
+    "vnindex_current_or_close": {"type": ["number", "null"]},
     "sector_benchmark_return_pct": {"type": ["number", "null"]},
     "excess_return_pct": {"type": ["number", "null"]},
     "adjustment_basis": {"type": "string", "minLength": 1},

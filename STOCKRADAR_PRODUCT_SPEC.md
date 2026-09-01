@@ -1,5 +1,7 @@
 # STOCKRADAR PRODUCT SPEC V1.2
 
+> Historical contract. Current specification: `STOCKRADAR_PRODUCT_SPEC_V2.md` (V2.1.2).
+
 Version: 1.2  
 Status: public validation website with MOCK-labelled data; production data/auth/email/billing blocked  
 Brand: **STOCKRADAR** / **stockradar.vn**

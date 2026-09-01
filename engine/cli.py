@@ -7,13 +7,19 @@ from pathlib import Path
 from engine.stockradar.ledger import ImmutableLedger
 from engine.stockradar.models import Candidate, Recommendation, RecommendationMode, UniverseSnapshot
 from engine.stockradar.ranking import build_radar
+from engine.stockradar.ticker_lookup import TickerMaster
 
 
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "engine" / "fixtures" / "demo_snapshot.json"
+TICKER_MASTER_FIXTURE_PATH = ROOT / "engine" / "fixtures" / "hose_universe_demo.json"
 RADAR_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "radar.json"
 TRACK_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "track-record.json"
 RECOMMENDATION_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "recommendations.json"
+TICKER_MASTER_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "ticker-universe.json"
+STOCK_REPORT_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "stock-reports.json"
+TODAY_CHANGES_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "today-changes.json"
+JOURNAL_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "recommendation-journal.json"
 LEDGER_PATH = ROOT / "artifacts" / "stockradar_demo.sqlite"
 
 
@@ -22,6 +28,8 @@ def build_demo() -> dict[str, object]:
     snapshot = UniverseSnapshot.from_dict(fixture["snapshot"])
     candidates = [Candidate.from_dict(item) for item in fixture["candidates"]]
     recommendations = [Recommendation.from_dict(item) for item in fixture.get("recommendations", [])]
+    ticker_master_payload = json.loads(TICKER_MASTER_FIXTURE_PATH.read_text(encoding="utf-8"))
+    ticker_master = TickerMaster.from_dict(ticker_master_payload)
     closed_returns = [item.final_return_pct for item in recommendations if item.final_return_pct is not None]
     gains = [value for value in closed_returns if value > 0]
     losses = [value for value in closed_returns if value < 0]
@@ -49,14 +57,183 @@ def build_demo() -> dict[str, object]:
     RECOMMENDATION_OUTPUT_PATH.write_text(
         json.dumps(
             {
-                "schema_version": "2.0",
+                "schema_version": "2.1.2",
                 "is_mock": True,
                 "notice": "Dữ liệu khuyến nghị mô phỏng; không gắn với cổ phiếu thật.",
                 "recommendation_mode": RecommendationMode.RESEARCH_ONLY.value,
                 "performance_method": "FIRST_POST_PUBLICATION_ELIGIBLE_BAR_TOUCH",
                 "performance_summary": performance_summary,
+                "new_recommendation_status": {
+                    "published": False,
+                    "message": "HÔM NAY KHÔNG CÓ KHUYẾN NGHỊ MỚI ĐẠT TIÊU CHUẨN."
+                },
                 "snapshot": snapshot.to_dict(),
                 "items": [item.to_dict() for item in recommendations],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    TICKER_MASTER_OUTPUT_PATH.write_text(
+        json.dumps({**ticker_master.to_public_dict(), "notice": ticker_master_payload["notice"]}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    horizon_defaults = {
+        "SHORT_TERM": ("CHƯA ĐỦ DỮ LIỆU", "Chờ giá, volume và thiết lập đạt chuẩn.", "INTRADAY"),
+        "MEDIUM_TERM": ("CHƯA ĐỦ DỮ LIỆU", "Chờ snapshot cuối phiên và dữ liệu tăng trưởng.", "EOD"),
+        "LONG_TERM": ("CHƯA ĐỦ DỮ LIỆU", "Chờ dữ liệu doanh nghiệp và định giá được cấp quyền.", "EOD_OR_EVENT"),
+        "ACCUMULATION": ("CHƯA ĐỦ ĐIỀU KIỆN ĐÁNH GIÁ", "Chờ BCTC, quản trị và biên an toàn.", "PERIODIC_OR_EVENT"),
+    }
+    stock_reports = []
+    for security in ticker_master.securities():
+        views = [
+            {
+                "horizon": horizon,
+                "assessment": assessment,
+                "summary": summary,
+                "freshness": freshness,
+                "evaluated_at": None,
+                "data_status": "INSUFFICIENT",
+            }
+            for horizon, (assessment, summary, freshness) in horizon_defaults.items()
+        ]
+        report = {
+            "ticker": security.ticker,
+            "company_name": security.company_name,
+            "sector": security.sector,
+            "snapshot_id": ticker_master.snapshot_id,
+            "updated_at": ticker_master.as_of,
+            "data_status": "BLOCKED_NO_LICENSED_DATA",
+            "current_price": None,
+            "rank": None,
+            "sector_rank": None,
+            "score": None,
+            "horizon_views": views,
+            "new_position_state": "CHƯA ĐỦ DỮ LIỆU",
+            "new_position_note": "Không tạo vùng mua khi dữ liệu chưa đạt chuẩn.",
+            "holding_state": "CHƯA ĐỦ DỮ LIỆU",
+            "holding_note": "Không suy luận phải giữ/bán khi chưa có bằng chứng phù hợp.",
+            "reasons": ["Ticker có trong fixture lookup; chưa có snapshot thị trường được cấp quyền."],
+            "risks": ["Không dùng fixture này cho quyết định đầu tư."],
+            "deep_report_available": False,
+            "recommendation_ids": [],
+            "is_mock": True,
+        }
+        if security.ticker == "DEMO1":
+            report.update({
+                "data_status": "MOCK",
+                "current_price": 51.2,
+                "rank": 1,
+                "sector_rank": 1,
+                "score": 91,
+                "new_position_state": "CHỜ CỔNG KHUYẾN NGHỊ",
+                "new_position_note": "Record đã kích hoạt không tự biến thành điểm mua mới.",
+                "holding_state": "TIẾP TỤC THEO DÕI",
+                "holding_note": "Theo dõi mục tiêu 60,0 và điều kiện vô hiệu 49,0.",
+                "reasons": [
+                    "Nền giá VCP co hẹp trong fixture mô phỏng.",
+                    "Khối lượng và sức mạnh tương đối được tách thành evidence riêng.",
+                    "Giá không bị chọn lại sau khi biết kết quả.",
+                ],
+                "risks": ["Market Regime mô phỏng đang VÀNG.", "Toàn bộ dữ liệu là MOCK/SHADOW."],
+                "deep_report_available": True,
+                "recommendation_ids": ["REC-DEMO1-SHORT-20260827"],
+                "horizon_views": [
+                    {"horizon": "SHORT_TERM", "assessment": "ĐANG CÓ HIỆU LỰC", "summary": "Record mô phỏng đã kích hoạt; không suy diễn thành điểm mua mới.", "freshness": "INTRADAY", "evaluated_at": "2026-09-01T14:15:00+07:00", "data_status": "MOCK"},
+                    {"horizon": "MEDIUM_TERM", "assessment": "THEO DÕI", "summary": "Cần thêm xác nhận tăng trưởng và dòng tiền trung hạn.", "freshness": "EOD", "evaluated_at": "2026-09-01T15:00:00+07:00", "data_status": "MOCK"},
+                    {"horizon": "LONG_TERM", "assessment": "TRUNG TÍNH", "summary": "Fixture chưa có đủ lịch sử chất lượng và định giá dài hạn.", "freshness": "EOD_OR_EVENT", "evaluated_at": "2026-08-31T15:00:00+07:00", "data_status": "MOCK"},
+                    {"horizon": "ACCUMULATION", "assessment": "CHỜ VÙNG GIÁ", "summary": "Không áp stop kỹ thuật ngắn hạn cho mục tiêu tích sản.", "freshness": "PERIODIC_OR_EVENT", "evaluated_at": "2026-08-31T15:00:00+07:00", "data_status": "MOCK"},
+                ],
+            })
+        stock_reports.append(report)
+
+    STOCK_REPORT_OUTPUT_PATH.write_text(
+        json.dumps(
+            {
+                "schema_version": "2.1.2",
+                "mode": "RESEARCH_ONLY",
+                "is_mock": True,
+                "notice": "Lookup UI fixture; báo cáo sâu production cần security master và dữ liệu được cấp quyền.",
+                "items": sorted(stock_reports, key=lambda item: item["ticker"]),
+            },
+            ensure_ascii=False,
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    journal = []
+    for recommendation in recommendations:
+        journal.append({
+            "event_id": f"{recommendation.recommendation_id}-PUBLISHED",
+            "recommendation_id": recommendation.recommendation_id,
+            "ticker": recommendation.ticker,
+            "timestamp": recommendation.published_at,
+            "previous_state": None,
+            "new_state": "UNACTIVATED",
+            "event_type": "PUBLISHED",
+            "old_value": None,
+            "new_value": recommendation.price_at_publication,
+            "reason": "Recommendation Gate đã qua trong fixture mô phỏng.",
+            "snapshot_id": recommendation.snapshot_id,
+            "system_version": recommendation.system_version,
+            "created_by": "SYSTEM",
+            "audit_reference": f"AUDIT-{recommendation.recommendation_id}-PUB",
+        })
+        if recommendation.is_activated:
+            journal.append({
+                "event_id": f"{recommendation.recommendation_id}-ACTIVATED",
+                "recommendation_id": recommendation.recommendation_id,
+                "ticker": recommendation.ticker,
+                "timestamp": recommendation.activation_timestamp,
+                "previous_state": "UNACTIVATED",
+                "new_state": "ACTIVE",
+                "event_type": "ACTIVATED",
+                "old_value": None,
+                "new_value": recommendation.performance_entry_price,
+                "reason": "Lần chạm vùng mua hợp lệ đầu tiên sau công bố.",
+                "snapshot_id": recommendation.snapshot_id,
+                "system_version": recommendation.system_version,
+                "created_by": "SYSTEM",
+                "audit_reference": f"AUDIT-{recommendation.recommendation_id}-ACT",
+            })
+        if recommendation.is_closed:
+            journal.append({
+                "event_id": f"{recommendation.recommendation_id}-CLOSED",
+                "recommendation_id": recommendation.recommendation_id,
+                "ticker": recommendation.ticker,
+                "timestamp": recommendation.close_timestamp,
+                "previous_state": "ACTIVE",
+                "new_state": recommendation.recommendation_state.value,
+                "event_type": "CLOSED",
+                "old_value": recommendation.performance_entry_price,
+                "new_value": recommendation.close_price,
+                "reason": recommendation.close_reason or "Đóng theo lifecycle mô phỏng.",
+                "snapshot_id": recommendation.snapshot_id,
+                "system_version": recommendation.system_version,
+                "created_by": "SYSTEM",
+                "audit_reference": f"AUDIT-{recommendation.recommendation_id}-CLOSE",
+            })
+    JOURNAL_OUTPUT_PATH.write_text(
+        json.dumps({"schema_version": "2.1.2", "is_mock": True, "items": journal}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+    TODAY_CHANGES_OUTPUT_PATH.write_text(
+        json.dumps(
+            {
+                "schema_version": "2.1.2",
+                "is_mock": True,
+                "as_of": snapshot.as_of,
+                "notice": "Thay đổi mô phỏng để kiểm thử view 30–60 giây.",
+                "items": [
+                    {"event_id": "CHANGE-001", "ticker": "DEMO3", "event_type": "STATE_CHANGED", "occurred_at": "2026-09-01T14:15:00+07:00", "title": "DEMO3 · Trung hạn", "previous_value": "ĐẠT VÙNG MUA", "new_value": "TĂNG QUÁ VÙNG MUA", "summary": "Mua mới không phù hợp; người đang nắm giữ tiếp tục theo dõi luận điểm.", "importance": 3},
+                    {"event_id": "CHANGE-002", "ticker": "DEMO2", "event_type": "SCORE_CHANGED", "occurred_at": "2026-09-01T13:30:00+07:00", "title": "DEMO2 · Ngắn hạn", "previous_value": "84", "new_value": "88", "summary": "Điểm tăng nhưng Recommendation Gate vẫn chưa kích hoạt.", "importance": 2},
+                    {"event_id": "CHANGE-003", "ticker": None, "event_type": "MARKET_REGIME_CHANGED", "occurred_at": "2026-09-01T11:15:00+07:00", "title": "Market Regime", "previous_value": "XANH", "new_value": "VÀNG", "summary": "Giảm mức chấp nhận rủi ro trong fixture; không phải trạng thái thị trường thật.", "importance": 3},
+                ],
             },
             ensure_ascii=False,
             indent=2,
@@ -73,6 +250,12 @@ def build_demo() -> dict[str, object]:
         for recommendation in recommendations:
             record = recommendation.to_dict()
             ledger.append_recommendation(record)
+            if recommendation.review_due_at:
+                ledger.append_review_schedule(
+                    recommendation.recommendation_id,
+                    recommendation.review_due_at,
+                    recommendation.review_status.value,
+                )
             ledger.append_recommendation_event(
                 recommendation.recommendation_id,
                 "PUBLISHED",

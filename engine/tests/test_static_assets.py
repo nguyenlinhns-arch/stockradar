@@ -147,7 +147,7 @@ class StaticAssetTests(unittest.TestCase):
     def test_master_product_surfaces_are_present_and_truthful(self) -> None:
         routes = {
             "nganh": "DỮ LIỆU CHƯA ĐỦ ĐỂ XẾP HẠNG TOÀN HOSE",
-            "phan-tich": "Trang demo chỉ có báo cáo cho DEMO1",
+            "phan-tich": "TICKER LOOKUP V2.1.2",
             "khuyen-nghi": "Công bố không đồng nghĩa đã mua",
             "hieu-qua": "Đếm đúng trước khi nói hiệu quả",
             "co-phieu/demo1": "KHÔNG PHẢI CỔ PHIẾU THẬT",
@@ -194,12 +194,12 @@ class StaticAssetTests(unittest.TestCase):
             self.assertIn(marker, recommendations_page)
         self.assertIn("data-performance-summary", performance_page)
         self.assertIn("SHADOW", performance_page)
-        self.assertIn("Chín câu hỏi", report_page)
+        self.assertIn("Bốn góc nhìn", report_page)
 
         recommendations = json.loads(
             (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
         )
-        self.assertEqual(recommendations["schema_version"], "2.0")
+        self.assertEqual(recommendations["schema_version"], "2.1.2")
         self.assertEqual(recommendations["recommendation_mode"], "RESEARCH_ONLY")
         unactivated = [item for item in recommendations["items"] if item["recommendation_state"] == "UNACTIVATED"]
         self.assertEqual(len(unactivated), 1)
@@ -217,6 +217,8 @@ class StaticAssetTests(unittest.TestCase):
             "STOCKRADAR_DATA_RIGHTS.md", "STOCKRADAR_EMAIL_SPEC.md",
             "STOCKRADAR_SUBSCRIPTION_SPEC.md", "STOCKRADAR_ANALYTICS_SPEC.md",
             "STOCKRADAR_ADS_EXPERIMENTS.md", "STOCKRADAR_COMPLIANCE_REVIEW.md",
+            "STOCKRADAR_PERSONALIZATION_SPEC.md", "STOCKRADAR_TODAY_CHANGES_SPEC.md",
+            "STOCKRADAR_RECOMMENDATION_JOURNAL_SPEC.md",
         )
         for name in names:
             self.assertTrue((ROOT / name).is_file(), name)
@@ -250,6 +252,34 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("Top 10", homepage)
         self.assertIn("199.000đ", pricing)
         self.assertIn("299.000đ/30 ngày", pricing)
+
+    def test_v212_lookup_dynamic_report_today_changes_and_journal_surfaces(self) -> None:
+        required_pages = {
+            "kiem-tra-co-phieu": "KIẾN TRÚC 3 TẦNG",
+            "co-phieu": "Một mã, bốn góc nhìn",
+            "thay-doi-hom-nay": "30–60 giây",
+        }
+        for route, marker in required_pages.items():
+            source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
+            self.assertIn(marker, source)
+
+        master = json.loads((WEBSITE / "public/data/ticker-universe.json").read_text(encoding="utf-8"))
+        reports = json.loads((WEBSITE / "public/data/stock-reports.json").read_text(encoding="utf-8"))
+        changes = json.loads((WEBSITE / "public/data/today-changes.json").read_text(encoding="utf-8"))
+        journal = json.loads((WEBSITE / "public/data/recommendation-journal.json").read_text(encoding="utf-8"))
+        self.assertFalse(master["full_universe"])
+        self.assertIn("VCI", {item["ticker"] for item in master["items"]})
+        self.assertEqual(len(next(item for item in reports["items"] if item["ticker"] == "DEMO1")["horizon_views"]), 4)
+        self.assertTrue(changes["items"])
+        self.assertTrue(all(item["audit_reference"] for item in journal["items"]))
+
+        script = (WEBSITE / "assets/app.js").read_text(encoding="utf-8")
+        for marker in (
+            "ticker_input_started", "ticker_autocomplete_selected", "ticker_search_valid",
+            "quick_report_view", "four_horizon_view", "holding_view", "today_changes_view",
+            "loadDynamicStockReport", "recommendation-journal.json",
+        ):
+            self.assertIn(marker, script)
 
     def test_six_creatives_have_feed_and_reels_variants(self) -> None:
         output = ROOT / "growth" / "creatives" / "output"

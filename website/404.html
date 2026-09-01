@@ -1,0 +1,14 @@
+<!doctype html>
+<html lang="vi" data-api-mode="auto">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Đang chuyển tới báo cáo — StockRadar</title>
+  <style>body{font:16px system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#f3f6f8;color:#102c46}main{max-width:560px;padding:32px;background:#fff;border-top:4px solid #c8202f}a{color:#1769aa}</style>
+</head>
+<body>
+  <main><h1>Đang mở báo cáo cổ phiếu…</h1><p>Nếu trang không tự chuyển, hãy quay lại <a id="home" href="./">StockRadar</a>.</p></main>
+  <script>(()=>{const marker='/co-phieu/';const index=location.pathname.toLowerCase().indexOf(marker);if(index>=0){const ticker=location.pathname.slice(index+marker.length).split('/')[0].toUpperCase().replace(/[^A-Z0-9]/g,'');if(ticker){location.replace(location.pathname.slice(0,index)+marker+'?ticker='+encodeURIComponent(ticker)+location.search.replace(/^\?/,'&'));return;}}document.getElementById('home').href=location.pathname.split('/').slice(0,2).join('/')+'/';})();</script>
+</body>
+</html>

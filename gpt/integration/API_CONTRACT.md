@@ -5,6 +5,10 @@ Minimum read operations:
 - `getCalendarStatus`
 - `getMarketSnapshot`
 - `getHoseUniverseStatus`
+- `autocompleteHoseTicker`
+- `getTickerQuickReport`
+- `requestTickerDeepReport`
+- `getReportCacheStatus`
 - `getRadarByHorizon`
 - `getSectorRankingByHorizon`
 - `getStockReport`
@@ -15,6 +19,8 @@ Minimum read operations:
 - `getRiskRadar`
 - `getTrackRecord`
 - `getStateChanges`
+- `getTodayChanges`
+- `getRecommendationJournal`
 
 Every dynamic response must include:
 
@@ -36,13 +42,15 @@ Recommendation responses additionally include:
 - current-price observation with its own timestamp;
 - close price/time/reason/final return for closed records;
 - price/total return basis, corporate-action references, benchmark and excess return;
+- independent four-horizon assessments/freshness, new-position and holding views;
+- review due/status/decision and append-only journal events;
 - record mode (`BACKTEST`, `SHADOW`, `LIVE_PUBLISHED`) and recommendation mode;
 - evidence score, Coverage and explicit `score_is_probability=false`;
 - thesis, risks, invalidation conditions and public state;
 - action gate results, including unknown/blocked reasons;
 - `is_mock`, whenever applicable.
 
-Writes are separate authenticated operations for watchlist preference and email consent. They must never accept broker credentials, OTPs, orders, NAV or portfolio-control authority.
+Writes are separate authenticated operations for onboarding preferences, watchlist and Trial/Paid email consent. Free product-email eligibility is always false. Writes must never accept broker credentials, OTPs, orders, NAV or portfolio-control authority.
 
 The local engine produces the Radar payload, but no HTTPS API/authentication exists. Do not configure a fake Action hostname.
 
@@ -52,6 +60,7 @@ Production requirements:
 - OpenAPI schema;
 - API key or OAuth stored outside prompts/files;
 - rate limits and bounded retries;
+- ticker-level cache/dedup, job queue, timeout/fallback and anonymous scraping protection;
 - idempotent snapshot/alert identifiers;
 - semantic integration tests, not HTTP 200 alone.
 

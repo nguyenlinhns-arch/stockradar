@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-09-01 — V2.1.2 universal lookup and service-monitoring update
+
+- Applied Change Request V2.1, Execution Priority Addendum V2.1.1 and Change Request V2.1.2 without rebuilding the V2 core.
+- Added independent new-position/holding assessments, mandatory review schedule/decisions and a fully attributed append-only recommendation journal.
+- Added Today Changes, public no-recommendation state and explicit winners/losers/open/unactivated/closed history.
+- Rebuilt Home around the ticker lookup live-demo flow; added `/kiem-tra-co-phieu/`, generic `/co-phieu/?ticker=...` and `/thay-doi-hom-nay/`.
+- Replaced hard-coded client lookup with master-driven autocomplete, quick/partial results, per-horizon freshness and ticker-specific Trial CTA.
+- Added SQLite report cache with independent horizon TTL, hit/miss/stale refresh, deduplicated watchlist monitoring and active intraday-universe union.
+- Enforced Free transactional-only email, verified Trial/Paid product email, three-group onboarding and tier watchlist limits in domain policy/schema/UI.
+- Expanded schemas for review, benchmark start/end, search/popularity, cache, monitored tickers, notification jobs and intraday universe.
+- Added V2.1.2 analytics events, local API lookup/rate-limit reference and regression cases; kept Pages MOCK/SHADOW/noindex/no-write.
+- Marked full current HOSE lookup, production on-demand analysis, auth/email/billing and Ads as BLOCKED until licensed data/backend/compliance exist.
+
 ## 2026-09-01 — V2 recommendation lifecycle and performance
 
 - Separated research ranking from recommendation publication with a dedicated gate and fail-closed mode controls.

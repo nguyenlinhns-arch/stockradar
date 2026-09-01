@@ -1,4 +1,4 @@
-# StockRadar Performance Methodology V2
+# StockRadar Performance Methodology V2.1.2
 
 ## Eligible sample
 
@@ -18,7 +18,7 @@ Splits and stock dividends adjust price/share factors. Verified cash dividends a
 
 ## Benchmark
 
-Default benchmark is the approved broad-market index appropriate to the exchange; sector benchmark is optional but must use the same window and adjusted basis. The provider and redistribution right must be approved before public production use.
+Default benchmark for HOSE recommendations is VN-Index, using the index at activation and at the same current/close timestamp as the recommendation. `benchmark_return = current_or_close_value / start_value - 1`; `excess_return = recommendation_return - benchmark_return`. Sector benchmark is optional but must use the same window and adjusted basis. The provider and redistribution right must be approved before public production use.
 
 ## Anti-bias rules
 

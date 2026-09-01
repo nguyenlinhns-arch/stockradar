@@ -16,6 +16,7 @@ class WebServerTests(unittest.TestCase):
         self.original_data_dir = web.DATA_DIR
         web.DATA_DIR = Path(self.temp.name)
         web.DB_PATH = web.DATA_DIR / "web.sqlite"
+        web.LOOKUP_LIMITER.clear()
         self.server = web.ThreadingHTTPServer(("127.0.0.1", 0), web.Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -43,12 +44,38 @@ class WebServerTests(unittest.TestCase):
             "/", "/radar5", "/breakout", "/risk", "/track-record", "/pro", "/signup",
             "/nganh", "/phan-tich", "/khuyen-nghi", "/hieu-qua", "/co-phieu/demo1", "/email",
             "/theo-doi", "/tai-khoan",
+            "/kiem-tra-co-phieu", "/thay-doi-hom-nay", "/co-phieu/VCI",
             "/kien-thuc", "/kien-thuc/canslim-sepa", "/kien-thuc/vpa", "/kien-thuc/4m",
             "/kien-thuc/pocket-pivot", "/kien-thuc/cong-cu-ky-thuat",
             "/kien-thuc/quan-tri-rui-ro", "/kien-thuc/quy-trinh-stockradar", "/api/health"
         ]:
             with urllib.request.urlopen(self.base + path) as response:
                 self.assertEqual(response.status, 200, path)
+
+    def test_v212_ticker_autocomplete_quick_and_partial_report(self) -> None:
+        with urllib.request.urlopen(self.base + "/api/tickers?q=H") as response:
+            payload = json.load(response)
+            tickers = {item["ticker"] for item in payload["items"]}
+            self.assertTrue({"HPG", "HDB", "HCM", "HSG"}.issubset(tickers))
+            self.assertFalse(payload["full_universe"])
+        with urllib.request.urlopen(self.base + "/api/stocks/VCI/quick") as response:
+            payload = json.load(response)
+            self.assertEqual(payload["ticker"], "VCI")
+            self.assertEqual(payload["data_status"], "BLOCKED_NO_LICENSED_DATA")
+        with urllib.request.urlopen(self.base + "/api/stocks/VCI/report") as response:
+            self.assertEqual(response.status, 206)
+            payload = json.load(response)
+            self.assertIn("Đánh giá nhanh", payload["message"])
+
+    def test_v212_invalid_ticker_and_rate_limiter(self) -> None:
+        with self.assertRaises(urllib.error.HTTPError) as context:
+            urllib.request.urlopen(self.base + "/api/stocks/ZZZ/quick")
+        self.assertEqual(context.exception.code, 404)
+        limiter = web.SlidingWindowRateLimiter()
+        self.assertTrue(limiter.allow("bot", limit=2, window_seconds=60, now=1))
+        self.assertTrue(limiter.allow("bot", limit=2, window_seconds=60, now=2))
+        self.assertFalse(limiter.allow("bot", limit=2, window_seconds=60, now=3))
+        self.assertTrue(limiter.allow("bot", limit=2, window_seconds=60, now=63))
 
     def test_signup_requires_consent(self) -> None:
         with self.assertRaises(urllib.error.HTTPError) as context:

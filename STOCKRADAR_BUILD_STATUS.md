@@ -1,33 +1,40 @@
-# STOCKRADAR BUILD STATUS V2
+# STOCKRADAR BUILD STATUS V2.1.2
 
-Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`.
+Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
 
 | Workstream | Status | Evidence | Remaining production gate |
 | --- | --- | --- | --- |
-| V2 product contract | PASS | `STOCKRADAR_PRODUCT_SPEC_V2.md` plus the eleven required lifecycle/performance/rights/email/subscription/analytics/ads/compliance specs | Validate with real users without widening claims |
-| Four horizon scoring | PASS | Distinct 100-point profiles and anti-double-count/probability tests | Licensed data and horizon-matched OOS calibration |
-| Recommendation Gate | PASS | Ranking is separated from publish eligibility; extension/data/market/liquidity/event/evidence/horizon gates tested | Calibrate thresholds on approved HOSE dataset |
-| Publication/activation lifecycle | PASS | Deterministic first eligible post-publication zone-touch; unactivated has no entry/P&L | Production timestamp/bar specification and exchange calendar |
-| Performance/corporate action | PASS | Open/final/excess return implementation; split/cash handling; unresolved rights blocks; closed result frozen | Approved corporate-action and benchmark provider |
-| Append-only track record | PASS | Immutable recommendations/events/corrections/manual overrides in SQLite; mutation tests pass | Production database, access control, backups and monitoring |
-| Website V2 | PASS | Home public search/proof, recommendation filters, Performance, nine-question report, sector/Knowledge/email/account/pricing; 23 routes | Live market adapter and production services |
-| Static GitHub Pages | PASS | Core commit `020f22c393c606353319de295ed26ed7af419e6c`; workflow `33526215030` SUCCESS; 23/23 public routes checked; MOCK/SHADOW/noindex/no-write | None for research demo; not a production backend |
-| Automated regression | PASS | 57/57 tests; JS syntax; CSS brace parity; static build | Add production adapter and end-to-end service tests |
-| Live browser QA | PASS | Home, lifecycle filter, Performance and DEMO1 interaction checked; no page overflow at desktop viewport; only browser-extension-origin metadata errors observed | Real-device/mobile visual matrix before production launch |
-| GPT client V2 | PASS | Nine-question explanation, recommendation/activation/performance/mode rules and six new regressions | HTTPS authenticated read API/Action |
-| Analytics V2 | PASS | Canonical event schema/client/server allowlist and privacy rules | Production first-party store, identity/dedup and consent controls |
-| Email architecture | PASS | Pre-session primary email, event/post-session/weekly contracts and scan checkpoints | Sender/provider, consent, unsubscribe, bounce/complaint and worker — BLOCKED |
-| Auth/watchlist | BLOCKED | Minimal schemas and honest unavailable UI | Managed auth, secure production DB, threat model and privacy operations |
-| Billing/subscription | BLOCKED | Free/Advanced entitlements and exact 30-day grant contract; 199k/299k hypotheses | Provider/webhooks, reconciliation, tax/refund/security/compliance |
-| Full HOSE data/rights | BLOCKED | Rights registry/provenance/fail-closed contract | Licensed current data, redistribution/derived-data approval and reconciliation |
-| Compliance/legal | BLOCKED | RESEARCH_ONLY mode and formal review checklist | Authorized Vietnamese legal/compliance approval and documented conditions |
-| Ads first round | BLOCKED | V2 propositions, equal-budget plan and copy draft; old Breakout/Risk retired from first round | Six new approved assets, production events, data rights, compliance and account eligibility |
-| Custom domain/brand | BLOCKED | Pages URL works; brand boundary documented | Domain ownership/DNS/HTTPS and trademark/confusion clearance |
+| V2.1.2 product contract | PASS | Current Product Spec plus personalization, Today Changes, journal and lookup/cache specs | Validate with real-user flow data |
+| Four horizon scoring | PASS | Distinct models; anti-double-count/probability regressions | Licensed data and horizon-matched OOS calibration |
+| Ranking ≠ Recommendation | PASS | Separate gate, extended Top-1 regression and empty-publication state | Calibrate on approved HOSE dataset |
+| New-position / holding view | PASS | Independent domain assessment and dynamic ticker UI | Production evidence and compliant wording review |
+| Publication/activation/P&L | PASS | First eligible post-publication touch; unactivated no P/L; closed final frozen | Production calendar/bar contract |
+| Review due / journal | PASS | Models, JSON/SQL schemas, schedule, append-only triggers, public timeline and tests | Production DB/access control/backups |
+| VN-Index benchmark method | PASS | Matching activation-to-current/close start/end demo and regression | Licensed benchmark provider/redistribution rights |
+| Today Changes | PASS | Significant-event filter, payload, 30–60 second route | Production event pipeline |
+| Public recommendation history | PASS | Winner, loser, open, unactivated and closed SHADOW records; no cherry-pick | Forward production sample |
+| Ticker lookup UI | PASS | Master-driven autocomplete, uppercase validation, quick/partial result and Trial CTA | None for MOCK fixture |
+| Dynamic ticker route | PASS | Generic client route, local `/co-phieu/{ticker}` resolver and Pages 404 redirect | Server-side SSR/indexability after rights/compliance |
+| Per-horizon cache/on-demand interface | PASS | SQLite hit/miss/stale/refresh, independent TTL and tests | Durable production cache, queue, invalidation and observability |
+| Watchlist dedupe / active intraday set | PASS | One ticker pipeline, subscriber fan-out and union regression | Authenticated durable store and worker |
+| Free email restriction | PASS | Tier policy, schema/UI/spec and regression | Production enforcement after auth/email connection |
+| Trial/Paid personalization | PASS | Preferences, limits, content prioritization and UI | Managed auth, verification, consent and delivery provider — BLOCKED |
+| Analytics V2.1.2 | PASS | Search/cache/report/onboarding/holding/journal event allowlists/spec | First-party store, identity/bot filtering and consent |
+| Website V2.1.2 | PASS | Live-demo Home; check-ticker, dynamic report and Today Changes routes; public history and pricing boundary | Real-device/mobile matrix before production |
+| Automated regression | TESTING | Suite expanded from 57 to current count; final count written after release QA | Production adapter/E2E tests |
+| Static GitHub Pages | TESTING | Static build remains no-write, noindex, MOCK/SHADOW | Final Actions deploy and live route check |
+| Full current HOSE master/data/rights | BLOCKED | Fixture is explicitly `full_universe=false`, `MOCK` | Licensed current master/price/fundamental/event/corporate-action data and reconciliation |
+| Production anonymous rate limit | BLOCKED | Configurable local reference limiter passes tests | Server-side gateway/WAF/rate limiter; Pages cannot enforce |
+| Auth/watchlist persistence | BLOCKED | Schemas, tier limits and honest UI only | Managed auth, secure DB, threat model and privacy operations |
+| Email delivery | BLOCKED | Trial/Paid-only personalized contract and UI | Provider, verified domain, consent, unsubscribe, bounce/complaint, worker |
+| Billing/subscription | BLOCKED | Exact 30-day contract and 199k/299k hypotheses | Provider/webhooks, reconciliation, tax/refund/security/compliance |
+| Compliance/legal | BLOCKED | RESEARCH_ONLY/noindex and formal checklist | Authorized Vietnamese legal/compliance approval |
+| Ads first round | BLOCKED | Lookup, holding and history landings/events are implemented; spending not authorized | Production data/auth/measurement, six approved assets, compliance and account eligibility |
 
 ## Shipping conclusion
 
-Research-only V2 demo: **PASS**.
+Research-only V2.1.2 implementation: **TESTING** until final regression, build, deploy and live QA complete.
 
-Production StockRadar, live Top HOSE, production recommendations/performance, email delivery, paid Advanced and Ads: **BLOCKED**.
+Production StockRadar, “any current HOSE ticker,” live Top HOSE, production recommendations/performance, email delivery, payment and Ads: **BLOCKED**.
 
-Critical path: `licensed data/rights → full-universe reconciliation → four-horizon calibration → forward SHADOW history → secure auth/email/billing/privacy → formal compliance → PRODUCTION_APPROVED`.
+Critical path: `licensed data/rights → full-universe reconciliation → production API/cache/queue/rate limit → auth/privacy → email/billing → formal compliance → PRODUCTION_APPROVED`.

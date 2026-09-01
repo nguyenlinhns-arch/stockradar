@@ -1,5 +1,7 @@
 # Audit and Gap Analysis — 01/09/2026
 
+> Historical migration audit. Current V2.1.2 implementation audit: `docs/AUDIT_V2_1_2.md`.
+
 ## Sources audited
 
 1. Master command migrating project “Chứng khoán” to StockRadar.
@@ -72,4 +74,3 @@ Not migrated into the product core:
 - Real Top 5 HOSE: not available.
 - Realtime alerts: not active.
 - Ads launched: no.
-

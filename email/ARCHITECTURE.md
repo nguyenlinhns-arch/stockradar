@@ -2,6 +2,10 @@
 
 Status: design contract only; no production sender is connected.
 
+## Entitlement gate
+
+Transactional mail is available where required for every account tier. Product content (`daily`, `state_change`, `post_session`, `weekly`) is eligible only for verified, consented Trial/Paid accounts. Free accounts are always suppressed for product content even if an obsolete opt-in flag exists. Paid content is ordered by watchlist ticker, preferred horizon and sector before general items.
+
 ## Delivery windows
 
 | Window | Purpose | Default content |

@@ -1,5 +1,5 @@
 {
-  "schema_version": "2.0",
+  "schema_version": "2.1.2",
   "is_mock": true,
   "notice": "Dữ liệu khuyến nghị mô phỏng; không gắn với cổ phiếu thật.",
   "recommendation_mode": "RESEARCH_ONLY",
@@ -17,6 +17,10 @@
     "average_loss_pct": -4.17,
     "average_closed_return_pct": 2.91,
     "excludes_unactivated_from_win_rate": true
+  },
+  "new_recommendation_status": {
+    "published": false,
+    "message": "HÔM NAY KHÔNG CÓ KHUYẾN NGHỊ MỚI ĐẠT TIÊU CHUẨN."
   },
   "snapshot": {
     "snapshot_id": "DEMO-2026-09-01-CLOSE",
@@ -86,7 +90,7 @@
       "status": "OPEN",
       "generated_at": "2026-08-27T14:55:00+07:00",
       "published_at": "2026-08-27T15:00:00+07:00",
-      "system_version": "2.0.0-demo",
+      "system_version": "2.1.2-demo",
       "score_version": "short-v2-demo",
       "publish_status": "DEMO_ONLY",
       "record_mode": "SHADOW",
@@ -105,6 +109,15 @@
       "outcome": "OPEN",
       "closed_at": null,
       "close_reason": null,
+      "review_due_at": "2026-09-15T15:00:00+07:00",
+      "review_status": "PENDING",
+      "review_decision": null,
+      "new_position_state": "CHỜ CỔNG KHUYẾN NGHỊ",
+      "new_position_note": "Không suy diễn record đã kích hoạt thành điểm mua mới tại giá hiện tại.",
+      "holding_state": "TIẾP TỤC THEO DÕI",
+      "holding_note": "Theo dõi mục tiêu 60,0 và điều kiện vô hiệu 49,0.",
+      "vnindex_at_activation": 1300.0,
+      "vnindex_current_or_close": 1304.55,
       "is_mock": true
     },
     {
@@ -150,7 +163,7 @@
       "status": "OPEN",
       "generated_at": "2026-08-27T14:55:00+07:00",
       "published_at": "2026-08-27T15:00:00+07:00",
-      "system_version": "2.0.0-demo",
+      "system_version": "2.1.2-demo",
       "score_version": "short-v2-demo",
       "publish_status": "DEMO_ONLY",
       "record_mode": "SHADOW",
@@ -169,6 +182,15 @@
       "outcome": "UNACTIVATED",
       "closed_at": null,
       "close_reason": null,
+      "review_due_at": "2026-09-10T15:00:00+07:00",
+      "review_status": "PENDING",
+      "review_decision": null,
+      "new_position_state": "CHỜ MUA",
+      "new_position_note": "Chưa có giao dịch hợp lệ đi vào vùng mua đã công bố.",
+      "holding_state": "THEO DÕI",
+      "holding_note": "Chưa có record kích hoạt; không suy diễn P/L.",
+      "vnindex_at_activation": null,
+      "vnindex_current_or_close": null,
       "is_mock": true
     },
     {
@@ -214,7 +236,7 @@
       "status": "OPEN",
       "generated_at": "2026-08-15T14:55:00+07:00",
       "published_at": "2026-08-15T15:00:00+07:00",
-      "system_version": "2.0.0-demo",
+      "system_version": "2.1.2-demo",
       "score_version": "medium-v2-demo",
       "publish_status": "DEMO_ONLY",
       "record_mode": "SHADOW",
@@ -233,6 +255,15 @@
       "outcome": "OPEN",
       "closed_at": null,
       "close_reason": null,
+      "review_due_at": "2026-09-05T15:00:00+07:00",
+      "review_status": "PENDING",
+      "review_decision": null,
+      "new_position_state": "KHÔNG MUA ĐUỔI",
+      "new_position_note": "Giá hiện đã vượt vùng mua 26,5–27,0.",
+      "holding_state": "TIẾP TỤC THEO DÕI",
+      "holding_note": "Không phù hợp mua mới không đồng nghĩa phải bán khi luận điểm còn nguyên.",
+      "vnindex_at_activation": 1290.0,
+      "vnindex_current_or_close": 1308.06,
       "is_mock": true
     },
     {
@@ -278,7 +309,7 @@
       "status": "CLOSED",
       "generated_at": "2026-07-01T14:55:00+07:00",
       "published_at": "2026-07-01T15:00:00+07:00",
-      "system_version": "2.0.0-demo",
+      "system_version": "2.1.2-demo",
       "score_version": "long-v2-demo",
       "publish_status": "DEMO_ONLY",
       "record_mode": "SHADOW",
@@ -299,6 +330,15 @@
       "outcome": "WIN",
       "closed_at": "2026-08-20T14:15:00+07:00",
       "close_reason": "Đạt vùng giá trị hợp lý mô phỏng.",
+      "review_due_at": "2026-08-20T14:15:00+07:00",
+      "review_status": "COMPLETED",
+      "review_decision": "CLOSE",
+      "new_position_state": "KHÔNG PHÙ HỢP",
+      "new_position_note": "Record đã đóng tại mục tiêu; không dùng lịch sử để tạo điểm mua mới.",
+      "holding_state": "ĐÃ ĐÓNG THEO MỤC TIÊU",
+      "holding_note": "Kết quả cuối cùng đã khóa tại thời điểm đóng.",
+      "vnindex_at_activation": 1250.0,
+      "vnindex_current_or_close": 1302.5,
       "is_mock": true
     },
     {
@@ -344,7 +384,7 @@
       "status": "CLOSED",
       "generated_at": "2026-06-01T14:55:00+07:00",
       "published_at": "2026-06-01T15:00:00+07:00",
-      "system_version": "2.0.0-demo",
+      "system_version": "2.1.2-demo",
       "score_version": "accumulation-v2-demo",
       "publish_status": "DEMO_ONLY",
       "record_mode": "SHADOW",
@@ -363,6 +403,15 @@
       "outcome": "LOSS",
       "closed_at": "2026-08-10T14:15:00+07:00",
       "close_reason": "Luận điểm tích sản mô phỏng không còn đạt điều kiện.",
+      "review_due_at": "2026-08-10T14:15:00+07:00",
+      "review_status": "COMPLETED",
+      "review_decision": "CLOSE",
+      "new_position_state": "KHÔNG PHÙ HỢP",
+      "new_position_note": "Luận điểm mô phỏng không còn đạt điều kiện.",
+      "holding_state": "XEM XÉT THOÁT / ĐÃ ĐÓNG",
+      "holding_note": "Record đã đóng; không tiếp tục cập nhật theo giá hiện tại.",
+      "vnindex_at_activation": 1270.0,
+      "vnindex_current_or_close": 1296.67,
       "is_mock": true
     }
   ]

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://stockradar.vn/schemas/recommendation-event.schema.json",
+  "title": "StockRadar Append-only Recommendation Event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "event_id", "recommendation_id", "timestamp", "event_type",
+    "new_state", "snapshot_id", "system_version", "created_by", "audit_reference"
+  ],
+  "properties": {
+    "event_id": {"type": "string", "minLength": 1},
+    "recommendation_id": {"type": "string", "minLength": 1},
+    "timestamp": {"type": "string", "minLength": 1},
+    "previous_state": {"type": ["string", "null"]},
+    "new_state": {"type": "string", "minLength": 1},
+    "event_type": {
+      "enum": [
+        "WATCHED", "WAIT_BUY", "PUBLISHED", "ACTIVATED", "OBSERVED",
+        "SCORE_CHANGED", "TARGET_CHANGED", "REVIEWED", "TARGET_REACHED",
+        "STOP_REACHED", "INVALIDATED", "EXPIRED", "CLOSED", "CORRECTION"
+      ]
+    },
+    "old_value": {},
+    "new_value": {},
+    "reason": {"type": ["string", "null"]},
+    "snapshot_id": {"type": "string", "minLength": 1},
+    "system_version": {"type": "string", "minLength": 1},
+    "created_by": {"type": "string", "minLength": 1},
+    "audit_reference": {"type": "string", "minLength": 1},
+    "correction_of": {"type": ["string", "null"]}
+  }
+}
