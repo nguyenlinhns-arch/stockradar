@@ -8,7 +8,12 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch({ headless: true });
   const errors = [];
-  const pages = ['/', '/radar5', '/breakout', '/risk', '/track-record', '/pro', '/signup'];
+  const pages = [
+    '/', '/radar5', '/breakout', '/risk', '/track-record', '/pro', '/signup',
+    '/kien-thuc', '/kien-thuc/canslim-sepa', '/kien-thuc/vpa', '/kien-thuc/4m',
+    '/kien-thuc/pocket-pivot', '/kien-thuc/cong-cu-ky-thuat',
+    '/kien-thuc/quan-tri-rui-ro'
+  ];
   for (const viewport of [{ name: 'desktop', width: 1440, height: 1000 }, { name: 'mobile', width: 390, height: 844 }]) {
     const context = await browser.newContext({ viewport: { width: viewport.width, height: viewport.height }, deviceScaleFactor: 1 });
     for (const route of pages) {
@@ -34,4 +39,3 @@ const { chromium } = require(path.join(process.env.CODEX_PRIMARY_RUNTIME_NODE_MO
   process.stderr.write(error.stack || String(error));
   process.exitCode = 1;
 });
-

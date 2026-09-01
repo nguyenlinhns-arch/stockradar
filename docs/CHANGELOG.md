@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-09-01 — Four-horizon positioning and Knowledge hub
+
+- Reframed the homepage around Short, Medium, Long and Accumulation goals.
+- Added accessible task-based navigation and a mobile menu across every public page.
+- Added a Knowledge hub and six original, source-attributed guides covering CANSLIM/SEPA/VCP, VPA, 4M, Pocket Pivot, technical context and risk management.
+- Documented UX patterns learned from FireAnt, FiinTrade, Simplize, SSI iBoard, VietstockFinance and CafeF while preserving StockRadar's narrow non-terminal scope.
+- Aligned public copy with conditional Top 10/sector plans and 199,000/299,000 VND per 30-day pricing.
+- Expanded regression coverage from 38 to 41 tests and local route checks from 7 to 14 public routes.
+
 ## 2026-09-01 — GitHub Pages launch
 
 - Created and populated public repository `nguyenlinhns-arch/stockradar`.

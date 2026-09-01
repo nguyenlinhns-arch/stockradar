@@ -3,7 +3,8 @@
   const allowedEvents = new Set([
     'ad_click', 'landing_view', 'radar_view', 'top5_expand', 'track_record_view',
     'signup_started', 'signup_completed', 'alert_opt_in', 'pro_page_view',
-    'trial_started', 'subscription_started', 'return_d1', 'return_d7'
+    'trial_started', 'subscription_started', 'return_d1', 'return_d7',
+    'knowledge_view', 'method_view', 'horizon_select'
   ]);
 
   function siteUrl(path) {
@@ -171,7 +172,7 @@
           const result = await response.json();
           if (!response.ok) throw new Error(result.error || 'Không thể ghi nhận đăng ký');
           message.className = 'form-message success';
-          message.textContent = 'Đã ghi nhận. Khi có bản thử nghiệm phù hợp, StockRadar sẽ liên hệ theo thông tin Thầy đã chọn.';
+          message.textContent = 'Đã ghi nhận. Khi có bản thử nghiệm phù hợp, StockRadar sẽ liên hệ theo thông tin bạn đã chọn.';
           track('signup_completed', { proposition: data.proposition });
           if (data.alert_opt_in) track('alert_opt_in', { proposition: data.proposition });
           form.reset();
@@ -183,11 +184,42 @@
     });
   }
 
+  function wireNavigation() {
+    const toggle = document.querySelector('[data-nav-toggle]');
+    const menu = document.querySelector('[data-nav-menu]');
+    if (!toggle || !menu) return;
+
+    const close = () => {
+      menu.classList.remove('is-open');
+      toggle.setAttribute('aria-expanded', 'false');
+    };
+    toggle.addEventListener('click', () => {
+      const opening = !menu.classList.contains('is-open');
+      menu.classList.toggle('is-open', opening);
+      toggle.setAttribute('aria-expanded', String(opening));
+    });
+    menu.addEventListener('click', event => {
+      if (event.target.closest('a')) close();
+    });
+    document.addEventListener('click', event => {
+      if (!menu.contains(event.target) && !toggle.contains(event.target)) close();
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        close();
+        toggle.focus();
+      }
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     getUtm(); retentionEvents();
     track('landing_view');
+    wireNavigation();
     if (/(^|\/)pro\/?$/.test(location.pathname)) track('pro_page_view');
-    document.querySelectorAll('[data-track-event]').forEach(el => el.addEventListener('click', () => track(el.dataset.trackEvent)));
+    if (document.body.dataset.pageKind === 'knowledge-hub') track('knowledge_view');
+    if (document.body.dataset.pageKind === 'method') track('method_view', { method: document.body.dataset.method || 'unknown' });
+    document.querySelectorAll('[data-track-event]').forEach(el => el.addEventListener('click', () => track(el.dataset.trackEvent, { target: el.getAttribute('href') || '' })));
     loadRadar(); loadTrackRecord(); wireForms();
   });
 })();

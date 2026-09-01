@@ -4,69 +4,98 @@
   <base href="./">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="StockRadar quét HOSE, chắt lọc ít setup đáng theo dõi và báo khi trạng thái thay đổi.">
-  <title>StockRadar — Quét HOSE, chắt lọc setup</title>
+  <meta name="description" content="StockRadar quét HOSE, xếp hạng cổ phiếu theo bốn mục tiêu đầu tư và báo khi trạng thái thay đổi.">
+  <meta property="og:title" content="StockRadar — Quét HOSE theo mục tiêu đầu tư">
+  <meta property="og:description" content="Ít lựa chọn hơn, luận điểm rõ hơn, rủi ro được nêu trước.">
+  <meta property="og:type" content="website">
+  <title>StockRadar — Quét HOSE theo mục tiêu đầu tư</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css">
   <script src="assets/app.js" defer></script>
 </head>
 <body data-proposition="organic">
+  <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header">
     <div class="container nav">
-      <a class="brand" href="./" aria-label="StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
-      <nav class="nav-links" aria-label="Điều hướng chính">
-        <a href="radar5/">Radar 5</a><a href="breakout/">Breakout</a><a href="risk/">Risk Radar</a><a href="track-record/">Track Record</a><a href="pro/">PRO</a>
-        <a class="button button-primary button-small" href="signup/">Xem miễn phí</a>
+      <a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button>
+      <nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>
+        <a href="radar5/">Radar</a><a href="kien-thuc/">Kiến thức</a><a href="risk/">Cảnh báo</a><a href="track-record/">Kết quả</a><a href="pro/">Gói PRO</a>
+        <a class="button button-primary button-small" href="radar5/">Xem Radar</a>
       </nav>
     </div>
   </header>
 
-  <main>
+  <main id="content">
     <section class="hero">
       <div class="container hero-grid">
         <div>
-          <span class="eyebrow">Không cần xem hàng trăm cổ phiếu</span>
-          <h1>Quét HOSE.<br><span>Giữ lại tín hiệu.</span></h1>
-          <p class="hero-copy">StockRadar chắt lọc rất ít setup đáng theo dõi — rồi báo khi chúng chuyển từ WATCH sang READY, TRIGGERED hoặc INVALIDATED.</p>
+          <span class="eyebrow">Bốn mục tiêu · Một quy trình có kỷ luật</span>
+          <h1>Quét HOSE.<br><span>Chọn đúng mục tiêu.</span></h1>
+          <p class="hero-copy">StockRadar chắt lọc cổ phiếu theo Ngắn hạn, Trung hạn, Dài hạn và Tích sản; nêu rõ vùng giá, luận điểm, rủi ro và điều kiện làm nhận định thay đổi.</p>
           <div class="hero-actions">
-            <a class="button button-primary" href="radar5/" data-track-event="ad_click">Xem Radar hôm nay →</a>
-            <a class="button button-secondary" href="track-record/">Xem Track Record</a>
+            <a class="button button-primary" href="radar5/" data-track-event="ad_click">Xem Radar demo →</a>
+            <a class="button button-secondary" href="kien-thuc/">Hiểu phương pháp</a>
           </div>
-          <p class="hero-note">Bản V1 đang ở giai đoạn kiểm chứng nhu cầu. Không cam kết lợi nhuận, không đặt lệnh thay người dùng.</p>
+          <div class="hero-trust" aria-label="Nguyên tắc StockRadar"><span>Quét toàn bộ HOSE khi dữ liệu đạt chuẩn</span><span>Không gọi score là xác suất thắng</span><span>Lưu lịch sử không sửa lại</span></div>
+          <p class="hero-note">Bản V1 đang kiểm chứng nhu cầu bằng dữ liệu mô phỏng. Không cam kết lợi nhuận và không đặt lệnh thay người dùng.</p>
         </div>
 
-        <div class="radar-visual" aria-label="Mô phỏng Radar 5">
+        <div class="radar-visual" aria-label="Bản xem trước Radar">
           <div class="radar-orbit" aria-hidden="true"></div>
           <div class="radar-card">
             <div class="radar-card-head">
-              <div><span class="eyebrow">Radar 5</span><h2>Setup đáng theo dõi</h2></div>
-              <span class="data-pill">Dữ liệu demo</span>
+              <div><span class="eyebrow">Bản xem trước</span><h2>Danh sách ưu tiên</h2></div>
+              <span class="data-pill">Dữ liệu mô phỏng</span>
             </div>
             <div class="radar-list loading" data-radar-list><div class="empty">Đang tải Radar…</div></div>
-            <div class="market-strip"><span>Market: <strong data-market>—</strong></span><span>Coverage: <strong data-coverage>—</strong></span></div>
+            <div class="market-strip"><span>Thị trường: <strong data-market>—</strong></span><span>Độ phủ: <strong data-coverage>—</strong></span></div>
           </div>
         </div>
       </div>
     </section>
 
-    <section class="section section-muted" id="product">
+    <section class="section section-muted" id="muc-tieu">
       <div class="container">
-        <span class="eyebrow">Ba ngách cần dữ liệu thật trả lời</span>
-        <h2>Một engine. Ba lý do để quay lại.</h2>
-        <p class="section-lead">Chưa mặc định ngách nào thắng. Mỗi proposition có landing, creative và event riêng để đo activated user, retention và ý định trả phí.</p>
+        <span class="eyebrow">Bắt đầu từ thời gian nắm giữ</span>
+        <h2>Một cổ phiếu có thể tốt cho mục tiêu này, nhưng không phù hợp mục tiêu khác.</h2>
+        <p class="section-lead">Mỗi chân trời dùng trọng số, vùng giá và cách quản trị rủi ro riêng. StockRadar không trộn một điểm cắt lỗ ngắn hạn vào luận điểm tích sản nhiều năm.</p>
+        <div class="grid-4">
+          <a class="objective-card" data-index="1" href="kien-thuc/#ngan-han" data-track-event="horizon_select"><span class="horizon">5–20 phiên</span><h3>Ngắn hạn</h3><p>Xu hướng, sức mạnh giá, khối lượng, điểm kích hoạt và độ kéo giãn.</p><span class="text-link">Xem bộ tiêu chí →</span></a>
+          <a class="objective-card" data-index="2" href="kien-thuc/#trung-han" data-track-event="horizon_select"><span class="horizon">1–6 tháng</span><h3>Trung hạn</h3><p>Xu hướng kết hợp tăng trưởng, ngành, dòng tiền và chất lượng doanh nghiệp.</p><span class="text-link">Xem bộ tiêu chí →</span></a>
+          <a class="objective-card" data-index="3" href="kien-thuc/#dai-han" data-track-event="horizon_select"><span class="horizon">6–18 tháng</span><h3>Dài hạn</h3><p>Chất lượng, lợi thế cạnh tranh, tăng trưởng, định giá và giá trị hợp lý.</p><span class="text-link">Xem bộ tiêu chí →</span></a>
+          <a class="objective-card" data-index="4" href="kien-thuc/#tich-san" data-track-event="horizon_select"><span class="horizon">2–5 năm+</span><h3>Tích sản</h3><p>Doanh nghiệp bền vững, dòng tiền, cổ tức, biên an toàn và điều kiện thoái vốn.</p><span class="text-link">Xem bộ tiêu chí →</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container method-preview">
+        <div>
+          <span class="eyebrow">Phương pháp có nguồn gốc</span>
+          <h2>Biết vì sao một mã được chọn.</h2>
+          <p class="section-lead">StockRadar không cho các chỉ báo “bỏ phiếu”. Mỗi phương pháp trả lời một câu hỏi khác nhau; bằng chứng trùng nhau chỉ được tính một lần.</p>
+          <div class="hero-actions"><a class="button button-secondary" href="kien-thuc/">Mở Trung tâm Kiến thức →</a></div>
+        </div>
+        <div class="method-preview-list">
+          <a class="method-preview-row" href="kien-thuc/canslim-sepa/"><span class="method-code">C+S</span><span><strong>CANSLIM, SEPA & VCP</strong><small>Tăng trưởng, cổ phiếu dẫn dắt và nền giá co hẹp</small></span><span class="arrow">→</span></a>
+          <a class="method-preview-row" href="kien-thuc/vpa/"><span class="method-code">VPA</span><span><strong>Giá và khối lượng</strong><small>Đọc quan hệ nỗ lực – kết quả của cung cầu</small></span><span class="arrow">→</span></a>
+          <a class="method-preview-row" href="kien-thuc/4m/"><span class="method-code">4M</span><span><strong>Chất lượng & giá trị</strong><small>Doanh nghiệp, lợi thế, quản trị và biên an toàn</small></span><span class="arrow">→</span></a>
+          <a class="method-preview-row" href="kien-thuc/pocket-pivot/"><span class="method-code">PP</span><span><strong>Tín hiệu sớm</strong><small>Pocket Pivot như bằng chứng phụ trong nền giá</small></span><span class="arrow">→</span></a>
+          <a class="method-preview-row" href="kien-thuc/cong-cu-ky-thuat/"><span class="method-code">TA</span><span><strong>Bối cảnh kỹ thuật</strong><small>Xu hướng, Ichimoku, Bollinger và giai đoạn giá</small></span><span class="arrow">→</span></a>
+          <a class="method-preview-row" href="kien-thuc/quan-tri-rui-ro/"><span class="method-code">R</span><span><strong>Quản trị rủi ro</strong><small>Điểm vô hiệu, R:R và quy mô vị thế</small></span><span class="arrow">→</span></a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-muted" id="san-pham">
+      <div class="container">
+        <span class="eyebrow">Ba tác vụ, không phải ba bảng điện</span>
+        <h2>Tìm cơ hội. Chờ điểm vào. Biết khi luận điểm đổi.</h2>
         <div class="grid-3">
-          <a class="feature-card" href="radar5/">
-            <div class="feature-number">5</div><h3>StockRadar 5</h3>
-            <p>Acquisition: quét full HOSE và chỉ giữ lại 5 setup khi Universe Gate thực sự PASS.</p>
-          </a>
-          <a class="feature-card is-breakout" href="breakout/">
-            <div class="feature-number">↗</div><h3>Breakout Radar</h3>
-            <p>Timing: theo dõi setup gần vùng kích hoạt nhưng chưa bị kéo giãn khỏi pivot.</p>
-          </a>
-          <a class="feature-card is-risk" href="risk/">
-            <div class="feature-number">!</div><h3>Risk Radar</h3>
-            <p>Retention: báo khi setup tốt bắt đầu xấu đi, mất hiệu lực hoặc Market đổi trạng thái.</p>
-          </a>
+          <a class="feature-card" href="radar5/"><div class="feature-number">10</div><h3>Radar ưu tiên</h3><p>Hướng tới Top 10 theo từng mục tiêu và Top ngành; chỉ công bố khi cổng dữ liệu toàn HOSE đạt chuẩn.</p></a>
+          <a class="feature-card is-breakout" href="breakout/"><div class="feature-number">↗</div><h3>Radar điểm kích hoạt</h3><p>Theo dõi thiết lập gần vùng mua nhưng chưa bị kéo giãn quá xa khỏi điểm kích hoạt.</p></a>
+          <a class="feature-card is-risk" href="risk/"><div class="feature-number">!</div><h3>Radar rủi ro</h3><p>Báo khi thiết lập mất hiệu lực, mã rời danh sách hoặc trạng thái thị trường xấu đi.</p></a>
         </div>
       </div>
     </section>
@@ -74,37 +103,37 @@
     <section class="section">
       <div class="container track-strip">
         <div>
-          <span class="eyebrow">Không cherry-pick</span>
-          <h2>Niềm tin đến từ lịch sử không sửa lại.</h2>
-          <p class="section-lead">Mỗi Radar được đóng băng theo snapshot. Nếu dữ liệu sai, StockRadar tạo correction log — không ghi đè sau khi đã biết kết quả.</p>
-          <div class="hero-actions"><a class="button button-secondary" href="track-record/">Mở Track Record →</a></div>
+          <span class="eyebrow">Không chọn lại lịch sử</span>
+          <h2>Công bố trước. Đánh giá sau.</h2>
+          <p class="section-lead">Mỗi khuyến nghị là một bản ghi theo thời điểm. Nếu dữ liệu sai, StockRadar thêm bản sửa có lý do — không ghi đè sau khi đã biết kết quả.</p>
+          <div class="hero-actions"><a class="button button-secondary" href="track-record/">Mở Lịch sử kết quả →</a></div>
         </div>
         <div class="track-points">
-          <div class="track-point">Snapshot, timestamp, Coverage và Market Regime được lưu cùng tín hiệu.</div>
-          <div class="track-point">Theo dõi MAE, MFE, outcome và R-multiple theo cùng horizon.</div>
-          <div class="track-point">Score không được đổi thành “xác suất thắng” khi chưa có calibration OOS phù hợp.</div>
+          <div class="track-point">Ngày khuyến nghị, vùng mua, mục tiêu, điều kiện vô hiệu và giá tại thời điểm công bố được lưu cùng nhau.</div>
+          <div class="track-point">Kết quả được đánh giá đúng theo chân trời đã chọn, không dùng cửa sổ đẹp nhất sau sự kiện.</div>
+          <div class="track-point">Điểm tổng hợp đo độ mạnh của bằng chứng, không được trình bày thành “xác suất thắng”.</div>
         </div>
       </div>
     </section>
 
     <section class="section section-muted">
       <div class="container">
-        <span class="eyebrow">FREE / PRO</span>
+        <span class="eyebrow">Miễn phí / Nâng cao</span>
         <h2>Cho thấy giá trị trước khi yêu cầu đăng ký.</h2>
         <div class="grid-2">
-          <div class="price-card"><span class="tag">FREE</span><div class="price">0đ</div><p>Xem Radar sau phiên và lịch sử công khai.</p><ul class="price-list"><li>Radar 5 sau phiên</li><li>Market Regime + state</li><li>Track Record cơ bản</li></ul><a class="button button-secondary" href="radar5/">Xem bản demo</a></div>
-          <div class="price-card featured"><span class="tag">PRO · Giá test</span><div class="price">199–299k <small>/ tháng</small></div><p>Trả tiền cho thay đổi quan trọng, không phải thêm hàng trăm biểu đồ.</p><ul class="price-list"><li>READY / TRIGGERED alert</li><li>INVALIDATED + Risk Radar</li><li>Mã mới vào/rời Radar</li></ul><a class="button button-primary" href="signup/?proposition=risk">Đăng ký thử nghiệm</a></div>
+          <div class="price-card"><span class="tag">MIỄN PHÍ</span><div class="price">0đ</div><p>Xem danh sách sau phiên, phương pháp và lịch sử công khai.</p><ul class="price-list"><li>Radar demo sau phiên</li><li>Trạng thái thị trường và thiết lập</li><li>Trung tâm Kiến thức</li><li>Lịch sử kết quả cơ bản</li></ul><a class="button button-secondary" href="radar5/">Xem bản demo</a></div>
+          <div class="price-card featured"><span class="tag">NÂNG CAO · CHƯA MỞ BÁN</span><div class="price">199.000đ <small>/ 30 ngày · giá thử nghiệm</small></div><p>Giá chuẩn dự kiến 299.000đ/30 ngày; chỉ mở sau khi dữ liệu, quyền riêng tư và tuân thủ đều đạt chuẩn.</p><ul class="price-list"><li>Top theo bốn mục tiêu và theo ngành</li><li>Cảnh báo READY / MẤT HIỆU LỰC</li><li>Mã mới vào hoặc rời danh sách</li><li>Theo dõi mã quan tâm</li></ul><a class="button button-primary" href="pro/">Xem phạm vi dự kiến</a></div>
         </div>
       </div>
     </section>
 
     <section class="section">
-      <div class="container cta-panel"><div><h2>Ít tín hiệu hơn. Rõ trạng thái hơn.</h2><p>Đăng ký bản thử nghiệm để giúp chọn đúng ngách StockRadar nên xây sâu.</p></div><a class="button button-primary" href="signup/">Tham gia FREE →</a></div>
+      <div class="container cta-panel"><div><h2>Ít lựa chọn hơn. Luận điểm rõ hơn.</h2><p>Bắt đầu bằng Radar demo hoặc đọc phương pháp trước khi đánh giá một thiết lập.</p></div><div class="hero-actions"><a class="button button-primary" href="radar5/">Xem Radar →</a><a class="button button-secondary" href="kien-thuc/">Đọc Kiến thức</a></div></div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar 5</a><a href="track-record/">Track Record</a><a href="pro/">FREE / PRO</a></div></div><p class="disclaimer">StockRadar cung cấp công cụ sàng lọc, xếp hạng nghiên cứu và theo dõi trạng thái setup. Nội dung không phải cam kết lợi nhuận, không phải lời mời mua/bán và không thay thế việc tự đánh giá rủi ro. Phạm vi thương mại phải qua compliance review trước khi mở bán.</p></div>
+    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kien-thuc/">Kiến thức</a><a href="track-record/">Lịch sử kết quả</a><a href="pro/">Gói dịch vụ</a></div></div><p class="disclaimer">StockRadar cung cấp công cụ sàng lọc, xếp hạng nghiên cứu và theo dõi trạng thái. Nội dung chỉ phục vụ mục đích thông tin và giáo dục; không phải cam kết lợi nhuận, lời mời mua/bán hay dịch vụ đặt lệnh. Người dùng tự đánh giá sự phù hợp và chịu trách nhiệm với quyết định đầu tư.</p></div>
   </footer>
 </body>
 </html>

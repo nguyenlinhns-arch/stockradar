@@ -39,7 +39,12 @@ class WebServerTests(unittest.TestCase):
         return urllib.request.urlopen(request)
 
     def test_pages_and_health(self) -> None:
-        for path in ["/", "/radar5", "/breakout", "/risk", "/track-record", "/pro", "/signup", "/api/health"]:
+        for path in [
+            "/", "/radar5", "/breakout", "/risk", "/track-record", "/pro", "/signup",
+            "/kien-thuc", "/kien-thuc/canslim-sepa", "/kien-thuc/vpa", "/kien-thuc/4m",
+            "/kien-thuc/pocket-pivot", "/kien-thuc/cong-cu-ky-thuat",
+            "/kien-thuc/quan-tri-rui-ro", "/api/health"
+        ]:
             with urllib.request.urlopen(self.base + path) as response:
                 self.assertEqual(response.status, 200, path)
 
@@ -63,4 +68,3 @@ class WebServerTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

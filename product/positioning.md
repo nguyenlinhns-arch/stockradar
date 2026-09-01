@@ -4,18 +4,20 @@ Category: HOSE stock screening and setup-state monitoring.
 
 One-line promise:
 
-> Không cần xem hàng trăm cổ phiếu. StockRadar đã lọc trước.
+> Quét HOSE. Chọn lọc cổ phiếu phù hợp với mục tiêu đầu tư của bạn.
 
 Five-second hero:
 
-> Quét HOSE. Chắt lọc những setup đáng theo dõi.
+> Ít lựa chọn hơn. Luận điểm rõ hơn. Rủi ro được nêu trước.
 
 Proof mechanism:
 
 - full-universe/Data Grade shown;
-- few ranked setups, not hundreds of filters;
+- four horizon-specific rankings, not one universal score;
+- a short conditional Top 10, not hundreds of filters;
 - state changes instead of generic notifications;
-- immutable Track Record.
+- immutable result history;
+- source-attributed method explanations.
 
 Anti-positioning:
 
@@ -24,4 +26,3 @@ Anti-positioning:
 - not a “room phím hàng”;
 - not an AI promise of price direction;
 - not a broker/order tool.
-

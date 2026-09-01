@@ -1,213 +1,216 @@
-# STOCKRADAR PRODUCT SPEC V1
+# STOCKRADAR PRODUCT SPEC V1.1
 
-Version: 1.0  
-Status: implemented as local MVP with MOCK-labelled data  
+Version: 1.1  
+Status: public validation website with MOCK-labelled data; production data/auth/email/billing blocked  
 Brand: **STOCKRADAR** / **stockradar.vn**
 
 ## 1. Product outcome
 
 StockRadar solves one job:
 
-> Quét HOSE → chắt lọc rất ít setup đáng theo dõi → báo khi trạng thái thay đổi.
+> Quét HOSE → xếp hạng cổ phiếu theo mục tiêu đầu tư → nêu vùng giá, luận điểm và rủi ro → báo khi trạng thái thay đổi.
 
-Core proposition:
+Homepage promise:
 
-> Không cần xem hàng trăm cổ phiếu. StockRadar đã lọc trước.
+> Quét HOSE. Chọn lọc cổ phiếu phù hợp với mục tiêu đầu tư của bạn.
 
-V1 is an experiment vehicle, not a terminal. Its purpose is to learn which narrow value proposition produces activated users, retention and willingness to pay.
+V1 is a focused decision-support product, not a terminal, price board, newsroom or generic chatbot.
 
-## 2. V1 scope
+## 2. Four investment horizons
 
-Included:
+The same stock can receive different conclusions by horizon. A universal score is prohibited.
 
-1. Home.
-2. Radar 5.
-3. Breakout Radar.
-4. Risk Radar.
-5. Immutable Track Record.
-6. FREE/PRO explanation and lead capture.
-7. State-change alert contract.
-8. Minimum ranking engine.
-9. Analytics/UTM contract.
-10. Ads experiment kit.
-
-Excluded until evidence justifies expansion:
-
-- price board, charting terminal, newsfeed or financial-statement warehouse;
-- custom screener builder;
-- social network;
-- native mobile app;
-- personalized portfolio management;
-- broker integration or order placement;
-- uncalibrated price prediction.
-
-## 3. Three propositions
-
-| Proposition | Job | Primary hypothesis | Landing |
+| Horizon | Reference period | Primary evidence | Required output |
 | --- | --- | --- | --- |
-| StockRadar 5 | Reduce search overload | A short ranked list creates acquisition | `/radar5` |
-| Breakout Radar | Improve timing | Users want to see setups before they become extended | `/breakout` |
-| Risk Radar | Reduce stale-signal risk | State deterioration creates retention and willingness to pay | `/risk` |
+| Short | 5–20 sessions | trend, relative strength, VPA, breakout/pivot, volume, extension, liquidity, event risk, market regime | buy zone, target, invalidation/stop, validity period |
+| Medium | 1–6 months | trend, growth, industry, flow, business quality, valuation, events | buy zone, target, risk rule, horizon, thesis |
+| Long | 6–18 months | business quality, durable growth, moat, management, industry, cash flow, valuation | reasonable buy zone, fair-value range, risks, thesis-change conditions |
+| Accumulation | 2–5+ years | business quality, moat, management, balance sheet, cash flow, dividends, fair value, margin of safety | attractive/reasonable/expensive zones, accumulation thesis, stop/exit conditions |
 
-No proposition is declared the winner before D7 retention and PRO intent are observed.
+Technical short-term stops must not be copied mechanically into Long or Accumulation recommendations.
 
-## 4. User-facing states
+## 3. V1 product surfaces
 
-- `WATCH`
-- `NEAR_TRIGGER`
-- `READY`
-- `TRIGGERED`
-- `INVALIDATED`
-- `EXTENDED`
-- `EXPIRED`
+Included or specified:
 
-State changes are first-class product events. High-value transitions include:
+1. Home organized around the four horizons.
+2. Top 10 HOSE for each horizon, subject to the full-universe gate.
+3. Sector × horizon rankings.
+4. Stock-detail page with four horizon tabs.
+5. Active recommendations with recommendation price, current price, target, invalidation and status.
+6. Trigger Radar and Risk Radar.
+7. Immutable result history and corrections.
+8. Watchlist for paid users.
+9. Email as the primary alert channel.
+10. Free/Advanced 30-day subscription model.
+11. Knowledge hub that explains the methods and their limitations.
+12. Analytics/UTM and acquisition experiment contracts.
 
-- `WATCH → NEAR_TRIGGER`
-- `NEAR_TRIGGER → READY`
-- `READY → TRIGGERED`
-- `READY → INVALIDATED`
-- `TRIGGERED → EXTENDED`
-- `TOP5 → OUT_OF_TOP5`
-- `OUTSIDE_TOP5 → TOP5`
+Current public implementation includes Home, a five-item MOCK Radar preview, Trigger Radar, Risk Radar, Result History, Knowledge, pricing scope and a disabled-on-Pages signup form. Missing production surfaces remain explicit in `STOCKRADAR_BUILD_STATUS.md`.
 
-Impossible resurrection paths, such as `INVALIDATED → READY`, are rejected. A new setup requires a new setup identity/snapshot lineage.
+Excluded from V1:
 
-## 5. Radar 5 publishing gate
+- realtime price board or charting terminal;
+- newsfeed/newsroom or social network;
+- hundreds of user-configurable indicators;
+- native mobile app;
+- complex portfolio management;
+- broker integration or order placement;
+- generic AI chatbot;
+- uncalibrated price/win-probability prediction;
+- more than Free and Advanced service tiers.
 
-The label `TOP5_HOSE` is allowed only when all conditions pass:
+## 4. Three user jobs
 
-1. Exchange is HOSE.
-2. Expected universe is known.
-3. Scanned count equals expected universe.
-4. `valid + excluded = expected`.
-5. Exclusion log reconciles.
-6. Missing/stale counts are zero for required fields.
-7. Same-snapshot and adjusted-basis checks pass.
-8. Corporate actions are checked.
-9. Data Grade is `DECISION_GRADE`.
-10. At least five eligible setups exist.
+| Surface | User job | Primary hypothesis | Current route |
+| --- | --- | --- | --- |
+| Priority Radar | Reduce search overload | A short, goal-specific ranked list creates acquisition | `/radar5` (transitional route) |
+| Trigger Radar | Improve timing | Users value seeing setups before they become extended | `/breakout` |
+| Risk Radar | Avoid stale theses | Material state deterioration creates retention | `/risk` |
 
-Otherwise output is exactly one of:
+No hypothesis wins before real activation, D7 retention and Advanced intent are observed.
 
-- `INCOMPLETE_UNIVERSE`
-- `SHORTLIST_FROM_AVAILABLE_DATA`
+## 5. Recommendation state contract
 
-MOCK data can never publish `TOP5_HOSE`.
+Internal enums remain stable for API compatibility; public labels are Vietnamese.
 
-## 6. Score contract
+| Internal | Public label |
+| --- | --- |
+| `WATCH` | THEO DÕI |
+| `NEAR_TRIGGER` | GẦN KÍCH HOẠT |
+| `READY` | SẴN SÀNG |
+| `TRIGGERED` | ĐÃ KÍCH HOẠT |
+| `INVALIDATED` | MẤT HIỆU LỰC |
+| `EXTENDED` | KÉO GIÃN |
+| `EXPIRED` | HẾT HẠN |
 
-Weights are fixed for V1:
+High-value transitions include readiness, activation, invalidation, extension, entering/leaving a ranking and market-regime change. `INVALIDATED → READY` on the same setup identity is rejected; a new thesis requires a new record lineage.
 
-| Bucket | Weight |
-| --- | ---: |
-| Trend / structure | 20 |
-| Volume / VPA | 15 |
-| SEPA + CANSLIM setup | 20 |
-| Relative Strength | 10 |
-| Fundamental | 15 |
-| Valuation | 10 |
-| Catalyst | 5 |
-| Risk / liquidity | 5 |
+## 6. Top 10 publishing gate
 
-Rules:
+The public label `TOP10_HOSE` is allowed only when:
 
-- Score is evidence quality, not win probability.
-- Exact score is shown only at 100% score Coverage; otherwise show a range.
-- Missing evidence is not treated as zero and score is not renormalized.
-- The same evidence ID cannot receive full credit in multiple buckets.
-- Ranking compares candidates from the same snapshot/basis/framework.
+1. exchange is HOSE;
+2. the expected security master is known;
+3. scanned count equals expected count;
+4. valid + excluded reconciles to expected;
+5. every exclusion has a reason;
+6. required fields contain no missing/stale records;
+7. same-snapshot and adjusted-basis checks pass;
+8. trading calendar and corporate actions are reconciled;
+9. Data Grade is `DECISION_GRADE`;
+10. the selected horizon has at least ten eligible candidates.
 
-## 7. Candidate eligibility
+Otherwise the result is an incomplete-universe status or a shortlist from available data. MOCK data can never publish a real Top 10 HOSE claim.
 
-Radar 5 candidates must have:
+The current engine fixture ranks five candidates to exercise legacy gates. Production work must parameterize ranking size and migrate the claim from `TOP5_HOSE` to horizon-specific `TOP10_HOSE` without weakening any gate.
 
-- state in `WATCH`, `NEAR_TRIGGER`, `READY` or `TRIGGERED`;
-- score Coverage 100%;
-- liquidity gate PASS;
-- event-risk gate PASS;
-- no `INVALIDATED`, `EXTENDED` or `EXPIRED` state.
+## 7. Four score models
 
-Market Regime does not silently change score. It changes action/priority and may block new entries.
+Short, Medium, Long and Accumulation require different weight profiles. Shared evidence definitions are allowed; a universal weighted total is not.
 
-## 8. Track Record
+Rules common to all models:
+
+- score measures evidence strength/coverage, not win probability;
+- exact score is shown only when score Coverage is complete; otherwise show a range;
+- missing evidence is not silently treated as zero or renormalized away;
+- the same evidence ID cannot receive full credit in multiple buckets;
+- ranking compares candidates from the same snapshot, basis, horizon and framework;
+- market regime changes action/priority and can block a new position without rewriting research history.
+
+The implemented V1 engine weight table is a short-term validation baseline. Separate production models require data, calibration and regression evidence before release.
+
+## 8. Immutable recommendation record
 
 At publication, freeze:
 
-- snapshot ID/time/source;
-- universe reconciliation/Coverage/Data Grade;
-- ticker, rank, score, setup and state;
-- Market Regime;
-- evidence, current price and pivot;
-- reason and state change.
+- recommendation/setup ID, ticker and horizon;
+- publication date/time and validity period;
+- snapshot/source/Data Grade/universe reconciliation;
+- rank, evidence score/coverage and state;
+- recommendation buy zone and current price at publication;
+- target/fair-value range and invalidation condition;
+- market regime, key evidence, thesis, main risk and thesis-change conditions.
 
-Original snapshots and entries are immutable. Later performance is appended as observations containing horizon, outcome, MAE, MFE and R-multiple. Errors create correction records; they never overwrite the original release.
+Later price/performance observations are append-only and contain current price/time, outcome, MAE, MFE and R-multiple where appropriate. Errors create correction records with reason/time; they never overwrite the original release.
 
-## 9. FREE / PRO
+## 9. Free and Advanced
 
-FREE:
+Free — **0 VND**:
 
-- Radar 5 after session;
-- Market Regime, score and state;
-- public Track Record;
-- basic weekly summary.
+- Radar after the session;
+- market/setup state;
+- Knowledge hub;
+- public result history;
+- basic weekly summary when email is enabled.
 
-PRO price experiment: **199.000–299.000đ/month**, not yet a live price.
+Advanced:
 
-PRO hypothesis:
+- planned standard price: **299,000 VND / 30 days**;
+- initial test price: **199,000 VND / 30 days**;
+- Top 10 by four horizons and sector × horizon;
+- earlier/priority Radar;
+- readiness, invalidation, rank-entry/exit and market alerts;
+- watchlist and deeper history.
 
-- earlier Radar;
-- state-change alerts;
-- entry/exit from Radar 5;
-- READY / INVALIDATED / Market alerts;
-- Risk Radar and deeper history.
-
-No payment is enabled before data, compliance, privacy and subscription gates pass.
+Every payment adds 30 days. Payment remains disabled until data, privacy, security, subscription and Vietnamese compliance gates pass.
 
 ## 10. Alert contract
 
-Alert priority:
+Email is the primary V1 channel. Priority:
 
-- P0 — risk/invalidation/market regime.
-- P1 — entry readiness/trigger.
-- P2 — thesis/fundamental event.
+- P0 — invalidation/risk/market regime;
+- P1 — readiness/trigger;
+- P2 — thesis/fundamental event;
 - P3 — watch-state improvement.
 
-An alert is not an automatic buy/sell instruction. Each action-oriented alert must carry snapshot, timestamp, state change, reason, Data Grade and validity boundary.
+An alert is not an automatic buy/sell instruction. Every action-oriented alert carries recommendation ID, snapshot, timestamp, horizon, state change, reason, Data Grade and validity boundary. Delivery must be idempotent.
 
-## 11. Success metrics
+## 11. Knowledge contract
 
-Primary:
+Knowledge content supports product comprehension, not a general newsroom. Each method guide must include:
 
-1. Cost per activated user.
-2. D1 retention.
-3. D7 retention.
-4. Alert opt-in.
-5. PRO intent.
-6. Paid conversion, once legally and technically enabled.
+1. a plain-Vietnamese explanation;
+2. the question the method answers;
+3. how StockRadar uses it;
+4. failure modes and non-claims;
+5. attributed books/public sources;
+6. related methods.
+
+Current method groups: CANSLIM/SEPA/VCP, VPA, 4M, Pocket Pivot, trend/Stage Analysis/Ichimoku/Bollinger and risk management. Content is original synthesis; books, chapters, charts and examples are not reproduced.
+
+## 12. Success metrics
+
+Primary metrics:
+
+1. cost per activated user;
+2. D1 retention;
+3. D7 retention;
+4. alert opt-in;
+5. Advanced intent;
+6. paid conversion once legally/technically enabled;
 7. CAC feasibility.
 
-CTR and likes are diagnostic, not winner metrics.
+CTR and social engagement are diagnostic, not winner metrics.
 
-## 12. V1 acceptance criteria
+## 13. Acceptance criteria
 
-Local MVP passes when:
+Public validation website passes when:
 
-- rules engine and ledger tests pass;
-- MOCK is visible and blocked from Top 5 claims;
-- all six pages render on desktop/mobile;
-- signup and analytics endpoints work locally;
-- 6 creatives exist in 4:5 and 9:16;
-- campaign and event schemas are complete;
-- blockers are explicit.
+- rules engine/ledger tests pass;
+- MOCK is visible and blocked from Top 10 claims;
+- all public and Knowledge routes render with valid assets/metadata;
+- responsive navigation, horizon positioning and pricing are consistent;
+- static Pages build disables writes and remains `noindex,nofollow`;
+- blockers remain explicit.
 
 Production V1 additionally requires:
 
 - licensed/current HOSE data and full-universe reconciliation;
-- real scheduler/alert delivery;
-- deployed hosting, domain/DNS and TLS;
-- privacy/consent operations;
+- four validated horizon score models and Top 10/sector rankings;
+- stock-detail/active-recommendation/watchlist flows;
+- authentication, production database and privacy operations;
+- scheduler and idempotent email delivery;
+- 30-day billing/subscription lifecycle;
 - formal Vietnamese legal/compliance review;
-- Meta financial-ad eligibility/verification where required;
-- at least one complete production snapshot through the shipping gate.
-
+- at least one complete live/shadow snapshot through the shipping gate.

@@ -78,7 +78,47 @@ class StaticAssetTests(unittest.TestCase):
 
     def test_public_pages_do_not_use_old_personal_brand(self) -> None:
         for path in list(WEBSITE.rglob("*.html")) + list(WEBSITE.rglob("*.js")) + list(WEBSITE.rglob("*.css")):
-            self.assertNotIn("Linh", path.read_text(encoding="utf-8"), path)
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn("Linh", source, path)
+            self.assertNotIn("Thầy", source, path)
+
+    def test_knowledge_library_has_required_methods_and_sources(self) -> None:
+        required = {
+            "canslim-sepa": ("William J. O’Neil", "Mark Minervini"),
+            "vpa": ("Anna Coulling", "Richard D. Wyckoff"),
+            "4m": ("Phil Town", "Benjamin Graham"),
+            "pocket-pivot": ("Gil Morales", "Chris Kacher"),
+            "cong-cu-ky-thuat": ("John Bollinger", "Goichi Hosoda", "Stan Weinstein"),
+            "quan-tri-rui-ro": ("Van K. Tharp", "Howard Marks"),
+        }
+        hub = (WEBSITE / "kien-thuc" / "index.html").read_text(encoding="utf-8")
+        self.assertIn('data-page-kind="knowledge-hub"', hub)
+        for slug, sources in required.items():
+            path = WEBSITE / "kien-thuc" / slug / "index.html"
+            self.assertTrue(path.is_file(), slug)
+            source = path.read_text(encoding="utf-8")
+            self.assertIn('data-page-kind="method"', source)
+            self.assertIn('id="stockradar"', source)
+            self.assertIn('id="nguon"', source)
+            for expected in sources:
+                self.assertIn(expected, source, path)
+
+    def test_all_pages_have_accessible_mobile_navigation(self) -> None:
+        for html in WEBSITE.rglob("index.html"):
+            source = html.read_text(encoding="utf-8")
+            self.assertIn('class="skip-link"', source, html)
+            self.assertIn("data-nav-toggle", source, html)
+            self.assertIn("data-nav-menu", source, html)
+            self.assertIn('href="kien-thuc/"', source, html)
+
+    def test_public_positioning_matches_current_horizons_and_pricing(self) -> None:
+        homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
+        pricing = (WEBSITE / "pro" / "index.html").read_text(encoding="utf-8")
+        for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
+            self.assertIn(horizon, homepage)
+        self.assertIn("Top 10", homepage)
+        self.assertIn("199.000đ", pricing)
+        self.assertIn("299.000đ/30 ngày", pricing)
 
     def test_six_creatives_have_feed_and_reels_variants(self) -> None:
         output = ROOT / "growth" / "creatives" / "output"

@@ -8,7 +8,7 @@ Command:
 python3 -m unittest discover -s engine/tests -v
 ```
 
-Result: **38/38 PASS** on 2026-09-01.
+Result: **41/41 PASS** on 2026-09-01.
 
 Coverage includes:
 
@@ -20,8 +20,11 @@ Coverage includes:
 - state transition validity;
 - extension/Market/R:R/stop/horizon buy gates;
 - immutable snapshots and corrections;
-- seven website routes, health, signup and event API;
+- fourteen website routes, health, signup and event API;
 - HTML metadata/internal assets;
+- accessible mobile navigation on every page;
+- Knowledge hub, six method guides, required source attribution and method sections;
+- four-horizon positioning, conditional Top 10 language and 30-day pricing consistency;
 - absence of the old personal brand in public web assets;
 - 6 Feed and 6 Reels image dimensions.
 
@@ -30,7 +33,7 @@ Coverage includes:
 - Repository: `nguyenlinhns-arch/stockradar`.
 - Workflow: `Verify and deploy StockRadar Pages`.
 - Run `33500186454`, attempt 2: **SUCCESS**.
-- Build, 38-test regression suite, static artifact upload and Pages deploy: **PASS**.
+- Previous build, 38-test regression suite, static artifact upload and Pages deploy: **PASS**.
 - Live URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
 - Public homepage returned HTTP 200, contained the expected StockRadar title and had `data-api-mode="disabled"`.
 - Public Radar payload remained visibly MOCK, `is_top5_hose=false`, and `SHORTLIST_FROM_AVAILABLE_DATA`.
@@ -41,7 +44,7 @@ The 6-up contact sheet was inspected. First render failed small-label contrast; 
 
 ## Website visual screenshot blocker
 
-The runtime contained the Playwright package but no Chromium executable. A browser install attempt timed out on the browser CDN. Therefore browser screenshots and pixel-level desktop/mobile inspection are **BLOCKED**, not claimed as PASS.
+The runtime contains the Playwright package but no Chromium executable. The new responsive layout therefore still requires live-browser inspection after deployment; local screenshot QA is **BLOCKED**, not claimed as PASS.
 
 Static and integration checks still passed. Run:
 
@@ -50,7 +53,7 @@ python3 website/server.py --port 8765
 STOCKRADAR_QA_URL=http://127.0.0.1:8765 node scripts/visual_qa.cjs
 ```
 
-in an environment with Chromium installed. The script checks seven routes at 1440×1000 and 390×844, captures 14 screenshots and fails on console errors or horizontal overflow.
+in an environment with Chromium installed. The script checks fourteen routes at 1440×1000 and 390×844, captures 28 screenshots and fails on console errors or horizontal overflow.
 
 ## Production QA not yet possible
 

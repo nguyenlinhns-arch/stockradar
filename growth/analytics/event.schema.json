@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["event_name", "occurred_at", "session_id", "page", "proposition"],
   "properties": {
-    "event_name": {"enum": ["ad_click", "landing_view", "radar_view", "top5_expand", "track_record_view", "signup_started", "signup_completed", "alert_opt_in", "pro_page_view", "trial_started", "subscription_started", "return_d1", "return_d7"]},
+    "event_name": {"enum": ["ad_click", "landing_view", "radar_view", "top5_expand", "track_record_view", "knowledge_view", "method_view", "horizon_select", "signup_started", "signup_completed", "alert_opt_in", "pro_page_view", "trial_started", "subscription_started", "return_d1", "return_d7"]},
     "occurred_at": {"type": "string", "format": "date-time"},
     "session_id": {"type": "string", "minLength": 1, "maxLength": 100},
     "page": {"type": "string", "maxLength": 200},
@@ -14,4 +14,3 @@
   },
   "additionalProperties": false
 }
-

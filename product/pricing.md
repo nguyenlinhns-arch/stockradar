@@ -2,7 +2,9 @@
 
 FREE: 0đ.
 
-PRO test range: 199.000–299.000đ/month.
+Advanced planned standard price: 299.000đ / 30 days.
+
+Initial test price: 199.000đ / 30 days.
 
 Do not A/B-test exact payment until:
 
@@ -12,4 +14,3 @@ Do not A/B-test exact payment until:
 - compliance review permits the planned feature/copy.
 
 Before payment, measure PRO intent with a clear “price test / not yet charged” screen. Never imply a subscription started when only a lead was collected.
-

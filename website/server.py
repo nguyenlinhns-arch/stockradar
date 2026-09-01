@@ -19,7 +19,8 @@ MAX_BODY = 16_384
 ALLOWED_EVENTS = {
     "ad_click", "landing_view", "radar_view", "top5_expand", "track_record_view",
     "signup_started", "signup_completed", "alert_opt_in", "pro_page_view",
-    "trial_started", "subscription_started", "return_d1", "return_d7"
+    "trial_started", "subscription_started", "return_d1", "return_d7",
+    "knowledge_view", "method_view", "horizon_select"
 }
 PROPOSITIONS = {"radar5", "breakout", "risk", "organic"}
 
@@ -169,7 +170,7 @@ class Handler(BaseHTTPRequestHandler):
         route = requested_path.rstrip("/")
         if route == "":
             candidate = ROOT / "index.html"
-        elif route in {"/radar5", "/breakout", "/risk", "/track-record", "/pro", "/signup"}:
+        elif (ROOT / route.lstrip("/") / "index.html").is_file():
             candidate = ROOT / route.lstrip("/") / "index.html"
         else:
             candidate = (ROOT / requested_path.lstrip("/")).resolve()
@@ -208,4 +209,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

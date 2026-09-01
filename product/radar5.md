@@ -1,17 +1,17 @@
-# StockRadar 5
+# Priority Radar (legacy route: Radar 5)
 
 Job: reduce the time and cognitive load of searching the HOSE universe.
 
 Output fields:
 
-- rank, ticker and Research Score;
+- horizon, rank, ticker and evidence score/coverage;
 - setup and current state;
 - change from prior snapshot;
-- Market Regime;
+- recommendation date, buy zone, target/fair value, invalidation and current price;
+- market regime;
 - Data Grade, universe Coverage and timestamp;
-- concise evidence reason.
+- concise thesis, main risk and thesis-change condition.
 
-The name “Radar 5” describes a five-item product surface. The phrase “Top 5 HOSE” is a gated data claim and must disappear when the full-universe gate fails.
+`/radar5` remains the transitional public route and the current MOCK preview contains five rows. The production target is a separate conditional Top 10 for Short, Medium, Long and Accumulation, plus sector × horizon views. “Top 10 HOSE” must disappear when the full-universe or selected-horizon gate fails.
 
-Activation event: `radar_view` followed by either `top5_expand`, `track_record_view` or `alert_opt_in` in the same first session.
-
+Activation event: `radar_view` followed by a method view, result-history view or alert opt-in in the same first session. `top5_expand` remains a legacy analytics event until the Top 10 migration is complete.

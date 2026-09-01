@@ -28,3 +28,6 @@ The seven-day spend period is followed by a retention observation period. No win
 
 Proceed with the user-chosen StockRadar name, but require trademark/confusion review because similar international financial brands exist.
 
+## D-008 — Four horizons and conditional Top 10 supersede D-002
+
+The current master specification expands the ranking contract to Short, Medium, Long and Accumulation, each with a separate Top 10 and future sector × horizon view. The existing five-item MOCK engine remains a validation fixture only; it is not the production product claim. Knowledge is allowed only when it directly explains methods used by StockRadar and does not become a newsroom.

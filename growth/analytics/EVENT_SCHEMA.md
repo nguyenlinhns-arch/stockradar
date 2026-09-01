@@ -17,6 +17,9 @@ Required envelope:
 | `radar_view` | Radar JSON rendered | status, is_mock |
 | `top5_expand` | user expands evidence/details | ticker, rank |
 | `track_record_view` | history rendered | is_mock, snapshot |
+| `knowledge_view` | Knowledge hub initialized | page |
+| `method_view` | method guide initialized | method |
+| `horizon_select` | user opens a horizon explanation | target |
 | `signup_started` | first meaningful form interaction | proposition |
 | `signup_completed` | backend accepted/recognized lead | proposition |
 | `alert_opt_in` | accepted lead chose alerts | proposition |
@@ -26,11 +29,13 @@ Required envelope:
 | `return_d1` | same identity/session family returns after 24h | first_seen |
 | `return_d7` | returns after 7 days | first_seen |
 
-The local website implements all client events but only the first nine can occur in V1. Trial/subscription events must never fire from a lead form.
+The local website implements all client events except entitlement/payment creation. Trial/subscription events must never fire from a lead form.
 
 ## Funnel
 
-`landing_view → radar_view → signup_started → signup_completed → alert_opt_in → return_d1 → return_d7 → pro_page_view → trial_started → subscription_started`
+Primary: `landing_view → radar_view → signup_started → signup_completed → alert_opt_in → return_d1 → return_d7 → pro_page_view → trial_started → subscription_started`
+
+Education-assisted: `landing_view → knowledge_view → method_view → radar_view`
 
 ## Quality checks
 
@@ -41,4 +46,3 @@ The local website implements all client events but only the first nine can occur
 - retain raw event and derived funnel separately;
 - reconcile Ads platform conversions with first-party events;
 - never send broker credentials, OTP, transcript or portfolio values as analytics properties.
-
