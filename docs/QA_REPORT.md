@@ -33,23 +33,20 @@ Coverage includes:
 
 - Repository: `nguyenlinhns-arch/stockradar`.
 - Workflow: `Verify and deploy StockRadar Pages`.
-- Commit `81172644b7ac53d3da3cbc2c2a18aa9ae1147d20`.
-- Run `33504751657`: **SUCCESS**.
-- Build, 41-test regression suite, static artifact upload and Pages deploy: **PASS**.
+- Commit `ab2e273ad0981e78bf23ff9c4d2b1fa1648d58d4`.
+- Run `33509617622`: **SUCCESS**.
+- Build, 42-test regression suite, static artifact upload and Pages deploy: **PASS**.
 - Live URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
 - All 14 public routes returned HTTP 200, including the Knowledge hub and six method guides.
-- Public homepage contained the expected four-horizon/Top 10/pricing copy and had `data-api-mode="disabled"` plus `noindex,nofollow`.
+- Public homepage contained the new dashboard, research feed, four horizons, locked sector module and truthful Top 10/pricing language.
 - Public Radar payload remained visibly MOCK, `is_top5_hose=false`, and `SHORTLIST_FROM_AVAILABLE_DATA`.
 
-## Previous live browser review
+## Live browser review of portal redesign
 
-- Home at 1363×936: no horizontal overflow; expected title/H1; four horizon cards; six method links; five MOCK Radar rows; desktop task navigation visible.
-- Knowledge hub: no horizontal overflow; six method cards; four horizon explanations; five method-to-engine table rows.
-- CANSLIM/SEPA article: no horizontal overflow; five contents links; five article sections; StockRadar-application and source sections present.
-- Navigation from Home → Knowledge → CANSLIM/SEPA succeeded through visible links.
-- No site-origin JavaScript error was recorded. Browser-extension metadata errors were excluded because they did not originate from the deployed website.
-
-The professional portal redesign introduced afterward requires a fresh live Home/Radar review after its deployment; the previous visual result is not reused as evidence for the new interface.
+- Home at 1348px: no horizontal overflow; shared utility/header/data tape present; seven task links; five MOCK Radar rows loaded; neutral portal background and dashboard modules rendered.
+- Radar at 1348px: no horizontal overflow; 937px main workspace plus 305px sidebar; dense table fits its panel; five rows, Vietnamese state labels and four publication-gate cards present.
+- Knowledge hub at 1348px: no horizontal overflow; six method cards; active `Kiến thức` navigation and shared snapshot tape rendered.
+- No site-origin JavaScript error was recorded. A browser-extension metadata error was excluded because it did not originate from the deployed website.
 
 ## Manual creative review
 
