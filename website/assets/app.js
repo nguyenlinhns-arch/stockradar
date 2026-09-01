@@ -131,12 +131,12 @@
     if (menu) {
       const route = location.pathname.replace(/\/+$/, '');
       const items = [
-        ['radar5/', 'Cổ phiếu nổi bật', '/radar5'],
-        ['nganh/', 'Theo ngành', '/nganh'],
+        ['radar5/', 'Radar', '/radar5'],
+        ['kiem-tra-co-phieu/', 'Tra mã', '/kiem-tra-co-phieu'],
         ['khuyen-nghi/', 'Khuyến nghị', '/khuyen-nghi'],
-        ['thay-doi-hom-nay/', 'Hôm nay thay đổi', '/thay-doi-hom-nay'],
-        ['kiem-tra-co-phieu/', 'Phân tích cổ phiếu', '/kiem-tra-co-phieu'],
+        ['thay-doi-hom-nay/', 'Biến động', '/thay-doi-hom-nay'],
         ['hieu-qua/', 'Hiệu quả', '/hieu-qua'],
+        ['theo-doi/', 'Theo dõi', '/theo-doi'],
         ['tai-khoan/', 'Tài khoản', '/tai-khoan'],
       ];
       menu.innerHTML = items.map(([href, label, match]) => {
@@ -149,33 +149,17 @@
 
     const utility = document.createElement('div');
     utility.className = 'portal-utility';
-    utility.innerHTML = `
-      <div class="container portal-utility-inner">
-        <span><strong>STOCKRADAR RESEARCH</strong><i></i>Xếp hạng nghiên cứu theo bốn mục tiêu</span>
-        <span class="portal-utility-note">V2.1.2 · RESEARCH_ONLY · Không phải khuyến nghị đầu tư</span>
-      </div>`;
+    utility.innerHTML = `<div class="container portal-utility-inner"><span><strong>STOCKRADAR.VN</strong><i></i>Radar cổ phiếu Việt Nam</span><span class="portal-utility-note">HOSE · Ngắn hạn · Trung hạn · Dài hạn · Tích sản</span></div>`;
 
     const tape = document.createElement('section');
     tape.className = 'market-tape';
     tape.setAttribute('aria-label', 'Trạng thái dữ liệu StockRadar');
-    tape.innerHTML = `
-      <div class="container market-tape-inner" aria-live="polite">
-        <div class="tape-heading"><span class="live-dot" aria-hidden="true"></span><span>RADAR SNAPSHOT</span><strong>MÔ PHỎNG</strong></div>
-        <div class="tape-item"><span>Trạng thái demo</span><strong data-market>—</strong></div>
-        <div class="tape-item"><span>Độ phủ fixture</span><strong data-coverage>—</strong></div>
-        <div class="tape-item tape-snapshot"><span>Cập nhật</span><strong data-snapshot>—</strong></div>
-        <div class="tape-disclaimer">Chưa kết nối dữ liệu thị trường thật</div>
-      </div>`;
+    tape.innerHTML = `<div class="container market-tape-inner" aria-live="polite"><div class="tape-heading"><span class="live-dot" aria-hidden="true"></span><span>THỊ TRƯỜNG</span></div><div class="tape-item"><strong data-market>—</strong></div><div class="tape-item tape-snapshot"><span>Cập nhật</span><strong data-snapshot>—</strong></div><div class="tape-disclaimer">Dữ liệu minh họa</div></div>`;
 
     const subnav = document.createElement('nav');
     subnav.className = 'product-subnav';
     subnav.setAttribute('aria-label', 'Điều hướng phân tích');
-    subnav.innerHTML = `<div class="container product-subnav-inner">
-      <a href="radar5/">Ngắn hạn</a><a href="kien-thuc/#trung-han">Trung hạn</a>
-      <a href="kien-thuc/#dai-han">Dài hạn</a><a href="kien-thuc/#tich-san">Tích sản</a>
-      <a href="thay-doi-hom-nay/">Hôm nay thay đổi</a><a href="kien-thuc/">Kiến thức</a><a href="track-record/">Nhật ký công bố</a>
-      <a href="email/">Email trước phiên</a><a href="theo-doi/">Mã đang theo dõi</a>
-    </div>`;
+    subnav.innerHTML = `<div class="container product-subnav-inner"><a href="radar5/">Ngắn hạn</a><a href="kiem-tra-co-phieu/">Trung hạn</a><a href="kiem-tra-co-phieu/">Dài hạn</a><a href="kiem-tra-co-phieu/">Tích sản</a><a href="nganh/">Theo ngành</a><a href="track-record/">Lịch sử</a><a href="pro/">Gói dịch vụ</a></div>`;
 
     header.before(utility);
     header.after(tape);

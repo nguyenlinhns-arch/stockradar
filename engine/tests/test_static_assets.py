@@ -122,7 +122,6 @@ class StaticAssetTests(unittest.TestCase):
             self.assertIn('class="skip-link"', source, html)
             self.assertIn("data-nav-toggle", source, html)
             self.assertIn("data-nav-menu", source, html)
-            self.assertIn('href="kien-thuc/"', source, html)
 
     def test_professional_portal_shell_and_truthful_radar_workspace(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
@@ -130,16 +129,17 @@ class StaticAssetTests(unittest.TestCase):
         script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
         styles = (WEBSITE / "assets" / "styles.css").read_text(encoding="utf-8")
 
-        for expected in ("dashboard-grid", "content-columns", "research-list", "sector-panel"):
+        for expected in ("product-home-grid", "dashboard-grid", "stock-search-main", "home-actions"):
             self.assertIn(expected, homepage)
-        for expected in ("radar-workspace-grid", "truth-strip", "gate-grid"):
+        for expected in ("radar-workspace-grid", "data-radar-table", "legend-list"):
             self.assertIn(expected, radar)
-        self.assertIn("Không phải dữ liệu cổ phiếu thật", radar)
-        self.assertIn("Không dựng thứ hạng giả", homepage)
+        self.assertIn("Dữ liệu hiện tại dùng để minh họa", radar)
+        self.assertNotIn("BỘ NÃO STOCKRADAR", homepage)
+        self.assertNotIn("CỔNG CÔNG BỐ", radar)
         self.assertIn("portal-utility", script)
         self.assertIn("market-tape", script)
         self.assertIn("route.includes('/co-phieu/')", script)
-        self.assertIn("Chưa kết nối dữ liệu thị trường thật", script)
+        self.assertIn("Dữ liệu minh họa", script)
         self.assertIn("const stateLabels", script)
         self.assertIn(".market-tape", styles)
         self.assertIn(".radar-workspace", styles)
@@ -148,8 +148,8 @@ class StaticAssetTests(unittest.TestCase):
         routes = {
             "nganh": "DỮ LIỆU CHƯA ĐỦ ĐỂ XẾP HẠNG TOÀN HOSE",
             "phan-tich": "TICKER LOOKUP V2.1.2",
-            "khuyen-nghi": "Công bố không đồng nghĩa đã mua",
-            "hieu-qua": "Đếm đúng trước khi nói hiệu quả",
+            "khuyen-nghi": "data-recommendations",
+            "hieu-qua": "data-performance-summary",
             "co-phieu/demo1": "KHÔNG PHẢI CỔ PHIẾU THẬT",
             "email": "10:30",
             "theo-doi": "CHƯA LƯU DỮ LIỆU NGƯỜI DÙNG",
@@ -160,7 +160,7 @@ class StaticAssetTests(unittest.TestCase):
             self.assertIn(marker, source, route)
 
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
-        for marker in ("BỘ NÃO STOCKRADAR", "04 · GATES", "score ≠ xác suất"):
+        for marker in ("Kiểm tra một mã", "Cổ phiếu đáng chú ý", "Kết quả khuyến nghị"):
             self.assertIn(marker, homepage)
 
         recommendations = json.loads(
@@ -190,10 +190,10 @@ class StaticAssetTests(unittest.TestCase):
             "sample_premium_report_view",
         ):
             self.assertIn(marker, script)
-        for marker in ("data-recommendation-filter", "entry tính hiệu quả", "không có P/L"):
+        for marker in ("data-recommendation-filter", "data-recommendations", "data-recommendation-journal"):
             self.assertIn(marker, recommendations_page)
         self.assertIn("data-performance-summary", performance_page)
-        self.assertIn("SHADOW", performance_page)
+        self.assertIn("dữ liệu mẫu", performance_page)
         self.assertIn("Bốn góc nhìn", report_page)
 
         recommendations = json.loads(
@@ -232,7 +232,7 @@ class StaticAssetTests(unittest.TestCase):
             "ĐÓNG KHUYẾN NGHỊ",
         ):
             self.assertIn(label, script)
-        self.assertIn("Chưa kết nối dữ liệu thị trường thật", script)
+        self.assertIn("Dữ liệu minh họa", script)
         self.assertIn("public/data/recommendations.json", script)
 
         blocked_markers = {
@@ -249,15 +249,15 @@ class StaticAssetTests(unittest.TestCase):
         pricing = (WEBSITE / "pro" / "index.html").read_text(encoding="utf-8")
         for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
             self.assertIn(horizon, homepage)
-        self.assertIn("Top 10", homepage)
+        self.assertIn("Cổ phiếu đáng chú ý", homepage)
         self.assertIn("199.000đ", pricing)
         self.assertIn("299.000đ/30 ngày", pricing)
 
     def test_v212_lookup_dynamic_report_today_changes_and_journal_surfaces(self) -> None:
         required_pages = {
-            "kiem-tra-co-phieu": "KIẾN TRÚC 3 TẦNG",
+            "kiem-tra-co-phieu": "Nhập mã cần kiểm tra",
             "co-phieu": "Một mã, bốn góc nhìn",
-            "thay-doi-hom-nay": "30–60 giây",
+            "thay-doi-hom-nay": "data-today-changes",
         }
         for route, marker in required_pages.items():
             source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
