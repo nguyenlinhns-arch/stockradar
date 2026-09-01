@@ -1,5 +1,7 @@
 # StockRadar V1
 
+**Live static demo:** https://nguyenlinhns-arch.github.io/stockradar/
+
 StockRadar V1 is a deliberately small validation product:
 
 `HOSE universe → data gate → score → setup state → Radar 5 → state-change alert → immutable track record`

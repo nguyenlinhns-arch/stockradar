@@ -8,7 +8,7 @@ Command:
 python3 -m unittest discover -s engine/tests -v
 ```
 
-Result: **36/36 PASS** on 2026-09-01.
+Result: **38/38 PASS** on 2026-09-01.
 
 Coverage includes:
 
@@ -24,6 +24,16 @@ Coverage includes:
 - HTML metadata/internal assets;
 - absence of the old personal brand in public web assets;
 - 6 Feed and 6 Reels image dimensions.
+
+## GitHub Pages deployment QA
+
+- Repository: `nguyenlinhns-arch/stockradar`.
+- Workflow: `Verify and deploy StockRadar Pages`.
+- Run `33500186454`, attempt 2: **SUCCESS**.
+- Build, 38-test regression suite, static artifact upload and Pages deploy: **PASS**.
+- Live URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
+- Public homepage returned HTTP 200, contained the expected StockRadar title and had `data-api-mode="disabled"`.
+- Public Radar payload remained visibly MOCK, `is_top5_hose=false`, and `SHORTLIST_FROM_AVAILABLE_DATA`.
 
 ## Manual creative review
 
@@ -50,5 +60,4 @@ in an environment with Chromium installed. The script checks seven routes at 144
 - hosted privacy/consent deletion flow;
 - production analytics attribution;
 - Meta Ads delivery/policy result;
-- domain/TLS.
-
+- custom-domain ownership, DNS and HTTPS configuration for `stockradar.vn`.

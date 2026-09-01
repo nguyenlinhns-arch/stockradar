@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-01 — GitHub Pages launch
+
+- Created and populated public repository `nguyenlinhns-arch/stockradar`.
+- Added a GitHub Actions build that rebuilds MOCK data and requires all 38 tests to pass.
+- Enabled Pages, deployed the static artifact and verified the public URL returned HTTP 200.
+- Kept signup/event writes disabled and added `noindex,nofollow` while production data, privacy, compliance and brand gates remain open.
+
 ## 2026-09-01 — V1 local MVP
 
 - Audited GPT package, method reference, OS V3.0 changelog and migration commands.
@@ -11,4 +18,3 @@
 - Created six creative concepts in 4:5 and 9:16.
 - Added campaign, analytics, UTM, Fanpage and GPT migration assets.
 - Added regression and visual-QA workflow.
-
