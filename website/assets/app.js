@@ -84,9 +84,12 @@
         ['kien-thuc/', 'Kiến thức', '/kien-thuc'],
         ['track-record/', 'Kết quả', '/track-record'],
       ];
-      menu.innerHTML = items.map(([href, label, match]) =>
-        `<a href="${href}"${route.endsWith(match) || route.includes(`${match}/`) ? ' aria-current="page"' : ''}>${label}</a>`
-      ).join('') + '<a class="button button-primary button-small" href="pro/">Nâng cấp</a>';
+      menu.innerHTML = items.map(([href, label, match]) => {
+        const isCurrent = route.endsWith(match)
+          || route.includes(`${match}/`)
+          || (match === '/phan-tich' && route.includes('/co-phieu/'));
+        return `<a href="${href}"${isCurrent ? ' aria-current="page"' : ''}>${label}</a>`;
+      }).join('') + '<a class="button button-primary button-small" href="pro/">Nâng cấp</a>';
     }
 
     const utility = document.createElement('div');

@@ -138,6 +138,7 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("Không dựng thứ hạng giả", homepage)
         self.assertIn("portal-utility", script)
         self.assertIn("market-tape", script)
+        self.assertIn("route.includes('/co-phieu/')", script)
         self.assertIn("Chưa kết nối dữ liệu thị trường thật", script)
         self.assertIn("const stateLabels", script)
         self.assertIn(".market-tape", styles)
