@@ -20,11 +20,11 @@ Updated: 2026-09-02 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
 | Free email restriction | PASS | Tier policy, schema/UI/spec and regression | Production enforcement after auth/email connection |
 | Trial/Paid personalization | PASS | Preferences, limits, content prioritization and UI | Managed auth, verification, consent and delivery provider — BLOCKED |
 | Analytics V2.1.2 | PASS | Search/cache/report/onboarding/holding/journal event allowlists/spec | First-party store, identity/bot filtering and consent |
-| Website operational shell | PASS | Main routes contain no rendered DEMO rankings, recommendations, performance or changes; every unavailable surface fails closed to a compact status | Real-device/mobile matrix before production |
+| Website operational shell | PASS | Main routes and published JSON contain no sample rankings, recommendations, performance or changes; every unavailable surface fails closed to a compact status | Real-device/mobile matrix before production |
 | Internal HOSE directory reference | PASS | Drive snapshot `hose-universe-2026-09-02-065632-vn`; 405/405 records structurally validated | Listing-status semantics and public redistribution rights remain unresolved |
-| Automated regression | PASS | 79/79 tests; deterministic data build; JS syntax; static Pages artifact | Production adapter/E2E tests |
+| Automated regression | PASS | 79/79 tests; deterministic publication-safe data build; JS syntax; static Pages artifact | Production adapter/E2E tests |
 | Static GitHub Pages | PASS | 12 read-only product routes + 404; no-write, noindex; Knowledge and unavailable service routes excluded | Production data/auth/compliance remain separately BLOCKED |
-| Full current HOSE market data/rights | BLOCKED | Internal directory coverage is 405/405; public fixture remains `full_universe=false`, `MOCK`; no OHLCV/fundamentals/corporate actions | Licensed current master/price/fundamental/event/corporate-action data, active-status semantics and reconciliation |
+| Full current HOSE market data/rights | BLOCKED | Internal directory coverage is 405/405; public payload is fail-closed with `full_universe=false` and no market rows; no OHLCV/fundamentals/corporate actions | Licensed current master/price/fundamental/event/corporate-action data, active-status semantics and reconciliation |
 | Production anonymous rate limit | BLOCKED | Configurable local reference limiter passes tests | Server-side gateway/WAF/rate limiter; Pages cannot enforce |
 | Auth/watchlist persistence | BLOCKED | Schemas, tier limits and honest UI only | Managed auth, secure DB, threat model and privacy operations |
 | Email delivery | BLOCKED | Trial/Paid-only personalized contract and UI | Provider, verified domain, consent, unsubscribe, bounce/complaint, worker |

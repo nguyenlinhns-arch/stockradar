@@ -1,12 +1,22 @@
 # Changelog
 
+## 2026-09-02 — Public payload hardening
+
+- Separated internal regression fixtures from the website data build.
+- Replaced public Radar, recommendation, performance, journal, track-record and Today Changes rows with explicit fail-closed payloads.
+- Removed all DEMO/MOCK records and labels from the published JSON and client runtime.
+- Kept the 405/405 internal HOSE directory summary while publishing only 16 three-letter lookup references and no raw directory rows.
+- Reduced the seven public JSON payloads from 71,518 bytes to 5,079 bytes by removing duplicated empty per-ticker reports.
+- Changed the deployment workflow to rebuild only publication-safe data before tests and release.
+- Removed unused legacy demo styling and made every public data loader gate on explicit operational status.
+
 ## 2026-09-02 — Operational interface and fail-closed HOSE data gate
 
 - Removed rendered DEMO rankings, recommendation rows, performance statistics and Today Changes records from the main public product routes.
 - Added compact operational status surfaces backed by the internal 405/405 HOSE directory reference while keeping raw directory rows out of the public artifact.
 - Changed ticker search to accept any structurally valid three-letter code without falsely claiming public membership; unknown codes enter a controlled pending-verification state.
 - Added device-local recent ticker history and tightened inputs to three letters with an autocomplete fallback.
-- Blocked Radar, recommendation, performance, journal, track-record and change views whenever their payload is MOCK.
+- Blocked Radar, recommendation, performance, journal, track-record and change views whenever their payload fails the operational data gate.
 - Preserved the Full-Universe, Data Rights and Recommendation gates; no price, score, rank or action is generated from missing data.
 - Unified static asset cache keys across public routes.
 

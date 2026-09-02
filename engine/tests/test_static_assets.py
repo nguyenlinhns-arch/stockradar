@@ -70,9 +70,15 @@ class StaticAssetTests(unittest.TestCase):
                 source = html.read_text(encoding="utf-8")
                 self.assertIn('data-api-mode="disabled"', source, html)
                 self.assertIn('name="robots" content="noindex,nofollow"', source, html)
+            for path in [*(output / "public" / "data").glob("*.json"), output / "assets" / "app.js"]:
+                source = path.read_text(encoding="utf-8").upper()
+                for forbidden in ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE"):
+                    self.assertNotIn(forbidden, source, path)
 
     def test_github_pages_workflow_runs_tests_before_deploy(self) -> None:
         workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        self.assertIn("python -m engine.cli build-public", workflow)
+        self.assertNotIn("python -m engine.cli build-demo", workflow)
         self.assertIn("python -m unittest discover -s engine/tests -v", workflow)
         self.assertIn("python scripts/build_pages.py --output .pages-site", workflow)
         self.assertLess(workflow.index("Run regression suite"), workflow.index("Deploy to GitHub Pages"))
@@ -183,18 +189,9 @@ class StaticAssetTests(unittest.TestCase):
         recommendations = json.loads(
             (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
         )
-        self.assertTrue(recommendations["is_mock"])
-        self.assertIn("mô phỏng", recommendations["notice"])
-        self.assertEqual(len(recommendations["items"]), 5)
-        self.assertEqual(
-            {item["horizon"] for item in recommendations["items"]},
-            {"SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"},
-        )
-        for item in recommendations["items"]:
-            self.assertTrue(item["is_mock"])
-            self.assertEqual(item["data_grade"], "MOCK")
-            for field in ("recommendation_id", "snapshot_id", "thesis", "risks", "invalidation_conditions"):
-                self.assertTrue(item[field], (item["ticker"], field))
+        self.assertEqual(recommendations["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(recommendations["items"], [])
+        self.assertNotIn("is_mock", recommendations)
 
     def test_v2_recommendation_and_performance_surfaces(self) -> None:
         script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
@@ -219,13 +216,10 @@ class StaticAssetTests(unittest.TestCase):
         )
         self.assertEqual(recommendations["schema_version"], "2.1.2")
         self.assertEqual(recommendations["recommendation_mode"], "RESEARCH_ONLY")
-        unactivated = [item for item in recommendations["items"] if item["recommendation_state"] == "UNACTIVATED"]
-        self.assertEqual(len(unactivated), 1)
-        self.assertIsNone(unactivated[0]["performance_entry_price"])
-        self.assertIsNone(unactivated[0]["current_return_pct"])
-        closed = [item for item in recommendations["items"] if item["status"] == "CLOSED"]
-        self.assertTrue(all(item["final_return_pct"] is not None for item in closed))
-        self.assertTrue(all(item["current_return_pct"] is None for item in closed))
+        self.assertEqual(recommendations["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(recommendations["items"], [])
+        self.assertEqual(recommendations["performance_summary"]["total_published"], 0)
+        self.assertIsNone(recommendations["performance_summary"]["win_rate_pct"])
 
     def test_required_v2_contract_documents_exist(self) -> None:
         names = (
@@ -283,7 +277,8 @@ class StaticAssetTests(unittest.TestCase):
         changes = json.loads((WEBSITE / "public/data/today-changes.json").read_text(encoding="utf-8"))
         journal = json.loads((WEBSITE / "public/data/recommendation-journal.json").read_text(encoding="utf-8"))
         self.assertFalse(master["full_universe"])
-        self.assertEqual(master["public_scope"], "REFERENCE_FIXTURE_ONLY")
+        self.assertEqual(master["public_scope"], "REFERENCE_ONLY")
+        self.assertEqual(master["data_status"], "BLOCKED_DATA_GATE")
         reference = master["internal_reference"]
         self.assertEqual(reference["snapshot_id"], "hose-universe-2026-09-02-065632-vn")
         self.assertEqual(reference["record_count"], 405)
@@ -293,16 +288,24 @@ class StaticAssetTests(unittest.TestCase):
         self.assertFalse(reference["ranking_ready"])
         self.assertLess(len(master["items"]), reference["record_count"])
         self.assertIn("VCI", {item["ticker"] for item in master["items"]})
-        self.assertEqual(len(next(item for item in reports["items"] if item["ticker"] == "DEMO1")["horizon_views"]), 4)
-        self.assertTrue(changes["items"])
-        self.assertTrue(all(item["audit_reference"] for item in journal["items"]))
+        self.assertEqual(reports["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(reports["items"], [])
+        self.assertEqual(changes["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(changes["items"], [])
+        self.assertEqual(journal["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(journal["items"], [])
+
+        for path in (WEBSITE / "public" / "data").glob("*.json"):
+            source = path.read_text(encoding="utf-8").upper()
+            for forbidden in ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE"):
+                self.assertNotIn(forbidden, source, path)
 
         script = (WEBSITE / "assets/app.js").read_text(encoding="utf-8")
         for marker in (
             "ticker_input_started", "ticker_autocomplete_selected", "ticker_search_valid",
             "quick_report_view", "four_horizon_view", "holding_view", "today_changes_view",
             "loadDynamicStockReport", "recommendation-journal.json", "isValidStockTicker",
-            "tickerAcceptedMarkup", "sr_recent_tickers", "BLOCKED_DATA_GATE",
+            "tickerAcceptedMarkup", "horizonCards", "sr_recent_tickers", "BLOCKED_DATA_GATE",
         ):
             self.assertIn(marker, script)
 

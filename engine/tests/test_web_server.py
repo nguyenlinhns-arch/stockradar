@@ -61,7 +61,7 @@ class WebServerTests(unittest.TestCase):
         with urllib.request.urlopen(self.base + "/api/stocks/VCI/quick") as response:
             payload = json.load(response)
             self.assertEqual(payload["ticker"], "VCI")
-            self.assertEqual(payload["data_status"], "BLOCKED_NO_LICENSED_DATA")
+            self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
         with urllib.request.urlopen(self.base + "/api/stocks/VCI/report") as response:
             self.assertEqual(response.status, 206)
             payload = json.load(response)

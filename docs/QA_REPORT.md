@@ -5,11 +5,13 @@ Updated: 2026-09-02 UTC.
 ## Current operational data-gate release candidate
 
 - `python3 -m unittest discover -s engine/tests`: **79/79 PASS**.
-- Deterministic data rebuild, Python compilation and JavaScript syntax: **PASS**.
+- Deterministic public-data rebuild, Python compilation and JavaScript syntax: **PASS**.
 - Static Pages artifact: **12 public routes plus `404.html` PASS**; API writes disabled and `noindex,nofollow` injected.
 - Public artifact JSON: **7/7 parsed**; CSS braces: **910/910 balanced**.
-- Main Home, Radar, ticker lookup/report, recommendation, performance, risk, history, sector and Today Changes HTML contains no rendered DEMO output.
-- MOCK Radar, recommendation, performance, journal, track-record and Today Changes payloads are intercepted before row rendering.
+- Main Home, Radar, ticker lookup/report, recommendation, performance, risk, history, sector and Today Changes HTML contains no rendered sample output.
+- Published JSON and client runtime contain no DEMO/MOCK records or labels; unavailable market surfaces use explicit `BLOCKED_DATA_GATE` payloads with empty rows.
+- Seven publication JSON files parse successfully and total 5,079 bytes, down 92.9% from the previous public payload set.
+- Internal regression fixtures are generated only under ignored local artifacts and are never copied into the Pages artifact.
 - Internal directory summary is 405/405 records from snapshot `hose-universe-2026-09-02-065632-vn`; raw rows, membership claims and market outputs remain unpublished.
 - Structurally valid three-letter ticker requests enter the lookup flow; unknown public membership stays pending verification and receives no fabricated price, score, rank or recommendation.
 

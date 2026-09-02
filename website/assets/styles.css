@@ -814,11 +814,6 @@ img { max-width: 100%; }
 }
 
 /* V2.1.2 conversion, lookup and monitoring surfaces */
-.live-demo-hero { background: linear-gradient(135deg, #071e34 0%, #0d2b49 60%, #123d63 100%); }
-.live-demo-grid { min-height: 485px; padding-block: 48px; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(310px, .6fr); gap: 46px; align-items: center; }
-.live-demo-hero h1 { margin: 18px 0 13px; color: #fff; font-size: clamp(42px, 5vw, 68px); line-height: .98; letter-spacing: -.05em; }
-.live-demo-hero h1 span { color: #90c5ea; }
-.live-demo-hero .hero-copy { max-width: 760px; color: #d2e1ed; }
 .hero-search-shell { margin-top: 25px; padding: 16px; background: #fff; box-shadow: 0 18px 45px rgba(0,0,0,.24); }
 .hero-data-note { margin: 13px 0 0; color: #b9ccdb; font-size: 11px; }
 .hero-data-note strong { color: #fff; }
@@ -941,7 +936,6 @@ img { max-width: 100%; }
 .option-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 
 @media (max-width: 930px) {
-  .live-demo-grid { grid-template-columns: 1fr; gap: 24px; }
   .value-stack { display: grid; grid-template-columns: 1fr 1fr; }
   .value-stack header { grid-column: 1 / -1; }
   .value-stack > div { grid-template-columns: 90px 1fr; }
@@ -953,8 +947,6 @@ img { max-width: 100%; }
 }
 
 @media (max-width: 700px) {
-  .live-demo-grid { min-height: auto; padding-block: 34px; }
-  .live-demo-hero h1 { font-size: 42px; }
   .value-stack { grid-template-columns: 1fr; }
   .value-stack header { grid-column: 1; }
   .ticker-suggestions { right: 0; top: 103px; }

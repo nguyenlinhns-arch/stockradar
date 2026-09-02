@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 from pathlib import Path
 
@@ -72,6 +73,7 @@ def build(output: Path) -> None:
         output / "public" / "data" / "stock-reports.json",
         output / "public" / "data" / "today-changes.json",
         output / "public" / "data" / "recommendation-journal.json",
+        output / "public" / "data" / "track-record.json",
         output / "track-record" / "index.html",
         output / "radar5" / "index.html",
         output / "breakout" / "index.html",
@@ -90,6 +92,15 @@ def build(output: Path) -> None:
         raise RuntimeError(f"Missing Pages assets: {missing}")
     if (output / "server.py").exists():
         raise RuntimeError("The Python server must not be included in GitHub Pages")
+
+    public_data = sorted((output / "public" / "data").glob("*.json"))
+    for path in public_data:
+        json.loads(path.read_text(encoding="utf-8"))
+    for path in [*public_data, output / "assets" / "app.js"]:
+        source = path.read_text(encoding="utf-8").upper()
+        for forbidden in ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE"):
+            if forbidden in source:
+                raise RuntimeError(f"Publication-only artifact contains {forbidden}: {path}")
 
 
 if __name__ == "__main__":

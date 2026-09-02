@@ -13,14 +13,127 @@ from engine.stockradar.ticker_lookup import TickerMaster
 ROOT = Path(__file__).resolve().parents[1]
 FIXTURE_PATH = ROOT / "engine" / "fixtures" / "demo_snapshot.json"
 TICKER_MASTER_FIXTURE_PATH = ROOT / "engine" / "fixtures" / "hose_universe_demo.json"
-RADAR_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "radar.json"
-TRACK_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "track-record.json"
-RECOMMENDATION_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "recommendations.json"
-TICKER_MASTER_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "ticker-universe.json"
-STOCK_REPORT_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "stock-reports.json"
-TODAY_CHANGES_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "today-changes.json"
-JOURNAL_OUTPUT_PATH = ROOT / "website" / "public" / "data" / "recommendation-journal.json"
+PUBLIC_DATA_DIR = ROOT / "website" / "public" / "data"
+DEMO_DATA_DIR = ROOT / "artifacts" / "demo-data"
+RADAR_OUTPUT_PATH = DEMO_DATA_DIR / "radar.json"
+TRACK_OUTPUT_PATH = DEMO_DATA_DIR / "track-record.json"
+RECOMMENDATION_OUTPUT_PATH = DEMO_DATA_DIR / "recommendations.json"
+TICKER_MASTER_OUTPUT_PATH = DEMO_DATA_DIR / "ticker-universe.json"
+STOCK_REPORT_OUTPUT_PATH = DEMO_DATA_DIR / "stock-reports.json"
+TODAY_CHANGES_OUTPUT_PATH = DEMO_DATA_DIR / "today-changes.json"
+JOURNAL_OUTPUT_PATH = DEMO_DATA_DIR / "recommendation-journal.json"
 LEDGER_PATH = ROOT / "artifacts" / "stockradar_demo.sqlite"
+
+
+def write_json(path: Path, payload: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def build_public() -> dict[str, object]:
+    """Build the fail-closed payloads that are safe to publish with the website."""
+
+    ticker_payload = json.loads(TICKER_MASTER_FIXTURE_PATH.read_text(encoding="utf-8"))
+    reference = dict(ticker_payload.get("internal_reference", {}))
+    snapshot = {
+        "snapshot_id": reference.get("snapshot_id", "UNAVAILABLE"),
+        "as_of": reference.get("as_of"),
+        "exchange": "HOSE",
+        "data_grade": "REFERENCE_ONLY",
+    }
+    securities = sorted(
+        (
+            item
+            for item in ticker_payload.get("items", [])
+            if str(item.get("ticker", "")).isalpha()
+            and len(str(item.get("ticker", ""))) == 3
+            and str(item.get("ticker", "")).isupper()
+        ),
+        key=lambda item: item["ticker"],
+    )
+    performance_summary = {
+        "total_published": 0,
+        "unactivated": 0,
+        "open": 0,
+        "closed": 0,
+        "target_reached": 0,
+        "stop_reached": 0,
+        "profitable_closed": 0,
+        "win_rate_pct": None,
+        "average_gain_pct": None,
+        "average_loss_pct": None,
+        "average_closed_return_pct": None,
+        "excludes_unactivated_from_win_rate": True,
+    }
+    payloads = {
+        "radar.json": {
+            "schema_version": "2.1.2",
+            "status": "BLOCKED_DATA_GATE",
+            "data_status": "BLOCKED_DATA_GATE",
+            "is_top5_hose": False,
+            "market_regime": "UNKNOWN",
+            "snapshot": snapshot,
+            "items": [],
+        },
+        "recommendations.json": {
+            "schema_version": "2.1.2",
+            "data_status": "BLOCKED_DATA_GATE",
+            "recommendation_mode": RecommendationMode.RESEARCH_ONLY.value,
+            "performance_method": "FIRST_POST_PUBLICATION_ELIGIBLE_BAR_TOUCH",
+            "performance_summary": performance_summary,
+            "new_recommendation_status": {
+                "published": False,
+                "message": "CHƯA PHÁT HÀNH",
+            },
+            "snapshot": snapshot,
+            "items": [],
+        },
+        "ticker-universe.json": {
+            "schema_version": "2.1.2",
+            "snapshot_id": snapshot["snapshot_id"],
+            "as_of": snapshot["as_of"],
+            "full_universe": False,
+            "data_grade": "REFERENCE_ONLY",
+            "data_status": "BLOCKED_DATA_GATE",
+            "public_scope": "REFERENCE_ONLY",
+            "internal_reference": reference,
+            "items": securities,
+        },
+        "stock-reports.json": {
+            "schema_version": "2.1.2",
+            "mode": RecommendationMode.RESEARCH_ONLY.value,
+            "data_status": "BLOCKED_DATA_GATE",
+            "items": [],
+        },
+        "today-changes.json": {
+            "schema_version": "2.1.2",
+            "data_status": "BLOCKED_DATA_GATE",
+            "as_of": snapshot["as_of"],
+            "items": [],
+        },
+        "recommendation-journal.json": {
+            "schema_version": "2.1.2",
+            "data_status": "BLOCKED_DATA_GATE",
+            "items": [],
+        },
+        "track-record.json": {
+            "schema_version": "2.1.2",
+            "data_status": "BLOCKED_DATA_GATE",
+            "rows": [],
+        },
+    }
+    for filename, payload in payloads.items():
+        write_json(PUBLIC_DATA_DIR / filename, payload)
+    return {
+        "status": "BLOCKED_DATA_GATE",
+        "public_files": len(payloads),
+        "lookup_items": len(securities),
+        "reference_records": reference.get("record_count", 0),
+        "output": str(PUBLIC_DATA_DIR),
+    }
 
 
 def build_demo() -> dict[str, object]:
@@ -308,10 +421,12 @@ def build_demo() -> dict[str, object]:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="StockRadar V1 utility")
-    parser.add_argument("command", choices=["build-demo"])
+    parser = argparse.ArgumentParser(description="StockRadar V2.1.2 utility")
+    parser.add_argument("command", choices=["build-public", "build-demo"])
     args = parser.parse_args()
-    if args.command == "build-demo":
+    if args.command == "build-public":
+        print(json.dumps(build_public(), ensure_ascii=False))
+    else:
         radar = build_demo()
         print(
             json.dumps(

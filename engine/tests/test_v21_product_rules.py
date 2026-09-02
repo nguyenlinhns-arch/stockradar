@@ -133,28 +133,31 @@ class V21ProductRulesTests(unittest.TestCase):
         ])
         self.assertEqual(ordered[0]["ticker"], "HPG")
 
-    def test_r8_r9_r11_public_fixture_preserves_closed_and_unactivated_truth(self) -> None:
-        payload = json.loads((ROOT / "website/public/data/recommendations.json").read_text(encoding="utf-8"))
-        closed = [item for item in payload["items"] if item["status"] == "CLOSED"]
-        unactivated = [item for item in payload["items"] if item["recommendation_state"] == "UNACTIVATED"]
+    def test_r8_r9_r11_internal_fixture_preserves_closed_and_unactivated_truth(self) -> None:
+        payload = json.loads((ROOT / "engine/fixtures/demo_snapshot.json").read_text(encoding="utf-8"))
+        closed = [item for item in payload["recommendations"] if item["status"] == "CLOSED"]
+        unactivated = [item for item in payload["recommendations"] if item["recommendation_state"] == "UNACTIVATED"]
         self.assertTrue(any(item["final_return_pct"] > 0 for item in closed))
         self.assertTrue(any(item["final_return_pct"] < 0 for item in closed))
         self.assertTrue(all(item["current_return_pct"] is None for item in closed))
-        self.assertTrue(all(item["final_return_pct"] is None for item in unactivated))
+        self.assertTrue(all(item.get("final_return_pct") is None for item in unactivated))
 
     def test_r10_benchmark_records_store_the_same_recommendation_window(self) -> None:
-        records = json.loads((ROOT / "website/public/data/recommendations.json").read_text(encoding="utf-8"))
-        for item in records["items"]:
+        records = json.loads((ROOT / "engine/fixtures/demo_snapshot.json").read_text(encoding="utf-8"))
+        for item in records["recommendations"]:
             if item["benchmark_return_pct"] is None:
                 continue
             expected = (item["vnindex_current_or_close"] / item["vnindex_at_activation"] - 1) * 100
             self.assertAlmostEqual(expected, item["benchmark_return_pct"], places=2)
 
-    def test_r12_one_ticker_has_four_independent_horizon_views(self) -> None:
+    def test_r12_public_lookup_keeps_four_horizon_shell_fail_closed(self) -> None:
         payload = json.loads((ROOT / "website/public/data/stock-reports.json").read_text(encoding="utf-8"))
-        report = next(item for item in payload["items"] if item["ticker"] == "DEMO1")
-        self.assertEqual({item["horizon"] for item in report["horizon_views"]}, {item.value for item in Horizon})
-        self.assertEqual(len({item["assessment"] for item in report["horizon_views"]}), 4)
+        script = (ROOT / "website/assets/app.js").read_text(encoding="utf-8")
+        self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(payload["items"], [])
+        self.assertIn("Object.entries(horizonLabels)", script)
+        for horizon in Horizon:
+            self.assertIn(horizon.value, script)
 
     def test_today_changes_filters_low_value_noise(self) -> None:
         events = [

@@ -1,9 +1,22 @@
 {
   "schema_version": "2.1.2",
-  "snapshot_id": "HOSE-REFERENCE-DEMO-20260901",
-  "as_of": "2026-09-01T15:00:00+07:00",
+  "snapshot_id": "hose-universe-2026-09-02-065632-vn",
+  "as_of": "2026-09-02T06:56:32+07:00",
   "full_universe": false,
-  "data_grade": "MOCK",
+  "data_grade": "REFERENCE_ONLY",
+  "data_status": "BLOCKED_DATA_GATE",
+  "public_scope": "REFERENCE_ONLY",
+  "internal_reference": {
+    "snapshot_id": "hose-universe-2026-09-02-065632-vn",
+    "as_of": "2026-09-02T06:56:32+07:00",
+    "record_count": 405,
+    "validated_count": 405,
+    "coverage_pct": 100.0,
+    "listing_status_semantics_resolved": false,
+    "raw_publication_allowed": false,
+    "market_data_ready": false,
+    "ranking_ready": false
+  },
   "items": [
     {
       "ticker": "ACB",
@@ -23,13 +36,6 @@
       "ticker": "CTG",
       "company_name": "Ngân hàng TMCP Công Thương Việt Nam",
       "sector": "Ngân hàng",
-      "exchange": "HOSE",
-      "active": true
-    },
-    {
-      "ticker": "DEMO1",
-      "company_name": "Doanh nghiệp mô phỏng số 1",
-      "sector": "Nhóm mô phỏng",
       "exchange": "HOSE",
       "active": true
     },
@@ -124,18 +130,5 @@
       "exchange": "HOSE",
       "active": true
     }
-  ],
-  "public_scope": "REFERENCE_FIXTURE_ONLY",
-  "internal_reference": {
-    "snapshot_id": "hose-universe-2026-09-02-065632-vn",
-    "as_of": "2026-09-02T06:56:32+07:00",
-    "record_count": 405,
-    "validated_count": 405,
-    "coverage_pct": 100.0,
-    "listing_status_semantics_resolved": false,
-    "raw_publication_allowed": false,
-    "market_data_ready": false,
-    "ranking_ready": false
-  },
-  "notice": "Fixture giao diện để kiểm thử lookup/autocomplete; không phải security master HOSE hiện hành và không được dùng cho tuyên bố toàn sàn."
+  ]
 }

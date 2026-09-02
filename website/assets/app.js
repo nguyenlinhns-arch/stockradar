@@ -223,13 +223,18 @@
     return master.internal_reference || {};
   }
 
+  function publicPayloadBlocked(data) {
+    const status = String(data?.data_status || data?.status || '');
+    return !data || !status || status.startsWith('BLOCKED');
+  }
+
   function publicMarketDataReady(data) {
-    return Boolean(data && data.is_mock !== true && data.snapshot?.data_grade !== 'MOCK');
+    return Boolean(!publicPayloadBlocked(data) && data.snapshot?.data_grade === 'DECISION_GRADE');
   }
 
   function licensedReportReady(report) {
     const status = String(report?.data_status || 'INSUFFICIENT');
-    return Boolean(report && report.is_mock !== true && !status.startsWith('BLOCKED') && !['MOCK', 'INSUFFICIENT'].includes(status));
+    return Boolean(report && !status.startsWith('BLOCKED') && status !== 'INSUFFICIENT');
   }
 
   function dataReadinessMarkup(master = {}, surface = 'DỮ LIỆU THỊ TRƯỜNG', compact = false) {
@@ -531,15 +536,15 @@
       ]);
       if (!response.ok) throw new Error('Không tải được dữ liệu khuyến nghị');
       const data = await response.json();
-      if (data.is_mock === true) {
+      if (publicPayloadBlocked(data)) {
         const master = tickerAssets?.master || {};
         tables.forEach(target => { target.innerHTML = dataReadinessMarkup(master, 'KHUYẾN NGHỊ CÔNG KHAI', true); });
         reports.forEach(target => { target.innerHTML = dataReadinessMarkup(master, 'BÁO CÁO CỔ PHIẾU', true); });
         performanceTargets.forEach(target => { target.innerHTML = dataReadinessMarkup(master, 'HIỆU QUẢ KHUYẾN NGHỊ', true); });
         performanceMiniTargets.forEach(target => { target.innerHTML = dataReadinessMarkup(master, 'HIỆU QUẢ KHUYẾN NGHỊ', true); });
         document.querySelectorAll('[data-recommendation-filter]').forEach(button => { button.closest('.recommendation-filters')?.setAttribute('hidden', ''); });
-        if (tables.length) track('recommendation_list_view', { status: 'BLOCKED_DATA_GATE', is_mock: true });
-        if (performanceTargets.length || performanceMiniTargets.length) track('performance_view', { status: 'BLOCKED_DATA_GATE', is_mock: true });
+        if (tables.length) track('recommendation_list_view', { status: 'BLOCKED_DATA_GATE' });
+        if (performanceTargets.length || performanceMiniTargets.length) track('performance_view', { status: 'BLOCKED_DATA_GATE' });
         return;
       }
       let activeFilter = 'ALL';
@@ -559,16 +564,16 @@
       performanceTargets.forEach(target => renderPerformance(target, data));
       performanceMiniTargets.forEach(target => renderPerformanceMini(target, data));
       if (tables.length) {
-        track('recommendation_list_view', { is_mock: data.is_mock, record_mode: data.items[0]?.record_mode });
-        track('recommendation_public_view', { is_mock: data.is_mock, records: data.items.length });
+        track('recommendation_list_view', { data_status: data.data_status, record_mode: data.items[0]?.record_mode });
+        track('recommendation_public_view', { data_status: data.data_status, records: data.items.length });
       }
       if (reports.length) {
-        track('stock_report_view', { ticker: reports[0].dataset.stockReport || '', is_mock: data.is_mock });
-        track('sample_premium_report_view', { ticker: reports[0].dataset.stockReport || '', is_mock: data.is_mock });
+        track('stock_report_view', { ticker: reports[0].dataset.stockReport || '', data_status: data.data_status });
+        track('sample_premium_report_view', { ticker: reports[0].dataset.stockReport || '', data_status: data.data_status });
       }
       if (performanceTargets.length) {
-        track('performance_view', { is_mock: data.is_mock, total_published: data.performance_summary.total_published });
-        track('benchmark_view', { benchmark: 'VNINDEX', is_mock: data.is_mock });
+        track('performance_view', { data_status: data.data_status, total_published: data.performance_summary.total_published });
+        track('benchmark_view', { benchmark: 'VNINDEX', data_status: data.data_status });
       }
     } catch (error) {
       [...tables, ...reports, ...performanceTargets, ...performanceMiniTargets].forEach(target => target.innerHTML = `<div class="empty">${error.message}</div>`);
@@ -603,7 +608,7 @@
       rank: null,
       sector_rank: null,
       score: null,
-      data_status: 'INSUFFICIENT',
+      data_status: 'BLOCKED_DATA_GATE',
       horizon_views: [],
       new_position_state: 'CHƯA ĐỦ DỮ LIỆU',
       holding_state: 'CHƯA ĐỦ DỮ LIỆU'
@@ -665,9 +670,7 @@
       const report = assets.reportByTicker.get(ticker);
       document.title = `${ticker} — StockRadar`;
       if (!licensedReportReady(report)) {
-        const lookup = report?.data_status === 'MOCK'
-          ? tickerAcceptedMarkup(ticker, assets.master)
-          : quickLookupMarkup(report, security);
+        const lookup = quickLookupMarkup(report, security);
         target.innerHTML = `${lookup}${dataReadinessMarkup(assets.master, `BÁO CÁO ${ticker}`, true)}<div class="compact-cta"><div><h2>Chưa phát hành kết quả</h2></div><a class="button button-primary" href="kiem-tra-co-phieu/">Tra mã khác</a></div>`;
         track('ticker_search_valid', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
         track('quick_report_view', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
@@ -679,8 +682,8 @@
       ]);
       const recommendationPayload = recommendationResponse.ok ? await recommendationResponse.json() : { items: [] };
       const journalPayload = journalResponse.ok ? await journalResponse.json() : { items: [] };
-      const recommendations = recommendationPayload.is_mock ? [] : recommendationPayload.items;
-      const journal = journalPayload.is_mock ? [] : journalPayload.items.filter(item => item.ticker === ticker);
+      const recommendations = publicPayloadBlocked(recommendationPayload) ? [] : (recommendationPayload.items || []);
+      const journal = publicPayloadBlocked(journalPayload) ? [] : (journalPayload.items || []).filter(item => item.ticker === ticker);
       target.innerHTML = `
         ${quickLookupMarkup(report, security)}
         <section class="position-detail-grid">
@@ -713,18 +716,18 @@
       ]);
       if (!response.ok) throw new Error('Không tải được nhật ký thay đổi');
       const data = await response.json();
-      if (data.is_mock === true) {
+      if (publicPayloadBlocked(data)) {
         targets.forEach(target => { target.innerHTML = dataReadinessMarkup(assets.master, 'BIẾN ĐỘNG HÔM NAY', true); });
         riskTargets.forEach(target => { target.innerHTML = dataReadinessMarkup(assets.master, 'CẢNH BÁO RỦI RO', true); });
         document.querySelectorAll('[data-today-updated]').forEach(item => { item.textContent = '—'; });
-        track('today_changes_view', { status: 'BLOCKED_DATA_GATE', is_mock: true, changes: 0 });
+        track('today_changes_view', { status: 'BLOCKED_DATA_GATE', changes: 0 });
         return;
       }
       const markup = items => items.map(item => `<article class="change-card"><time>${formatSnapshot(item.occurred_at)}</time><div><span>${escapeHtml(item.event_type.replaceAll('_', ' '))}</span><h2>${escapeHtml(item.title)}</h2><p>${escapeHtml(item.summary)}</p></div><div class="change-values"><del>${escapeHtml(item.previous_value || '—')}</del><b>→</b><strong>${escapeHtml(item.new_value || '—')}</strong></div></article>`).join('') || '<div class="empty">Không có thay đổi phù hợp.</div>';
       targets.forEach(target => { target.innerHTML = markup(data.items); });
       riskTargets.forEach(target => { target.innerHTML = markup(data.items.filter(item => Number(item.importance || 0) >= 3)); });
       document.querySelectorAll('[data-today-updated]').forEach(item => { item.textContent = formatSnapshot(data.as_of); });
-      track('today_changes_view', { is_mock: data.is_mock, changes: data.items.length });
+      track('today_changes_view', { data_status: data.data_status, changes: data.items.length });
     } catch (error) {
       [...targets, ...riskTargets].forEach(target => { target.innerHTML = `<div class="empty">${escapeHtml(error.message)}</div>`; });
     }
@@ -739,7 +742,7 @@
         loadTickerAssets()
       ]);
       const data = await response.json();
-      if (data.is_mock === true) {
+      if (publicPayloadBlocked(data)) {
         target.innerHTML = dataReadinessMarkup(assets.master, 'NHẬT KÝ KHUYẾN NGHỊ', true);
         return;
       }
@@ -783,7 +786,7 @@
           }
           const report = assets.reportByTicker.get(ticker);
           result.className = 'search-result is-available has-quick-result';
-          result.innerHTML = `${report?.data_status === 'MOCK' ? tickerAcceptedMarkup(ticker, assets.master, true) : quickLookupMarkup(report, security, true)}<a class="button button-primary button-small" href="co-phieu/?ticker=${encodeURIComponent(ticker)}">Mở ${escapeHtml(ticker)}</a>`;
+          result.innerHTML = `${quickLookupMarkup(report, security, true)}<a class="button button-primary button-small" href="co-phieu/?ticker=${encodeURIComponent(ticker)}">Mở ${escapeHtml(ticker)}</a>`;
           track('ticker_search_valid', { ticker, data_status: report?.data_status || 'INSUFFICIENT' });
           track('quick_report_view', { ticker, surface: location.pathname });
         } catch (error) {
@@ -844,7 +847,7 @@
         document.querySelectorAll('[data-snapshot]').forEach(el => { el.textContent = formatSnapshot(reference.as_of); });
         document.querySelectorAll('[data-grade]').forEach(el => { el.textContent = 'INTERNAL REFERENCE'; });
         document.querySelectorAll('[data-status]').forEach(el => { el.textContent = 'DATA GATE'; });
-        if (hasRankedSurface) track('radar_view', { status: 'BLOCKED_DATA_GATE', is_mock: data.is_mock });
+        if (hasRankedSurface) track('radar_view', { status: 'BLOCKED_DATA_GATE' });
         return;
       }
       document.querySelectorAll('[data-radar-list]').forEach(el => renderMiniRadar(el, data));
@@ -862,8 +865,8 @@
       document.querySelectorAll('[data-grade]').forEach(el => el.textContent = data.snapshot.data_grade);
       document.querySelectorAll('[data-status]').forEach(el => el.textContent = statusLabel(data.status));
       if (hasRankedSurface) {
-        track('radar_view', { status: data.status, is_mock: data.is_mock });
-        track('top_view', { status: data.status, is_mock: data.is_mock });
+        track('radar_view', { status: data.status, data_status: data.data_status });
+        track('top_view', { status: data.status, data_status: data.data_status });
       }
     } catch (error) {
       targets.forEach(el => el.innerHTML = `<div class="empty">${error.message}</div>`);
@@ -879,9 +882,9 @@
         loadTickerAssets()
       ]);
       const data = await response.json();
-      if (data.is_mock === true) {
+      if (publicPayloadBlocked(data)) {
         target.innerHTML = dataReadinessMarkup(assets.master, 'LỊCH SỬ CÔNG KHAI', true);
-        track('track_record_view', { status: 'BLOCKED_DATA_GATE', is_mock: true });
+        track('track_record_view', { status: 'BLOCKED_DATA_GATE' });
         return;
       }
       target.innerHTML = `
@@ -894,7 +897,7 @@
             <span><span class="state ${stateClass(row.state)}">${stateLabel(row.state)}</span></span>
             <span class="change">${new Date(row.as_of).toLocaleDateString('vi-VN')}</span>
           </div>`).join('')}`;
-      track('track_record_view', { is_mock: data.is_mock });
+      track('track_record_view', { data_status: data.data_status });
     } catch (_) {
       target.innerHTML = '<div class="empty">Chưa có track record công khai.</div>';
     }

@@ -27,8 +27,8 @@ jobs:
         with:
           python-version: "3.13"
 
-      - name: Build deterministic demo data
-        run: python -m engine.cli build-demo
+      - name: Build fail-closed public data
+        run: python -m engine.cli build-public
 
       - name: Run regression suite
         run: python -m unittest discover -s engine/tests -v

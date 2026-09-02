@@ -233,9 +233,10 @@ class Handler(BaseHTTPRequestHandler):
                     "ticker": security.ticker,
                     "company_name": security.company_name,
                     "sector": security.sector,
-                    "data_status": "INSUFFICIENT",
+                    "data_status": "BLOCKED_DATA_GATE",
                     "message": "Đánh giá nhanh đã sẵn sàng. Một số phần phân tích chuyên sâu hiện chưa đủ dữ liệu.",
-                }
+                },
+                HTTPStatus.PARTIAL_CONTENT if report_type == "report" else HTTPStatus.OK,
             )
         if report_type == "report" and not bool(report.get("deep_report_available")):
             return self.send_json(
