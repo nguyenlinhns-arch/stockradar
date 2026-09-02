@@ -1,8 +1,21 @@
 # QA Report — StockRadar V2.1.2
 
-Date: 2026-09-01 UTC.
+Updated: 2026-09-02 UTC.
 
-## Release result
+## Current operational data-gate release candidate
+
+- `python3 -m unittest discover -s engine/tests`: **79/79 PASS**.
+- Deterministic data rebuild, Python compilation and JavaScript syntax: **PASS**.
+- Static Pages artifact: **12 public routes plus `404.html` PASS**; API writes disabled and `noindex,nofollow` injected.
+- Public artifact JSON: **7/7 parsed**; CSS braces: **910/910 balanced**.
+- Main Home, Radar, ticker lookup/report, recommendation, performance, risk, history, sector and Today Changes HTML contains no rendered DEMO output.
+- MOCK Radar, recommendation, performance, journal, track-record and Today Changes payloads are intercepted before row rendering.
+- Internal directory summary is 405/405 records from snapshot `hose-universe-2026-09-02-065632-vn`; raw rows, membership claims and market outputs remain unpublished.
+- Structurally valid three-letter ticker requests enter the lookup flow; unknown public membership stays pending verification and receives no fabricated price, score, rank or recommendation.
+
+## Historical QA — 2026-09-01
+
+### Release result
 
 Research-only V2.1.2: **PASS**.
 
@@ -13,7 +26,7 @@ Research-only V2.1.2: **PASS**.
 
 Production data, all-current-HOSE lookup, recommendations, auth, email, billing, Ads and compliance remain BLOCKED by their documented gates.
 
-## Automated verification
+### Automated verification
 
 `python -m unittest discover -s engine/tests -v`: **79/79 PASS**.
 
@@ -40,7 +53,7 @@ Additional checks:
 - CSS braces: 813/813 pairs PASS;
 - Pages artifact: 26 routes plus `404.html`, API disabled and `noindex,nofollow` PASS.
 
-## Live interaction review
+### Live interaction review
 
 At the inspected desktop viewport:
 
@@ -55,7 +68,7 @@ At the inspected desktop viewport:
 - Unknown `ZZZ` produced the explicit incomplete-master boundary; it did not fabricate a report.
 - The live artifact exposed `data-api-mode="disabled"` and `noindex,nofollow`; no website-origin console warning/error was observed.
 
-## Remaining QA gates
+### Remaining QA gates
 
 The cloud browser cannot access the local `127.0.0.1` preview and does not expose a mobile viewport switch. Responsive CSS and navigation regressions pass, but a real-device mobile screenshot matrix is still required before production approval.
 

@@ -1,6 +1,6 @@
-# STOCKRADAR BUILD STATUS V2.1.2
+# STOCKRADAR BUILD STATUS V2.1.2 + OPERATIONAL DATA GATE
 
-Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
+Updated: 2026-09-02 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
 
 | Workstream | Status | Evidence | Remaining production gate |
 | --- | --- | --- | --- |
@@ -13,17 +13,18 @@ Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
 | VN-Index benchmark method | PASS | Matching activation-to-current/close start/end demo and regression | Licensed benchmark provider/redistribution rights |
 | Today Changes | PASS | Significant-event filter, payload, 30–60 second route | Production event pipeline |
 | Public recommendation history | PASS | Winner, loser, open, unactivated and closed SHADOW records; no cherry-pick | Forward production sample |
-| Ticker lookup UI | PASS | Master-driven autocomplete, uppercase validation, quick/partial result and Trial CTA | None for MOCK fixture |
+| Ticker lookup UI | PASS | Three-letter validation, fixture autocomplete, structurally valid unknown-ticker acceptance, dynamic route and device-local recent history | Public membership verification remains gated |
 | Dynamic ticker route | PASS | Generic client route, local `/co-phieu/{ticker}` resolver and Pages 404 redirect | Server-side SSR/indexability after rights/compliance |
 | Per-horizon cache/on-demand interface | PASS | SQLite hit/miss/stale/refresh, independent TTL and tests | Durable production cache, queue, invalidation and observability |
 | Watchlist dedupe / active intraday set | PASS | One ticker pipeline, subscriber fan-out and union regression | Authenticated durable store and worker |
 | Free email restriction | PASS | Tier policy, schema/UI/spec and regression | Production enforcement after auth/email connection |
 | Trial/Paid personalization | PASS | Preferences, limits, content prioritization and UI | Managed auth, verification, consent and delivery provider — BLOCKED |
 | Analytics V2.1.2 | PASS | Search/cache/report/onboarding/holding/journal event allowlists/spec | First-party store, identity/bot filtering and consent |
-| Website V2.1.2 | PASS | Operational Home; ticker lookup; Radar filters; Trigger/Risk; Today Changes; recommendation, performance, sector and history views; public explanatory/blocked routes removed | Real-device/mobile matrix before production |
-| Automated regression | PASS | 79/79 tests; static build; JS syntax; public-route/link checks | Production adapter/E2E tests |
-| Static GitHub Pages | PASS | 12 read-only product routes + 404; no-write, noindex, MOCK/SHADOW; Knowledge and unavailable service routes excluded | Production data/auth/compliance remain separately BLOCKED |
-| Full current HOSE master/data/rights | BLOCKED | Fixture is explicitly `full_universe=false`, `MOCK` | Licensed current master/price/fundamental/event/corporate-action data and reconciliation |
+| Website operational shell | PASS | Main routes contain no rendered DEMO rankings, recommendations, performance or changes; every unavailable surface fails closed to a compact status | Real-device/mobile matrix before production |
+| Internal HOSE directory reference | PASS | Drive snapshot `hose-universe-2026-09-02-065632-vn`; 405/405 records structurally validated | Listing-status semantics and public redistribution rights remain unresolved |
+| Automated regression | PASS | 79/79 tests; deterministic data build; JS syntax; static Pages artifact | Production adapter/E2E tests |
+| Static GitHub Pages | PASS | 12 read-only product routes + 404; no-write, noindex; Knowledge and unavailable service routes excluded | Production data/auth/compliance remain separately BLOCKED |
+| Full current HOSE market data/rights | BLOCKED | Internal directory coverage is 405/405; public fixture remains `full_universe=false`, `MOCK`; no OHLCV/fundamentals/corporate actions | Licensed current master/price/fundamental/event/corporate-action data, active-status semantics and reconciliation |
 | Production anonymous rate limit | BLOCKED | Configurable local reference limiter passes tests | Server-side gateway/WAF/rate limiter; Pages cannot enforce |
 | Auth/watchlist persistence | BLOCKED | Schemas, tier limits and honest UI only | Managed auth, secure DB, threat model and privacy operations |
 | Email delivery | BLOCKED | Trial/Paid-only personalized contract and UI | Provider, verified domain, consent, unsubscribe, bounce/complaint, worker |
@@ -33,8 +34,8 @@ Updated: 2026-09-01 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
 
 ## Shipping conclusion
 
-Research-only V2.1.2 operational interface: **PASS**.
+Operational static interface and fail-closed data gate: **PASS locally**.
 
-Production StockRadar, “any current HOSE ticker,” live Top HOSE, production recommendations/performance, email delivery, payment and Ads: **BLOCKED**.
+Any structurally valid three-letter ticker can enter the public lookup flow. Verified current-HOSE membership, live Top HOSE, production recommendations/performance, email delivery, payment and Ads remain **BLOCKED**.
 
 Critical path: `licensed data/rights → full-universe reconciliation → production API/cache/queue/rate limit → auth/privacy → email/billing → formal compliance → PRODUCTION_APPROVED`.

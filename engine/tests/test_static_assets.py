@@ -151,7 +151,9 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("portal-utility", script)
         self.assertIn("market-tape", script)
         self.assertIn("route.includes('/co-phieu/')", script)
-        self.assertIn("Chưa kết nối nguồn thị trường được cấp quyền", script)
+        self.assertIn("Giá/OHLCV chưa kết nối", script)
+        self.assertIn("dataReadinessMarkup", script)
+        self.assertIn("BLOCKED_DATA_GATE", script)
         self.assertIn("data-radar-filter", script)
         self.assertIn("const stateLabels", script)
         self.assertIn(".market-tape", styles)
@@ -159,7 +161,7 @@ class StaticAssetTests(unittest.TestCase):
 
     def test_master_product_surfaces_are_present_and_truthful(self) -> None:
         routes = {
-            "nganh": "horizon-matrix",
+            "nganh": "data-data-readiness",
             "phan-tich": "data-stock-search-form",
             "khuyen-nghi": "data-recommendations",
             "hieu-qua": "data-performance-summary",
@@ -208,7 +210,8 @@ class StaticAssetTests(unittest.TestCase):
         for marker in ("data-recommendation-filter", "data-recommendations", "NHẬT KÝ TRẠNG THÁI"):
             self.assertIn(marker, recommendations_page)
         self.assertIn("data-performance-summary", performance_page)
-        self.assertIn("SHADOW", performance_page)
+        self.assertIn("DATA GATE", performance_page)
+        self.assertIn("BLOCKED_DATA_GATE", script)
         self.assertIn("data-stock-report", report_page)
 
         recommendations = json.loads(
@@ -247,7 +250,7 @@ class StaticAssetTests(unittest.TestCase):
             "ĐÓNG KHUYẾN NGHỊ",
         ):
             self.assertIn(label, script)
-        self.assertIn("Chưa kết nối nguồn thị trường được cấp quyền", script)
+        self.assertIn("Giá/OHLCV chưa kết nối", script)
         self.assertIn("public/data/recommendations.json", script)
         with tempfile.TemporaryDirectory() as temp:
             output = Path(temp) / "pages"
@@ -260,7 +263,8 @@ class StaticAssetTests(unittest.TestCase):
         for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
             self.assertIn(horizon, homepage)
         self.assertIn("BẢNG ĐIỀU HÀNH", homepage)
-        self.assertIn("DỮ LIỆU MẪU", homepage)
+        self.assertIn("DATA GATE", homepage)
+        self.assertNotIn("DỮ LIỆU MẪU", homepage)
         self.assertNotIn("199.000đ", homepage)
         self.assertNotIn("CHƯA MỞ BÁN", homepage)
 
@@ -279,6 +283,15 @@ class StaticAssetTests(unittest.TestCase):
         changes = json.loads((WEBSITE / "public/data/today-changes.json").read_text(encoding="utf-8"))
         journal = json.loads((WEBSITE / "public/data/recommendation-journal.json").read_text(encoding="utf-8"))
         self.assertFalse(master["full_universe"])
+        self.assertEqual(master["public_scope"], "REFERENCE_FIXTURE_ONLY")
+        reference = master["internal_reference"]
+        self.assertEqual(reference["snapshot_id"], "hose-universe-2026-09-02-065632-vn")
+        self.assertEqual(reference["record_count"], 405)
+        self.assertEqual(reference["validated_count"], 405)
+        self.assertFalse(reference["raw_publication_allowed"])
+        self.assertFalse(reference["market_data_ready"])
+        self.assertFalse(reference["ranking_ready"])
+        self.assertLess(len(master["items"]), reference["record_count"])
         self.assertIn("VCI", {item["ticker"] for item in master["items"]})
         self.assertEqual(len(next(item for item in reports["items"] if item["ticker"] == "DEMO1")["horizon_views"]), 4)
         self.assertTrue(changes["items"])
@@ -288,9 +301,20 @@ class StaticAssetTests(unittest.TestCase):
         for marker in (
             "ticker_input_started", "ticker_autocomplete_selected", "ticker_search_valid",
             "quick_report_view", "four_horizon_view", "holding_view", "today_changes_view",
-            "loadDynamicStockReport", "recommendation-journal.json",
+            "loadDynamicStockReport", "recommendation-journal.json", "isValidStockTicker",
+            "tickerAcceptedMarkup", "sr_recent_tickers", "BLOCKED_DATA_GATE",
         ):
             self.assertIn(marker, script)
+
+        for route in (
+            "index.html", "radar5/index.html", "breakout/index.html", "risk/index.html",
+            "track-record/index.html", "nganh/index.html", "phan-tich/index.html",
+            "khuyen-nghi/index.html", "hieu-qua/index.html", "co-phieu/index.html",
+            "kiem-tra-co-phieu/index.html", "thay-doi-hom-nay/index.html",
+        ):
+            source = (WEBSITE / route).read_text(encoding="utf-8")
+            self.assertNotIn("DỮ LIỆU MẪU", source, route)
+            self.assertNotIn("DEMO1", source, route)
 
     def test_six_creatives_have_feed_and_reels_variants(self) -> None:
         output = ROOT / "growth" / "creatives" / "output"

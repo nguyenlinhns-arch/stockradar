@@ -330,7 +330,7 @@ img { max-width: 100%; }
 .table-ticker, .ticker { color: var(--navy); font-size: 16px; font-weight: 900; letter-spacing: .025em; }
 .setup { margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.35; }
 .score { color: var(--blue); font-size: 17px; font-weight: 900; }
-.demo-price, .pivot-distance { color: #344a5d; font-size: 12px; font-weight: 720; }
+.market-price, .pivot-distance { color: #344a5d; font-size: 12px; font-weight: 720; }
 .change { color: var(--green); font-size: 9px; font-weight: 800; line-height: 1.35; }
 .change.unchanged { color: var(--muted-2); }
 .compact-table .table-row { min-width: 820px; grid-template-columns: 38px minmax(225px, 1.5fr) 52px 110px 66px 70px 120px; min-height: 61px; }
@@ -1034,4 +1034,60 @@ img { max-width: 100%; }
   .radar-filter-bar { overflow-x: auto; flex-wrap: nowrap; }
   .radar-filter-bar button { flex: 0 0 auto; }
   .compact-heading { padding: 17px 0; }
+}
+
+/* Operational data gate and ticker lookup */
+.data-readiness {
+  overflow: hidden;
+  background: #fff;
+  border-top: 4px solid var(--amber);
+  box-shadow: var(--shadow);
+}
+.data-readiness > header {
+  min-height: 82px;
+  padding: 17px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid var(--line);
+}
+.data-readiness h2 { margin: 3px 0 0; color: var(--navy); font-size: 20px; }
+.readiness-grid { display: grid; grid-template-columns: repeat(4, 1fr); }
+.readiness-grid > div { min-height: 86px; padding: 16px; border-right: 1px solid var(--line); }
+.readiness-grid > div:last-child { border-right: 0; }
+.readiness-grid span, .accepted-metrics span { display: block; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+.readiness-grid strong, .accepted-metrics strong { display: block; margin-top: 7px; color: var(--navy); font-size: 13px; }
+.data-readiness.is-compact { border-top-width: 3px; box-shadow: none; }
+.data-readiness.is-compact > header { min-height: 70px; }
+.data-readiness.is-compact .readiness-grid > div { min-height: 74px; }
+
+.ticker-accepted { overflow: hidden; background: #fff; border-top: 4px solid var(--blue); box-shadow: var(--shadow); }
+.ticker-accepted > header { min-height: 94px; padding: 18px 22px; display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 1px solid var(--line); }
+.ticker-accepted h2 { margin: 3px 0 0; color: var(--navy); font-size: 36px; line-height: 1; }
+.accepted-metrics { display: grid; grid-template-columns: repeat(4, 1fr); }
+.accepted-metrics > div { min-height: 74px; padding: 14px 16px; border-right: 1px solid var(--line); }
+.accepted-metrics > div:last-child { border-right: 0; }
+.ticker-accepted.is-compact { border-top-width: 3px; box-shadow: none; }
+.ticker-accepted.is-compact > header { min-height: 76px; }
+.ticker-accepted.is-compact h2 { font-size: 30px; }
+
+.recent-panel { padding: 19px 21px; background: #fff; border: 1px solid var(--line); box-shadow: var(--shadow); }
+.recent-panel h2 { margin: 4px 0 0; color: var(--navy); font-size: 20px; }
+.recent-tickers { min-height: 48px; margin-top: 10px; display: flex; flex-wrap: wrap; align-items: center; gap: 9px; }
+.recent-tickers a { min-width: 62px; padding: 9px 13px; border: 1px solid var(--line-dark); background: var(--surface-2); color: var(--navy); font-size: 12px; font-weight: 850; text-align: center; }
+.recent-tickers a:hover { border-color: var(--blue); background: var(--blue-soft); color: var(--blue); }
+.recent-tickers > span { color: var(--muted); font-size: 12px; }
+.recent-card .recent-tickers { margin-top: 5px; }
+
+@media (max-width: 930px) {
+  .readiness-grid, .accepted-metrics { grid-template-columns: 1fr 1fr; }
+  .readiness-grid > div, .accepted-metrics > div { border-bottom: 1px solid var(--line); }
+}
+
+@media (max-width: 700px) {
+  .data-readiness > header, .ticker-accepted > header { align-items: flex-start; flex-direction: column; }
+  .readiness-grid, .accepted-metrics { grid-template-columns: 1fr; }
+  .readiness-grid > div, .accepted-metrics > div { min-height: 67px; border-right: 0; }
+  .recent-tickers a { flex: 1 0 64px; }
 }

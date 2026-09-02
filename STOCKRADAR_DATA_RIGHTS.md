@@ -21,3 +21,11 @@ Unknown rights fail closed. Public websites, scraped pages and user subscription
 `source_id`, source timestamp, ingestion timestamp, symbol/exchange, raw reference/hash, adjustment basis, corporate-action status, quality grade and correction link.
 
 The current fixture source `STOCKRADAR_DEMO_FIXTURE` is MOCK and grants no inference about production data availability or rights.
+
+## 2026-09-02 internal HOSE directory reference
+
+- Snapshot: `hose-universe-2026-09-02-065632-vn`.
+- Structural validation: 405/405 records.
+- Observed raw listing-status value: `11`; its active/tradable semantics are not yet approved.
+- Missing production layers: licensed OHLCV, corporate actions, fundamentals and event data.
+- Public rule: expose summary readiness only. Do not publish the 405 raw/normalized rows, membership claims, rankings or recommendations until redistribution rights and field semantics are approved.

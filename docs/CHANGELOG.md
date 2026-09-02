@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-02 — Operational interface and fail-closed HOSE data gate
+
+- Removed rendered DEMO rankings, recommendation rows, performance statistics and Today Changes records from the main public product routes.
+- Added compact operational status surfaces backed by the internal 405/405 HOSE directory reference while keeping raw directory rows out of the public artifact.
+- Changed ticker search to accept any structurally valid three-letter code without falsely claiming public membership; unknown codes enter a controlled pending-verification state.
+- Added device-local recent ticker history and tightened inputs to three letters with an autocomplete fallback.
+- Blocked Radar, recommendation, performance, journal, track-record and change views whenever their payload is MOCK.
+- Preserved the Full-Universe, Data Rights and Recommendation gates; no price, score, rank or action is generated from missing data.
+- Unified static asset cache keys across public routes.
+
 ## 2026-09-01 — Operational public interface
 
 - Replaced the text-heavy Home with a working dashboard that opens directly to ticker lookup, market state, Radar, Today Changes and performance.

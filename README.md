@@ -8,7 +8,7 @@ StockRadar V2.1.2 is a deliberately focused validation product:
 
 The repository contains a validation engine, four horizon-specific score profiles, separate recommendation gate, dynamic ticker lookup contract, per-horizon report cache, deterministic activation/review/performance logic, append-only SQLite journal, personalization/email entitlements, ticker-level monitor deduplication, a mobile-first Vietnamese stock dashboard, internal method references, analytics contracts and regression tests.
 
-Important status: the included market records are labelled `MOCK`. They demonstrate the product and exercise the legacy five-item gate; they are not a live HOSE scan and can never be presented as a real “Top 10 HOSE”. A real release requires a licensed/current data feed, four validated horizon models, full-universe reconciliation, consent/privacy setup and compliance review.
+Important status: the included test records remain `MOCK`, but public product routes fail closed instead of rendering them as market output. The internal Drive snapshot validates 405/405 reference records; it does not establish current tradability or public redistribution rights. A real market release requires a licensed/current feed, resolved listing semantics, full-universe reconciliation, four validated horizon models, consent/privacy setup and compliance review.
 
 ## Run locally
 
@@ -37,7 +37,7 @@ The Pages artifact publishes only working read-only product surfaces. Knowledge,
 - `STOCKRADAR_BUILD_STATUS.md` — evidence-backed status by workstream.
 - `STOCKRADAR_EXPERIMENTS.md` — append-only experiment registry.
 - `engine/` — data gates, scoring, ranking/recommendation, lookup/cache, personalization, monitoring and immutable ledger.
-- `website/` — operational Home, `/kiem-tra-co-phieu/`, dynamic ticker reports, Radar/Trigger/Risk, Today Changes, recommendation journal/history, Performance and sector views; non-public future surfaces remain as source references only.
+- `website/` — operational Home, strict three-letter ticker lookup, controlled dynamic ticker routes and fail-closed Radar/recommendation/performance/change/history surfaces; non-public future surfaces remain as source references only.
 - `docs/UX_BENCHMARK_VI.md` — patterns learned from established Vietnamese finance products and the boundaries retained for StockRadar.
 - `growth/` — ads, creatives, UTM and analytics.
 - `gpt/` — migration contract for the old GPT prototype.
@@ -46,7 +46,7 @@ The Pages artifact publishes only working read-only product surfaces. Knowledge,
 
 - Score is evidence quality, not win probability.
 - “Top 10 HOSE” is allowed only when the full-universe and selected-horizon gates pass.
-- Demo/mock data is visibly labelled in engine output and UI.
+- Demo/mock data is labelled in engine output and blocked from operational public result surfaces.
 - Published snapshots are immutable; corrections are appended.
 - Publication is not activation; unactivated records have no P/L.
 - New-position and holding views are independent; `KHÔNG MUA ĐUỔI` is not an automatic sell.

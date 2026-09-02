@@ -10,8 +10,8 @@
   <meta property="og:type" content="website">
   <title>StockRadar — Bảng điều hành cổ phiếu HOSE</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260901-ops1">
-  <script src="assets/app.js?v=20260901-ops1" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
+  <script src="assets/app.js?v=20260902-data1" defer></script>
 </head>
 <body data-proposition="organic" class="app-home">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -28,12 +28,12 @@
       <div class="container">
         <div class="operations-title-row">
           <div><span class="panel-label">BẢNG ĐIỀU HÀNH</span><h1>StockRadar HOSE</h1></div>
-          <span class="data-pill">DỮ LIỆU MẪU</span>
+          <span class="data-pill">DATA GATE</span>
         </div>
         <div class="operations-search">
           <form class="stock-search-form" data-stock-search-form>
             <label for="ticker-hero">Tra cứu mã</label>
-            <input id="ticker-hero" name="ticker" type="text" inputmode="text" autocomplete="off" maxlength="12" placeholder="Nhập mã HOSE">
+            <input id="ticker-hero" name="ticker" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="3" pattern="[A-Za-z]{3}" placeholder="VD: FPT">
             <button class="button button-primary" type="submit">Tra cứu</button>
           </form>
           <div class="search-result" data-stock-search-result aria-live="polite"></div>
@@ -49,11 +49,11 @@
 
     <section class="operations-status-section" aria-label="Trạng thái hệ thống">
       <div class="container operations-status-grid">
-        <article><span>Thị trường</span><strong data-market>—</strong></article>
-        <article><span>Trạng thái Radar</span><strong data-status>Đang tải</strong></article>
-        <article><span>Độ phủ</span><strong data-coverage>—</strong></article>
-        <article><span>Data grade</span><strong data-grade>—</strong></article>
-        <article><span>Snapshot</span><strong data-snapshot>—</strong></article>
+        <article><span>Hồ sơ nội bộ</span><strong data-reference-count>—</strong></article>
+        <article><span>Giá &amp; OHLCV</span><strong data-feed-status>Đang kiểm tra</strong></article>
+        <article><span>Tra mã</span><strong>SẴN SÀNG</strong></article>
+        <article><span>Xếp hạng toàn HOSE</span><strong data-ranking-status>Đang kiểm tra</strong></article>
+        <article><span>Snapshot nguồn</span><strong data-reference-snapshot>—</strong></article>
       </div>
     </section>
 
@@ -88,13 +88,17 @@
             <a href="risk/"><strong>Cảnh báo</strong><span>Tín hiệu mất hiệu lực</span></a>
             <a href="nganh/"><strong>Theo ngành</strong><span>Bảng xếp hạng ngành</span></a>
           </section>
+          <section class="side-panel recent-panel recent-card">
+            <div class="side-panel-head"><span>MÃ ĐÃ TRA</span></div>
+            <div class="recent-tickers" data-recent-tickers><span>Chưa có mã đã tra.</span></div>
+          </section>
         </aside>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Dữ liệu công khai hiện là dữ liệu mẫu, không phải dữ liệu giao dịch thời gian thực hay lời mời mua bán.</p></div>
+    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate.</p></div>
   </footer>
 </body>
 </html>

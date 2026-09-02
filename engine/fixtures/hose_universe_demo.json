@@ -4,6 +4,18 @@
   "as_of": "2026-09-01T15:00:00+07:00",
   "full_universe": false,
   "data_grade": "MOCK",
+  "public_scope": "REFERENCE_FIXTURE_ONLY",
+  "internal_reference": {
+    "snapshot_id": "hose-universe-2026-09-02-065632-vn",
+    "as_of": "2026-09-02T06:56:32+07:00",
+    "record_count": 405,
+    "validated_count": 405,
+    "coverage_pct": 100.0,
+    "listing_status_semantics_resolved": false,
+    "raw_publication_allowed": false,
+    "market_data_ready": false,
+    "ranking_ready": false
+  },
   "notice": "Fixture giao diện để kiểm thử lookup/autocomplete; không phải security master HOSE hiện hành và không được dùng cho tuyên bố toàn sàn.",
   "items": [
     {"ticker": "ACB", "company_name": "Ngân hàng TMCP Á Châu", "sector": "Ngân hàng", "exchange": "HOSE", "active": true},

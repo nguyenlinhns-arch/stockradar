@@ -77,7 +77,16 @@ def build_demo() -> dict[str, object]:
     )
 
     TICKER_MASTER_OUTPUT_PATH.write_text(
-        json.dumps({**ticker_master.to_public_dict(), "notice": ticker_master_payload["notice"]}, ensure_ascii=False, indent=2) + "\n",
+        json.dumps(
+            {
+                **ticker_master.to_public_dict(),
+                "public_scope": ticker_master_payload.get("public_scope", "REFERENCE_FIXTURE_ONLY"),
+                "internal_reference": ticker_master_payload.get("internal_reference", {}),
+                "notice": ticker_master_payload["notice"],
+            },
+            ensure_ascii=False,
+            indent=2,
+        ) + "\n",
         encoding="utf-8",
     )
 
