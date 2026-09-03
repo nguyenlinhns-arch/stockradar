@@ -29,12 +29,11 @@ REQUIRED_EMAIL_ASSETS = (
     "assets/email-interest.js",
 )
 REQUIRED_HOME_ASSETS = (
-    "assets/home-dashboard.js",
     "assets/home-dashboard.css",
     "assets/home-density.css",
     "assets/home-dense-v3.css",
+    "assets/home-focus-v1.css",
     "assets/recommendation-dense-v3.css",
-    "assets/premium-preview-v7.css",
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
@@ -141,33 +140,29 @@ def main() -> None:
         "index.html",
         (
             'data-email-conversion',
-            'href="dang-ky/"',
+            'href="signup/"',
             'href="dang-nhap/"',
             'data-header-auth-actions',
             'assets/home-dense-v3.css',
-            'assets/premium-preview-v7.css',
+            'assets/home-focus-v1.css',
             'assets/site-v4.css',
             'assets/public-fallbacks-v4.js',
             'assets/public-copy-v7.js',
-            'home-watchlist-grid',
-            'home-ticker-grid',
-            '<b>ACB</b>',
-            '<b>VNM</b>',
-            '<b>NKG</b>',
-            '<b>HAH</b>',
-            'Tín hiệu hành động hiện tại',
+            'home-radar-sector-list',
+            'home-tier-grid',
+            'ticker=ACB',
+            'ticker=VNM',
+            'ticker=NKG',
+            'ticker=HAH',
+            'Tín hiệu hành động',
             '<strong>0 mã</strong>',
-            'Danh sách cổ phiếu theo Radar rà soát',
-            '<strong>30 mã</strong>',
-            '10 nhóm ngành',
-            '3 mã mỗi ngành',
-            'MẪU BÁO CÁO CHUYÊN SÂU',
-            '4M &amp; Payback Time',
-            'Định giá Bear / Base / Bull',
-            'MẪU EMAIL GÓI TRẢ PHÍ',
-            'TOP 30 STOCKRADAR',
-            '[StockRadar Premium] TOP 30 HOSE',
-            'assets/home-dashboard.js',
+            '30 mã',
+            '10 ngành · 3 mã mỗi ngành',
+            'Free bên trái · Premium bên phải',
+            '4M · CANSLIM · Payback',
+            'Định giá Bear/Base/Bull',
+            'SEPA/VCP · VPA · RVOL',
+            'Free không nhận email báo cáo/khuyến nghị hằng ngày',
         ),
         errors,
     )
@@ -180,15 +175,26 @@ def main() -> None:
         errors.append("obsolete HOSE reference section remains on homepage")
     if "Danh sách cổ phiếu đang theo dõi" in home_source:
         errors.append("obsolete tracking-list wording remains on homepage")
+    for obsolete in (
+        "home-watchlist-grid",
+        "home-ticker-grid",
+        "premium-preview-section",
+        "MẪU BÁO CÁO CHUYÊN SÂU",
+        "MẪU EMAIL GÓI TRẢ PHÍ",
+        "assets/premium-preview-v7.css",
+        "assets/home-dashboard.js",
+        "assets/email-interest.js",
+    ):
+        if obsolete in home_source:
+            errors.append(f"obsolete/heavy homepage element remains: {obsolete}")
 
     require_text(
         output,
         "dang-ky/index.html",
         (
-            'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
             'data-header-auth-actions',
             'href="dang-nhap/"',
-            'href="dang-ky/"',
+            'href="signup/"',
             'data-email-interest-form',
             'name="daily_brief"',
             'name="event_alerts"',
@@ -224,7 +230,7 @@ def main() -> None:
         "thay-doi-hom-nay/index.html", "hieu-qua/index.html", "nganh/index.html",
         "kiem-tra-co-phieu/index.html", "phan-tich/index.html", "co-phieu/index.html",
     ):
-        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'), errors)
+        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'), errors)
 
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
@@ -275,7 +281,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; 30-stock 10x3 Radar review + Premium previews + single Login/Register header pair present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; focused 30-stock Radar + Free/Premium comparison + single Login/Register header pair present")
 
 
 if __name__ == "__main__":
