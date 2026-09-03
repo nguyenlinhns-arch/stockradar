@@ -36,6 +36,7 @@ def main() -> None:
         "assets/auth-policy.js",
         "assets/auth-account-security.js",
         "assets/auth-extra.js",
+        "assets/auth-delete-security.js",
         "signup/index.html",
         "dang-nhap/index.html",
         "dat-lai-mat-khau/index.html",
@@ -53,6 +54,7 @@ def main() -> None:
     policy = require(site / "assets" / "auth-policy.js")
     account_security = require(site / "assets" / "auth-account-security.js")
     extra = require(site / "assets" / "auth-extra.js")
+    delete_security = require(site / "assets" / "auth-delete-security.js")
 
     checks = {
         "signup OTP input": ("one-time-code", signup),
@@ -67,7 +69,9 @@ def main() -> None:
         "current password input": ("name=\"current_password\"", account),
         "current password enforcement": ("currentPassword", account_security),
         "account deletion UI": ("data-delete-account-form", account),
-        "account deletion function": ("delete-account", extra),
+        "delete password input": ("name=\"delete_current_password\"", account),
+        "delete reauthentication": ("signInWithPassword", delete_security),
+        "account deletion function": ("delete-account", delete_security),
     }
     missing = [name for name, (marker, source) in checks.items() if marker not in source]
     if missing:
@@ -81,6 +85,7 @@ def main() -> None:
         "assets/auth-account-security.js",
         "assets/auth.js",
         "assets/auth-extra.js",
+        "assets/auth-delete-security.js",
     )
     for page in sample_pages:
         source = require(page)
