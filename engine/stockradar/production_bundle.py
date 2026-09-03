@@ -1,0 +1,182 @@
+from __future__ import annotations
+
+import csv
+from dataclasses import dataclass
+import hashlib
+import json
+from pathlib import Path
+from typing import Any, Mapping
+
+from .production_data import CONTRACT_VERSION, COVERAGE_DATASETS, REQUIRED_DATASETS
+
+
+class ProductionBundleError(ValueError):
+    pass
+
+
+@dataclass(frozen=True)
+class DatasetInspection:
+    path: Path
+    sha256: str
+    row_count: int
+    covered_tickers: int | None
+
+    def to_manifest_entry(self, *, snapshot_id: str, as_of: str) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "present": True,
+            "snapshot_id": snapshot_id,
+            "as_of": as_of,
+            "sha256": self.sha256,
+            "row_count": self.row_count,
+        }
+        if self.covered_tickers is not None:
+            payload["covered_tickers"] = self.covered_tickers
+        return payload
+
+
+def _resolve_inside(bundle_dir: Path, relative_path: object) -> Path:
+    raw = str(relative_path or "").strip()
+    if not raw:
+        raise ProductionBundleError("dataset path is required")
+    candidate = (bundle_dir / raw).resolve()
+    root = bundle_dir.resolve()
+    try:
+        candidate.relative_to(root)
+    except ValueError as error:
+        raise ProductionBundleError(f"dataset path escapes bundle directory: {raw}") from error
+    if not candidate.is_file():
+        raise ProductionBundleError(f"dataset file is missing: {raw}")
+    return candidate
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _normalized_ticker(value: object) -> str | None:
+    ticker = str(value or "").strip().upper()
+    if not ticker:
+        return None
+    if len(ticker) != 3 or not ticker.isalpha() or not ticker.isascii():
+        raise ProductionBundleError(f"invalid ticker in bundle: {ticker!r}")
+    return ticker
+
+
+def inspect_csv_dataset(path: Path, *, ticker_column: str | None = None) -> DatasetInspection:
+    row_count = 0
+    tickers: set[str] | None = set() if ticker_column else None
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames is None:
+            raise ProductionBundleError(f"CSV header is missing: {path.name}")
+        if ticker_column and ticker_column not in reader.fieldnames:
+            raise ProductionBundleError(
+                f"ticker column {ticker_column!r} is missing from {path.name}"
+            )
+        for row in reader:
+            row_count += 1
+            if tickers is not None:
+                ticker = _normalized_ticker(row.get(ticker_column or ""))
+                if ticker is None:
+                    raise ProductionBundleError(
+                        f"blank ticker at row {row_count + 1} in {path.name}"
+                    )
+                tickers.add(ticker)
+    return DatasetInspection(
+        path=path,
+        sha256=_sha256(path),
+        row_count=row_count,
+        covered_tickers=len(tickers) if tickers is not None else None,
+    )
+
+
+def _dataset_as_of(spec: Mapping[str, Any], snapshot_as_of: str) -> str:
+    value = str(spec.get("as_of") or snapshot_as_of).strip()
+    if not value:
+        raise ProductionBundleError("dataset as_of is required")
+    return value
+
+
+def build_manifest_from_descriptor(
+    bundle_dir: str | Path,
+    descriptor: Mapping[str, Any],
+) -> dict[str, Any]:
+    root = Path(bundle_dir).resolve()
+    if not root.is_dir():
+        raise ProductionBundleError(f"bundle directory is missing: {root}")
+
+    contract_version = str(descriptor.get("contract_version") or "").strip()
+    if contract_version != CONTRACT_VERSION:
+        raise ProductionBundleError(
+            f"descriptor contract_version must be {CONTRACT_VERSION!r}"
+        )
+
+    snapshot_raw = descriptor.get("snapshot")
+    rights_raw = descriptor.get("rights")
+    active_status_raw = descriptor.get("active_status")
+    dataset_specs = descriptor.get("datasets")
+    if not isinstance(snapshot_raw, Mapping):
+        raise ProductionBundleError("snapshot object is required")
+    if not isinstance(rights_raw, Mapping):
+        raise ProductionBundleError("rights object is required")
+    if not isinstance(active_status_raw, Mapping):
+        raise ProductionBundleError("active_status object is required")
+    if not isinstance(dataset_specs, Mapping):
+        raise ProductionBundleError("datasets object is required")
+
+    snapshot = dict(snapshot_raw)
+    snapshot_id = str(snapshot.get("snapshot_id") or "").strip()
+    snapshot_as_of = str(snapshot.get("as_of") or "").strip()
+    if not snapshot_id:
+        raise ProductionBundleError("snapshot.snapshot_id is required")
+    if not snapshot_as_of:
+        raise ProductionBundleError("snapshot.as_of is required")
+
+    datasets: dict[str, Any] = {}
+    for name in REQUIRED_DATASETS:
+        raw_spec = dataset_specs.get(name)
+        if not isinstance(raw_spec, Mapping):
+            raise ProductionBundleError(f"dataset descriptor is missing: {name}")
+        path = _resolve_inside(root, raw_spec.get("path"))
+        format_name = str(raw_spec.get("format") or path.suffix.lstrip(".")).strip().lower()
+        if format_name != "csv":
+            raise ProductionBundleError(
+                f"unsupported dataset format for {name}: {format_name or '<blank>'}; only CSV is accepted in V1"
+            )
+        ticker_column = str(raw_spec.get("ticker_column") or "").strip() or None
+        if name in COVERAGE_DATASETS and not ticker_column:
+            raise ProductionBundleError(f"ticker_column is required for {name}")
+        inspection = inspect_csv_dataset(path, ticker_column=ticker_column)
+        datasets[name] = inspection.to_manifest_entry(
+            snapshot_id=snapshot_id,
+            as_of=_dataset_as_of(raw_spec, snapshot_as_of),
+        )
+
+    return {
+        "contract_version": CONTRACT_VERSION,
+        "snapshot": snapshot,
+        "rights": dict(rights_raw),
+        "active_status": dict(active_status_raw),
+        "datasets": datasets,
+    }
+
+
+def load_descriptor(path: str | Path) -> Mapping[str, Any]:
+    descriptor_path = Path(path)
+    payload = json.loads(descriptor_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, Mapping):
+        raise ProductionBundleError("bundle descriptor must be a JSON object")
+    return payload
+
+
+def write_manifest(path: str | Path, payload: Mapping[str, Any]) -> None:
+    target = Path(path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
