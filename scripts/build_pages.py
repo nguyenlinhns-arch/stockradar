@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
@@ -24,9 +25,7 @@ DEFAULT_OUTPUT = ROOT / ".pages-site"
 AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
 AUTH_ROUTES = {"signup", "dang-nhap", "dat-lai-mat-khau", "tai-khoan"}
 PREMIUM_CLIENT_ROUTES = {"co-phieu"}
-EXCLUDED_NAMES = {
-    "server.py", "__pycache__", "kien-thuc", "demo1", "email", "theo-doi", "pro",
-}
+EXCLUDED_NAMES = {"server.py", "__pycache__", "kien-thuc", "demo1", "email", "theo-doi", "pro"}
 PUBLIC_AUTH_HEAD = """\
 <script src="assets/auth-config.js?v=20260903-auth7" defer></script>
 """
@@ -84,7 +83,6 @@ def write_auth_config(output: Path) -> None:
     key_lower = key.lower()
     if key_lower.startswith("sb_secret_") or "service_role" in key_lower:
         raise RuntimeError("Refusing to publish a privileged Supabase key to GitHub Pages")
-
     payload = {
         "provider": "supabase", "supabaseUrl": url, "supabasePublishableKey": key,
         "configured": bool(url and key), "emailDeliveryReady": email_ready,
@@ -118,8 +116,7 @@ def inject_auth_bundle(source: str, page: Path, output: Path) -> str:
 
 
 def radar_items(output: Path) -> list[dict[str, object]]:
-    path = output / "public" / "data" / "ticker-universe.json"
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = json.loads((output / "public" / "data" / "ticker-universe.json").read_text(encoding="utf-8"))
     items = payload.get("items")
     if not isinstance(items, list):
         raise RuntimeError("Radar ticker universe items must be a list")
@@ -141,12 +138,8 @@ def radar_items(output: Path) -> list[dict[str, object]]:
 
 
 def generate_radar_ticker_pages(output: Path) -> tuple[str, ...]:
-    """Generate shareable static routes only for the already-public Radar 30 list.
-
-    This does not expose the internal 405-row HOSE reference set and does not imply a buy ranking.
-    """
-    template_path = output / "co-phieu" / "index.html"
-    template = template_path.read_text(encoding="utf-8")
+    """Generate shareable static routes only for the already-public Radar 30 list."""
+    template = (output / "co-phieu" / "index.html").read_text(encoding="utf-8")
     tickers: list[str] = []
     for item in radar_items(output):
         ticker = str(item["ticker"]).upper()
@@ -159,29 +152,35 @@ def generate_radar_ticker_pages(output: Path) -> tuple[str, ...]:
             "Radar rà soát không đồng nghĩa khuyến nghị mua."
         )
         canonical = f"https://stockradar.vn/co-phieu/{ticker}/"
+        safe_title = html.escape(title, quote=True)
+        safe_description = html.escape(description, quote=True)
+        safe_canonical = html.escape(canonical, quote=True)
 
         source = template.replace('<base href="../">', '<base href="../../">', 1)
-        source = re.sub(r'<title>.*?</title>', f'<title>{title}</title>', source, count=1, flags=re.DOTALL)
+        source = re.sub(r'<title>.*?</title>', f'<title>{safe_title}</title>', source, count=1, flags=re.DOTALL)
         source = re.sub(
             r'<meta\s+name="description"\s+content="[^"]*">',
-            f'<meta name="description" content="{description}">',
+            f'<meta name="description" content="{safe_description}">',
             source,
             count=1,
         )
         social = (
-            f'<link rel="canonical" href="{canonical}">\n'
-            f'<meta property="og:site_name" content="StockRadar">\n'
-            f'<meta property="og:type" content="website">\n'
-            f'<meta property="og:title" content="{title}">\n'
-            f'<meta property="og:description" content="{description}">\n'
-            f'<meta property="og:url" content="{canonical}">\n'
-            f'<meta name="twitter:card" content="summary">\n'
-            f'<meta name="twitter:title" content="{title}">\n'
-            f'<meta name="twitter:description" content="{description}">\n'
+            f'<link rel="canonical" href="{safe_canonical}">\n'
+            '<meta property="og:site_name" content="StockRadar">\n'
+            '<meta property="og:type" content="website">\n'
+            f'<meta property="og:title" content="{safe_title}">\n'
+            f'<meta property="og:description" content="{safe_description}">\n'
+            f'<meta property="og:url" content="{safe_canonical}">\n'
+            '<meta name="twitter:card" content="summary">\n'
+            f'<meta name="twitter:title" content="{safe_title}">\n'
+            f'<meta name="twitter:description" content="{safe_description}">\n'
         )
         source = source.replace("</head>", social + "</head>", 1)
-        source = source.replace('<body data-proposition="stock-report">', f'<body data-proposition="stock-report" data-static-ticker="{ticker}">', 1)
-
+        source = source.replace(
+            '<body data-proposition="stock-report">',
+            f'<body data-proposition="stock-report" data-static-ticker="{ticker}">',
+            1,
+        )
         target = output / "co-phieu" / ticker / "index.html"
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(source, encoding="utf-8")
