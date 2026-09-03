@@ -30,12 +30,12 @@
     const button = form.querySelector('button[type="submit"]');
 
     if (!validEmail(email)) {
-      setMessage(message, 'Nhập email hợp lệ để ghi nhận nhu cầu Premium.', 'error');
+      setMessage(message, 'Nhập email hợp lệ để ghi nhận nhu cầu nhận bản tin/cảnh báo StockRadar.', 'error');
       form.elements.email?.focus();
       return;
     }
     if (!dailyBrief && !eventAlerts) {
-      setMessage(message, 'Chọn ít nhất Báo cáo Premium hằng ngày hoặc Cảnh báo hành động Premium.', 'error');
+      setMessage(message, 'Chọn ít nhất bản rà soát 09:00 hoặc cảnh báo điểm mua/bán Premium.', 'error');
       return;
     }
     if (!privacyAccepted) {
@@ -68,19 +68,19 @@
       let payload = {};
       try { payload = await response.json(); } catch (_) {}
       if (!response.ok || payload.accepted !== true) {
-        throw new Error(payload.message || 'Chưa thể ghi nhận nhu cầu Premium lúc này.');
+        throw new Error(payload.message || 'Chưa thể ghi nhận nhu cầu email lúc này.');
       }
 
       form.reset();
       setMessage(
         message,
-        payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bước này chưa kích hoạt báo cáo hoặc cảnh báo Premium.',
+        payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bản tin 09:00 cần quyền Free trở lên; cảnh báo mua/bán cần quyền Premium.',
         'success'
       );
     } catch (error) {
       const text = error?.name === 'AbortError'
         ? 'Kết nối ghi nhận email quá thời gian. Vui lòng thử lại.'
-        : String(error?.message || 'Chưa thể ghi nhận nhu cầu Premium lúc này.');
+        : String(error?.message || 'Chưa thể ghi nhận nhu cầu email lúc này.');
       setMessage(message, text, 'error');
     } finally {
       clearTimeout(timeout);
