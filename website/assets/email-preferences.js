@@ -32,8 +32,8 @@
 
   function friendlyError(error) {
     const raw = String(error?.message || '').toLowerCase();
-    if (raw.includes('free product email requires daily_brief')) {
-      return 'Tài khoản Free cần chọn Báo cáo hằng ngày để bật gửi email. Cảnh báo mua/bán được lưu như nhu cầu Premium.';
+    if (raw.includes('premium product email requires trial or paid')) {
+      return 'Email báo cáo và cảnh báo thuộc quyền Premium. Tài khoản Free vẫn có thể lưu nhu cầu để dùng sau khi nâng cấp.';
     }
     if (raw.includes('product email requires active account')) {
       return 'Hãy xác minh email trước khi bật gửi email nội dung.';
@@ -107,8 +107,8 @@
     const alerts = form?.elements?.event_alerts;
 
     if (master) {
-      master.checked = Boolean(preferences.enabled && active);
-      master.disabled = !active;
+      master.checked = Boolean(preferences.enabled && active && premium);
+      master.disabled = !active || !premium;
     }
     if (daily) daily.checked = Boolean(preferences.daily_brief);
     if (alerts) alerts.checked = Boolean(preferences.event_alerts);
@@ -125,8 +125,8 @@
     if (tier) tier.textContent = profile.account_tier || 'FREE';
     if (consentTarget) consentTarget.textContent = consent?.granted ? 'Đã đồng ý' : 'Chưa đồng ý';
     if (delivery) {
-      delivery.textContent = preferences.enabled && active
-        ? (premium ? 'Đã bật Premium' : 'Đã bật bản tin Free')
+      delivery.textContent = preferences.enabled && active && premium
+        ? 'Đã bật Premium'
         : consent?.granted
           ? 'Đã lưu nhu cầu'
           : 'Chưa bật';
@@ -135,17 +135,17 @@
       eligibility.textContent = !active
         ? 'Cần xác minh email'
         : premium
-          ? 'Premium · bản tin + cảnh báo'
-          : 'Free · bản tin cơ bản';
+          ? 'Premium · báo cáo + cảnh báo'
+          : 'Free · không có email nội dung';
     }
 
     const note = root.querySelector('[data-product-email-tier-note]');
     if (note) {
       note.textContent = !active
-        ? 'Bạn có thể lưu loại email quan tâm ngay bây giờ; việc gửi chỉ được bật sau khi email đã xác minh.'
+        ? 'Bạn có thể lưu loại nội dung Premium quan tâm; việc gửi chỉ được bật sau khi email đã xác minh và tài khoản có quyền Premium.'
         : premium
-          ? 'Gói hiện tại cho phép bật bản tin và cảnh báo mua/bán theo lựa chọn của bạn.'
-          : 'Free được nhận bản tin thị trường cơ bản hằng ngày. Lựa chọn cảnh báo mua/bán được lưu để dùng khi tài khoản có quyền Premium.';
+          ? 'Gói hiện tại cho phép bật báo cáo hằng ngày và cảnh báo hành động theo lựa chọn của bạn.'
+          : 'Free không nhận email báo cáo/khuyến nghị hằng ngày. Các lựa chọn bên dưới chỉ được lưu như nhu cầu Premium.';
     }
   }
 
@@ -224,16 +224,12 @@
         setMessage(message, 'Chọn ít nhất một loại email trước khi bật gửi.', 'error');
         return;
       }
-      if (masterRequested && profile.account_tier === 'FREE' && !dailyBrief) {
-        setMessage(message, 'Free cần chọn Báo cáo hằng ngày để bật gửi. Cảnh báo mua/bán vẫn được lưu như nhu cầu Premium.', 'error');
+      if (masterRequested && profile.account_tier === 'FREE') {
+        setMessage(message, 'Tài khoản Free không có quyền bật email nội dung. Các lựa chọn vẫn được lưu để dùng khi nâng Premium.', 'error');
         return;
       }
 
-      const enabled = Boolean(
-        active &&
-        masterRequested &&
-        (premium ? selectedAny : dailyBrief)
-      );
+      const enabled = Boolean(active && premium && masterRequested && selectedAny);
       const granted = selectedAny;
       const button = form.querySelector('button[type="submit"]');
       if (button) button.disabled = true;
@@ -257,13 +253,11 @@
         if (!selectedAny) {
           setMessage(message, 'Đã rút đăng ký email nội dung.', 'success');
         } else if (!active) {
-          setMessage(message, 'Đã lưu lựa chọn. Xác minh email để có thể bật gửi.', 'success');
+          setMessage(message, 'Đã lưu lựa chọn. Xác minh email và cần quyền Premium để có thể bật gửi.', 'success');
         } else if (enabled && premium) {
           setMessage(message, 'Đã bật các email Premium bạn chọn.', 'success');
-        } else if (enabled) {
-          setMessage(message, eventAlerts
-            ? 'Đã bật bản tin Free hằng ngày và lưu nhu cầu cảnh báo mua/bán Premium.'
-            : 'Đã bật bản tin Free hằng ngày.', 'success');
+        } else if (!premium) {
+          setMessage(message, 'Đã lưu nhu cầu Premium. Tài khoản Free không nhận email báo cáo/khuyến nghị hằng ngày.', 'success');
         } else {
           setMessage(message, 'Đã lưu loại email quan tâm; gửi email hiện đang tắt.', 'success');
         }
@@ -314,7 +308,7 @@
         if (error) throw error;
         alertState.set(id, nextValue);
         setMessage(status, nextValue
-          ? 'Đã lưu mã ưu tiên nhận cảnh báo. Cảnh báo mua/bán qua email chỉ được gửi khi tài khoản có quyền Premium và email toàn cục đang bật.'
+          ? 'Đã lưu mã ưu tiên nhận cảnh báo. Gửi cảnh báo qua email chỉ hoạt động khi tài khoản có quyền Premium và email toàn cục đang bật.'
           : 'Đã tắt cảnh báo riêng cho mã này.', 'success');
       } catch (error) {
         toggle.checked = !nextValue;
