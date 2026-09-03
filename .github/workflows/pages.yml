@@ -34,6 +34,9 @@ jobs:
         run: python -m unittest discover -s engine/tests -v
 
       - name: Build static Pages artifact
+        env:
+          STOCKRADAR_SUPABASE_URL: ${{ vars.STOCKRADAR_SUPABASE_URL }}
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: ${{ vars.STOCKRADAR_SUPABASE_PUBLISHABLE_KEY }}
         run: python scripts/build_pages.py --output .pages-site
 
       - name: Configure GitHub Pages

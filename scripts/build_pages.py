@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -19,10 +20,14 @@ EXCLUDED_NAMES = {
     "demo1",
     "email",
     "theo-doi",
-    "tai-khoan",
-    "signup",
     "pro",
 }
+AUTH_HEAD = """\
+<link rel="stylesheet" href="assets/auth.css?v=20260903-auth1">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth1" defer></script>
+<script src="assets/auth.js?v=20260903-auth1" defer></script>
+"""
 
 
 def parse_args() -> argparse.Namespace:
@@ -45,15 +50,51 @@ def ignore(directory: str, names: list[str]) -> set[str]:
     return excluded
 
 
+def write_auth_config(output: Path) -> None:
+    url = os.environ.get("STOCKRADAR_SUPABASE_URL", "").strip().rstrip("/")
+    key = os.environ.get("STOCKRADAR_SUPABASE_PUBLISHABLE_KEY", "").strip()
+    if bool(url) != bool(key):
+        raise RuntimeError("Supabase auth configuration is incomplete")
+    if url and not url.startswith("https://"):
+        raise RuntimeError("STOCKRADAR_SUPABASE_URL must use HTTPS")
+    key_lower = key.lower()
+    if key_lower.startswith("sb_secret_") or "service_role" in key_lower:
+        raise RuntimeError("Refusing to publish a privileged Supabase key to GitHub Pages")
+
+    payload = {
+        "provider": "supabase",
+        "supabaseUrl": url,
+        "supabasePublishableKey": key,
+        "configured": bool(url and key),
+    }
+    target = output / "assets" / "auth-config.js"
+    target.write_text(
+        "window.STOCKRADAR_AUTH_CONFIG = Object.freeze("
+        + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+        + ");\n",
+        encoding="utf-8",
+    )
+
+
+def inject_auth_bundle(source: str) -> str:
+    if "assets/auth.js" in source:
+        return source
+    if "</head>" not in source:
+        raise RuntimeError("HTML page has no closing head tag")
+    return source.replace("</head>", AUTH_HEAD + "</head>", 1)
+
+
 def build(output: Path) -> None:
     output = validate_output(output)
     if output.exists():
         shutil.rmtree(output)
     shutil.copytree(WEBSITE, output, ignore=ignore)
+    write_auth_config(output)
 
     for page in output.rglob("*.html"):
         source = page.read_text(encoding="utf-8")
         source = source.replace('data-api-mode="auto"', 'data-api-mode="disabled"')
+        source = inject_auth_bundle(source)
         if 'name="robots"' not in source:
             source = source.replace(
                 "<head>",
@@ -67,6 +108,9 @@ def build(output: Path) -> None:
     required = [
         output / "index.html",
         output / "assets" / "app.js",
+        output / "assets" / "auth.css",
+        output / "assets" / "auth.js",
+        output / "assets" / "auth-config.js",
         output / "public" / "data" / "radar.json",
         output / "public" / "data" / "recommendations.json",
         output / "public" / "data" / "ticker-universe.json",
@@ -85,6 +129,10 @@ def build(output: Path) -> None:
         output / "co-phieu" / "index.html",
         output / "kiem-tra-co-phieu" / "index.html",
         output / "thay-doi-hom-nay" / "index.html",
+        output / "signup" / "index.html",
+        output / "dang-nhap" / "index.html",
+        output / "dat-lai-mat-khau" / "index.html",
+        output / "tai-khoan" / "index.html",
         output / "404.html",
     ]
     missing = [str(path) for path in required if not path.is_file()]
