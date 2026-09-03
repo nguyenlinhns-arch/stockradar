@@ -47,6 +47,9 @@ jobs:
       - name: Verify production auth artifact
         run: python scripts/verify_pages_auth.py .pages-site
 
+      - name: Verify production public surface
+        run: python scripts/verify_pages_public_surface.py .pages-site
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:
