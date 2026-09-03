@@ -1,0 +1,45 @@
+/* Mobile-first interaction polish. Keep desktop density while making touch actions easier. */
+@media(max-width:760px){
+  .nav-toggle,
+  .header-login-cta,
+  .header-register-cta,
+  .button,
+  .stock-search-form button,
+  .stock-search-form input,
+  .ticker-suggestions button,
+  .ticker-suggestions [role="option"],
+  .horizon-tab,
+  .live-horizon-tabs button,
+  .market-sector-chip,
+  .home-radar-tickers a,
+  .home-quick-actions a,
+  .analysis-tier-link{
+    min-height:44px;
+  }
+  .stock-search-form input{font-size:16px}
+  .home-radar-tickers a{min-width:48px;padding:0 9px;font-size:12px}
+  .home-radar-sector-row{min-height:54px}
+  .home-radar-sector-row>strong{font-size:12px;line-height:1.25}
+  .home-quick-actions strong{font-size:12px}
+  .home-quick-actions span{font-size:10px;line-height:1.4}
+  .home-tier-card-head h3{font-size:19px}
+  .home-tier-card-head p,.home-tier-feature span,.home-tier-actions span{font-size:10px;line-height:1.5}
+  .home-tier-feature strong{font-size:12px}
+  .analysis-tier-head h2{font-size:20px}
+  .analysis-tier-head p{font-size:11px;line-height:1.5}
+  .premium-analysis-block h3{font-size:14px}
+  .premium-analysis-block p{font-size:11px;line-height:1.55}
+  .free-context-horizons strong{font-size:13px}
+  .free-context-horizons small,.free-context-grid ul,.free-context-conclusion p{font-size:10px;line-height:1.5}
+  .free-context-conclusion strong{font-size:12px}
+}
+
+:where(.button,.nav-toggle,.header-login-cta,.header-register-cta,.home-radar-tickers a,.home-quick-actions a,.analysis-tier-link,.live-horizon-tabs button,.market-sector-chip):focus-visible{
+  outline:3px solid #1f6fae;
+  outline-offset:2px;
+}
+
+@media(prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto!important}
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
