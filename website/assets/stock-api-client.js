@@ -33,6 +33,13 @@
     return `${number > 0 ? '+' : ''}${number.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`;
   }
 
+  function formatProbability(value) {
+    if (value == null || value === '' || Number.isNaN(Number(value))) return '—';
+    const number = Number(value);
+    if (number < 0 || number > 100) return '—';
+    return `${number.toLocaleString('vi-VN', { maximumFractionDigits: 2 })}%`;
+  }
+
   function formatDateTime(value) {
     if (!value) return '—';
     const date = new Date(value);
@@ -67,7 +74,7 @@
     const assessment = payload.assessment || payload.action || payload.new_position_state || 'CHƯA CÓ KẾT LUẬN';
     const holding = payload.holding_state || 'CHƯA CÓ KẾT LUẬN';
     const calibratedProbability = payload.probability_calibrated === true && payload.probability_pct != null
-      ? formatPercent(payload.probability_pct)
+      ? formatProbability(payload.probability_pct)
       : 'KHÔNG CÔNG BỐ';
 
     container.innerHTML = `
