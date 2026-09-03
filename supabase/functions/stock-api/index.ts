@@ -9,6 +9,7 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:8000",
 ]);
 const HORIZONS = new Set(["SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"]);
+const PREMIUM_TIERS = new Set(["TRIAL", "PAID"]);
 
 function corsHeaders(origin: string | null): HeadersInit {
   const headers: Record<string, string> = {
@@ -82,6 +83,19 @@ Deno.serve(async (req: Request) => {
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+
+  const { data: profileData, error: profileError } = await serviceClient
+    .from("profiles")
+    .select("account_tier,account_status")
+    .eq("id", user.id)
+    .maybeSingle();
+  if (profileError || !profileData || String(profileData.account_status || "").toUpperCase() !== "ACTIVE") {
+    return jsonResponse({ status: "FORBIDDEN", reason: "ACCOUNT_INACTIVE" }, 403, origin);
+  }
+  const accountTier = String(profileData.account_tier || "").toUpperCase();
+  if (!PREMIUM_TIERS.has(accountTier)) {
+    return jsonResponse({ status: "PREMIUM_REQUIRED", reason: "PREMIUM_REQUIRED" }, 403, origin);
+  }
 
   const { data: quotaData, error: quotaError } = await serviceClient.rpc("consume_stockradar_api_quota", {
     p_user_id: user.id,
