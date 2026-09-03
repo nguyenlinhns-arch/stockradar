@@ -1,6 +1,6 @@
 # STOCKRADAR BUILD STATUS V2.1.2 + OPERATIONAL DATA GATE
 
-Updated: 2026-09-02 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
+Updated: 2026-09-03 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
 
 | Workstream | Status | Evidence | Remaining production gate |
 | --- | --- | --- | --- |
@@ -22,20 +22,21 @@ Updated: 2026-09-02 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`
 | Analytics V2.1.2 | PASS | Search/cache/report/onboarding/holding/journal event allowlists/spec | First-party store, identity/bot filtering and consent |
 | Website operational shell | PASS | Main routes and published JSON contain no sample rankings, recommendations, performance or changes; every unavailable surface fails closed to a compact status | Real-device/mobile matrix before production |
 | Internal HOSE directory reference | PASS | Drive snapshot `hose-universe-2026-09-02-065632-vn`; 405/405 records structurally validated | Listing-status semantics and public redistribution rights remain unresolved |
-| Automated regression | PASS | 79/79 tests; deterministic publication-safe data build; JS syntax; static Pages artifact | Production adapter/E2E tests |
-| Static GitHub Pages | PASS | 12 read-only product routes + 404; no-write, noindex; Knowledge and unavailable service routes excluded | Production data/auth/compliance remain separately BLOCKED |
-| Full current HOSE market data/rights | BLOCKED | Internal directory coverage is 405/405; public payload is fail-closed with `full_universe=false` and no market rows; no OHLCV/fundamentals/corporate actions | Licensed current master/price/fundamental/event/corporate-action data, active-status semantics and reconciliation |
+| Production data contract / publication gate | PASS | `engine/stockradar/production_data.py`, CLI validator, contract document and regression tests; Pages rejects any production-looking payload without a valid fresh rights-aware manifest | Licensed production bundle and written rights evidence |
+| Automated regression | PASS | GitHub Actions regression suite passed on commit `70497fa`; includes production-data and Pages publication-gate tests | Production adapter/E2E tests with licensed provider |
+| Static GitHub Pages | PASS | Fail-closed public-data build, static artifact and production auth verification passed in GitHub Actions; 12 read-only product routes + 404 | Production data/auth/compliance remain separately BLOCKED |
+| Full current HOSE market data/rights | BLOCKED | Internal directory coverage is 405/405; Drive `Giá & OHLCV` and `Dữ liệu doanh nghiệp` contain no production payload. DNSE LightSpeed is technically suitable for internal scanning but its current terms prohibit third-party redistribution, including processed data, without written approval. FiinGroup API Datafeed is a technical candidate only. | Contracted source with public display + redistribution + derived-data rights; current master/OHLCV/fundamentals/event/corporate-action bundle; active-status semantics and reconciliation |
 | Production anonymous rate limit | BLOCKED | Configurable local reference limiter passes tests | Server-side gateway/WAF/rate limiter; Pages cannot enforce |
 | Auth/watchlist persistence | BLOCKED | Schemas, tier limits and honest UI only | Managed auth, secure DB, threat model and privacy operations |
 | Email delivery | BLOCKED | Trial/Paid-only personalized contract and UI | Provider, verified domain, consent, unsubscribe, bounce/complaint, worker |
 | Billing/subscription | BLOCKED | Exact 30-day contract and 199k/299k hypotheses | Provider/webhooks, reconciliation, tax/refund/security/compliance |
-| Compliance/legal | BLOCKED | RESEARCH_ONLY/noindex and formal checklist | Authorized Vietnamese legal/compliance approval |
+| Compliance/legal | BLOCKED | RESEARCH_ONLY/noindex, data-rights registry and formal checklist | Authorized Vietnamese legal/compliance approval |
 | Ads first round | BLOCKED | Lookup, holding and history landings/events are implemented; spending not authorized | Production data/auth/measurement, six approved assets, compliance and account eligibility |
 
 ## Shipping conclusion
 
-Operational static interface and fail-closed data gate: **PASS locally**.
+Operational static interface, fail-closed data build and production-data publication gate: **PASS in GitHub Actions**.
 
-Any structurally valid three-letter ticker can enter the public lookup flow. Verified current-HOSE membership, live Top HOSE, production recommendations/performance, email delivery, payment and Ads remain **BLOCKED**.
+Any structurally valid three-letter ticker can enter the public lookup flow. Verified current-HOSE membership, live Top HOSE, production recommendations/performance, customer-facing DNSE-derived signals, email delivery, payment and Ads remain **BLOCKED**.
 
-Critical path: `licensed data/rights → full-universe reconciliation → production API/cache/queue/rate limit → auth/privacy → email/billing → formal compliance → PRODUCTION_APPROVED`.
+Critical path: `licensed public/derived-data rights → fresh production manifest + full-universe bundle → reconciliation → production API/cache/queue/rate limit → auth/privacy → email/billing → formal compliance → PRODUCTION_APPROVED`.
