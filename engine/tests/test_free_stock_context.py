@@ -23,16 +23,24 @@ class FreeStockContextTests(unittest.TestCase):
             "2–5 năm+",
             "Không dựng giá, định giá, Buy Zone, Stop hay Target",
             "Không biến danh sách Radar thành khuyến nghị mua",
+            "Không coi mã 3 ký tự ngoài Radar 30 là mã HOSE hợp lệ",
             "CHƯA CÓ CƠ SỞ DỮ LIỆU ĐỦ ĐỂ ĐƯA RA HÀNH ĐỘNG MUA/BÁN",
         ):
             self.assertIn(marker, source)
         self.assertIn("ticker-universe.json", source)
+        self.assertIn("CHƯA XÁC MINH CÔNG KHAI", source)
 
-    def test_free_context_does_not_duplicate_full_public_report(self):
+    def test_free_context_replaces_technical_fallback_and_yields_to_full_report(self):
         source = (ROOT / "website" / "assets" / "free-stock-context-v1.js").read_text(encoding="utf-8")
+        styles = (ROOT / "website" / "assets" / "free-stock-context-v1.css").read_text(encoding="utf-8")
         self.assertIn(".position-detail-grid, .ticker-history, .evidence-grid", source)
+        self.assertIn("clearFallback", source)
+        self.assertIn("has-free-context", source)
         self.assertIn("data-free-stock-context", source)
         self.assertIn("MutationObserver", source)
+        self.assertIn(".analysis-free-content.has-free-context>.ticker-accepted", styles)
+        self.assertIn(".analysis-free-content.has-free-context>.data-readiness", styles)
+        self.assertIn("display:none!important", styles)
 
 
 if __name__ == "__main__":
