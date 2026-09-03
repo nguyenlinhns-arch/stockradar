@@ -36,8 +36,8 @@ jobs:
       - name: Build static Pages artifact
         env:
           STOCKRADAR_ENABLE_AUTH: "1"
-          STOCKRADAR_SUPABASE_URL: ${{ vars.STOCKRADAR_SUPABASE_URL }}
-          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: ${{ vars.STOCKRADAR_SUPABASE_PUBLISHABLE_KEY }}
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
         run: python scripts/build_pages.py --output .pages-site
 
       - name: Configure GitHub Pages
