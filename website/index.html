@@ -4,24 +4,35 @@
   <base href="./">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="StockRadar — tra cứu cổ phiếu HOSE, Radar ưu tiên, trạng thái thị trường, khuyến nghị và đăng ký email báo cáo/cảnh báo.">
+  <meta name="description" content="StockRadar — tra cứu cổ phiếu HOSE, dữ liệu tham chiếu theo ngành, Radar, khuyến nghị và đăng ký nhận bản tin chứng khoán mỗi ngày.">
   <meta property="og:title" content="StockRadar — Bảng điều hành cổ phiếu HOSE">
-  <meta property="og:description" content="Tra cứu mã, xem Radar và đăng ký nhận báo cáo hằng ngày cùng cảnh báo điểm mua/bán qua email.">
+  <meta property="og:description" content="Theo dõi dữ liệu HOSE tham chiếu, tra cứu mã và đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn.">
   <meta property="og:type" content="website">
   <title>StockRadar — Bảng điều hành cổ phiếu HOSE</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
   <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email3">
+  <link rel="stylesheet" href="assets/home-dashboard.css?v=20260903-home1">
   <script src="assets/app.js?v=20260902-data1" defer></script>
   <script src="assets/email-interest.js?v=20260903-email1" defer></script>
+  <script src="assets/home-dashboard.js?v=20260903-home1" defer></script>
 </head>
 <body data-proposition="organic" class="app-home">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
+
+  <div class="home-newsletter-strip">
+    <div class="container">
+      <p><strong>Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn</strong> · Free có bản rà soát thị trường cơ bản; Premium có thêm cảnh báo điểm mua/bán khi đủ điều kiện.</p>
+      <a class="button button-primary" href="#dang-ky-ban-tin">Đăng ký ngay</a>
+    </div>
+  </div>
+
   <header class="site-header">
     <div class="container nav">
       <a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button>
       <nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="thay-doi-hom-nay/">Thay đổi</a><a href="hieu-qua/">Hiệu quả</a><a href="nganh/">Theo ngành</a></nav>
+      <a class="button button-primary header-newsletter-cta" href="#dang-ky-ban-tin">Nhận bản tin mỗi ngày</a>
     </div>
   </header>
 
@@ -30,11 +41,11 @@
       <div class="container">
         <div class="operations-title-row">
           <div><span class="panel-label">BẢNG ĐIỀU HÀNH</span><h1>StockRadar HOSE</h1></div>
-          <span class="data-pill">DATA GATE</span>
+          <span class="data-pill">TRẠNG THÁI DỮ LIỆU</span>
         </div>
         <div class="operations-search">
           <form class="stock-search-form" data-stock-search-form>
-            <label for="ticker-hero">Tra cứu mã</label>
+            <label for="ticker-hero">Tra cứu mã cổ phiếu HOSE</label>
             <input id="ticker-hero" name="ticker" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="3" pattern="[A-Za-z]{3}" placeholder="VD: FPT">
             <button class="button button-primary" type="submit">Tra cứu</button>
           </form>
@@ -51,11 +62,47 @@
 
     <section class="operations-status-section" aria-label="Trạng thái hệ thống">
       <div class="container operations-status-grid">
-        <article><span>Hồ sơ nội bộ</span><strong data-reference-count>—</strong></article>
+        <article><span>Mã tham chiếu</span><strong data-reference-count>—</strong></article>
         <article><span>Giá &amp; OHLCV</span><strong data-feed-status>Đang kiểm tra</strong></article>
-        <article><span>Tra mã</span><strong>SẴN SÀNG</strong></article>
-        <article><span>Xếp hạng toàn HOSE</span><strong data-ranking-status>Đang kiểm tra</strong></article>
+        <article><span>Tra cứu mã</span><strong>SẴN SÀNG</strong></article>
+        <article><span>Xếp hạng HOSE</span><strong data-ranking-status>Đang kiểm tra</strong></article>
         <article><span>Snapshot nguồn</span><strong data-reference-snapshot>—</strong></article>
+      </div>
+    </section>
+
+    <section class="home-market-section" data-home-market-data aria-labelledby="home-market-title">
+      <div class="container">
+        <div class="home-market-shell">
+          <header class="home-market-head">
+            <div>
+              <span class="panel-label">DỮ LIỆU HOSE THAM CHIẾU</span>
+              <h2 id="home-market-title">Danh mục cổ phiếu đang có dữ liệu công khai</h2>
+              <p data-home-market-status>Đang tải dữ liệu tham chiếu…</p>
+            </div>
+            <div class="home-market-note">Bấm vào một mã để đưa thẳng vào ô tra cứu. Giá, OHLCV, xếp hạng và tín hiệu chỉ hiển thị khi nguồn dữ liệu tương ứng đủ điều kiện phát hành.</div>
+          </header>
+
+          <div class="home-market-stats" aria-label="Tổng quan dữ liệu tham chiếu">
+            <article class="home-market-stat"><span>Mã công khai</span><strong data-home-public-tickers>—</strong></article>
+            <article class="home-market-stat"><span>Nhóm ngành</span><strong data-home-sectors>—</strong></article>
+            <article class="home-market-stat"><span>Hồ sơ HOSE đã đối chiếu</span><strong data-home-reference-records>—</strong></article>
+            <article class="home-market-stat"><span>Thời điểm snapshot</span><strong data-home-snapshot-time>—</strong></article>
+          </div>
+
+          <div class="home-market-controls">
+            <div class="home-sector-chips" data-home-sector-chips aria-label="Lọc theo ngành"></div>
+            <span class="home-visible-count" data-home-visible-count>—</span>
+          </div>
+
+          <div class="home-market-table-head" aria-hidden="true"><span>Mã</span><span>Doanh nghiệp</span><span>Ngành</span><span></span></div>
+          <div class="home-market-list" data-home-market-list><div class="market-data-empty">Đang tải danh sách mã…</div></div>
+
+          <div class="home-data-explainer">
+            <article><strong>Tra cứu nhanh</strong><span>Danh mục công khai giúp kiểm tra mã, doanh nghiệp và ngành trước khi mở báo cáo chi tiết.</span></article>
+            <article><strong>Không điền dữ liệu giả</strong><span>Trường giá, volume, Buy Zone, Stop và Target chỉ xuất hiện khi dữ liệu đủ chất lượng và quyền sử dụng.</span></article>
+            <article><strong>HOSE בלבד</strong><span>StockRadar tập trung cổ phiếu HOSE; không đưa HNX/UPCoM vào hệ thống sàng lọc chính.</span></article>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -76,14 +123,10 @@
         </section>
 
         <aside class="dashboard-sidebar operations-sidebar">
-          <section class="side-panel operations-feed">
-            <div class="side-panel-head"><span>THAY ĐỔI HÔM NAY</span><a href="thay-doi-hom-nay/">Xem tất cả</a></div>
-            <div class="today-changes-list today-changes-compact" data-today-changes><div class="empty">Đang tải…</div></div>
-          </section>
-          <section class="side-panel home-email-cta" data-email-conversion>
-            <span class="panel-label">EMAIL STOCKRADAR</span>
-            <h2>Báo cáo mỗi ngày + cảnh báo mua/bán</h2>
-            <p>Để lại email và chọn đúng loại thông tin bạn muốn nhận. Không lựa chọn nào được bật sẵn.</p>
+          <section class="side-panel home-email-cta" id="dang-ky-ban-tin" data-email-conversion>
+            <span class="panel-label">BẢN TIN STOCKRADAR</span>
+            <h2>Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn</h2>
+            <p>Để lại email và chọn đúng nội dung bạn quan tâm. Không lựa chọn nào được bật sẵn.</p>
             <ul>
               <li><strong>Free:</strong> bản rà soát thị trường cơ bản hằng ngày sau khi xác minh email và đồng ý nhận.</li>
               <li><strong>Premium:</strong> cảnh báo điểm mua/bán tại các mốc quét chính khi có tín hiệu hành động đủ điều kiện.</li>
@@ -91,20 +134,25 @@
             </ul>
 
             <form class="email-interest-form" data-email-interest-form novalidate>
-              <label for="home-email-interest">Email</label>
+              <label for="home-email-interest">Email nhận bản tin</label>
               <input id="home-email-interest" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com">
               <div class="email-interest-options">
-                <label class="email-interest-check"><input name="daily_brief" type="checkbox"><span>Đăng ký <strong>Báo cáo StockRadar hằng ngày</strong>.</span></label>
-                <label class="email-interest-check"><input name="event_alerts" type="checkbox"><span>Đăng ký quan tâm <strong>Cảnh báo điểm mua/bán Premium</strong>.</span></label>
+                <label class="email-interest-check"><input name="daily_brief" type="checkbox"><span>Nhận <strong>bản tin chứng khoán hằng ngày</strong>.</span></label>
+                <label class="email-interest-check"><input name="event_alerts" type="checkbox"><span>Quan tâm <strong>cảnh báo điểm mua/bán Premium</strong>.</span></label>
                 <label class="email-interest-check email-interest-privacy"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và lựa chọn này để phục vụ đăng ký, xác minh và quản lý email theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
               </div>
               <div class="email-interest-honeypot" aria-hidden="true"><label for="home-company">Công ty</label><input id="home-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
-              <button class="button button-primary" type="submit">Đăng ký nhận email</button>
-              <p class="email-interest-message" data-email-interest-message aria-live="polite">Bước này chỉ ghi nhận yêu cầu. Chưa gửi báo cáo/cảnh báo cho tới khi email được xác minh và điều kiện gửi được đáp ứng.</p>
+              <button class="button button-primary" type="submit">Đăng ký nhận bản tin mỗi ngày</button>
+              <p class="email-interest-message" data-email-interest-message aria-live="polite">Bước này ghi nhận yêu cầu chờ xác minh. Chưa gửi báo cáo/cảnh báo cho tới khi email được xác minh và điều kiện gửi được đáp ứng.</p>
             </form>
 
             <div class="hero-actions"><a class="button button-secondary" href="signup/">Tạo tài khoản</a><a class="button button-secondary" href="dang-nhap/">Đã có tài khoản</a></div>
             <p class="email-interest-pending">Yêu cầu chưa xác minh được giữ tối đa 30 ngày. Cảnh báo mua/bán vẫn cần quyền Premium; việc chọn tại đây không tự cấp quyền gửi.</p>
+          </section>
+
+          <section class="side-panel operations-feed">
+            <div class="side-panel-head"><span>THAY ĐỔI HÔM NAY</span><a href="thay-doi-hom-nay/">Xem tất cả</a></div>
+            <div class="today-changes-list today-changes-compact" data-today-changes><div class="empty">Đang tải…</div></div>
           </section>
           <section class="side-panel home-proof-card operations-performance">
             <header><div><span class="panel-label">HIỆU QUẢ</span><h2>Khuyến nghị</h2></div><a href="hieu-qua/">Chi tiết</a></header>
@@ -125,8 +173,13 @@
     </section>
   </main>
 
+  <div class="mobile-newsletter-bar" aria-label="Đăng ký bản tin StockRadar">
+    <span>Bản tin chứng khoán mỗi ngày từ StockRadar.vn</span>
+    <a class="button button-primary" href="#dang-ky-ban-tin">Đăng ký</a>
+  </div>
+
   <footer class="site-footer">
-    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate.</p></div>
+    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Dữ liệu, xếp hạng và tín hiệu chỉ được phát hành khi nguồn dữ liệu và quyền sử dụng tương ứng đã đạt điều kiện.</p></div>
   </footer>
 </body>
 </html>
