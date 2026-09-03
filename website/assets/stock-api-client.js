@@ -162,19 +162,14 @@
     const load = async nextHorizon => {
       horizon = nextHorizon;
       const { response, payload } = await fetchReport(auth, ticker, horizon);
-      if (response.status === 503 && String(payload.status || '').startsWith('BLOCKED')) return false;
-      if (response.status === 404) return false;
-      if (response.status === 401 || response.status === 403) return false;
-
-      const container = ensureLiveContainer();
       if (response.status === 429) {
+        const container = ensureLiveContainer();
         renderLiveMessage(container, 'Đã đạt giới hạn tra cứu tạm thời. Vui lòng thử lại sau.');
         return true;
       }
-      if (!response.ok || payload.status !== 'READY') {
-        renderLiveMessage(container, 'Chưa thể tải báo cáo động cho khung này.');
-        return true;
-      }
+      if (!response.ok || payload.status !== 'READY') return false;
+
+      const container = ensureLiveContainer();
       renderLiveReport(container, payload, horizon);
       container.querySelectorAll('[data-live-horizon]').forEach(button => {
         button.addEventListener('click', () => load(button.dataset.liveHorizon));
