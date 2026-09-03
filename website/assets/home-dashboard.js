@@ -4,6 +4,15 @@
   const DATA_URL = 'public/data/ticker-universe.json';
   const numberFormat = new Intl.NumberFormat('vi-VN');
 
+  function ensureStyles() {
+    if (document.querySelector('link[data-home-density-style]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'assets/home-density.css?v=20260903-home2';
+    link.dataset.homeDensityStyle = '';
+    document.head.append(link);
+  }
+
   function text(target, value) {
     if (target) target.textContent = value;
   }
@@ -12,12 +21,7 @@
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return '—';
     return new Intl.DateTimeFormat('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
       timeZone: 'Asia/Ho_Chi_Minh',
     }).format(date).replace(',', ' ·');
   }
@@ -43,8 +47,7 @@
   function renderSectors(root, items, activeSector = 'ALL') {
     const target = root.querySelector('[data-home-sector-chips]');
     if (!target) return;
-    const sectors = sectorCounts(items);
-    const chips = [['ALL', items.length], ...sectors];
+    const chips = [['ALL', items.length], ...sectorCounts(items)];
     target.innerHTML = chips.map(([sector, count]) => {
       const label = sector === 'ALL' ? 'Tất cả' : sector;
       const active = sector === activeSector ? ' is-active' : '';
@@ -70,9 +73,7 @@
     if (!target) return;
     const filtered = activeSector === 'ALL' ? items : items.filter(item => item.sector === activeSector);
     text(count, `${filtered.length} mã`);
-    target.innerHTML = filtered.length
-      ? filtered.map(tickerButton).join('')
-      : '<div class="market-data-empty">Chưa có mã trong nhóm này.</div>';
+    target.innerHTML = filtered.length ? filtered.map(tickerButton).join('') : '<div class="market-data-empty">Chưa có mã trong nhóm này.</div>';
   }
 
   function triggerLookup(ticker) {
@@ -89,6 +90,7 @@
   }
 
   async function mount() {
+    ensureStyles();
     const root = document.querySelector('[data-home-market-data]');
     if (!root) return;
     const message = root.querySelector('[data-home-market-status]');
@@ -117,11 +119,10 @@
         if (ticker) triggerLookup(ticker);
       });
     } catch (_) {
-      text(message, 'Dữ liệu tham chiếu tạm thời chưa tải được. Vui lòng thử lại sau.');
-      const target = root.querySelector('[data-home-market-list]');
-      if (target) target.innerHTML = '<div class="market-data-empty">Chưa thể tải danh mục tham chiếu.</div>';
+      text(message, 'Dữ liệu tham chiếu tạm thời chưa tải được. Danh sách tĩnh trên trang vẫn giữ để người dùng nhìn thấy các mã hiện có.');
     }
   }
 
+  ensureStyles();
   document.addEventListener('DOMContentLoaded', mount);
 })();
