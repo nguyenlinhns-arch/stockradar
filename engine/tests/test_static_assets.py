@@ -140,11 +140,12 @@ class StaticAssetTests(unittest.TestCase):
         radar = (WEBSITE / "radar5" / "index.html").read_text(encoding="utf-8")
         script = (WEBSITE / "assets" / "app.js").read_text(encoding="utf-8")
         styles = (WEBSITE / "assets" / "styles.css").read_text(encoding="utf-8")
+        focus_styles = (WEBSITE / "assets" / "home-focus-v1.css").read_text(encoding="utf-8")
 
         for expected in (
-            "operations-shell", "operations-search", "operations-status-grid",
-            "dashboard-grid", "home-watchlist-grid", "home-ticker-grid",
-            "Danh sách cổ phiếu theo Radar rà soát", "30 mã",
+            "operations-shell", "operations-search", "home-status-grid",
+            "home-focus-grid", "home-radar-sector-list", "home-tier-grid",
+            "Free bên trái · Premium bên phải", "30 mã",
         ):
             self.assertIn(expected, homepage)
         for expected in ("radar-workspace-grid", "data-radar-filter", "data-radar-table"):
@@ -152,6 +153,9 @@ class StaticAssetTests(unittest.TestCase):
         for removed in ("BỘ NÃO STOCKRADAR", "TRUNG TÂM KIẾN THỨC", "KIẾN TRÚC 3 TẦNG"):
             self.assertNotIn(removed, homepage)
             self.assertNotIn(removed, radar)
+        self.assertNotIn("home-watchlist-grid", homepage)
+        self.assertNotIn("home-ticker-grid", homepage)
+        self.assertNotIn("premium-preview-section", homepage)
         self.assertIn("portal-utility", script)
         self.assertIn("market-tape", script)
         self.assertIn("route.includes('/co-phieu/')", script)
@@ -162,6 +166,8 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("const stateLabels", script)
         self.assertIn(".market-tape", styles)
         self.assertIn(".operations-status-grid", styles)
+        self.assertIn(".home-radar-sector-row", focus_styles)
+        self.assertIn(".home-tier-grid", focus_styles)
 
     def test_master_product_surfaces_are_present_and_truthful(self) -> None:
         routes = {
@@ -245,7 +251,9 @@ class StaticAssetTests(unittest.TestCase):
         for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
             self.assertIn(horizon, homepage)
         self.assertIn("BẢNG ĐIỀU HÀNH", homepage)
-        self.assertIn("DATA GATE", homepage)
+        self.assertIn("TRẠNG THÁI DỮ LIỆU", homepage)
+        self.assertIn("Free bên trái · Premium bên phải", homepage)
+        self.assertNotIn("DATA GATE", homepage)
         self.assertNotIn("DỮ LIỆU MẪU", homepage)
         self.assertNotIn("199.000đ", homepage)
         self.assertNotIn("CHƯA MỞ BÁN", homepage)
