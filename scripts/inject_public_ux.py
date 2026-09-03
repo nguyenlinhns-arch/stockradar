@@ -172,38 +172,38 @@ def inject_page(page: Path, output: Path) -> None:
     if "</head>" not in source:
         raise RuntimeError(f"HTML page has no closing head tag: {page}")
 
-    public_css = asset_href(source, page, output, "public-ux.css")
     site_css = asset_href(source, page, output, "site-v4.css")
     mobile_css = asset_href(source, page, output, "mobile-touch-v1.css")
-    auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
-    auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
-    copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
-
-    head = (
-        route_specific_head(source, page, output)
-        + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
-        + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7">\n'
-        + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
-    )
 
     if is_homepage(page, output):
         home_core_js = asset_href(source, page, output, "home-core-v1.js")
-        head += f'<script src="{home_core_js}?v=20260903-homecore1" defer></script>\n'
+        head = (
+            route_specific_head(source, page, output)
+            + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7" {HEAD_MARKER}>\n'
+            + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
+            + f'<script src="{home_core_js}?v=20260903-homecore2" defer></script>\n'
+        )
     else:
+        public_css = asset_href(source, page, output, "public-ux.css")
         public_js = asset_href(source, page, output, "public-ux.js")
         fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
+        auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
+        auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
+        copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
         direct_ticker_js = asset_href(source, page, output, "direct-ticker-nav-v1.js")
-        head += (
-            f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
+        head = (
+            route_specific_head(source, page, output)
+            + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
+            + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7">\n'
+            + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
+            + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
             + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
             + f'<script src="{direct_ticker_js}?v=20260903-direct1" defer></script>\n'
+            + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
+            + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
+            + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
         )
 
-    head += (
-        f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
-        + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
-        + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
-    )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
 
