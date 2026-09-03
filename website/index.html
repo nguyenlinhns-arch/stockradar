@@ -4,13 +4,14 @@
   <base href="./">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="StockRadar — tra cứu cổ phiếu HOSE, Radar ưu tiên, trạng thái thị trường, khuyến nghị và lịch sử hiệu quả.">
+  <meta name="description" content="StockRadar — tra cứu cổ phiếu HOSE, Radar ưu tiên, trạng thái thị trường, khuyến nghị và đăng ký email báo cáo/cảnh báo.">
   <meta property="og:title" content="StockRadar — Bảng điều hành cổ phiếu HOSE">
-  <meta property="og:description" content="Tra cứu mã, xem Radar, thay đổi trạng thái và lịch sử khuyến nghị trên một màn hình.">
+  <meta property="og:description" content="Tra cứu mã, xem Radar và đăng ký nhận báo cáo hằng ngày cùng cảnh báo điểm mua/bán qua email.">
   <meta property="og:type" content="website">
   <title>StockRadar — Bảng điều hành cổ phiếu HOSE</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
+  <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email1">
   <script src="assets/app.js?v=20260902-data1" defer></script>
 </head>
 <body data-proposition="organic" class="app-home">
@@ -77,6 +78,18 @@
           <section class="side-panel operations-feed">
             <div class="side-panel-head"><span>THAY ĐỔI HÔM NAY</span><a href="thay-doi-hom-nay/">Xem tất cả</a></div>
             <div class="today-changes-list today-changes-compact" data-today-changes><div class="empty">Đang tải…</div></div>
+          </section>
+          <section class="side-panel home-email-cta" data-email-conversion>
+            <span class="panel-label">EMAIL STOCKRADAR</span>
+            <h2>Báo cáo mỗi ngày + cảnh báo mua/bán</h2>
+            <p>Đăng ký một lần để lưu email, loại báo cáo muốn nhận và các mã cần cảnh báo riêng.</p>
+            <ul>
+              <li>Báo cáo hằng ngày về thị trường và mã theo dõi.</li>
+              <li>Cảnh báo khi có tín hiệu hành động đã được xác nhận.</li>
+              <li>Quản lý hoặc tắt email bất kỳ lúc nào trong Tài khoản.</li>
+            </ul>
+            <div class="hero-actions"><a class="button button-primary" href="signup/">Đăng ký nhận email</a><a class="button button-secondary" href="dang-nhap/">Đã có tài khoản</a></div>
+            <p>Free tự xem trên website. Email nội dung được bật cho Trial/Nâng cao sau khi xác minh và đồng ý nhận.</p>
           </section>
           <section class="side-panel home-proof-card operations-performance">
             <header><div><span class="panel-label">HIỆU QUẢ</span><h2>Khuyến nghị</h2></div><a href="hieu-qua/">Chi tiết</a></header>
