@@ -25,13 +25,14 @@ EXCLUDED_NAMES = {
     "pro",
 }
 AUTH_HEAD = """\
-<link rel="stylesheet" href="assets/auth.css?v=20260903-auth3">
-<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth3">
+<link rel="stylesheet" href="assets/auth.css?v=20260903-auth4">
+<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth4">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth3" defer></script>
-<script src="assets/auth-policy.js?v=20260903-auth3" defer></script>
-<script src="assets/auth.js?v=20260903-auth3" defer></script>
-<script src="assets/auth-extra.js?v=20260903-auth3" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth4" defer></script>
+<script src="assets/auth-policy.js?v=20260903-auth4" defer></script>
+<script src="assets/auth-account-security.js?v=20260903-auth4" defer></script>
+<script src="assets/auth.js?v=20260903-auth4" defer></script>
+<script src="assets/auth-extra.js?v=20260903-auth4" defer></script>
 """
 
 
@@ -145,6 +146,7 @@ def build(output: Path) -> None:
             output / "assets" / "auth.css",
             output / "assets" / "auth-extra.css",
             output / "assets" / "auth-policy.js",
+            output / "assets" / "auth-account-security.js",
             output / "assets" / "auth.js",
             output / "assets" / "auth-extra.js",
             output / "assets" / "auth-config.js",
