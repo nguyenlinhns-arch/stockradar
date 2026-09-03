@@ -16,8 +16,19 @@ PUBLIC_HTML_REPLACEMENTS = (
     ("dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate", "dữ liệu thị trường và quyền sử dụng đã đạt điều kiện phát hành"),
     ("DATA GATE", "TRẠNG THÁI DỮ LIỆU"),
     ("Data Gate", "điều kiện phát hành dữ liệu"),
-    ("CHỜ NGUỒN ĐƯỢC CẤP QUYỀN", "TẠM CHƯA PHÁT HÀNH"),
-    ("CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN", "CHƯA ĐỦ DỮ LIỆU"),
+    ("CHỜ NGUỒN ĐƯỢC CẤP QUYỀN", "ĐANG CẬP NHẬT GIÁ"),
+    ("CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN", "ĐANG CẬP NHẬT DỮ LIỆU"),
+    ("TẠM CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT"),
+    ("CHƯA SẴN SÀNG", "ĐANG CẬP NHẬT"),
+    ("Chưa sẵn sàng", "Đang cập nhật"),
+    ("chưa sẵn sàng", "đang cập nhật"),
+    ("CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT"),
+    ("Chưa phát hành", "Đang cập nhật"),
+    ("chưa phát hành", "đang cập nhật"),
+    ("ĐANG KHÓA", "ĐANG CẬP NHẬT"),
+    ("CHƯA KẾT NỐI", "ĐANG CẬP NHẬT"),
+    ("CHƯA ĐỦ NGUỒN GIÁ", "ĐANG CẬP NHẬT GIÁ"),
+    ("CHƯA ĐỦ DỮ LIỆU", "ĐANG CẬP NHẬT DỮ LIỆU"),
 )
 
 
@@ -71,7 +82,6 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
     if "site-header" not in source:
         return source
 
-    # Login/Register belong only in the header auth action group, never primary nav.
     def clean_nav(match: re.Match[str]) -> str:
         nav = match.group(0)
         nav = re.sub(
@@ -90,7 +100,6 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
         flags=re.IGNORECASE | re.DOTALL,
     )
 
-    # Remove old standalone Register buttons and a previous auth-action group if present.
     source = re.sub(
         r'<a\b[^>]*class=["\'][^"\']*(?:header-newsletter-cta|global-register-cta)[^"\']*["\'][^>]*>.*?</a>',
         "",
@@ -146,14 +155,16 @@ def inject_page(page: Path, output: Path) -> None:
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
     fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
     auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
+    copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
     head = (
         route_specific_head(source, page, output)
         + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
-        + f'<link rel="stylesheet" href="{site_css}?v=20260903-site5">\n'
+        + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7">\n'
         + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
         + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
         + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
         + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
+        + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
@@ -171,6 +182,7 @@ def main() -> None:
         output / "assets" / "site-v4.css",
         output / "assets" / "public-fallbacks-v4.js",
         output / "assets" / "header-auth-dedupe-v6.js",
+        output / "assets" / "public-copy-v7.js",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
