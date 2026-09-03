@@ -34,7 +34,7 @@ def inject_page(page: Path, output: Path) -> None:
     auth_gate_js = relative_asset(page, output, "auth-production-gate.js")
     head = (
         f'<link rel="stylesheet" href="{css}?v=20260903-public1" {HEAD_MARKER}>\n'
-        f'<script src="{public_js}?v=20260903-public1" defer></script>\n'
+        f'<script src="{public_js}?v=20260903-public2" defer></script>\n'
         f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
