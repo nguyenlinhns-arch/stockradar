@@ -16,9 +16,13 @@ Place the following CSV files in one secure local/server directory:
 4. `corporate_actions.csv`
 5. `events.csv`
 
-The first three must contain a canonical three-letter `ticker` column or the descriptor must name the provider's equivalent column. Corporate-actions/events files may contain only headers when there are no rows for the snapshot.
+`security_master.csv` must contain both a canonical three-letter ticker column and an exchange column. Every security-master row must resolve to `HOSE`; any HNX, UPCoM or blank/unknown exchange row blocks the whole bundle.
 
-The production adapter is HOSE-only. HNX/UPCoM rows must not be supplied in the StockRadar bundle.
+`ohlcv.csv` and `fundamentals.csv` must contain a canonical three-letter ticker column or the descriptor must name the provider's equivalent column. Every ticker in OHLCV/fundamentals must already exist in the validated HOSE security master. This prevents an otherwise valid three-letter HNX/UPCoM/unknown ticker from entering StockRadar accidentally.
+
+Corporate-actions/events files may contain only headers when there are no rows for the snapshot. If these files expose an exchange column, the descriptor may name it and StockRadar will enforce `HOSE` there as well.
+
+The production adapter is HOSE-only. HNX and UPCoM are rejected, not merely filtered after ranking.
 
 ## Descriptor
 
@@ -56,7 +60,11 @@ Keep a descriptor JSON beside the secure bundle. The descriptor contains no cred
     "market_status_checked": false
   },
   "datasets": {
-    "security_master": {"path": "security_master.csv", "ticker_column": "ticker"},
+    "security_master": {
+      "path": "security_master.csv",
+      "ticker_column": "ticker",
+      "exchange_column": "exchange"
+    },
     "ohlcv": {"path": "ohlcv.csv", "ticker_column": "ticker"},
     "fundamentals": {"path": "fundamentals.csv", "ticker_column": "ticker"},
     "corporate_actions": {"path": "corporate_actions.csv"},
@@ -80,7 +88,10 @@ The assembler:
 
 - rejects paths escaping the secure bundle directory;
 - accepts CSV only in V1;
+- requires `snapshot.exchange=HOSE`;
+- requires an exchange column on the security master and rejects every non-HOSE row;
 - validates canonical three-letter ticker values for coverage datasets;
+- rejects OHLCV/fundamental tickers that are absent from the HOSE security master;
 - streams SHA-256 calculation rather than loading large data files into memory;
 - counts rows and unique covered tickers;
 - attaches every dataset to the same snapshot ID;
