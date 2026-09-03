@@ -143,10 +143,9 @@ class StaticAssetTests(unittest.TestCase):
         focus_styles = (WEBSITE / "assets" / "home-focus-v1.css").read_text(encoding="utf-8")
 
         for expected in (
-            "operations-shell", "operations-search", "home-status-grid",
-            "home-focus-grid", "home-radar-sector-list", "home-tier-grid",
-            "Free và Premium có gì?", "Radar 30", "4M · CANSLIM",
-            "Bear · Base · Bull", "Pivot · Breakout", "Buy Zone · Stop · Target", "30 mã",
+            "operations-shell", "operations-search", "home-focus-grid", "home-radar-sector-list", "home-tier-grid",
+            "Free và Premium có gì?", "Radar 30", "4M · CANSLIM · Payback", "Định giá Bear / Base / Bull",
+            "SEPA/VCP · Stage · Pivot", "VPA · RVOL · dòng tiền lớn", "30 mã",
         ):
             self.assertIn(expected, homepage)
         for expected in ("radar-workspace-grid", "data-radar-filter", "data-radar-table"):
@@ -154,6 +153,7 @@ class StaticAssetTests(unittest.TestCase):
         for removed in (
             "BỘ NÃO STOCKRADAR", "TRUNG TÂM KIẾN THỨC", "KIẾN TRÚC 3 TẦNG",
             "Free bên trái · Premium bên phải", "Trạng thái công khai", "Chưa có setup",
+            "home-status-band", "home-status-grid",
         ):
             self.assertNotIn(removed, homepage)
         self.assertNotIn("home-watchlist-grid", homepage)
@@ -258,6 +258,8 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("Free và Premium có gì?", homepage)
         self.assertIn("Radar 30", homepage)
         self.assertIn("Định giá Bear / Base / Bull", homepage)
+        self.assertNotIn("home-status-band", homepage)
+        self.assertNotIn("home-status-grid", homepage)
         self.assertNotIn("TRẠNG THÁI DỮ LIỆU", homepage)
         self.assertNotIn("DATA GATE", homepage)
         self.assertNotIn("DỮ LIỆU MẪU", homepage)
