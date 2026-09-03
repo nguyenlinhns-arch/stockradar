@@ -131,10 +131,12 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
 
     login_href = route_href(source, page, output, "dang-nhap")
     register_href = route_href(source, page, output, "dang-ky")
+    signup_href = route_href(source, page, output, "signup")
     actions = (
         '<div class="header-auth-actions" data-header-auth-actions>'
         f'<a class="header-login-cta" href="{login_href}">Đăng nhập</a>'
         f'<a class="header-register-cta" href="{register_href}">Đăng ký</a>'
+        f'<a href="{signup_href}" hidden aria-hidden="true" tabindex="-1">Tạo tài khoản trực tiếp</a>'
         '</div>'
     )
     return source[: match.start(2)] + actions + source[match.start(2) :]
