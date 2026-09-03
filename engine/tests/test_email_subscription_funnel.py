@@ -75,7 +75,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("`state_change` / buy-sell event alerts: Trial/Paid only", architecture)
         self.assertIn("preference data, not delivery entitlement", architecture)
         self.assertNotIn("Free accounts are always suppressed for product content", architecture)
-        self.assertIn("Public signup remains fail-closed", architecture)
+        self.assertIn("account signup remains fail-closed", architecture)
 
     def test_homepage_has_email_conversion_surface(self):
         home = self.read("website/index.html")
@@ -87,7 +87,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="event_alerts" type="checkbox" checked', home)
         self.assertIn("Đăng ký nhận email", home)
         self.assertIn("Báo cáo mỗi ngày + cảnh báo mua/bán", home)
-        self.assertIn("chờ xác minh", home)
+        self.assertIn("chưa xác minh", home)
         self.assertIn("tối đa 30 ngày", home)
 
     def test_public_interest_client_calls_edge_without_privileged_secret(self):
@@ -95,7 +95,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("/functions/v1/email-interest", client)
         self.assertIn("privacy_accepted", client)
         self.assertIn("consent_version", client)
-        self.assertIn("PENDING_VERIFICATION", client)
+        self.assertIn("payload.accepted !== true", client)
+        self.assertIn("chờ xác minh", client)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", client)
         self.assertNotIn("service_role", client.lower())
 
@@ -119,7 +120,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("rate limit exceeded", edge)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY", edge)
         self.assertIn("PENDING_VERIFICATION", edge)
-        self.assertIn("Chưa gửi báo cáo hoặc cảnh báo", edge)
+        self.assertIn("StockRadar chưa gửi báo cáo hoặc cảnh báo", edge)
 
     def test_privacy_page_discloses_pending_interest_retention(self):
         privacy = self.read("website/quyen-rieng-tu/index.html")
