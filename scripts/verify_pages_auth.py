@@ -28,6 +28,11 @@ HEAVY_AUTH_ASSETS = (
     "assets/auth.css",
     "assets/auth-extra.css",
 )
+HOMEPAGE_LEGACY_AUTH_UX = (
+    "assets/auth-production-gate.js",
+    "assets/header-auth-dedupe-v6.js",
+    "assets/public-copy-v7.js",
+)
 
 
 def require(path: Path) -> str:
@@ -45,7 +50,7 @@ def require_all(source: str, markers: tuple[str, ...], label: str) -> None:
 def reject_all(source: str, markers: tuple[str, ...], label: str) -> None:
     present = [marker for marker in markers if marker in source]
     if present:
-        raise SystemExit(f"{label} unexpectedly loads heavy auth assets: {', '.join(present)}")
+        raise SystemExit(f"{label} unexpectedly loads disallowed auth assets: {', '.join(present)}")
 
 
 def main() -> None:
@@ -74,6 +79,7 @@ def main() -> None:
         "assets/auth-account-security.js",
         "assets/auth-extra.js",
         "assets/auth-delete-security.js",
+        "assets/home-core-v1.js",
         "signup/index.html",
         "dang-nhap/index.html",
         "dat-lai-mat-khau/index.html",
@@ -92,6 +98,7 @@ def main() -> None:
     account = require(site / "tai-khoan" / "index.html")
     stock = require(site / "co-phieu" / "index.html")
     home = require(site / "index.html")
+    home_core = require(site / "assets" / "home-core-v1.js")
     auth = require(site / "assets" / "auth.js")
     email_gate = require(site / "assets" / "auth-email-gate.js")
     policy = require(site / "assets" / "auth-policy.js")
@@ -121,7 +128,6 @@ def main() -> None:
     if missing:
         raise SystemExit("auth release checks failed: " + ", ".join(missing))
 
-    # Full auth routes get the complete UI/security bundle and the Supabase browser client.
     for label, source in (
         ("signup", signup),
         ("login", login),
@@ -131,26 +137,24 @@ def main() -> None:
         require_all(source, FULL_AUTH_ASSETS, label)
         require_all(source, (SUPABASE_CDN, "assets/auth.css", "assets/auth-extra.css"), label)
 
-    # Stock analysis needs the Supabase browser client for an authenticated Premium report,
-    # but not password/OTP/account-management scripts.
     require_all(stock, (SUPABASE_CDN, "assets/auth-config.js", "assets/stock-api-client.js"), "stock analysis")
     reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
 
-    # Public homepage only needs the tiny launch-state config. Header actions and the
-    # Premium-interest fallback are handled by the public UX layer without Supabase SDK.
-    require_all(home, ("assets/auth-config.js", "assets/auth-production-gate.js"), "homepage")
+    # Homepage reads only the tiny auth-config launch state. The lightweight home core
+    # handles signup -> Premium-interest routing when production email verification is gated.
+    require_all(home, ("assets/auth-config.js", "assets/home-core-v1.js"), "homepage")
+    require_all(home_core, ("emailDeliveryReady", "registrationUrl", "signup/", "dang-ky/"), "homepage core")
     if SUPABASE_CDN in home:
         raise SystemExit("homepage must not load Supabase browser SDK")
-    reject_all(home, HEAVY_AUTH_ASSETS, "homepage")
+    reject_all(home, (*HEAVY_AUTH_ASSETS, *HOMEPAGE_LEGACY_AUTH_UX), "homepage")
 
-    # Reject obvious accidental embedding of privileged key names in public JavaScript/HTML.
     for path in [*site.rglob("*.js"), *site.rglob("*.html")]:
         source = path.read_text(encoding="utf-8").lower()
         if "sb_secret_" in source or re.search(r"service[_-]?role\s*[:=]", source):
             raise SystemExit(f"privileged auth material detected in public artifact: {path}")
 
     state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
-    print(f"StockRadar production auth verification: PASS (email delivery {state}; auth bundles route-scoped)")
+    print(f"StockRadar production auth verification: PASS (email delivery {state}; homepage gate self-contained; auth bundles route-scoped)")
 
 
 if __name__ == "__main__":
