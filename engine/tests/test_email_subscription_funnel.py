@@ -18,6 +18,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="email_daily_brief" type="checkbox" checked', signup)
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
         self.assertIn("Premium", signup)
+        self.assertIn("Free không nhận email", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
     def test_signup_auth_metadata_carries_legal_and_product_email_consent(self):
@@ -40,6 +41,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("product_email_consent_events", client)
         self.assertIn("PREMIUM_TIERS", client)
         self.assertIn("profile.account_tier === 'FREE'", client)
+        self.assertIn("master.disabled = !active || !premium", client)
+        self.assertIn("Free không nhận email báo cáo/khuyến nghị hằng ngày", client)
         self.assertIn("alert_enabled", client)
         self.assertIn("data-watchlist-alert-toggle", client)
 
@@ -52,22 +55,25 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("false,", migration)
         self.assertIn("product_email_consent_version", migration)
 
-    def test_free_daily_and_premium_alert_entitlement_are_separated_server_side(self):
-        migration = self.read("supabase/migrations/20260903071000_align_free_daily_and_premium_alert_interest.sql")
+    def test_product_email_entitlement_is_premium_only_server_side(self):
+        migration = self.read("supabase/migrations/20260903095900_restrict_product_email_to_premium.sql")
         lowered = migration.lower()
-        self.assertIn("free product email requires daily_brief enabled", lowered)
-        self.assertIn("pref.event_alerts and prof.account_tier in ('trial','paid')", lowered)
+        self.assertIn("premium product email requires trial or paid", lowered)
+        self.assertIn("prof.account_tier in ('trial','paid')", lowered)
+        self.assertIn("pref.daily_brief and prof.account_tier in ('trial','paid')", lowered)
         self.assertIn("eligible_for_premium", lowered)
         self.assertIn("create or replace function public.handle_email_verified()", lowered)
-        self.assertIn("pref.daily_brief is true", lowered)
-        self.assertIn("gate.current_consent_version", lowered)
+        self.assertIn("daily_brief_content_tier", lowered)
+        self.assertIn("else 'none'", lowered)
+        self.assertIn("fail closed any previously enabled free product-email preference", lowered)
 
-    def test_email_architecture_matches_v214_free_and_premium_entitlement(self):
+    def test_email_architecture_matches_premium_only_product_email(self):
         architecture = self.read("email/ARCHITECTURE.md")
-        self.assertIn("`daily` Free brief", architecture)
+        self.assertIn("Free accounts receive transactional email only", architecture)
+        self.assertIn("`daily`: Trial/Paid only", architecture)
         self.assertIn("`state_change` / buy-sell event alerts: Trial/Paid only", architecture)
         self.assertIn("preference data, not delivery entitlement", architecture)
-        self.assertNotIn("Free accounts are always suppressed for product content", architecture)
+        self.assertNotIn("`daily` Free brief", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
     def test_homepage_has_premium_previews_and_30_radar_review_tickers(self):
@@ -108,7 +114,6 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
 
     def test_dedicated_registration_page_collects_interest_without_prechecking(self):
         register = self.read("website/dang-ky/index.html")
-        self.assertIn("Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn", register)
         self.assertIn("data-email-interest-form", register)
         self.assertIn('name="daily_brief" type="checkbox"', register)
         self.assertIn('name="event_alerts" type="checkbox"', register)
