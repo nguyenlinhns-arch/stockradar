@@ -13,6 +13,11 @@
     document.head.append(link);
   }
 
+  function removeLegacySecondaryBlocks() {
+    const legacySection = document.querySelector('.home-secondary-grid');
+    if (legacySection) legacySection.remove();
+  }
+
   function text(target, value) {
     if (target) target.textContent = value;
   }
@@ -91,6 +96,7 @@
 
   async function mount() {
     ensureStyles();
+    removeLegacySecondaryBlocks();
     const root = document.querySelector('[data-home-market-data]');
     if (!root) return;
     const message = root.querySelector('[data-home-market-status]');
@@ -124,5 +130,6 @@
   }
 
   ensureStyles();
+  removeLegacySecondaryBlocks();
   document.addEventListener('DOMContentLoaded', mount);
 })();
