@@ -23,6 +23,8 @@ def main() -> None:
     config = require(site / "assets" / "auth-config.js")
     if '"configured":true' not in config:
         raise SystemExit("production auth config is not enabled")
+    if '"emailDeliveryReady":true' not in config and '"emailDeliveryReady":false' not in config:
+        raise SystemExit("production auth config has no explicit email-delivery launch state")
     if "https://" not in config or "supabase.co" not in config:
         raise SystemExit("production auth config has no Supabase HTTPS URL")
     if "sb_publishable_" not in config:
@@ -33,6 +35,7 @@ def main() -> None:
 
     required_files = [
         "assets/auth.js",
+        "assets/auth-email-gate.js",
         "assets/auth-policy.js",
         "assets/auth-account-security.js",
         "assets/auth-extra.js",
@@ -51,6 +54,7 @@ def main() -> None:
     login = require(site / "dang-nhap" / "index.html")
     account = require(site / "tai-khoan" / "index.html")
     auth = require(site / "assets" / "auth.js")
+    email_gate = require(site / "assets" / "auth-email-gate.js")
     policy = require(site / "assets" / "auth-policy.js")
     account_security = require(site / "assets" / "auth-account-security.js")
     extra = require(site / "assets" / "auth-extra.js")
@@ -61,6 +65,7 @@ def main() -> None:
         "signup OTP form": ("data-auth-signup-otp-form", signup),
         "terms link": ("dieu-khoan/", signup),
         "privacy link": ("quyen-rieng-tu/", signup),
+        "email delivery fail-closed gate": ("emailDeliveryReady", email_gate),
         "login OTP recovery": ("data-auth-login-otp-form", login),
         "OTP verification": ("verifyOtp", auth + extra),
         "OTP resend": ("auth.resend", auth + extra),
@@ -81,6 +86,7 @@ def main() -> None:
     sample_pages = [site / "index.html", site / "signup" / "index.html", site / "dang-nhap" / "index.html"]
     bundle = (
         "assets/auth-config.js",
+        "assets/auth-email-gate.js",
         "assets/auth-policy.js",
         "assets/auth-account-security.js",
         "assets/auth.js",
@@ -99,7 +105,8 @@ def main() -> None:
         if "sb_secret_" in source or re.search(r"service[_-]?role\s*[:=]", source):
             raise SystemExit(f"privileged auth material detected in public artifact: {path}")
 
-    print("StockRadar production auth verification: PASS")
+    state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
+    print(f"StockRadar production auth verification: PASS (email delivery {state})")
 
 
 if __name__ == "__main__":
