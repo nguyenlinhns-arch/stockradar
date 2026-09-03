@@ -4,7 +4,7 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Radar 30 cổ phiếu HOSE theo 10 ngành, bốn khung đầu tư và hệ phương pháp StockRadar.">
+  <meta name="description" content="Radar 30 cổ phiếu HOSE theo 10 ngành, bốn khung đầu tư và bốn nền tảng 4M, CANSLIM, SEPA/VCP, VPA của StockRadar.">
   <title>Radar 30 HOSE — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
@@ -15,12 +15,12 @@
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/" aria-current="page">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="thay-doi-hom-nay/">Thay đổi</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
 
   <main id="content">
-    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Radar</span></nav><h1>Radar 30 cổ phiếu HOSE</h1><p>30 mã · 10 ngành · 3 mã mỗi ngành · 4 khung đầu tư.</p></div><div class="page-heading-actions"><span class="data-pill">RADAR 30 · HOSE</span><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu mã</a></div></div></section>
+    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Radar</span></nav><h1>Radar 30 cổ phiếu HOSE</h1><p>30 mã · 10 ngành · 3 mã mỗi ngành · 4 khung đầu tư.</p></div><div class="page-heading-actions"><span class="data-pill">RADAR 30 · HOSE</span><a class="button button-secondary button-small" href="#phuong-phap">Phương pháp</a><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu mã</a></div></div></section>
 
     <section class="radar-workspace">
       <div class="container radar-workspace-grid">
         <section class="workspace-panel">
-          <header class="radar-toolbar"><div><span class="panel-label">NGẮN HẠN · 5–20 PHIÊN</span><h2>Bộ lọc trạng thái Radar</h2></div><div class="toolbar-meta"><span>Khung đầu tư <strong>4 chiến lược</strong></span><span>Phương pháp <strong>4M · SEPA · VPA</strong></span></div></header>
+          <header class="radar-toolbar"><div><span class="panel-label">NGẮN HẠN · 5–20 PHIÊN</span><h2>Bộ lọc trạng thái Radar</h2></div><div class="toolbar-meta"><span>Khung đầu tư <strong>4 chiến lược</strong></span><span>Nền tảng <strong>4M · CANSLIM · SEPA/VCP · VPA</strong></span></div></header>
           <div class="recommendation-filters radar-filter-bar" aria-label="Lọc Radar"><button class="is-active" type="button" data-radar-filter="ALL">Tất cả</button><button type="button" data-radar-filter="READY">Đạt vùng mua</button><button type="button" data-radar-filter="NEAR_TRIGGER">Chờ mua</button><button type="button" data-radar-filter="WATCH">Theo dõi</button><button type="button" data-radar-filter="EXTENDED">Tăng quá vùng mua</button></div>
           <div class="radar-table" data-radar-table></div>
           <footer class="panel-foot"><span>Radar <strong>30 mã</strong></span><span>Ngành <strong>10 × 3</strong></span><span>Sàn <strong>HOSE</strong></span></footer>
@@ -28,8 +28,48 @@
 
         <aside class="dashboard-sidebar radar-sidebar">
           <section class="side-panel market-regime-panel"><div class="side-panel-head"><span>QUÉT TRONG PHIÊN</span><i class="status-light"></i></div><strong class="regime-value">10:30 · 11:15 · 13:30 · 14:15</strong></section>
-          <section class="side-panel operations-shortcuts"><div class="side-panel-head"><span>TRUY CẬP NHANH</span></div><a href="breakout/"><strong>Điểm mua</strong><span>Pocket Pivot · Breakout · Retest</span></a><a href="risk/"><strong>Quản trị rủi ro</strong><span>Stop · hạ tỷ trọng · cắt lỗ</span></a><a href="khuyen-nghi/"><strong>Khuyến nghị</strong><span>Buy Zone · Target · R:R</span></a><a href="track-record/"><strong>Lịch sử</strong><span>Vòng đời và kết quả khuyến nghị</span></a></section>
+          <section class="side-panel operations-shortcuts"><div class="side-panel-head"><span>TRUY CẬP NHANH</span></div><a href="#phuong-phap"><strong>Phương pháp StockRadar</strong><span>4M · CANSLIM · SEPA/VCP · VPA</span></a><a href="breakout/"><strong>Điểm mua</strong><span>Pocket Pivot · Breakout · Retest</span></a><a href="risk/"><strong>Quản trị rủi ro</strong><span>Stop · hạ tỷ trọng · cắt lỗ</span></a><a href="khuyen-nghi/"><strong>Khuyến nghị</strong><span>Buy Zone · Target · R:R</span></a><a href="track-record/"><strong>Lịch sử</strong><span>Vòng đời và kết quả khuyến nghị</span></a></section>
         </aside>
+      </div>
+    </section>
+
+    <section class="radar-methodology" id="phuong-phap" aria-labelledby="radar-method-title">
+      <div class="container">
+        <section class="v4-fallback radar-method-card">
+          <header class="v4-fallback-head radar-method-head">
+            <div><span class="panel-label">PHƯƠNG PHÁP STOCKRADAR</span><h2 id="radar-method-title">StockRadar rà soát cổ phiếu như thế nào?</h2><p>Không dùng một chỉ báo đơn lẻ. Mỗi mã được rà theo chất lượng doanh nghiệp, tăng trưởng, cấu trúc giá và xác nhận dòng tiền trước khi xét điểm mua.</p></div>
+          </header>
+          <div class="v4-method-grid radar-method-grid">
+            <article>
+              <strong>1. 4M &amp; Payback — Phil Town</strong>
+              <span><b>Meaning · Moat · Management · Margin of Safety.</b> StockRadar dùng 4M để trả lời doanh nghiệp có đáng sở hữu không, sau đó kiểm tra Owner Earnings/FCF, Payback Time, Fair Value và mức chiết khấu.</span>
+              <small>Tại Việt Nam: loại lợi nhuận bất thường, xem chất lượng dòng tiền, CAPEX, nợ và chu kỳ ngành trước khi kết luận “rẻ”.</small>
+            </article>
+            <article>
+              <strong>2. CANSLIM — William J. O’Neil</strong>
+              <span><b>Current · Annual · New · Supply/Demand · Leader · Institutional · Market.</b> StockRadar dùng CANSLIM để tìm tăng trưởng lợi nhuận thật, catalyst mới, cổ phiếu dẫn đầu và cầu tổ chức.</span>
+              <small>Tại Việt Nam: ưu tiên tăng trưởng quý/năm, ROE, free float, thanh khoản, khối ngoại/tự doanh/tổ chức và xu hướng VN-Index, VN30, ngành.</small>
+            </article>
+            <article>
+              <strong>3. SEPA / VCP — Mark Minervini</strong>
+              <span><b>Trend Template · Stage · Relative Strength · VCP · Pivot · Breakout.</b> StockRadar dùng SEPA/VCP để tránh mua doanh nghiệp tốt tại điểm kỹ thuật xấu và ưu tiên cuối Stage 1 → đầu Stage 2 → Stage 2 tăng tốc.</span>
+              <small>Tại Việt Nam: theo MA10/50/150/200, nền giá, độ co biến động, pivot và khoảng cách khỏi MA; không mua đuổi khi cổ phiếu đã extended.</small>
+            </article>
+            <article>
+              <strong>4. VPA / Wyckoff — Anna Coulling &amp; Richard D. Wyckoff</strong>
+              <span><b>Price × Volume · Supply/Demand · Accumulation/Distribution.</b> StockRadar dùng VPA để nhận diện Volume Dry-up, Demand/Supply, Absorption, Shakeout và dấu vết dòng tiền lớn.</span>
+              <small>Tại Việt Nam: giữa phiên dùng RVOL/same-time volume tại 10:30 · 11:15 · 13:30 · 14:15, không lấy volume cả ngày để áp máy móc vào dữ liệu intraday.</small>
+            </article>
+          </div>
+          <div class="radar-vietnam-note">
+            <strong>Có áp dụng được tại thị trường Việt Nam?</strong>
+            <span>Có, nhưng phải nội địa hóa. StockRadar chỉ quét HOSE, ưu tiên thanh khoản thực tế, xét biên độ giá và cấu trúc phiên Việt Nam, chu kỳ ngành, free float, dòng tiền trong nước/khối ngoại và chất lượng báo cáo tài chính. Bốn phương pháp được kết hợp, không dùng máy móc từng phương pháp riêng lẻ.</span>
+          </div>
+          <div class="radar-support-tools">
+            <strong>Công cụ bổ sung cho điểm mua:</strong>
+            <span>Pocket Pivot của Gil Morales &amp; Chris Kacher để tìm điểm mua sớm; Ichimoku, Bollinger Bands, trendline và Stage Analysis được dùng để xác nhận cấu trúc và quản trị rủi ro.</span>
+          </div>
+        </section>
       </div>
     </section>
   </main>
