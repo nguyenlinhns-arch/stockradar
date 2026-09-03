@@ -45,7 +45,9 @@ def can_receive_email(
         return False
     if kind is EmailKind.MARKETING:
         return marketing_consent
-    if kind in {EmailKind.PRODUCT_DAILY, EmailKind.PRODUCT_ALERT, EmailKind.PRODUCT_WEEKLY}:
+    if kind is EmailKind.PRODUCT_DAILY:
+        return tier in {AccountTier.FREE, AccountTier.TRIAL, AccountTier.PAID} and product_consent
+    if kind in {EmailKind.PRODUCT_ALERT, EmailKind.PRODUCT_WEEKLY}:
         return tier in {AccountTier.TRIAL, AccountTier.PAID} and product_consent
     return False
 
