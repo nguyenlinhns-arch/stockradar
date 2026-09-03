@@ -6,6 +6,7 @@
     ['BLOCKED_DATA_GATE', 'TẠM CHƯA PHÁT HÀNH'],
     ['INTERNAL REFERENCE', 'CHƯA XÁC NHẬN'],
     ['REFERENCE_ONLY', 'THAM CHIẾU'],
+    ['TRA MÃ SẴN SÀNG', 'PHẠM VI THAM CHIẾU'],
     ['CHỜ NGUỒN ĐƯỢC CẤP QUYỀN', 'TẠM CHƯA PHÁT HÀNH'],
     ['CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN', 'CHƯA ĐỦ DỮ LIỆU'],
     ['CHỜ DỮ LIỆU', 'CHƯA SẴN SÀNG'],
@@ -22,6 +23,11 @@
     GREEN: 'XANH · THUẬN LỢI',
     YELLOW: 'VÀNG · THẬN TRỌNG',
     RED: 'ĐỎ · PHÒNG THỦ'
+  };
+
+  const publicState = {
+    lookupLabel: 'ĐANG KIỂM TRA',
+    lookupScope: 'ĐANG KIỂM TRA'
   };
 
   function siteUrl(path) {
@@ -82,13 +88,40 @@
       status.innerHTML = `
         <article><span>Thị trường</span><strong>HOSE</strong></article>
         <article><span>Dữ liệu giá</span><strong data-public-feed-status>CHƯA SẴN SÀNG</strong></article>
-        <article><span>Tra cứu mã</span><strong>SẴN SÀNG</strong></article>
+        <article><span>Tra cứu công khai</span><strong data-public-lookup-status>${publicState.lookupLabel}</strong></article>
         <article><span>Radar toàn HOSE</span><strong data-public-ranking-status>TẠM DỪNG</strong></article>`;
     }
 
     document.querySelectorAll('.site-footer .disclaimer').forEach(node => {
       const clean = 'StockRadar chỉ hiển thị tín hiệu khi dữ liệu thị trường đáp ứng điều kiện phát hành.';
       if (node.textContent !== clean) node.textContent = clean;
+    });
+  }
+
+  function patchSearchScope() {
+    if (document.body?.dataset.proposition !== 'ticker-search') return;
+
+    const title = document.querySelector('.page-heading h1');
+    if (title && title.textContent.trim() === 'Tra cứu cổ phiếu HOSE') title.textContent = 'Kiểm tra mã cổ phiếu';
+
+    const headingPill = document.querySelector('.page-heading .data-pill');
+    if (headingPill) headingPill.textContent = 'PHẠM VI THAM CHIẾU';
+
+    document.querySelectorAll('.lookup-status-line > span').forEach(item => {
+      const text = item.textContent.trim();
+      const strong = item.querySelector('strong');
+      if (!strong) return;
+      if (text.startsWith('Tra mã:')) {
+        strong.removeAttribute('data-reference-count');
+        strong.dataset.publicLookupStatus = '';
+        strong.textContent = publicState.lookupLabel;
+      }
+      if (text.startsWith('Nguồn:') || text.startsWith('Phạm vi công khai:')) {
+        item.firstChild.nodeValue = 'Phạm vi công khai: ';
+        strong.removeAttribute('data-reference-count');
+        strong.dataset.publicLookupScope = '';
+        strong.textContent = publicState.lookupScope;
+      }
     });
   }
 
@@ -103,7 +136,7 @@
         grid.dataset.publicUx = '1';
         grid.innerHTML = `
           <div><span>Thị trường</span><strong>HOSE</strong></div>
-          <div><span>Tra cứu mã</span><strong>SẴN SÀNG</strong></div>
+          <div><span>Tra cứu công khai</span><strong data-public-lookup-status>${publicState.lookupLabel}</strong></div>
           <div><span>Dữ liệu giá</span><strong>CHƯA SẴN SÀNG</strong></div>
           <div><span>Radar toàn HOSE</span><strong>TẠM DỪNG</strong></div>`;
       }
@@ -113,15 +146,15 @@
   function patchTickerCards() {
     document.querySelectorAll('.ticker-accepted').forEach(card => {
       const label = card.querySelector('.panel-label');
-      if (label) label.textContent = 'MÃ CỔ PHIẾU';
+      if (label) label.textContent = 'MÃ ĐÃ NHẬP';
       const pill = card.querySelector('.data-pill');
-      if (pill) pill.textContent = 'CHƯA ĐỦ DỮ LIỆU';
+      if (pill) pill.textContent = 'CHƯA XÁC NHẬN NIÊM YẾT';
       const metrics = card.querySelector('.accepted-metrics');
       if (metrics && metrics.dataset.publicUx !== '1') {
         metrics.dataset.publicUx = '1';
         metrics.innerHTML = `
-          <div><span>Thị trường</span><strong>HOSE</strong></div>
           <div><span>Định dạng mã</span><strong>HỢP LỆ</strong></div>
+          <div><span>Niêm yết HOSE</span><strong>CHƯA XÁC NHẬN</strong></div>
           <div><span>Giá hiện tại</span><strong>—</strong></div>
           <div><span>Kết luận</span><strong>—</strong></div>`;
       }
@@ -133,6 +166,11 @@
       const pill = card.querySelector('header .data-pill');
       if (pill && /CHỜ|CẤP QUYỀN|TẠM/i.test(pill.textContent)) pill.textContent = 'CHƯA ĐỦ DỮ LIỆU';
     });
+  }
+
+  function applyLookupState() {
+    document.querySelectorAll('[data-public-lookup-status]').forEach(node => { node.textContent = publicState.lookupLabel; });
+    document.querySelectorAll('[data-public-lookup-scope]').forEach(node => { node.textContent = publicState.lookupScope; });
   }
 
   let refreshStarted = false;
@@ -147,6 +185,12 @@
       const master = masterResponse.ok ? await masterResponse.json() : {};
       const radar = radarResponse.ok ? await radarResponse.json() : {};
       const reference = master.internal_reference || {};
+      const masterStatus = String(master.data_status || master.status || '');
+      const masterReady = Boolean(masterStatus && !masterStatus.startsWith('BLOCKED') && master.full_universe === true && master.data_grade === 'DECISION_GRADE');
+      const publicItemCount = Array.isArray(master.items) ? master.items.length : 0;
+      publicState.lookupLabel = masterReady ? 'TOÀN BỘ HOSE' : (publicItemCount ? `${publicItemCount} MÃ THAM CHIẾU` : 'CHƯA SẴN SÀNG');
+      publicState.lookupScope = masterReady ? 'TOÀN BỘ HOSE' : (publicItemCount ? `${publicItemCount} MÃ` : 'CHƯA SẴN SÀNG');
+
       const radarStatus = String(radar.data_status || radar.status || '');
       const radarReady = Boolean(radarStatus && !radarStatus.startsWith('BLOCKED') && radar.snapshot?.data_grade === 'DECISION_GRADE');
       const feedReady = Boolean(reference.market_data_ready || radarReady);
@@ -154,11 +198,15 @@
       const market = radarReady ? (marketLabels[radar.market_regime] || 'ĐANG THEO DÕI') : 'CHƯA SẴN SÀNG';
       const snapshot = reference.as_of || radar.snapshot?.as_of;
 
+      applyLookupState();
       document.querySelectorAll('[data-public-market]').forEach(node => { node.textContent = market; });
       document.querySelectorAll('[data-public-feed-status]').forEach(node => { node.textContent = feedReady ? 'SẴN SÀNG' : 'CHƯA SẴN SÀNG'; });
       document.querySelectorAll('[data-public-ranking-status]').forEach(node => { node.textContent = rankingReady ? 'SẴN SÀNG' : 'TẠM DỪNG'; });
       document.querySelectorAll('[data-public-snapshot]').forEach(node => { node.textContent = formatSnapshot(snapshot); });
     } catch (_) {
+      publicState.lookupLabel = 'CHƯA XÁC NHẬN';
+      publicState.lookupScope = 'CHƯA XÁC NHẬN';
+      applyLookupState();
       document.querySelectorAll('[data-public-market]').forEach(node => { node.textContent = 'CHƯA XÁC NHẬN'; });
       document.querySelectorAll('[data-public-feed-status]').forEach(node => { node.textContent = 'CHƯA XÁC NHẬN'; });
       document.querySelectorAll('[data-public-ranking-status]').forEach(node => { node.textContent = 'TẠM DỪNG'; });
@@ -167,9 +215,11 @@
 
   function applyPublicUx() {
     patchPortalShell();
+    patchSearchScope();
     patchReadinessCards();
     patchTickerCards();
     replaceExactText();
+    applyLookupState();
   }
 
   let scheduled = false;
