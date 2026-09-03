@@ -19,14 +19,22 @@ Use a file outside the public repository, preferably named `*.stock-cache-batch.
       "payload": {
         "ticker": "MBB",
         "horizon": "SHORT_TERM",
-        "data_status": "READY"
+        "data_status": "READY",
+        "data_grade": "DECISION_GRADE",
+        "current_price": 30.5,
+        "new_position_state": "CHỜ MUA",
+        "holding_state": "THEO DÕI",
+        "score": 82,
+        "probability_calibrated": false,
+        "thesis": ["Fundamental và cấu trúc giá cùng khung."],
+        "risks": ["Luận điểm vô hiệu nếu cấu trúc kỹ thuật bị phá vỡ."]
       }
     }
   ]
 }
 ```
 
-The batch snapshot must match a Production Data Contract manifest that currently passes rights, coverage, freshness, corporate-action, active-status and checksum gates.
+The batch snapshot must match a Production Data Contract manifest that currently passes rights, coverage, freshness, corporate-action, active-status and checksum gates. Every report payload must separately pass `STOCKRADAR_REPORT_PAYLOAD_CONTRACT.md`.
 
 ## Dry run first
 
@@ -47,7 +55,15 @@ Validation blocks:
 - report generated before the source snapshot;
 - invalid expiry window;
 - payload ticker/horizon mismatch;
+- any report that is not `READY + DECISION_GRADE`;
+- missing positive current price;
+- missing independent new-position or holding state;
+- invalid score/RVOL/Buy Zone/Stop/Target/Upside/Downside/Risk-Reward fields;
+- uncalibrated probability claims;
+- calibrated probability without OOS flag, sample size, method and calibration scope;
 - credential-shaped fields such as API keys, passwords, access/refresh/service-role/trading tokens or OTP.
+
+`score` is never treated as win probability. If a report has no valid calibration evidence, leave `probability_calibrated=false` and omit `probability_pct`; the customer UI will show `KHÔNG CÔNG BỐ`.
 
 ## Publish
 
