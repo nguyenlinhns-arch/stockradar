@@ -25,15 +25,16 @@ EXCLUDED_NAMES = {
     "pro",
 }
 AUTH_HEAD = """\
-<link rel="stylesheet" href="assets/auth.css?v=20260903-auth5">
-<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth5">
+<link rel="stylesheet" href="assets/auth.css?v=20260903-auth6">
+<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth6">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth5" defer></script>
-<script src="assets/auth-policy.js?v=20260903-auth5" defer></script>
-<script src="assets/auth-account-security.js?v=20260903-auth5" defer></script>
-<script src="assets/auth.js?v=20260903-auth5" defer></script>
-<script src="assets/auth-extra.js?v=20260903-auth5" defer></script>
-<script src="assets/auth-delete-security.js?v=20260903-auth5" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth6" defer></script>
+<script src="assets/auth-email-gate.js?v=20260903-auth6" defer></script>
+<script src="assets/auth-policy.js?v=20260903-auth6" defer></script>
+<script src="assets/auth-account-security.js?v=20260903-auth6" defer></script>
+<script src="assets/auth.js?v=20260903-auth6" defer></script>
+<script src="assets/auth-extra.js?v=20260903-auth6" defer></script>
+<script src="assets/auth-delete-security.js?v=20260903-auth6" defer></script>
 """
 
 
@@ -65,6 +66,7 @@ def write_auth_config(output: Path) -> None:
         return
     url = os.environ.get("STOCKRADAR_SUPABASE_URL", "").strip().rstrip("/")
     key = os.environ.get("STOCKRADAR_SUPABASE_PUBLISHABLE_KEY", "").strip()
+    email_ready = os.environ.get("STOCKRADAR_AUTH_EMAIL_READY", "").strip().lower() in {"1", "true", "yes", "on"}
     if bool(url) != bool(key):
         raise RuntimeError("Supabase auth configuration is incomplete")
     if url and not url.startswith("https://"):
@@ -78,6 +80,7 @@ def write_auth_config(output: Path) -> None:
         "supabaseUrl": url,
         "supabasePublishableKey": key,
         "configured": bool(url and key),
+        "emailDeliveryReady": email_ready,
     }
     target = output / "assets" / "auth-config.js"
     target.write_text(
@@ -146,6 +149,7 @@ def build(output: Path) -> None:
         required.extend([
             output / "assets" / "auth.css",
             output / "assets" / "auth-extra.css",
+            output / "assets" / "auth-email-gate.js",
             output / "assets" / "auth-policy.js",
             output / "assets" / "auth-account-security.js",
             output / "assets" / "auth.js",
