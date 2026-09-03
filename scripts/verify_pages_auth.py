@@ -141,9 +141,9 @@ def main() -> None:
     reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
 
     # Homepage reads only the tiny auth-config launch state. The lightweight home core
-    # handles signup -> Premium-interest routing when production email verification is gated.
+    # routes registration to the Free/Premium plan selector before account creation.
     require_all(home, ("assets/auth-config.js", "assets/home-core-v1.js"), "homepage")
-    require_all(home_core, ("emailDeliveryReady", "registrationUrl", "signup/", "dang-ky/"), "homepage core")
+    require_all(home_core, ("emailDeliveryReady", "registrationUrl", "dang-ky/", "So sánh gói"), "homepage core")
     if SUPABASE_CDN in home:
         raise SystemExit("homepage must not load Supabase browser SDK")
     reject_all(home, (*HEAVY_AUTH_ASSETS, *HOMEPAGE_LEGACY_AUTH_UX), "homepage")
