@@ -25,8 +25,27 @@ Official in-session scan checkpoints are 10:30, 11:15, 13:30 and 14:15 Vietnam t
 
 If no new recommendation passes the gate, the paid email says so and may summarize existing records, followed tickers, market state, Top changes and risk alerts. It never creates a recommendation merely to fill an email.
 
+## Implemented foundation — 2026-09-03
+
+The Supabase production project now contains:
+
+- `public.product_email_preferences`: owner-scoped Trial/Paid product-email preferences with RLS.
+- `public.product_email_consent_events`: append-only owner-scoped consent history with RLS.
+- `private.email_outbox`: provider-neutral idempotent delivery queue, not exposed to browser roles.
+- `private.email_suppressions`: unsubscribe/bounce/complaint/security suppression state, not exposed to browser roles.
+- `private.email_delivery_gate`: one-row fail-closed production gate.
+- `private.product_email_eligibility`: private security-invoker view combining tier, account status, latest consent version, suppression and delivery gate.
+
+The delivery gate cannot set `sending_enabled=true` unless provider configuration, sender-domain verification, unsubscribe, bounce/complaint handling, compliance approval and an evidence reference are all present. Current state remains **sending disabled**.
+
+Free users cannot enable product email at the database entitlement layer. A downgrade to Free or a non-active account automatically disables product email preferences.
+
 ## Analytics and privacy
 
 Track `email_open` and `email_click` only where lawful and consented. Do not include broker credentials, portfolio values, private holdings or individualized order language. Every email states data time, horizon, lifecycle state, and informational/educational boundary.
 
-Production sending remains BLOCKED until provider, privacy, consent, unsubscribe, security and compliance gates pass.
+## Production status
+
+Consent/outbox/suppression/delivery-gate foundation: **PASS**.
+
+Actual product-email sending: **BLOCKED** until a provider is selected, the StockRadar sending domain is verified, unsubscribe links and preference-center withdrawal are live, bounce/complaint webhooks are processed, provider secrets are stored server-side, compliance approves the content, and the delivery gate is deliberately opened with evidence.
