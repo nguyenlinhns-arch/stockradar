@@ -40,6 +40,21 @@ The delivery gate cannot set `sending_enabled=true` unless provider configuratio
 
 Free users cannot enable product email at the database entitlement layer. A downgrade to Free or a non-active account automatically disables product email preferences.
 
+## Signup and account preference funnel — 2026-09-03
+
+The production website now has a single account-based funnel for the two primary email goals:
+
+- signup captures optional, non-prechecked intent for `DAILY_BRIEF` and `EVENT_ALERT`;
+- legal acceptance and product-email intent are passed into Supabase Auth user metadata at signup;
+- the `handle_new_user` trigger stores Terms/Privacy receipts and, when selected, creates fail-closed email preferences plus an append-only `SIGNUP` consent event;
+- the account center lets authenticated users change daily-report and buy/sell-alert preferences, with a separate master send switch;
+- Free users may save interest/preferences but cannot set `product_email_preferences.enabled=true`;
+- Trial/Paid users can enable product email only when the profile is active;
+- each watchlist row can store `alert_enabled` so event delivery can later respect ticker-level alert preferences;
+- signup links remain fail-closed while production Auth email verification is not ready.
+
+The homepage includes a dedicated conversion surface for “Báo cáo mỗi ngày + cảnh báo mua/bán”. Production CI verifies that the signup fields, account preference center and required email assets are present in the generated Pages artifact.
+
 ## Analytics and privacy
 
 Track `email_open` and `email_click` only where lawful and consented. Do not include broker credentials, portfolio values, private holdings or individualized order language. Every email states data time, horizon, lifecycle state, and informational/educational boundary.
@@ -47,5 +62,7 @@ Track `email_open` and `email_click` only where lawful and consented. Do not inc
 ## Production status
 
 Consent/outbox/suppression/delivery-gate foundation: **PASS**.
+
+Signup/account preference funnel: **PASS**.
 
 Actual product-email sending: **BLOCKED** until a provider is selected, the StockRadar sending domain is verified, unsubscribe links and preference-center withdrawal are live, bounce/complaint webhooks are processed, provider secrets are stored server-side, compliance approves the content, and the delivery gate is deliberately opened with evidence.
