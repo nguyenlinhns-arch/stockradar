@@ -13,3 +13,4 @@ licensed-data/
 secure-data/
 *.production-manifest.json
 *.licensed-bundle.json
+*.stock-cache-batch.json
