@@ -57,20 +57,29 @@
     });
   }
 
+  function emailDeliveryReady() {
+    return window.STOCKRADAR_AUTH_CONFIG?.emailDeliveryReady === true;
+  }
+
   function signupHref() {
-    return new URL('signup/', document.baseURI).href;
+    const route = emailDeliveryReady() ? 'signup/' : 'dang-ky/';
+    return new URL(route, document.baseURI).href;
   }
 
   function normalizeSignupLinks(root = document) {
     root.querySelectorAll?.('a[href]').forEach(link => {
       const raw = link.getAttribute('href') || '';
-      if (/(^|\/)dang-ky\/?$/i.test(raw)) {
-        link.setAttribute('href', raw.replace(/dang-ky\/?$/i, 'signup/'));
+      if (emailDeliveryReady()) {
+        if (/(^|\/)dang-ky\/?$/i.test(raw)) link.setAttribute('href', raw.replace(/dang-ky\/?$/i, 'signup/'));
+      } else if (/(^|\/)signup\/?$/i.test(raw)) {
+        link.setAttribute('href', raw.replace(/signup\/?$/i, 'dang-ky/'));
+        if (/Đăng ký Premium|Tạo tài khoản|Đăng ký StockRadar/i.test(link.textContent || '')) link.textContent = 'Đăng ký quan tâm';
       }
     });
   }
 
   function redirectLegacySignup() {
+    if (!emailDeliveryReady()) return false;
     if (/\/dang-ky\/(?:index\.html)?$/i.test(window.location.pathname)) {
       window.location.replace(signupHref());
       return true;
@@ -143,7 +152,7 @@
       if (heading) heading.textContent = 'StockRadar Premium';
       if (description) description.textContent = 'Free: tra cứu & phân tích công khai · Premium: báo cáo sâu, email hằng ngày và cảnh báo hành động.';
       if (action) {
-        action.textContent = 'Đăng ký';
+        action.textContent = emailDeliveryReady() ? 'Đăng ký' : 'Đăng ký quan tâm';
         action.href = signupHref();
       }
     }
@@ -191,7 +200,7 @@
       const action = mobileBar.querySelector('a');
       if (label) label.textContent = 'Premium: phân tích sâu + email + cảnh báo hành động';
       if (action) {
-        action.textContent = 'Đăng ký';
+        action.textContent = emailDeliveryReady() ? 'Đăng ký' : 'Quan tâm';
         action.href = signupHref();
       }
     }
