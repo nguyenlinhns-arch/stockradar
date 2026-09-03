@@ -172,19 +172,18 @@ def inject_page(page: Path, output: Path) -> None:
     if "</head>" not in source:
         raise RuntimeError(f"HTML page has no closing head tag: {page}")
 
-    site_css = asset_href(source, page, output, "site-v4.css")
     mobile_css = asset_href(source, page, output, "mobile-touch-v1.css")
 
     if is_homepage(page, output):
         home_core_js = asset_href(source, page, output, "home-core-v1.js")
         head = (
             route_specific_head(source, page, output)
-            + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7" {HEAD_MARKER}>\n'
-            + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
-            + f'<script src="{home_core_js}?v=20260903-homecore2" defer></script>\n'
+            + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1" {HEAD_MARKER}>\n'
+            + f'<script src="{home_core_js}?v=20260903-homecore3" defer></script>\n'
         )
     else:
         public_css = asset_href(source, page, output, "public-ux.css")
+        site_css = asset_href(source, page, output, "site-v4.css")
         public_js = asset_href(source, page, output, "public-ux.js")
         fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
         auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
