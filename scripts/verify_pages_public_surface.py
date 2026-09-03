@@ -10,13 +10,15 @@ from urllib.parse import urlsplit
 
 
 FORBIDDEN_PUBLIC_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
-FORBIDDEN_HTML_TERMS = ("DATA GATE",)
+FORBIDDEN_HTML_TERMS = ("DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH")
 REQUIRED_UX_ASSETS = (
     "assets/public-ux.css",
     "assets/public-ux.js",
     "assets/auth-production-gate.js",
     "assets/site-v4.css",
     "assets/public-fallbacks-v4.js",
+    "assets/header-auth-dedupe-v6.js",
+    "assets/public-copy-v7.js",
 )
 REQUIRED_EMAIL_ASSETS = (
     "assets/signup-email-intent.js",
@@ -30,6 +32,7 @@ REQUIRED_HOME_ASSETS = (
     "assets/home-density.css",
     "assets/home-dense-v3.css",
     "assets/recommendation-dense-v3.css",
+    "assets/premium-preview-v7.css",
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
@@ -94,8 +97,8 @@ def verify_header_auth_pair(page: Path, output: Path, source: str) -> list[str]:
     if "header-login-cta" not in source or "header-register-cta" not in source:
         errors.append(f"Login/Register header pair missing: {relative}")
     nav = re.search(r'<nav\b[^>]*data-nav-menu[^>]*>(.*?)</nav>', source, flags=re.IGNORECASE | re.DOTALL)
-    if nav and re.search(r'href=["\'][^"\']*dang-ky/', nav.group(1), flags=re.IGNORECASE):
-        errors.append(f"duplicate Register link remains in primary nav: {relative}")
+    if nav and re.search(r'href=["\'][^"\']*dang-(?:ky|nhap)/', nav.group(1), flags=re.IGNORECASE):
+        errors.append(f"auth link remains in primary nav: {relative}")
     return errors
 
 
@@ -137,18 +140,25 @@ def main() -> None:
             'href="dang-ky/"',
             'href="dang-nhap/"',
             'data-header-auth-actions',
-            'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
             'assets/home-dense-v3.css',
+            'assets/premium-preview-v7.css',
             'assets/site-v4.css',
             'assets/public-fallbacks-v4.js',
+            'assets/public-copy-v7.js',
             'home-watchlist-grid',
             'home-ticker-grid',
             '<b>ACB</b>',
             '<b>VNM</b>',
-            'Khuyến nghị đã phát hành',
+            'Tín hiệu hành động hiện tại',
             '<strong>0 mã</strong>',
-            'Danh sách tham chiếu đang theo dõi',
+            'Danh sách cổ phiếu đang theo dõi',
             '<strong>16 mã</strong>',
+            'MẪU BÁO CÁO CHUYÊN SÂU',
+            '4M &amp; Payback Time',
+            'Định giá Bear / Base / Bull',
+            'MẪU EMAIL GÓI TRẢ PHÍ',
+            'TOP 30 STOCKRADAR',
+            '[StockRadar Premium] TOP 30 HOSE',
             'assets/home-dashboard.js',
         ),
         errors,
@@ -156,6 +166,10 @@ def main() -> None:
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
     if "home-newsletter-strip" in home_source:
         errors.append("homepage top newsletter strip must be removed")
+    if "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành." in home_source:
+        errors.append("obsolete homepage recommendation/reference sentence remains")
+    if "DỮ LIỆU HOSE THAM CHIẾU" in home_source:
+        errors.append("obsolete HOSE reference section remains on homepage")
 
     require_text(
         output,
@@ -179,9 +193,7 @@ def main() -> None:
         output,
         "khuyen-nghi/index.html",
         (
-            'Khuyến nghị đã phát hành',
             '<strong>0 mã</strong>',
-            'Mã tham chiếu đang theo dõi',
             '<strong>16 mã</strong>',
             'reference-watch-table',
             '<b>ACB</b>',
@@ -209,7 +221,7 @@ def main() -> None:
         require_text(
             output,
             route,
-            ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js'),
+            ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'),
             errors,
         )
 
@@ -227,10 +239,17 @@ def main() -> None:
             "radar-reference", "breakout-reference", "risk-reference", "today-reference",
             "performance-method", "track-method", "sector-reference", "lookup-reference",
             "report-reference", "referenceGrid", "sectorGrid", "enhanceNavigation",
-            "TRẠNG THÁI DỮ LIỆU", "CHƯA PHÁT HÀNH",
+            "TRẠNG THÁI DỮ LIỆU",
         ):
             if marker not in source:
                 errors.append(f"full-site V4 fallback marker missing: {marker}")
+
+    copy_v7 = output / "assets" / "public-copy-v7.js"
+    if copy_v7.is_file():
+        source = copy_v7.read_text(encoding="utf-8")
+        for marker in ("CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT", "MutationObserver"):
+            if marker not in source:
+                errors.append(f"public copy V7 marker missing: {marker}")
 
     site_css = output / "assets" / "site-v4.css"
     if site_css.is_file():
@@ -251,7 +270,7 @@ def main() -> None:
                 errors.append(f"forbidden public term {term}: {page.relative_to(output)}")
         for term in FORBIDDEN_HTML_TERMS:
             if term in upper:
-                errors.append(f"internal HTML term {term}: {page.relative_to(output)}")
+                errors.append(f"unfinished/internal HTML term {term}: {page.relative_to(output)}")
         errors.extend(verify_injected_assets(page, output, source))
         errors.extend(verify_header_auth_pair(page, output, source))
 
@@ -267,7 +286,7 @@ def main() -> None:
 
     print(
         f"Verified production public surface: {len(pages)} HTML pages; "
-        "single Login/Register header pair + dense responsive V4 + truthful reference fallbacks present"
+        "premium previews + polished public wording + single Login/Register header pair present"
     )
 
 
