@@ -6,21 +6,23 @@
   ]);
 
   const copyReplacements = new Map([
-    ['DATA GATE', 'TRẠNG THÁI DỮ LIỆU'],
-    ['GATE', 'TRẠNG THÁI'],
-    ['BLOCKED_DATA_GATE', 'CHƯA ĐỦ DỮ LIỆU'],
-    ['CHỜ NGUỒN ĐƯỢC CẤP QUYỀN', 'CHƯA ĐỦ NGUỒN GIÁ'],
-    ['CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN', 'CHƯA ĐỦ DỮ LIỆU'],
-    ['ĐANG KHÓA', 'CHƯA PHÁT HÀNH'],
-    ['Hồ sơ tham chiếu nội bộ', 'Hồ sơ HOSE tham chiếu'],
-    ['Hồ sơ nội bộ', 'Hồ sơ HOSE'],
+    ['Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate.', 'Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng tương ứng đã đạt điều kiện.'],
+    ['Dữ liệu đã vượt Data Gate', 'Dữ liệu đã đạt điều kiện phát hành'],
+    ['dữ liệu và quyền sử dụng đã vượt qua Data Gate', 'dữ liệu và quyền sử dụng đã đạt điều kiện phát hành'],
+    ['dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate', 'dữ liệu thị trường và quyền sử dụng đã đạt điều kiện phát hành'],
     ['Giá/OHLCV đang chờ nguồn được cấp quyền', 'Giá/OHLCV chưa được phát hành'],
     ['Giá/OHLCV chưa kết nối', 'Giá/OHLCV chưa được phát hành'],
-    ['Dữ liệu đã vượt Data Gate', 'Dữ liệu đã đạt điều kiện phát hành'],
+    ['CHỜ NGUỒN ĐƯỢC CẤP QUYỀN', 'CHƯA ĐỦ NGUỒN GIÁ'],
+    ['CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN', 'CHƯA ĐỦ DỮ LIỆU'],
+    ['Hồ sơ tham chiếu nội bộ', 'Hồ sơ HOSE tham chiếu'],
+    ['Hồ sơ nội bộ', 'Hồ sơ HOSE'],
     ['Record đang hiệu lực', 'Khuyến nghị đang hiệu lực'],
     ['Snapshot đã công bố', 'Lịch sử đã công bố'],
     ['Data grade', 'Cấp dữ liệu'],
-    ['Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate.', 'Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng tương ứng đã đạt điều kiện.']
+    ['BLOCKED_DATA_GATE', 'CHƯA ĐỦ DỮ LIỆU'],
+    ['DATA GATE', 'TRẠNG THÁI DỮ LIỆU'],
+    ['Data Gate', 'điều kiện phát hành dữ liệu'],
+    ['ĐANG KHÓA', 'CHƯA PHÁT HÀNH']
   ]);
 
   function escapeHtml(value) {
@@ -104,10 +106,10 @@
   function performanceCells(payload) {
     const summary = payload?.performance_summary || {};
     return [
-      { label: 'Khuyến nghị đã phát hành', value: String(summary.total_published ?? publishedCount(payload)), note: 'Chỉ record công khai' },
+      { label: 'Khuyến nghị đã phát hành', value: String(summary.total_published ?? publishedCount(payload)), note: 'Chỉ bản ghi công khai' },
       { label: 'Đang mở', value: String(summary.open ?? 0), note: 'Chưa khóa kết quả' },
       { label: 'Đã đóng', value: String(summary.closed ?? 0), note: 'Kết quả đã khóa' },
-      { label: 'Tỷ lệ thắng', value: summary.win_rate_pct == null ? 'Chưa đủ mẫu' : `${summary.win_rate_pct}%`, note: 'Chỉ tính record đã đóng' }
+      { label: 'Tỷ lệ thắng', value: summary.win_rate_pct == null ? 'Chưa đủ mẫu' : `${summary.win_rate_pct}%`, note: 'Chỉ tính bản ghi đã đóng' }
     ];
   }
 
@@ -115,14 +117,14 @@
     if (type === 'performance') {
       return `<div class="v4-method-grid">
         <article><strong>Không tính mã chưa kích hoạt</strong><span>Khuyến nghị chưa chạm vùng mua không được đưa vào lãi/lỗ.</span></article>
-        <article><strong>Entry có quy tắc</strong><span>Hiệu quả chỉ bắt đầu từ lần chạm hợp lệ đầu tiên sau thời điểm công bố.</span></article>
-        <article><strong>Kết quả đóng mới là kết quả khóa</strong><span>Record đang mở chỉ là mark-to-market và có thể thay đổi.</span></article>
+        <article><strong>Giá vào có quy tắc</strong><span>Hiệu quả chỉ bắt đầu từ lần chạm hợp lệ đầu tiên sau thời điểm công bố.</span></article>
+        <article><strong>Kết quả đóng mới là kết quả khóa</strong><span>Bản ghi đang mở chỉ là kết quả tạm tính theo giá quan sát và có thể thay đổi.</span></article>
       </div>`;
     }
     return `<div class="v4-method-grid">
       <article><strong>Mỗi lần công bố có dấu thời gian</strong><span>Không sửa lịch sử để làm đẹp kết quả.</span></article>
       <article><strong>Trạng thái có vòng đời</strong><span>Chưa kích hoạt, đang hiệu lực và đã đóng được tách riêng.</span></article>
-      <article><strong>Không có dữ liệu thì không tạo record</strong><span>StockRadar giữ trạng thái trống thay vì điền số liệu giả.</span></article>
+      <article><strong>Không có dữ liệu thì không tạo bản ghi</strong><span>StockRadar giữ trạng thái trống thay vì điền số liệu giả.</span></article>
     </div>`;
   }
 
@@ -141,43 +143,43 @@
     if (proposition === 'radar5') {
       const target = document.querySelector('[data-radar-table]');
       const body = zeroBar([
-        { label: 'Xếp hạng đã phát hành', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Snapshot hiện tại' },
+        { label: 'Xếp hạng đã phát hành', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Ảnh chụp dữ liệu hiện tại' },
         { label: 'Mã tham chiếu', value: String(items.length), note: 'Danh sách công khai' },
         { label: 'Phạm vi', value: 'HOSE', note: 'Không HNX/UPCoM' },
         { label: 'Trạng thái', value: isBlocked(payload) ? 'THEO DÕI' : 'ĐÃ PHÁT HÀNH', note: 'Không tạo thứ hạng giả' }
       ]) + referenceGrid(items);
-      insertAfter(target, fallbackSection({ key: 'radar-reference', title: `${items.length} mã HOSE đang theo dõi`, description: 'Radar chưa phát hành thứ hạng khi feed giá chưa đạt điều kiện; danh sách tham chiếu vẫn được hiển thị cụ thể.', body, note: 'THEO DÕI không đồng nghĩa khuyến nghị mua. Khi đủ dữ liệu, bảng Radar phía trên mới hiển thị điểm, setup, giá và khoảng cách tới pivot.' }), 'radar-reference');
+      insertAfter(target, fallbackSection({ key: 'radar-reference', title: `${items.length} mã HOSE đang theo dõi`, description: 'Radar chưa phát hành thứ hạng khi nguồn giá chưa đạt điều kiện; danh sách tham chiếu vẫn được hiển thị cụ thể.', body, note: 'THEO DÕI không đồng nghĩa khuyến nghị mua. Khi đủ dữ liệu, bảng Radar phía trên mới hiển thị điểm, thiết lập, giá và khoảng cách tới pivot.' }), 'radar-reference');
       return;
     }
 
     if (proposition === 'breakout') {
       const target = document.querySelector('[data-radar-table]');
       const body = zeroBar([
-        { label: 'Điểm mua đã phát hành', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Snapshot hiện tại' },
+        { label: 'Điểm mua đã phát hành', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Ảnh chụp dữ liệu hiện tại' },
         { label: 'Mã tham chiếu', value: String(items.length), note: 'Đang theo dõi' },
-        { label: 'Setup', value: 'Pocket / Breakout', note: 'Chỉ hiện khi đủ điều kiện' },
+        { label: 'Thiết lập', value: 'Pocket / Breakout', note: 'Chỉ hiện khi đủ điều kiện' },
         { label: 'Hành động', value: 'CHỜ', note: 'Không mua đuổi' }
       ]) + referenceGrid(items);
-      insertAfter(target, fallbackSection({ key: 'breakout-reference', title: 'Danh sách theo dõi trước điểm mua', description: 'Không có tín hiệu được phát hành thì StockRadar giữ nguyên trạng thái theo dõi thay vì tạo điểm mua giả.', body, note: 'Buy Zone, Stop-loss, Target và R:R chỉ xuất hiện sau khi một setup vượt đủ điều kiện phát hành.' }), 'breakout-reference');
+      insertAfter(target, fallbackSection({ key: 'breakout-reference', title: 'Danh sách theo dõi trước điểm mua', description: 'Không có tín hiệu được phát hành thì StockRadar giữ nguyên trạng thái theo dõi thay vì tạo điểm mua giả.', body, note: 'Buy Zone, Stop-loss, Target và R:R chỉ xuất hiện sau khi một thiết lập vượt đủ điều kiện phát hành.' }), 'breakout-reference');
       return;
     }
 
     if (proposition === 'risk') {
       const target = document.querySelector('[data-risk-alerts]');
       const body = zeroBar([
-        { label: 'Cảnh báo hành động', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Snapshot hiện tại' },
+        { label: 'Cảnh báo hành động', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Ảnh chụp dữ liệu hiện tại' },
         { label: 'Mã tham chiếu', value: String(items.length), note: 'Đang theo dõi' },
         { label: 'Phạm vi', value: 'HOSE', note: 'Cổ phiếu công khai' },
-        { label: 'Nguyên tắc', value: 'CHỈ BÁO KHI CẦN', note: 'Không spam cảnh báo' }
+        { label: 'Nguyên tắc', value: 'CHỈ BÁO KHI CẦN', note: 'Không gửi cảnh báo thừa' }
       ]) + referenceGrid(items);
-      insertAfter(target, fallbackSection({ key: 'risk-reference', title: 'Mã đang nằm trong phạm vi theo dõi rủi ro', description: 'Chưa có cảnh báo hành động được phát hành ở snapshot công khai hiện tại.', body, note: 'Cảnh báo hạ tỷ trọng/cắt lỗ chỉ được phát hành khi có record hợp lệ và điều kiện rủi ro thực sự bị kích hoạt.' }), 'risk-reference');
+      insertAfter(target, fallbackSection({ key: 'risk-reference', title: 'Mã đang nằm trong phạm vi theo dõi rủi ro', description: 'Chưa có cảnh báo hành động được phát hành ở dữ liệu công khai hiện tại.', body, note: 'Cảnh báo hạ tỷ trọng/cắt lỗ chỉ được phát hành khi có bản ghi hợp lệ và điều kiện rủi ro thực sự bị kích hoạt.' }), 'risk-reference');
       return;
     }
 
     if (proposition === 'today-changes') {
       const target = document.querySelector('[data-today-changes]');
       const body = zeroBar([
-        { label: 'Thay đổi đã phát hành', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Snapshot hiện tại' },
+        { label: 'Thay đổi đã phát hành', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Ảnh chụp dữ liệu hiện tại' },
         { label: 'Mã tham chiếu', value: String(items.length), note: 'Đang theo dõi' },
         { label: 'Nhiễu thấp', value: 'ƯU TIÊN', note: 'Chỉ thay đổi đáng kể' },
         { label: 'Phạm vi', value: 'HOSE', note: 'Danh mục công khai' }
@@ -189,19 +191,19 @@
     if (proposition === 'performance') {
       const target = document.querySelector('[data-performance-summary]');
       const body = zeroBar(performanceCells(payload)) + methodGrid('performance');
-      insertAfter(target, fallbackSection({ key: 'performance-method', title: 'Cách StockRadar đo hiệu quả', description: 'Khi chưa có khuyến nghị đã đóng, tỷ lệ thắng và lợi nhuận trung bình được để trống thay vì ước đoán.', body, note: 'Past performance không đảm bảo kết quả tương lai; số liệu chỉ có ý nghĩa khi đủ mẫu và cùng phương pháp tính.' }), 'performance-method');
+      insertAfter(target, fallbackSection({ key: 'performance-method', title: 'Cách StockRadar đo hiệu quả', description: 'Khi chưa có khuyến nghị đã đóng, tỷ lệ thắng và lợi nhuận trung bình được để trống thay vì ước đoán.', body, note: 'Hiệu quả quá khứ không đảm bảo kết quả tương lai; số liệu chỉ có ý nghĩa khi đủ mẫu và cùng phương pháp tính.' }), 'performance-method');
       return;
     }
 
     if (proposition === 'track-record') {
       const target = document.querySelector('[data-track-record]');
       const body = zeroBar([
-        { label: 'Record công khai', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Lịch sử hiện tại' },
+        { label: 'Bản ghi công khai', value: String(isBlocked(payload) ? 0 : publishedCount(payload)), note: 'Lịch sử hiện tại' },
         { label: 'Phạm vi', value: 'HOSE', note: 'Theo chuẩn StockRadar' },
-        { label: 'Sửa lịch sử', value: 'KHÔNG', note: 'Append-only' },
-        { label: 'Trạng thái', value: isBlocked(payload) ? 'CHƯA CÓ RECORD' : 'ĐÃ CÓ DỮ LIỆU', note: 'Không dựng lịch sử giả' }
+        { label: 'Sửa lịch sử', value: 'KHÔNG', note: 'Chỉ ghi thêm' },
+        { label: 'Trạng thái', value: isBlocked(payload) ? 'CHƯA CÓ BẢN GHI' : 'ĐÃ CÓ DỮ LIỆU', note: 'Không dựng lịch sử giả' }
       ]) + methodGrid('track');
-      insertAfter(target, fallbackSection({ key: 'track-method', title: 'Nguyên tắc lưu lịch sử công bố', description: 'Lịch sử chỉ bắt đầu khi có snapshot khuyến nghị thật được phát hành.', body, note: 'Mỗi record giữ dấu thời gian, trạng thái kích hoạt và kết quả theo cùng một quy tắc đo.' }), 'track-method');
+      insertAfter(target, fallbackSection({ key: 'track-method', title: 'Nguyên tắc lưu lịch sử công bố', description: 'Lịch sử chỉ bắt đầu khi có khuyến nghị thật được phát hành.', body, note: 'Mỗi bản ghi giữ dấu thời gian, trạng thái kích hoạt và kết quả theo cùng một quy tắc đo.' }), 'track-method');
       return;
     }
 
@@ -250,6 +252,7 @@
       copyReplacements.forEach((after, before) => {
         if (value.includes(before)) value = value.replaceAll(before, after);
       });
+      if (value.trim() === 'GATE') value = value.replace('GATE', 'TRẠNG THÁI');
       if (value !== node.nodeValue) node.nodeValue = value;
     });
   }
