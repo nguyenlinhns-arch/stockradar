@@ -67,18 +67,18 @@ def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
 
 
 def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
-    """Expose one adjacent Login/Register pair and remove duplicate Register CTAs."""
+    """Expose one adjacent Login/Register pair and remove duplicate auth links."""
     if "site-header" not in source:
         return source
 
-    # Remove Register from the primary nav: it belongs in the auth action group.
+    # Login/Register belong only in the header auth action group, never primary nav.
     def clean_nav(match: re.Match[str]) -> str:
         nav = match.group(0)
         nav = re.sub(
-            r'<a\b[^>]*href=["\'][^"\']*dang-ky/["\'][^>]*>\s*Đăng ký(?:\s+bản tin)?\s*</a>',
+            r'<a\b[^>]*href=["\'][^"\']*dang-(?:ky|nhap)/["\'][^>]*>.*?</a>',
             "",
             nav,
-            flags=re.IGNORECASE,
+            flags=re.IGNORECASE | re.DOTALL,
         )
         return nav
 
@@ -145,6 +145,7 @@ def inject_page(page: Path, output: Path) -> None:
     public_js = asset_href(source, page, output, "public-ux.js")
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
     fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
+    auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
     head = (
         route_specific_head(source, page, output)
         + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
@@ -152,6 +153,7 @@ def inject_page(page: Path, output: Path) -> None:
         + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
         + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
         + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
+        + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
@@ -168,6 +170,7 @@ def main() -> None:
         output / "assets" / "recommendation-dense-v3.css",
         output / "assets" / "site-v4.css",
         output / "assets" / "public-fallbacks-v4.js",
+        output / "assets" / "header-auth-dedupe-v6.js",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
