@@ -2,6 +2,12 @@
   'use strict';
 
   const CONSENT_VERSION = '2026-09-03';
+  const VALID_PLANS = new Set(['free', 'premium']);
+
+  function selectedPlan(form) {
+    const value = String(form?.elements?.selected_plan?.value || 'free').trim().toLowerCase();
+    return VALID_PLANS.has(value) ? value : 'free';
+  }
 
   function formMetadata() {
     const form = document.querySelector('[data-auth-signup-form]');
@@ -12,6 +18,7 @@
     const termsAccepted = Boolean(form.elements.terms?.checked);
 
     return {
+      selected_plan_interest: selectedPlan(form),
       terms_accepted: termsAccepted,
       terms_version: CONSENT_VERSION,
       privacy_accepted: termsAccepted,
@@ -21,6 +28,38 @@
       product_email_daily_brief: dailyBrief,
       product_email_event_alerts: eventAlerts,
     };
+  }
+
+  function syncPlanUi() {
+    const form = document.querySelector('[data-auth-signup-form]');
+    if (!form) return;
+
+    const requested = new URLSearchParams(window.location.search).get('plan');
+    if (requested && VALID_PLANS.has(requested.toLowerCase())) {
+      const radio = form.querySelector(`input[name="selected_plan"][value="${requested.toLowerCase()}"]`);
+      if (radio) radio.checked = true;
+    }
+
+    const render = () => {
+      const plan = selectedPlan(form);
+      const premium = plan === 'premium';
+      const name = document.querySelector('[data-signup-plan-name]');
+      const note = document.querySelector('[data-signup-plan-note]');
+      const submit = document.querySelector('[data-signup-submit-label]');
+
+      if (name) name.textContent = premium ? 'Premium' : 'Free';
+      if (note) {
+        note.textContent = premium
+          ? 'Premium có giá sáng lập dự kiến 199.000đ/30 ngày. Tạo tài khoản không phát sinh thanh toán; bước thanh toán riêng chỉ xuất hiện khi cổng thanh toán được kích hoạt và bạn xác nhận.'
+          : 'Free có phí 0đ. Bạn có thể nâng Premium sau từ trang tài khoản.';
+      }
+      if (submit) submit.textContent = premium
+        ? 'Tạo tài khoản Premium & gửi mã xác minh'
+        : 'Tạo tài khoản Free & gửi mã xác minh';
+    };
+
+    form.querySelectorAll('input[name="selected_plan"]').forEach(input => input.addEventListener('change', render));
+    render();
   }
 
   function patchSupabaseClientFactory() {
@@ -57,5 +96,8 @@
     sdk.createClient = patchedCreateClient;
   }
 
-  document.addEventListener('DOMContentLoaded', patchSupabaseClientFactory, { once: true });
+  document.addEventListener('DOMContentLoaded', () => {
+    syncPlanUi();
+    patchSupabaseClientFactory();
+  }, { once: true });
 })();
