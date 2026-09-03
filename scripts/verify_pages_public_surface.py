@@ -20,6 +20,7 @@ REQUIRED_EMAIL_ASSETS = (
     "assets/signup-email-intent.js",
     "assets/email-preferences.js",
     "assets/email-preferences.css",
+    "assets/email-interest.js",
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
@@ -107,7 +108,21 @@ def main() -> None:
     require_text(
         output,
         "index.html",
-        ('data-email-conversion', 'Đăng ký nhận email'),
+        (
+            'data-email-conversion',
+            'data-email-interest-form',
+            'name="daily_brief"',
+            'name="event_alerts"',
+            'assets/email-interest.js',
+            'Đăng ký nhận email',
+            'chờ xác minh',
+        ),
+        errors,
+    )
+    require_text(
+        output,
+        "quyen-rieng-tu/index.html",
+        ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'),
         errors,
     )
 
@@ -132,7 +147,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; email subscription funnel present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; email registration funnel present")
 
 
 if __name__ == "__main__":
