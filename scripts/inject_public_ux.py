@@ -88,14 +88,18 @@ def inject_page(page: Path, output: Path) -> None:
     if "</head>" not in source:
         raise RuntimeError(f"HTML page has no closing head tag: {page}")
 
-    css = asset_href(source, page, output, "public-ux.css")
+    public_css = asset_href(source, page, output, "public-ux.css")
+    site_css = asset_href(source, page, output, "site-v4.css")
     public_js = asset_href(source, page, output, "public-ux.js")
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
+    fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
     head = (
         route_specific_head(source, page, output)
-        + f'<link rel="stylesheet" href="{css}?v=20260903-public2" {HEAD_MARKER}>\n'
+        + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
+        + f'<link rel="stylesheet" href="{site_css}?v=20260903-site4">\n'
         + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
         + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
+        + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
@@ -110,6 +114,8 @@ def main() -> None:
         output / "assets" / "public-ux.js",
         output / "assets" / "auth-production-gate.js",
         output / "assets" / "recommendation-dense-v3.css",
+        output / "assets" / "site-v4.css",
+        output / "assets" / "public-fallbacks-v4.js",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
