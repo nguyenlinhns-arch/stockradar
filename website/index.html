@@ -4,10 +4,10 @@
   <base href="./">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="StockRadar — bảng điều hành cổ phiếu HOSE, Radar, phân tích chuyên sâu, khuyến nghị và bản tin Premium.">
+  <meta name="description" content="StockRadar — bảng điều hành cổ phiếu HOSE, Radar rà soát 30 mã cân bằng ngành, phân tích chuyên sâu, khuyến nghị và bản tin Premium.">
   <meta name="stockradar-internal-status" content="DATA GATE">
   <meta property="og:title" content="StockRadar — Bảng điều hành cổ phiếu HOSE">
-  <meta property="og:description" content="Theo dõi cổ phiếu HOSE, xem cấu trúc báo cáo chuyên sâu và nội dung bản tin Premium từ StockRadar.vn.">
+  <meta property="og:description" content="Danh sách cổ phiếu theo Radar rà soát, báo cáo chuyên sâu và nội dung bản tin Premium từ StockRadar.vn.">
   <meta property="og:type" content="website">
   <title>StockRadar — Bảng điều hành cổ phiếu HOSE</title>
   <link rel="icon" href="assets/logo.svg">
@@ -72,9 +72,9 @@
       <div class="container home-status-grid operations-status-grid-hook">
         <article><span>Phạm vi</span><strong>HOSE</strong></article>
         <article><span>Hồ sơ đối chiếu</span><strong>405 / 405</strong></article>
-        <article><span>Tra cứu mã</span><strong>SẴN SÀNG</strong></article>
-        <article><span>Giá &amp; OHLCV</span><strong data-feed-status>ĐANG CẬP NHẬT</strong></article>
-        <article><span>Radar toàn HOSE</span><strong data-ranking-status>ĐANG CẬP NHẬT</strong></article>
+        <article><span>Radar rà soát</span><strong>30 mã</strong></article>
+        <article><span>Nhóm ngành</span><strong>10 ngành</strong></article>
+        <article><span>Phân bổ</span><strong>3 mã/ngành</strong></article>
       </div>
     </section>
 
@@ -82,50 +82,66 @@
       <div class="container home-primary-grid dashboard-grid-hook">
         <article class="home-panel home-recommendation-panel">
           <header class="home-panel-head">
-            <div><span class="panel-label">RADAR &amp; KHUYẾN NGHỊ</span><h2>Danh sách cổ phiếu cụ thể</h2></div>
+            <div><span class="panel-label">RADAR &amp; KHUYẾN NGHỊ</span><h2>Danh sách cổ phiếu theo Radar rà soát</h2></div>
             <a class="button button-secondary" href="khuyen-nghi/">Mở danh sách</a>
           </header>
           <div class="home-recommendation-summary">
             <div><span>Tín hiệu hành động hiện tại</span><strong>0 mã</strong><small>Không có setup đạt chuẩn tại snapshot công khai hiện tại.</small></div>
-            <div><span>Danh sách cổ phiếu đang theo dõi</span><strong>16 mã</strong><small>ACB, BID, CTG, FPT, GAS, HCM, HDB, HPG, HSG, MBB, MWG, SSI, TCB, VCI, VIC, VNM.</small></div>
+            <div><span>Danh sách cổ phiếu theo Radar rà soát</span><strong>30 mã</strong><small>10 nhóm ngành · 3 mã mỗi ngành · phạm vi rà soát cân bằng trên HOSE.</small></div>
           </div>
           <div class="home-watchlist-title"><span>Mã · Ngành</span><span>Trạng thái</span></div>
           <div class="home-watchlist-grid">
             <div class="home-watch-col">
-              <div class="home-watch-row"><b>ACB</b><span>Ngân hàng</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>BID</b><span>Ngân hàng</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>CTG</b><span>Ngân hàng</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>FPT</b><span>Công nghệ</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>GAS</b><span>Dầu khí</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>HCM</b><span>Chứng khoán</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>HDB</b><span>Ngân hàng</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>HPG</b><span>Thép</span><em>THEO DÕI</em></div>
+              <div class="home-watch-row"><b>ACB</b><span>Ngân hàng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>MBB</b><span>Ngân hàng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>TCB</b><span>Ngân hàng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>HCM</b><span>Chứng khoán</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>SSI</b><span>Chứng khoán</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>VCI</b><span>Chứng khoán</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>HPG</b><span>Thép</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>HSG</b><span>Thép</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>NKG</b><span>Thép</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>FPT</b><span>Công nghệ</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>CMG</b><span>Công nghệ</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>ELC</b><span>Công nghệ</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>GAS</b><span>Dầu khí</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>PLX</b><span>Dầu khí</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>PVD</b><span>Dầu khí</span><em>RÀ SOÁT</em></div>
             </div>
             <div class="home-watch-col">
-              <div class="home-watch-row"><b>HSG</b><span>Thép</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>MBB</b><span>Ngân hàng</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>MWG</b><span>Bán lẻ</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>SSI</b><span>Chứng khoán</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>TCB</b><span>Ngân hàng</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>VCI</b><span>Chứng khoán</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>VIC</b><span>Bất động sản</span><em>THEO DÕI</em></div>
-              <div class="home-watch-row"><b>VNM</b><span>Hàng tiêu dùng</span><em>THEO DÕI</em></div>
+              <div class="home-watch-row"><b>MWG</b><span>Bán lẻ &amp; phân phối</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>FRT</b><span>Bán lẻ &amp; phân phối</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>DGW</b><span>Bán lẻ &amp; phân phối</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>VIC</b><span>Bất động sản</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>VHM</b><span>Bất động sản</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>KDH</b><span>Bất động sản</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>VNM</b><span>Hàng tiêu dùng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>MSN</b><span>Hàng tiêu dùng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>SAB</b><span>Hàng tiêu dùng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>POW</b><span>Điện &amp; tiện ích</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>REE</b><span>Điện &amp; tiện ích</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>GEG</b><span>Điện &amp; tiện ích</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>GMD</b><span>Logistics &amp; cảng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>VSC</b><span>Logistics &amp; cảng</span><em>RÀ SOÁT</em></div>
+              <div class="home-watch-row"><b>HAH</b><span>Logistics &amp; cảng</span><em>RÀ SOÁT</em></div>
             </div>
           </div>
-          <div class="home-watch-note">Khi xuất hiện tín hiệu đạt chuẩn, StockRadar hiển thị đầy đủ setup, Buy Zone, tỷ trọng, Stop-loss, Target, Upside/Downside và Risk/Reward.</div>
+          <div class="home-watch-note">30 mã là phạm vi Radar rà soát cân bằng ngành, không phải bảng xếp hạng sức mạnh giả định. Khi xuất hiện tín hiệu đạt chuẩn, StockRadar mới hiển thị setup, Buy Zone, tỷ trọng, Stop-loss, Target, Upside/Downside và Risk/Reward.</div>
         </article>
 
         <article class="home-panel home-sector-panel">
-          <header class="home-panel-head"><div><span class="panel-label">THEO NGÀNH</span><h2>Nhóm cổ phiếu</h2><p>Các nhóm đang được StockRadar theo dõi trên HOSE.</p></div><a class="button button-secondary" href="nganh/">Chi tiết</a></header>
+          <header class="home-panel-head"><div><span class="panel-label">THEO NGÀNH</span><h2>10 nhóm ngành</h2><p>Radar rà soát đúng 3 mã ở mỗi nhóm để tránh danh sách bị lệch về một ngành.</p></div><a class="button button-secondary" href="nganh/">Chi tiết</a></header>
           <div class="home-sector-list">
-            <div class="home-sector-row"><strong>Ngân hàng</strong><span><b>6 mã</b> · ACB, BID, CTG, HDB, MBB, TCB</span></div>
+            <div class="home-sector-row"><strong>Ngân hàng</strong><span><b>3 mã</b> · ACB, MBB, TCB</span></div>
             <div class="home-sector-row"><strong>Chứng khoán</strong><span><b>3 mã</b> · HCM, SSI, VCI</span></div>
-            <div class="home-sector-row"><strong>Thép</strong><span><b>2 mã</b> · HPG, HSG</span></div>
-            <div class="home-sector-row"><strong>Công nghệ</strong><span><b>1 mã</b> · FPT</span></div>
-            <div class="home-sector-row"><strong>Dầu khí</strong><span><b>1 mã</b> · GAS</span></div>
-            <div class="home-sector-row"><strong>Bán lẻ</strong><span><b>1 mã</b> · MWG</span></div>
-            <div class="home-sector-row"><strong>Bất động sản</strong><span><b>1 mã</b> · VIC</span></div>
-            <div class="home-sector-row"><strong>Tiêu dùng</strong><span><b>1 mã</b> · VNM</span></div>
+            <div class="home-sector-row"><strong>Thép</strong><span><b>3 mã</b> · HPG, HSG, NKG</span></div>
+            <div class="home-sector-row"><strong>Công nghệ</strong><span><b>3 mã</b> · FPT, CMG, ELC</span></div>
+            <div class="home-sector-row"><strong>Dầu khí</strong><span><b>3 mã</b> · GAS, PLX, PVD</span></div>
+            <div class="home-sector-row"><strong>Bán lẻ &amp; phân phối</strong><span><b>3 mã</b> · MWG, FRT, DGW</span></div>
+            <div class="home-sector-row"><strong>Bất động sản</strong><span><b>3 mã</b> · VIC, VHM, KDH</span></div>
+            <div class="home-sector-row"><strong>Hàng tiêu dùng</strong><span><b>3 mã</b> · VNM, MSN, SAB</span></div>
+            <div class="home-sector-row"><strong>Điện &amp; tiện ích</strong><span><b>3 mã</b> · POW, REE, GEG</span></div>
+            <div class="home-sector-row"><strong>Logistics &amp; cảng</strong><span><b>3 mã</b> · GMD, VSC, HAH</span></div>
           </div>
         </article>
 
@@ -151,14 +167,20 @@
       </div>
     </section>
 
-    <section class="home-ticker-strip" aria-label="Các mã HOSE đang hiển thị">
+    <section class="home-ticker-strip" aria-label="Danh sách cổ phiếu theo Radar rà soát">
       <div class="container">
-        <div class="home-ticker-strip-head"><strong>16 mã cổ phiếu đang hiển thị</strong><a href="kiem-tra-co-phieu/">Tra cứu mã khác →</a></div>
+        <div class="home-ticker-strip-head"><strong>30 mã theo Radar rà soát · 10 ngành × 3 mã</strong><a href="kiem-tra-co-phieu/">Tra cứu mã khác →</a></div>
         <div class="home-ticker-grid">
-          <span><b>ACB</b><small>Ngân hàng</small></span><span><b>BID</b><small>Ngân hàng</small></span><span><b>CTG</b><small>Ngân hàng</small></span><span><b>FPT</b><small>Công nghệ</small></span>
-          <span><b>GAS</b><small>Dầu khí</small></span><span><b>HCM</b><small>Chứng khoán</small></span><span><b>HDB</b><small>Ngân hàng</small></span><span><b>HPG</b><small>Thép</small></span>
-          <span><b>HSG</b><small>Thép</small></span><span><b>MBB</b><small>Ngân hàng</small></span><span><b>MWG</b><small>Bán lẻ</small></span><span><b>SSI</b><small>Chứng khoán</small></span>
-          <span><b>TCB</b><small>Ngân hàng</small></span><span><b>VCI</b><small>Chứng khoán</small></span><span><b>VIC</b><small>Bất động sản</small></span><span><b>VNM</b><small>Hàng tiêu dùng</small></span>
+          <span><b>ACB</b><small>Ngân hàng</small></span><span><b>MBB</b><small>Ngân hàng</small></span><span><b>TCB</b><small>Ngân hàng</small></span>
+          <span><b>HCM</b><small>Chứng khoán</small></span><span><b>SSI</b><small>Chứng khoán</small></span><span><b>VCI</b><small>Chứng khoán</small></span>
+          <span><b>HPG</b><small>Thép</small></span><span><b>HSG</b><small>Thép</small></span><span><b>NKG</b><small>Thép</small></span>
+          <span><b>FPT</b><small>Công nghệ</small></span><span><b>CMG</b><small>Công nghệ</small></span><span><b>ELC</b><small>Công nghệ</small></span>
+          <span><b>GAS</b><small>Dầu khí</small></span><span><b>PLX</b><small>Dầu khí</small></span><span><b>PVD</b><small>Dầu khí</small></span>
+          <span><b>MWG</b><small>Bán lẻ &amp; phân phối</small></span><span><b>FRT</b><small>Bán lẻ &amp; phân phối</small></span><span><b>DGW</b><small>Bán lẻ &amp; phân phối</small></span>
+          <span><b>VIC</b><small>Bất động sản</small></span><span><b>VHM</b><small>Bất động sản</small></span><span><b>KDH</b><small>Bất động sản</small></span>
+          <span><b>VNM</b><small>Hàng tiêu dùng</small></span><span><b>MSN</b><small>Hàng tiêu dùng</small></span><span><b>SAB</b><small>Hàng tiêu dùng</small></span>
+          <span><b>POW</b><small>Điện &amp; tiện ích</small></span><span><b>REE</b><small>Điện &amp; tiện ích</small></span><span><b>GEG</b><small>Điện &amp; tiện ích</small></span>
+          <span><b>GMD</b><small>Logistics &amp; cảng</small></span><span><b>VSC</b><small>Logistics &amp; cảng</small></span><span><b>HAH</b><small>Logistics &amp; cảng</small></span>
         </div>
       </div>
     </section>
@@ -167,47 +189,36 @@
       <div class="container premium-preview-grid">
         <article class="premium-preview-card">
           <header class="premium-preview-head">
-            <div><span class="panel-label">MẪU BÁO CÁO CHUYÊN SÂU</span><h2 id="premium-report-title">Một báo cáo Premium gồm những gì?</h2><p>Cấu trúc được dùng cho từng mã khi StockRadar có đủ dữ liệu hợp lệ; không điền số liệu minh họa để tránh tạo cảm giác đây là khuyến nghị thật.</p></div>
+            <div><span class="panel-label">MẪU BÁO CÁO CHUYÊN SÂU</span><h2 id="premium-report-title">Một báo cáo Premium gồm những gì?</h2><p>Cấu trúc áp dụng cho từng mã khi StockRadar có dữ liệu hợp lệ; mẫu không điền số liệu thị trường giả.</p></div>
             <span class="premium-badge">PREMIUM</span>
           </header>
-          <div class="premium-report-hero">
-            <div><strong>MÃ CỔ PHIẾU · HOSE</strong><span>Doanh nghiệp · Ngành · Ngày cập nhật · Chân trời đầu tư</span></div>
-            <div class="premium-report-status"><b>NGẮN HẠN</b><b>3–6 THÁNG</b><b>12 THÁNG</b><b>TÍCH SẢN</b></div>
-          </div>
-          <div class="premium-plan-strip">
-            <div><span>Định giá</span><strong>Fair Value · MOS</strong></div>
-            <div><span>Kế hoạch mua</span><strong>Buy Zone · Tỷ trọng</strong></div>
-            <div><span>Quản trị rủi ro</span><strong>Stop · Downside · R:R</strong></div>
-            <div><span>Mục tiêu</span><strong>Gần · 3–6T · 12T</strong></div>
-          </div>
+          <div class="premium-report-hero"><div><strong>MÃ CỔ PHIẾU · HOSE</strong><span>Doanh nghiệp · Ngành · Ngày cập nhật · Chân trời đầu tư</span></div><div class="premium-report-status"><b>NGẮN HẠN</b><b>3–6 THÁNG</b><b>12 THÁNG</b><b>TÍCH SẢN</b></div></div>
+          <div class="premium-plan-strip"><div><span>Định giá</span><strong>Fair Value · MOS</strong></div><div><span>Kế hoạch mua</span><strong>Buy Zone · Tỷ trọng</strong></div><div><span>Quản trị rủi ro</span><strong>Stop · Downside · R:R</strong></div><div><span>Mục tiêu</span><strong>Gần · 3–6T · 12T</strong></div></div>
           <div class="premium-report-grid">
-            <section class="premium-report-block"><h3>1. 4M &amp; Payback Time</h3><ul><li>Meaning: mô hình kinh doanh, động lực lợi nhuận, chu kỳ ngành.</li><li>Moat: thị phần, quy mô, chi phí, thương hiệu, rào cản gia nhập.</li><li>Management: phân bổ vốn, CAPEX, nợ, minh bạch và lợi ích cổ đông.</li><li>Owner Earnings/FCF chuẩn hóa và thời gian hoàn vốn.</li></ul></section>
-            <section class="premium-report-block"><h3>2. CANSLIM &amp; tăng trưởng</h3><ul><li>Doanh thu, EPS, LNST quý gần nhất và biên lợi nhuận.</li><li>Tăng trưởng 3–5 năm, ROE và chất lượng lợi nhuận.</li><li>Catalyst mới: công suất, sản phẩm, thị trường, chu kỳ lợi nhuận.</li><li>Leader, thanh khoản, tổ chức và bối cảnh thị trường.</li></ul></section>
-            <section class="premium-report-block"><h3>3. Định giá Bear / Base / Bull</h3><ul><li>P/E, Forward P/E, P/B, PEG, EV/EBITDA và so sánh ngành.</li><li>DCF, Owner Earnings/FCF, lịch sử định giá và chu kỳ.</li><li>Fair Value, Margin of Safety, Upside và Downside.</li><li>Loại thu nhập một lần và lợi nhuận bất thường.</li></ul></section>
-            <section class="premium-report-block"><h3>4. SEPA / VCP / Stage</h3><ul><li>MA10/50/150/200, Trend Template và Relative Strength.</li><li>Stage 1–4, Base, VCP, Pivot, Breakout, Pullback và Retest.</li><li>Pocket Pivot / Early Momentum trước breakout truyền thống.</li><li>Không mua đuổi khi giá đã quá extended.</li></ul></section>
-            <section class="premium-report-block"><h3>5. VPA &amp; dòng tiền lớn</h3><ul><li>Volume Dry-up, No Supply, Demand/Supply Bar.</li><li>Accumulation, Distribution, Absorption và Shakeout.</li><li>RVOL, same-time volume và Max Down-Volume 10 phiên.</li><li>Xác nhận Whale Move trước hoặc ngay khi giá tăng mạnh.</li></ul></section>
-            <section class="premium-report-block"><h3>6. Kế hoạch giao dịch</h3><ul><li>Setup: Pocket Pivot / Early Breakout / Confirmed Breakout.</li><li>Buy Zone, tỷ trọng đề xuất, Stop-loss và điều kiện vô hiệu.</li><li>Target gần, Target 3–6 tháng, Target 12 tháng.</li><li>Upside/Downside, Risk/Reward và thời gian kỳ vọng.</li></ul></section>
+            <section class="premium-report-block"><h3>1. 4M &amp; Payback Time</h3><ul><li>Meaning, Moat, Management và Margin of Safety.</li><li>Owner Earnings/FCF chuẩn hóa và thời gian hoàn vốn.</li></ul></section>
+            <section class="premium-report-block"><h3>2. CANSLIM &amp; tăng trưởng</h3><ul><li>Doanh thu, EPS, LNST, ROE, catalyst, leader và tổ chức.</li><li>Chất lượng tăng trưởng và bối cảnh thị trường.</li></ul></section>
+            <section class="premium-report-block"><h3>3. Định giá Bear / Base / Bull</h3><ul><li>P/E, Forward P/E, P/B, PEG, EV/EBITDA, DCF và FCF.</li><li>Fair Value, MOS, Upside và Downside.</li></ul></section>
+            <section class="premium-report-block"><h3>4. SEPA / VCP / Stage</h3><ul><li>MA10/50/150/200, Relative Strength, Base, VCP, Pivot và Stage.</li><li>Pocket Pivot, Breakout, Pullback và Retest.</li></ul></section>
+            <section class="premium-report-block"><h3>5. VPA &amp; dòng tiền lớn</h3><ul><li>Volume Dry-up, No Supply, Demand/Supply Bar, Accumulation và Distribution.</li><li>RVOL, same-time volume và Whale Move.</li></ul></section>
+            <section class="premium-report-block"><h3>6. Kế hoạch giao dịch</h3><ul><li>Buy Zone, tỷ trọng, Stop-loss, Target gần/3–6T/12T.</li><li>Upside/Downside, Risk/Reward và điều kiện vô hiệu.</li></ul></section>
           </div>
-          <div class="premium-preview-foot"><p>Báo cáo thật chỉ hiển thị số liệu thị trường và khuyến nghị khi các lớp dữ liệu tương ứng đáp ứng điều kiện kiểm soát của StockRadar.</p><a class="button button-primary" href="dang-ky/">Đăng ký Premium</a></div>
+          <div class="premium-preview-foot"><p>Báo cáo thật chỉ hiển thị số liệu thị trường và tín hiệu khi các lớp dữ liệu tương ứng đạt chuẩn.</p><a class="button button-primary" href="dang-ky/">Đăng ký Premium</a></div>
         </article>
 
         <article class="premium-preview-card" aria-labelledby="premium-email-title">
-          <header class="premium-preview-head">
-            <div><span class="panel-label">MẪU EMAIL GÓI TRẢ PHÍ</span><h2 id="premium-email-title">Email Premium bạn nhận được</h2><p>Nội dung được thiết kế để đọc nhanh trên điện thoại: thị trường, TOP 30, mã hành động và kế hoạch giao dịch.</p></div>
-            <span class="premium-badge">EMAIL PREMIUM</span>
-          </header>
+          <header class="premium-preview-head"><div><span class="panel-label">MẪU EMAIL GÓI TRẢ PHÍ</span><h2 id="premium-email-title">Email Premium bạn nhận được</h2><p>Thiết kế để đọc nhanh trên điện thoại: thị trường, TOP 30, mã hành động và kế hoạch giao dịch.</p></div><span class="premium-badge">EMAIL PREMIUM</span></header>
           <div class="premium-email-window">
             <div class="premium-email-toolbar"><strong>StockRadar.vn</strong><span>Gửi tới email tài khoản Premium</span></div>
             <div class="premium-email-subject"><span>Tiêu đề</span><strong>[StockRadar Premium] TOP 30 HOSE · Tín hiệu hành động · DD/MM/YYYY</strong></div>
             <div class="premium-email-body">
-              <div class="premium-email-intro"><strong>Tóm tắt thị trường:</strong> VN-Index, VN30, breadth, thanh khoản, ngành dẫn dắt, trạng thái Market Direction và mức độ ưu tiên giải ngân.</div>
-              <section class="premium-email-section"><header><strong>TOP 30 STOCKRADAR</strong><span>Cân bằng theo ngành</span></header><div class="premium-email-lines"><div class="premium-email-line"><b>Toàn HOSE</b><span>Xếp hạng tổng hợp theo 4M, CANSLIM, định giá, SEPA/VCP, VPA, dòng tiền và Risk/Reward.</span></div><div class="premium-email-line"><b>Theo ngành</b><span>Top Ngân hàng, Chứng khoán, Thép, Công nghệ, Bán lẻ, Dầu khí, Bất động sản, Tiêu dùng…</span></div></div></section>
-              <section class="premium-email-section"><header><strong>TÍN HIỆU HÀNH ĐỘNG</strong><span>Chỉ hiện khi đạt chuẩn</span></header><div class="premium-email-lines"><div class="premium-email-line"><b>Mã / Setup</b><span>Pocket Pivot · Early Breakout · Confirmed Breakout · Nhồi lệnh · Hạ tỷ trọng · Cắt lỗ.</span></div><div class="premium-email-line"><b>Kế hoạch</b><span>Giá · Volume/RVOL · Buy Zone · Tỷ trọng · Stop · Target gần · Target 3–6T · R:R · thời gian kỳ vọng.</span></div></div></section>
-              <section class="premium-email-section"><header><strong>PHÂN TÍCH CHUYÊN SÂU</strong><span>Mã nổi bật</span></header><div class="premium-email-lines"><div class="premium-email-line"><b>Fundamental</b><span>4M, Payback, CANSLIM, catalyst, chất lượng lợi nhuận và định giá Bear/Base/Bull.</span></div><div class="premium-email-line"><b>Technical</b><span>Stage, VCP, Pivot, MA, Ichimoku, Bollinger, VPA, dòng tiền và điều kiện phá vỡ luận điểm.</span></div></div></section>
+              <div class="premium-email-intro"><strong>Tóm tắt thị trường:</strong> VN-Index, VN30, breadth, thanh khoản, ngành dẫn dắt, Market Direction và mức độ ưu tiên giải ngân.</div>
+              <section class="premium-email-section"><header><strong>TOP 30 STOCKRADAR</strong><span>Cân bằng theo ngành</span></header><div class="premium-email-lines"><div class="premium-email-line"><b>Toàn HOSE</b><span>Xếp hạng tổng hợp theo 4M, CANSLIM, định giá, SEPA/VCP, VPA, dòng tiền và Risk/Reward.</span></div><div class="premium-email-line"><b>Theo ngành</b><span>Top theo từng nhóm ngành và trạng thái thay đổi trong ngày.</span></div></div></section>
+              <section class="premium-email-section"><header><strong>TÍN HIỆU HÀNH ĐỘNG</strong><span>Chỉ hiện khi đạt chuẩn</span></header><div class="premium-email-lines"><div class="premium-email-line"><b>Mã / Setup</b><span>Pocket Pivot · Early Breakout · Confirmed Breakout · Nhồi lệnh · Hạ tỷ trọng · Cắt lỗ.</span></div><div class="premium-email-line"><b>Kế hoạch</b><span>Giá · Volume/RVOL · Buy Zone · Tỷ trọng · Stop · Target · R:R · thời gian kỳ vọng.</span></div></div></section>
+              <section class="premium-email-section"><header><strong>PHÂN TÍCH CHUYÊN SÂU</strong><span>Mã nổi bật</span></header><div class="premium-email-lines"><div class="premium-email-line"><b>Fundamental</b><span>4M, Payback, CANSLIM, catalyst và định giá Bear/Base/Bull.</span></div><div class="premium-email-line"><b>Technical</b><span>Stage, VCP, Pivot, MA, Ichimoku, Bollinger, VPA và dòng tiền.</span></div></div></section>
             </div>
-            <div class="premium-email-cta"><strong>Mục tiêu: quyết định nhanh, quản trị rủi ro rõ.</strong><span>Email không gửi tín hiệu mua/bán khi không có setup đạt chuẩn; khi có hành động, thông tin được trình bày đủ để người dùng kiểm tra trước khi ra quyết định.</span></div>
+            <div class="premium-email-cta"><strong>Mục tiêu: quyết định nhanh, quản trị rủi ro rõ.</strong><span>Không có setup đạt chuẩn thì email không tạo tín hiệu mua/bán.</span></div>
           </div>
-          <div class="premium-preview-foot"><p>Gói Premium tập trung vào tín hiệu có thể hành động và báo cáo chuyên sâu, thay vì gửi nhiều thông báo không cần thiết.</p><a class="button button-primary" href="dang-ky/">Nâng cấp Premium</a></div>
+          <div class="premium-preview-foot"><p>Premium tập trung vào tín hiệu có thể hành động và báo cáo chuyên sâu.</p><a class="button button-primary" href="dang-ky/">Nâng cấp Premium</a></div>
         </article>
       </div>
     </section>
@@ -215,8 +226,6 @@
 
   <div class="mobile-newsletter-bar" aria-label="Đăng ký bản tin StockRadar"><span>TOP 30 + cảnh báo hành động + báo cáo chuyên sâu</span><a class="button button-primary" href="dang-ky/">Premium</a></div>
 
-  <footer class="site-footer">
-    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="dang-ky/">Đăng ký</a></div></div><p class="disclaimer">StockRadar chỉ hiển thị tín hiệu hành động khi dữ liệu và điều kiện kiểm soát tương ứng đạt chuẩn.</p></div>
-  </footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="dang-ky/">Đăng ký</a></div></div><p class="disclaimer">Danh sách cổ phiếu theo Radar rà soát không đồng nghĩa khuyến nghị mua; tín hiệu hành động chỉ hiển thị khi setup đạt chuẩn.</p></div></footer>
 </body>
 </html>
