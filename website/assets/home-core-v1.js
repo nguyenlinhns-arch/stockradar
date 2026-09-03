@@ -1,6 +1,10 @@
 (() => {
   'use strict';
 
+  function emailDeliveryReady() {
+    return window.STOCKRADAR_AUTH_CONFIG?.emailDeliveryReady === true;
+  }
+
   function normalizeTicker(value) {
     return String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
   }
@@ -11,6 +15,10 @@
 
   function stockUrl(ticker) {
     return new URL(`co-phieu/?ticker=${encodeURIComponent(ticker)}`, document.baseURI).href;
+  }
+
+  function registrationUrl() {
+    return new URL(emailDeliveryReady() ? 'signup/' : 'dang-ky/', document.baseURI).href;
   }
 
   function setSearchMessage(form, message, kind = '') {
@@ -72,9 +80,40 @@
     });
   }
 
+  function mountRegistration() {
+    const ready = emailDeliveryReady();
+    const href = registrationUrl();
+    document.querySelectorAll('a[href]').forEach(link => {
+      let parsed;
+      try { parsed = new URL(link.getAttribute('href') || '', document.baseURI); } catch (_) { return; }
+      const path = parsed.pathname.replace(/\/+$/, '');
+      if (!/(?:\/signup|\/dang-ky)$/.test(path)) return;
+      link.href = href;
+      if (!ready && /Đăng ký Premium|Tạo tài khoản|Đăng ký StockRadar/i.test(link.textContent || '')) {
+        link.textContent = 'Đăng ký quan tâm';
+      }
+      if (!ready && link.classList.contains('header-register-cta')) {
+        link.textContent = 'Đăng ký';
+        link.setAttribute('aria-label', 'Đăng ký quan tâm StockRadar Premium');
+      }
+    });
+
+    const compact = document.querySelector('.home-register-compact');
+    if (compact && !ready) {
+      const text = compact.querySelector('span');
+      const action = compact.querySelector('a');
+      if (text) text.textContent = 'Free: tra cứu & phân tích công khai · Premium: có thể đăng ký quan tâm trong khi email xác minh đang hoàn thiện.';
+      if (action) action.textContent = 'Đăng ký quan tâm';
+    }
+
+    const mobile = document.querySelector('.mobile-newsletter-bar a');
+    if (mobile && !ready) mobile.textContent = 'Quan tâm';
+  }
+
   function mount() {
     mountNavigation();
     mountTickerSearch();
+    mountRegistration();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
