@@ -26,6 +26,8 @@ REQUIRED_HOME_ASSETS = (
     "assets/home-dashboard.js",
     "assets/home-dashboard.css",
     "assets/home-density.css",
+    "assets/home-dense-v3.css",
+    "assets/recommendation-dense-v3.css",
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
@@ -117,6 +119,9 @@ def main() -> None:
             'data-email-conversion',
             'href="dang-ky/"',
             'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
+            'header-newsletter-cta',
+            'assets/home-dense-v3.css',
+            'home-watchlist-grid',
             'home-ticker-grid',
             '<b>ACB</b>',
             '<b>VNM</b>',
@@ -133,11 +138,13 @@ def main() -> None:
         "dang-ky/index.html",
         (
             'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
+            'header-newsletter-cta',
             'data-email-interest-form',
             'name="daily_brief"',
             'name="event_alerts"',
             'assets/email-interest.js',
             'assets/home-density.css',
+            'assets/home-dense-v3.css',
         ),
         errors,
     )
@@ -149,10 +156,24 @@ def main() -> None:
             '<strong>0 mã</strong>',
             'Mã tham chiếu đang theo dõi',
             '<strong>16 mã</strong>',
+            'reference-watch-table',
             '<b>ACB</b>',
             '<b>VNM</b>',
             'không phải khuyến nghị mua',
+            'assets/recommendation-dense-v3.css',
         ),
+        errors,
+    )
+    require_text(
+        output,
+        "radar5/index.html",
+        ('data-global-register-cta', 'href="dang-ky/"'),
+        errors,
+    )
+    require_text(
+        output,
+        "kiem-tra-co-phieu/index.html",
+        ('data-global-register-cta', 'href="dang-ky/"'),
         errors,
     )
     require_text(
@@ -183,7 +204,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; dense home + registration + concrete ticker surfaces present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; dense home + visible registration + concrete ticker surfaces present")
 
 
 if __name__ == "__main__":
