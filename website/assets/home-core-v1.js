@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  document.documentElement.classList.add('site-v4');
+
   function emailDeliveryReady() {
     return window.STOCKRADAR_AUTH_CONFIG?.emailDeliveryReady === true;
   }
