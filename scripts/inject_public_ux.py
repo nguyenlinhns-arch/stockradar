@@ -156,6 +156,7 @@ def inject_page(page: Path, output: Path) -> None:
     fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
     auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
     copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
+    direct_ticker_js = asset_href(source, page, output, "direct-ticker-nav-v1.js")
     head = (
         route_specific_head(source, page, output)
         + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
@@ -165,6 +166,7 @@ def inject_page(page: Path, output: Path) -> None:
         + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
         + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
         + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
+        + f'<script src="{direct_ticker_js}?v=20260903-direct1" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
@@ -183,6 +185,7 @@ def main() -> None:
         output / "assets" / "public-fallbacks-v4.js",
         output / "assets" / "header-auth-dedupe-v6.js",
         output / "assets" / "public-copy-v7.js",
+        output / "assets" / "direct-ticker-nav-v1.js",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
