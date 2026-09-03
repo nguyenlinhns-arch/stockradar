@@ -10,7 +10,6 @@ from pathlib import Path
 
 
 HEAD_MARKER = "data-stockradar-public-ux"
-REGISTER_MARKER = "data-global-register-cta"
 PUBLIC_HTML_REPLACEMENTS = (
     ("Dữ liệu đã vượt Data Gate", "Dữ liệu đã đạt điều kiện phát hành"),
     ("dữ liệu và quyền sử dụng đã vượt qua Data Gate", "dữ liệu và quyền sử dụng đã đạt điều kiện phát hành"),
@@ -39,10 +38,11 @@ def asset_href(source: str, page: Path, output: Path, name: str) -> str:
     return os.path.relpath(target, page.parent).replace(os.sep, "/")
 
 
-def registration_href(source: str, page: Path, output: Path) -> str:
+def route_href(source: str, page: Path, output: Path, route: str) -> str:
+    route = route.strip("/")
     if has_base(source):
-        return "dang-ky/"
-    target = output / "dang-ky"
+        return f"{route}/"
+    target = output / route
     relative = os.path.relpath(target, page.parent).replace(os.sep, "/")
     return relative.rstrip("/") + "/"
 
@@ -54,11 +54,7 @@ def sanitize_public_html(source: str) -> str:
 
 
 def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
-    """Keep the homepage header compact by removing the old top newsletter ribbon.
-
-    Registration remains available in the main header, homepage conversion modules,
-    mobile CTA and the dedicated /dang-ky/ page.
-    """
+    """Remove the old homepage newsletter ribbon to keep the first viewport compact."""
     if page.resolve() != (output / "index.html").resolve():
         return source
     return re.sub(
@@ -70,11 +66,43 @@ def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
     )
 
 
-def inject_registration_cta(source: str, page: Path, output: Path) -> str:
-    if REGISTER_MARKER in source or "header-newsletter-cta" in source:
-        return source
+def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
+    """Expose one adjacent Login/Register pair and remove duplicate Register CTAs."""
     if "site-header" not in source:
         return source
+
+    # Remove Register from the primary nav: it belongs in the auth action group.
+    def clean_nav(match: re.Match[str]) -> str:
+        nav = match.group(0)
+        nav = re.sub(
+            r'<a\b[^>]*href=["\'][^"\']*dang-ky/["\'][^>]*>\s*Đăng ký(?:\s+bản tin)?\s*</a>',
+            "",
+            nav,
+            flags=re.IGNORECASE,
+        )
+        return nav
+
+    source = re.sub(
+        r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>',
+        clean_nav,
+        source,
+        count=1,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+    # Remove old standalone Register buttons and a previous auth-action group if present.
+    source = re.sub(
+        r'<a\b[^>]*class=["\'][^"\']*(?:header-newsletter-cta|global-register-cta)[^"\']*["\'][^>]*>.*?</a>',
+        "",
+        source,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    source = re.sub(
+        r'<div\b[^>]*data-header-auth-actions[^>]*>.*?</div>',
+        "",
+        source,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
 
     match = re.search(
         r'(<header\b[^>]*class=["\'][^"\']*\bsite-header\b[^"\']*["\'][^>]*>.*?)(</div>\s*</header>)',
@@ -84,9 +112,15 @@ def inject_registration_cta(source: str, page: Path, output: Path) -> str:
     if not match:
         return source
 
-    href = registration_href(source, page, output)
-    cta = f'<a class="global-register-cta" {REGISTER_MARKER} href="{href}">Đăng ký</a>'
-    return source[: match.start(2)] + cta + source[match.start(2) :]
+    login_href = route_href(source, page, output, "dang-nhap")
+    register_href = route_href(source, page, output, "dang-ky")
+    actions = (
+        '<div class="header-auth-actions" data-header-auth-actions>'
+        f'<a class="header-login-cta" href="{login_href}">Đăng nhập</a>'
+        f'<a class="header-register-cta" href="{register_href}">Đăng ký</a>'
+        '</div>'
+    )
+    return source[: match.start(2)] + actions + source[match.start(2) :]
 
 
 def route_specific_head(source: str, page: Path, output: Path) -> str:
@@ -99,7 +133,7 @@ def route_specific_head(source: str, page: Path, output: Path) -> str:
 def inject_page(page: Path, output: Path) -> None:
     source = sanitize_public_html(page.read_text(encoding="utf-8"))
     source = remove_home_top_strip(source, page, output)
-    source = inject_registration_cta(source, page, output)
+    source = normalize_header_auth_actions(source, page, output)
     if HEAD_MARKER in source:
         page.write_text(source, encoding="utf-8")
         return
@@ -114,7 +148,7 @@ def inject_page(page: Path, output: Path) -> None:
     head = (
         route_specific_head(source, page, output)
         + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
-        + f'<link rel="stylesheet" href="{site_css}?v=20260903-site4">\n'
+        + f'<link rel="stylesheet" href="{site_css}?v=20260903-site5">\n'
         + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
         + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
         + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
