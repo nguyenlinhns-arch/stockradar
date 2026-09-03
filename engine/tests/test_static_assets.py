@@ -114,11 +114,8 @@ class StaticAssetTests(unittest.TestCase):
         self.assertTrue(workflow.is_file())
         source = workflow.read_text(encoding="utf-8")
         for expected in (
-            "Bốn mục tiêu, bốn bộ điểm",
-            "Score ≠ xác suất",
-            "Không đếm trùng",
-            "unknown = không mua",
-            "10:30, 11:15, 13:30 và 14:15",
+            "Bốn mục tiêu, bốn bộ điểm", "Score ≠ xác suất", "Không đếm trùng",
+            "unknown = không mua", "10:30, 11:15, 13:30 và 14:15",
         ):
             self.assertIn(expected, source)
 
@@ -146,7 +143,8 @@ class StaticAssetTests(unittest.TestCase):
 
         for expected in (
             "operations-shell", "operations-search", "operations-status-grid",
-            "dashboard-grid", "data-radar-filter", "data-today-changes",
+            "dashboard-grid", "home-watchlist-grid", "home-ticker-grid",
+            "Danh sách cổ phiếu theo Radar rà soát", "30 mã",
         ):
             self.assertIn(expected, homepage)
         for expected in ("radar-workspace-grid", "data-radar-filter", "data-radar-table"):
@@ -167,14 +165,10 @@ class StaticAssetTests(unittest.TestCase):
 
     def test_master_product_surfaces_are_present_and_truthful(self) -> None:
         routes = {
-            "nganh": "data-data-readiness",
-            "phan-tich": "data-stock-search-form",
-            "khuyen-nghi": "data-recommendations",
-            "hieu-qua": "data-performance-summary",
-            "co-phieu": "data-dynamic-stock-report",
-            "radar5": "data-radar-table",
-            "risk": "data-risk-alerts",
-            "breakout": "data-radar-filter",
+            "nganh": "data-data-readiness", "phan-tich": "data-stock-search-form",
+            "khuyen-nghi": "data-recommendations", "hieu-qua": "data-performance-summary",
+            "co-phieu": "data-dynamic-stock-report", "radar5": "data-radar-table",
+            "risk": "data-risk-alerts", "breakout": "data-radar-filter",
         }
         for route, marker in routes.items():
             source = (WEBSITE / route / "index.html").read_text(encoding="utf-8")
@@ -186,9 +180,7 @@ class StaticAssetTests(unittest.TestCase):
             for removed in ("kien-thuc", "email", "theo-doi", "tai-khoan", "signup", "pro"):
                 self.assertFalse((output / removed).exists(), removed)
 
-        recommendations = json.loads(
-            (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
-        )
+        recommendations = json.loads((WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8"))
         self.assertEqual(recommendations["data_status"], "BLOCKED_DATA_GATE")
         self.assertEqual(recommendations["items"], [])
         self.assertNotIn("is_mock", recommendations)
@@ -200,8 +192,7 @@ class StaticAssetTests(unittest.TestCase):
         report_page = (WEBSITE / "co-phieu" / "demo1" / "index.html").read_text(encoding="utf-8")
         for marker in (
             "CHƯA KÍCH HOẠT", "performance_entry_price", "final_return_pct",
-            "benchmark_return_pct", "recommendation_list_view", "performance_view",
-            "sample_premium_report_view",
+            "benchmark_return_pct", "recommendation_list_view", "performance_view", "sample_premium_report_view",
         ):
             self.assertIn(marker, script)
         for marker in ("data-recommendation-filter", "data-recommendations", "NHẬT KÝ TRẠNG THÁI"):
@@ -211,9 +202,7 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("BLOCKED_DATA_GATE", script)
         self.assertIn("data-stock-report", report_page)
 
-        recommendations = json.loads(
-            (WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8")
-        )
+        recommendations = json.loads((WEBSITE / "public" / "data" / "recommendations.json").read_text(encoding="utf-8"))
         self.assertEqual(recommendations["schema_version"], "2.1.2")
         self.assertEqual(recommendations["recommendation_mode"], "RESEARCH_ONLY")
         self.assertEqual(recommendations["data_status"], "BLOCKED_DATA_GATE")
@@ -240,8 +229,7 @@ class StaticAssetTests(unittest.TestCase):
         for label in (
             "THEO DÕI", "CHỜ MUA", "ĐẠT VÙNG MUA", "ĐANG CÓ HIỆU LỰC",
             "TĂNG QUÁ VÙNG MUA", "KHÔNG CÒN ĐẠT ĐIỀU KIỆN",
-            "ĐẠT MỤC TIÊU", "CHẠM MỨC CẮT LỖ", "HẾT THỜI HẠN",
-            "ĐÓNG KHUYẾN NGHỊ",
+            "ĐẠT MỤC TIÊU", "CHẠM MỨC CẮT LỖ", "HẾT THỜI HẠN", "ĐÓNG KHUYẾN NGHỊ",
         ):
             self.assertIn(label, script)
         self.assertIn("Giá/OHLCV chưa kết nối", script)
@@ -264,8 +252,7 @@ class StaticAssetTests(unittest.TestCase):
 
     def test_v212_lookup_dynamic_report_today_changes_and_journal_surfaces(self) -> None:
         required_pages = {
-            "kiem-tra-co-phieu": "data-stock-search-form",
-            "co-phieu": "data-dynamic-stock-report",
+            "kiem-tra-co-phieu": "data-stock-search-form", "co-phieu": "data-dynamic-stock-report",
             "thay-doi-hom-nay": "data-today-changes",
         }
         for route, marker in required_pages.items():
