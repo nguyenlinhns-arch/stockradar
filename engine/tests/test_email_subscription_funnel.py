@@ -76,23 +76,26 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("`daily` Free brief", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
-    def test_homepage_is_focused_on_radar_and_free_premium_comparison(self):
+    def test_homepage_is_feature_first_and_free_premium_comparison_is_concrete(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
         self.assertIn('href="signup/"', home)
         self.assertIn("home-radar-sector-list", home)
         self.assertIn("home-tier-grid", home)
-        self.assertIn("Free bên trái · Premium bên phải", home)
-        self.assertIn("Free không nhận email báo cáo/khuyến nghị hằng ngày", home)
+        self.assertIn("Free và Premium có gì?", home)
         for ticker in ("ACB", "VNM", "NKG", "CMG", "PVD", "FRT", "VHM", "POW", "GMD", "HAH"):
             self.assertIn(f"ticker={ticker}", home)
-        self.assertIn("Tín hiệu hành động", home)
-        self.assertIn("0 mã", home)
+        for feature in (
+            "Radar 30", "4M · CANSLIM", "Bear · Base · Bull", "Pivot · Breakout",
+            "Buy Zone · Stop · Target", "So sánh theo ngành", "Hiệu quả khuyến nghị",
+            "Định giá Bear / Base / Bull", "SEPA/VCP · Stage · Pivot",
+            "VPA · RVOL · dòng tiền lớn", "Email & cảnh báo trong phiên",
+        ):
+            self.assertIn(feature, home)
         self.assertIn("30 mã", home)
         self.assertIn("10 ngành · 3 mã mỗi ngành", home)
-        self.assertIn("4M · CANSLIM · Payback", home)
-        self.assertIn("Định giá Bear/Base/Bull", home)
-        self.assertIn("SEPA/VCP · VPA · RVOL", home)
+        self.assertIn("4 mốc quét/ngày", home)
+        self.assertIn("10:30 · 11:15 · 13:30 · 14:15", home)
         self.assertIn("assets/home-focus-v1.css", home)
         self.assertNotIn("assets/premium-preview-v7.css", home)
         self.assertNotIn("assets/home-dashboard.js", home)
@@ -101,6 +104,11 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("home-ticker-grid", home)
         self.assertNotIn("MẪU BÁO CÁO CHUYÊN SÂU", home)
         self.assertNotIn("MẪU EMAIL GÓI TRẢ PHÍ", home)
+        self.assertNotIn("DỮ LIỆU MẪU", home)
+        self.assertNotIn("MINH HỌA", home.upper())
+        self.assertNotIn("Chưa có setup", home)
+        self.assertNotIn("đang hoàn thiện", home.lower())
+        self.assertNotIn("Trạng thái công khai", home)
         self.assertNotIn("Danh sách cổ phiếu đang theo dõi", home)
         self.assertNotIn("Chưa phát hành", home)
         self.assertNotIn("Chưa sẵn sàng", home)
