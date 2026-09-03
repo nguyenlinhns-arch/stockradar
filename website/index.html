@@ -11,8 +11,9 @@
   <title>StockRadar — Bảng điều hành cổ phiếu HOSE</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
-  <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email2">
+  <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email3">
   <script src="assets/app.js?v=20260902-data1" defer></script>
+  <script src="assets/email-interest.js?v=20260903-email1" defer></script>
 </head>
 <body data-proposition="organic" class="app-home">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -82,14 +83,28 @@
           <section class="side-panel home-email-cta" data-email-conversion>
             <span class="panel-label">EMAIL STOCKRADAR</span>
             <h2>Báo cáo mỗi ngày + cảnh báo mua/bán</h2>
-            <p>Đăng ký một lần để lưu email, loại báo cáo muốn nhận và các mã cần cảnh báo riêng.</p>
+            <p>Để lại email và chọn đúng loại thông tin bạn muốn nhận. Không lựa chọn nào được bật sẵn.</p>
             <ul>
               <li><strong>Free:</strong> bản rà soát thị trường cơ bản hằng ngày sau khi xác minh email và đồng ý nhận.</li>
               <li><strong>Premium:</strong> cảnh báo điểm mua/bán tại các mốc quét chính khi có tín hiệu hành động đủ điều kiện.</li>
-              <li>Quản lý hoặc rút đăng ký email bất kỳ lúc nào trong Tài khoản.</li>
+              <li>Không có tín hiệu hành động đạt chuẩn thì không gửi cảnh báo mua/bán.</li>
             </ul>
-            <div class="hero-actions"><a class="button button-primary" href="signup/">Đăng ký nhận email</a><a class="button button-secondary" href="dang-nhap/">Đã có tài khoản</a></div>
-            <p>Không có tín hiệu hành động đạt chuẩn thì không gửi cảnh báo mua/bán.</p>
+
+            <form class="email-interest-form" data-email-interest-form novalidate>
+              <label for="home-email-interest">Email</label>
+              <input id="home-email-interest" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com">
+              <div class="email-interest-options">
+                <label class="email-interest-check"><input name="daily_brief" type="checkbox"><span>Đăng ký <strong>Báo cáo StockRadar hằng ngày</strong>.</span></label>
+                <label class="email-interest-check"><input name="event_alerts" type="checkbox"><span>Đăng ký quan tâm <strong>Cảnh báo điểm mua/bán Premium</strong>.</span></label>
+                <label class="email-interest-check email-interest-privacy"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và lựa chọn này để phục vụ đăng ký, xác minh và quản lý email theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
+              </div>
+              <div class="email-interest-honeypot" aria-hidden="true"><label for="home-company">Công ty</label><input id="home-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
+              <button class="button button-primary" type="submit">Đăng ký nhận email</button>
+              <p class="email-interest-message" data-email-interest-message aria-live="polite">Bước này chỉ ghi nhận yêu cầu. Chưa gửi báo cáo/cảnh báo cho tới khi email được xác minh và điều kiện gửi được đáp ứng.</p>
+            </form>
+
+            <div class="hero-actions"><a class="button button-secondary" href="signup/">Tạo tài khoản</a><a class="button button-secondary" href="dang-nhap/">Đã có tài khoản</a></div>
+            <p class="email-interest-pending">Yêu cầu chưa xác minh được giữ tối đa 30 ngày. Cảnh báo mua/bán vẫn cần quyền Premium; việc chọn tại đây không tự cấp quyền gửi.</p>
           </section>
           <section class="side-panel home-proof-card operations-performance">
             <header><div><span class="panel-label">HIỆU QUẢ</span><h2>Khuyến nghị</h2></div><a href="hieu-qua/">Chi tiết</a></header>
