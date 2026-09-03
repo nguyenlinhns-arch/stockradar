@@ -84,6 +84,21 @@ def require_text(output: Path, relative_path: str, expected: tuple[str, ...], er
             errors.append(f"required production hook missing in {relative_path}: {text}")
 
 
+def verify_header_auth_pair(page: Path, output: Path, source: str) -> list[str]:
+    errors: list[str] = []
+    if "site-header" not in source:
+        return errors
+    relative = page.relative_to(output)
+    if source.count("data-header-auth-actions") != 1:
+        errors.append(f"header must contain exactly one auth action group: {relative}")
+    if "header-login-cta" not in source or "header-register-cta" not in source:
+        errors.append(f"Login/Register header pair missing: {relative}")
+    nav = re.search(r'<nav\b[^>]*data-nav-menu[^>]*>(.*?)</nav>', source, flags=re.IGNORECASE | re.DOTALL)
+    if nav and re.search(r'href=["\'][^"\']*dang-ky/', nav.group(1), flags=re.IGNORECASE):
+        errors.append(f"duplicate Register link remains in primary nav: {relative}")
+    return errors
+
+
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
@@ -120,8 +135,9 @@ def main() -> None:
         (
             'data-email-conversion',
             'href="dang-ky/"',
+            'href="dang-nhap/"',
+            'data-header-auth-actions',
             'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
-            'header-newsletter-cta',
             'assets/home-dense-v3.css',
             'assets/site-v4.css',
             'assets/public-fallbacks-v4.js',
@@ -137,12 +153,18 @@ def main() -> None:
         ),
         errors,
     )
+    home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
+    if "home-newsletter-strip" in home_source:
+        errors.append("homepage top newsletter strip must be removed")
+
     require_text(
         output,
         "dang-ky/index.html",
         (
             'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
-            'header-newsletter-cta',
+            'data-header-auth-actions',
+            'href="dang-nhap/"',
+            'href="dang-ky/"',
             'data-email-interest-form',
             'name="daily_brief"',
             'name="event_alerts"',
@@ -167,6 +189,7 @@ def main() -> None:
             'không phải khuyến nghị mua',
             'assets/recommendation-dense-v3.css',
             'assets/site-v4.css',
+            'data-header-auth-actions',
         ),
         errors,
     )
@@ -186,7 +209,7 @@ def main() -> None:
         require_text(
             output,
             route,
-            ('data-global-register-cta', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js'),
+            ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js'),
             errors,
         )
 
@@ -212,7 +235,11 @@ def main() -> None:
     site_css = output / "assets" / "site-v4.css"
     if site_css.is_file():
         source = site_css.read_text(encoding="utf-8")
-        for marker in (".v4-reference-grid", ".v4-sector-grid", ".v4-zero-bar", "@media(max-width:760px)"):
+        for marker in (
+            ".v4-reference-grid", ".v4-sector-grid", ".v4-zero-bar",
+            ".header-auth-actions", ".header-login-cta", ".header-register-cta",
+            "@media(max-width:760px)",
+        ):
             if marker not in source:
                 errors.append(f"full-site V4 CSS marker missing: {marker}")
 
@@ -226,6 +253,7 @@ def main() -> None:
             if term in upper:
                 errors.append(f"internal HTML term {term}: {page.relative_to(output)}")
         errors.extend(verify_injected_assets(page, output, source))
+        errors.extend(verify_header_auth_pair(page, output, source))
 
     for suffix in ("*.js", "*.json"):
         for path in output.rglob(suffix):
@@ -239,7 +267,7 @@ def main() -> None:
 
     print(
         f"Verified production public surface: {len(pages)} HTML pages; "
-        "dense responsive V4 + visible registration + truthful reference fallbacks present"
+        "single Login/Register header pair + dense responsive V4 + truthful reference fallbacks present"
     )
 
 

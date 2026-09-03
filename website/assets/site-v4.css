@@ -18,7 +18,14 @@ html.site-v4{background:#eef2f5}
 .site-v4 .site-header .brand img{width:180px}
 .site-v4 .nav-links{gap:13px;font-size:12px}
 .site-v4 .nav-links>a:not(.button){min-height:58px}
-.site-v4 .global-register-cta,.site-v4 .header-newsletter-cta{display:inline-flex!important;min-height:36px!important;padding:0 14px!important;font-size:11px!important;white-space:nowrap}
+.site-v4 .nav-links a[href$="dang-ky/"]{display:none!important}
+.site-v4 .global-register-cta,.site-v4 .header-newsletter-cta{display:none!important}
+.site-v4 .header-auth-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.site-v4 .header-login-cta,.site-v4 .header-register-cta{min-height:36px;padding:0 13px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;line-height:1;white-space:nowrap;text-decoration:none}
+.site-v4 .header-login-cta{border:1px solid #b9c8d5;background:#fff;color:var(--navy)}
+.site-v4 .header-login-cta:hover{border-color:#7e97ab;background:#f5f8fa;color:var(--navy)}
+.site-v4 .header-register-cta{border:1px solid var(--red);background:var(--red);color:#fff}
+.site-v4 .header-register-cta:hover{border-color:#b71e29;background:#b71e29;color:#fff}
 
 /* Page shells: remove large empty bands. */
 .site-v4 .page-heading{padding:12px 0!important;background:#fff}
@@ -89,6 +96,8 @@ html.site-v4{background:#eef2f5}
 @media(max-width:1020px){
   .site-v4 .nav-links{gap:9px;font-size:10px}
   .site-v4 .site-header .brand img{width:158px}
+  .site-v4 .header-auth-actions{gap:4px}
+  .site-v4 .header-login-cta,.site-v4 .header-register-cta{min-height:34px;padding:0 9px;font-size:10px}
   .v4-reference-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
   .v4-reference-item:nth-child(8n){border-right:1px solid var(--line)}
   .v4-reference-item:nth-child(4n){border-right:0}
@@ -105,7 +114,8 @@ html.site-v4{background:#eef2f5}
   .site-v4 .site-header .brand img{width:140px}
   .site-v4 .nav-toggle{display:inline-flex;justify-self:end;min-height:34px;padding:0 9px}
   .site-v4 .nav-links{top:54px!important}
-  .site-v4 .global-register-cta,.site-v4 .header-newsletter-cta{min-height:34px!important;padding:0 10px!important;font-size:10px!important}
+  .site-v4 .header-auth-actions{gap:4px}
+  .site-v4 .header-login-cta,.site-v4 .header-register-cta{min-height:34px;padding:0 8px;font-size:9px}
   .site-v4 .page-heading{padding:9px 0!important}
   .site-v4 .page-heading-inner{min-height:46px!important;align-items:center}
   .site-v4 .page-heading h1{font-size:20px!important}
@@ -122,9 +132,9 @@ html.site-v4{background:#eef2f5}
 
 @media(max-width:520px){
   .site-v4 .container,.site-v4 .narrow{width:calc(100% - 16px)}
-  .site-v4 .site-header .brand img{width:126px}
+  .site-v4 .site-header .brand img{width:112px}
   .site-v4 .nav-toggle span:last-child{display:none}
-  .site-v4 .global-register-cta,.site-v4 .header-newsletter-cta{padding:0 8px!important}
+  .site-v4 .header-login-cta,.site-v4 .header-register-cta{min-height:32px;padding:0 6px;font-size:8px}
   .v4-fallback-head{align-items:flex-start;flex-direction:column}
   .v4-fallback-head .button{width:100%}
   .v4-reference-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
