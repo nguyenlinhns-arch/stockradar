@@ -1,4 +1,4 @@
-# StockRadar Email Specification V2.1.3
+# StockRadar Email Specification V2.1.4
 
 Email is the primary retention channel for registered users and the premium delivery channel for Trial/Paid users.
 
@@ -26,6 +26,57 @@ Public copy may say: “MIỄN PHÍ: nhận bản rà soát thị trường cơ 
 - Post-session digest: new/closed records and lifecycle summary.
 - Weekly transparency report: open/closed/unactivated counts and upcoming watch items.
 
+## Daily report date contract — mandatory
+
+Every daily email must make the calendar date and data freshness unambiguous.
+
+Required fields:
+
+- `report_date`: the Vietnam calendar date on which this report is issued, formatted `dd/mm/yyyy`.
+- `data_cutoff_at`: the exact latest verified source/snapshot time used in the report, including Vietnam time `(GMT+7)` when available.
+- `market_session_reference`: the trading-session date represented by the main market data. This may be earlier than `report_date`, especially for the 09:00 pre-session report.
+- `generated_at`: the email-generation timestamp in Vietnam time.
+
+Rules:
+
+1. The email subject MUST include `report_date`.
+2. The first visible block in the email MUST repeat `report_date` and the data cutoff/session reference.
+3. Never describe an older snapshot as “hôm nay” without also displaying its actual snapshot/session date.
+4. The 09:00 daily report uses the latest verified data available at generation time. If that data is from the previous trading session, show both dates explicitly.
+5. On weekends/holidays, the subject still uses the current `report_date`, while `market_session_reference` must identify the last verified trading session.
+6. If a report is regenerated after a correction, prepend `[CẬP NHẬT]` or `[ĐÍNH CHÍNH]` and preserve the same `report_date`; show the new `generated_at`/`data_cutoff_at`.
+7. Do not fabricate a cutoff time. If an exact source timestamp is unavailable, state the strongest verified boundary such as `Đóng cửa phiên dd/mm/yyyy`.
+
+Canonical daily subject:
+
+`[StockRadar][dd/mm/yyyy] Báo cáo thị trường hàng ngày`
+
+Canonical Premium subject when useful:
+
+`[StockRadar Pro][dd/mm/yyyy] Top HOSE & điểm hành động`
+
+Canonical first block:
+
+- `Ngày báo cáo: dd/mm/yyyy`
+- `Dữ liệu chốt đến: HH:mm – dd/mm/yyyy (GMT+7)` or the strongest verified session boundary
+- `Phiên tham chiếu: dd/mm/yyyy`
+- `Tạo lúc: HH:mm – dd/mm/yyyy (GMT+7)`
+
+## Standard daily email layout
+
+Daily reports should follow one stable reading order so recipients can compare one day with another quickly:
+
+1. Date/freshness block.
+2. Market state: VN-Index/market regime, breadth, liquidity and material risk change when supported by data.
+3. Top 5 objective HOSE setups for the report horizon, only when the full-universe/snapshot gate is satisfied.
+4. Top 5 objective stocks by sector/sector view where sufficient data exists; never force five names if the gate is not met.
+5. New actions/changes since the prior report: Pocket Pivot, Early Breakout, Confirmed Breakout, Retest/Add-on, Reduce, Stop/Exit.
+6. For each actionable Premium item: current price, setup, Buy Zone, position-sizing guidance, Stop-loss, near target, 3–6 month target when supported, Upside/Downside, Risk/Reward, expected horizon and invalidation condition.
+7. Lifecycle summary for previously published market-wide recommendations: waiting/activated/invalidated/target/stop/expired/closed as applicable.
+8. Data-quality note, informational/educational boundary and preference/unsubscribe controls.
+
+If no new recommendation passes the gate, say so clearly. Never create a recommendation merely to fill the email.
+
 ## Premium feature copy
 
 Premium may include:
@@ -40,13 +91,31 @@ Premium may include:
 
 Verified consent, confirmed sender/domain, unsubscribe and preference center, suppression list, bounce/complaint processing, delivery log, signed links, idempotency key, duplicate protection, debounce and cooldown are mandatory.
 
-Official in-session scan checkpoints are 10:30, 11:15, 13:30 and 14:15 Vietnam time. Worker cadence may be higher, but alerts require confirmation and must not claim tick-level realtime.
+The standard daily report delivery target is 09:00 Vietnam time. Official in-session scan checkpoints are 10:30, 11:15, 13:30 and 14:15 Vietnam time. Worker cadence may be higher, but alerts require confirmation and must not claim tick-level realtime.
 
 If no new recommendation passes the gate, the paid email says so and may summarize existing market-wide records, followed tickers selected by that recipient, market state, Top changes and risk alerts. It never creates a recommendation merely to fill an email.
 
+## Event-alert date contract
+
+Every in-session alert subject must also contain the Vietnam signal date.
+
+Examples:
+
+- `[CHỨNG KHOÁN][dd/mm/yyyy] ĐẠT ĐIỂM MUA – <MÃ>`
+- `[CHỨNG KHOÁN][dd/mm/yyyy] CẢNH BÁO BÁN – <MÃ>`
+
+The first visible block must include the signal time and source/data time in GMT+7.
+
 ## Internal highest-tier recipients
 
-`nguyenlinhns@gmail.com` and `Anh.le2910@gmail.com` are internal/admin recipients that should receive the highest available Premium version by default. This internal rule must never be surfaced to public/customer-facing output. It does not authorize bypassing provider/compliance/delivery security gates.
+The following internal/admin recipients should receive the highest available Premium version by default:
+
+- `nguyenlinhns@gmail.com`
+- `Anh.le2910@gmail.com`
+- `phuonghan666@gmail.com`
+- `leanhtkv@gmail.com`
+
+All four should receive the same highest-tier report version and the same event-alert content/timing, subject to provider/compliance/delivery security gates. This internal rule must never be surfaced to public/customer-facing output.
 
 ## Implemented foundation — 2026-09-03
 
