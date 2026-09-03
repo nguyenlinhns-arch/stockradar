@@ -5,17 +5,59 @@
   const numberFormat = new Intl.NumberFormat('vi-VN');
 
   function ensureStyles() {
-    if (document.querySelector('link[data-home-density-style]')) return;
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'assets/home-density.css?v=20260903-home2';
-    link.dataset.homeDensityStyle = '';
-    document.head.append(link);
+    if (!document.querySelector('link[data-home-density-style]')) {
+      const density = document.createElement('link');
+      density.rel = 'stylesheet';
+      density.href = 'assets/home-density.css?v=20260903-home2';
+      density.dataset.homeDensityStyle = '';
+      document.head.append(density);
+    }
+    if (!document.querySelector('link[data-home-balance-style]')) {
+      const balance = document.createElement('link');
+      balance.rel = 'stylesheet';
+      balance.href = 'assets/home-balance-v8.css?v=20260903-balance8';
+      balance.dataset.homeBalanceStyle = '';
+      document.head.append(balance);
+    }
   }
 
   function removeLegacySecondaryBlocks() {
     const legacySection = document.querySelector('.home-secondary-grid');
     if (legacySection) legacySection.remove();
+  }
+
+  function simplifyHomepageCopy() {
+    const recommendation = document.querySelector('.home-recommendation-panel');
+    const sector = document.querySelector('.home-sector-panel');
+
+    if (recommendation) {
+      const heading = recommendation.querySelector('.home-panel-head h2');
+      if (heading) heading.textContent = 'Cổ phiếu đang theo dõi';
+
+      const summaryItems = recommendation.querySelectorAll('.home-recommendation-summary > div');
+      if (summaryItems[0]) {
+        const label = summaryItems[0].querySelector('span');
+        const note = summaryItems[0].querySelector('small');
+        if (label) label.textContent = 'Tín hiệu hành động';
+        if (note) note.textContent = 'Chưa có mã đạt chuẩn hành động.';
+      }
+      if (summaryItems[1]) {
+        const label = summaryItems[1].querySelector('span');
+        const note = summaryItems[1].querySelector('small');
+        if (label) label.textContent = 'Danh sách theo dõi';
+        if (note) note.textContent = '16 mã HOSE đang được theo dõi.';
+      }
+
+      const watchNote = recommendation.querySelector('.home-watch-note');
+      if (watchNote) watchNote.textContent = 'Khi có tín hiệu: Buy Zone · Tỷ trọng · Stop · Target · R:R.';
+    }
+
+    if (sector) {
+      const heading = sector.querySelector('.home-panel-head h2');
+      const description = sector.querySelector('.home-panel-head p');
+      if (heading) heading.textContent = 'Theo nhóm ngành';
+      if (description) description.textContent = '8 nhóm ngành trên HOSE.';
+    }
   }
 
   function text(target, value) {
@@ -97,6 +139,7 @@
   async function mount() {
     ensureStyles();
     removeLegacySecondaryBlocks();
+    simplifyHomepageCopy();
     const root = document.querySelector('[data-home-market-data]');
     if (!root) return;
     const message = root.querySelector('[data-home-market-status]');
@@ -131,5 +174,6 @@
 
   ensureStyles();
   removeLegacySecondaryBlocks();
+  simplifyHomepageCopy();
   document.addEventListener('DOMContentLoaded', mount);
 })();
