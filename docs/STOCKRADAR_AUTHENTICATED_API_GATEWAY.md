@@ -44,7 +44,11 @@ Approvals are append-only events in `private.stock_api_approval_events` and are 
 
 Successful activation sets the exact active manifest/snapshot and writes an `ENABLE` audit record to `private.stock_api_activation_events`.
 
-`deactivate_stockradar_api(...)` closes the API, clears active gate bindings and writes a `DISABLE` audit record. Approval and activation history is not rewritten.
+A later `granted=false` event for DATA_RIGHTS or COMPLIANCE on the currently active manifest/snapshot automatically closes the API in the **same transaction**, clears the active bindings and writes a `DISABLE` audit event with `AUTO_REVOKE` evidence. This prevents rights/compliance revocation from depending on a later worker run or deployment.
+
+`deactivate_stockradar_api(...)` also supports deliberate operational shutdown, clears active gate bindings and writes a `DISABLE` audit record. Approval and activation history is not rewritten.
+
+Approval recording, activation and deactivation share a PostgreSQL advisory lock so a concurrent grant/revocation cannot race an activation decision.
 
 All approval/activation functions are `SECURITY DEFINER`, use an empty `search_path`, and are executable only by `service_role`. Browser roles receive no table or RPC access.
 
