@@ -1,6 +1,8 @@
 (() => {
   'use strict';
 
+  const DIRECT_SIGNUP_ROUTE = 'signup/';
+
   function emailDeliveryReady() {
     return window.STOCKRADAR_AUTH_CONFIG?.emailDeliveryReady === true;
   }
@@ -19,6 +21,10 @@
 
   function registrationUrl() {
     return new URL('dang-ky/', document.baseURI).href;
+  }
+
+  function directSignupUrl() {
+    return new URL(DIRECT_SIGNUP_ROUTE, document.baseURI).href;
   }
 
   function setSearchMessage(form, message, kind = '') {
@@ -106,6 +112,7 @@
     if (mobile) mobile.textContent = 'Xem gói';
 
     emailDeliveryReady();
+    directSignupUrl();
   }
 
   function mount() {
