@@ -24,6 +24,17 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("privacy_accepted", policy)
         self.assertIn("2026-09-03", policy)
 
+    def test_public_email_flows_fail_closed_until_smtp_is_ready(self) -> None:
+        config = (WEBSITE / "assets" / "auth-config.js").read_text(encoding="utf-8")
+        gate = (WEBSITE / "assets" / "auth-email-gate.js").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        self.assertIn("emailDeliveryReady: false", config)
+        self.assertIn("emailDeliveryReady", gate)
+        self.assertIn("data-auth-signup-form", gate)
+        self.assertIn("data-auth-login-otp-form", gate)
+        self.assertIn("data-auth-forgot-form", gate)
+        self.assertIn('STOCKRADAR_AUTH_EMAIL_READY: "0"', workflow)
+
     def test_unverified_users_can_resume_with_login_otp(self) -> None:
         login = (WEBSITE / "dang-nhap" / "index.html").read_text(encoding="utf-8")
         extra = (WEBSITE / "assets" / "auth-extra.js").read_text(encoding="utf-8")
