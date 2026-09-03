@@ -22,6 +22,11 @@ REQUIRED_EMAIL_ASSETS = (
     "assets/email-preferences.css",
     "assets/email-interest.js",
 )
+REQUIRED_HOME_ASSETS = (
+    "assets/home-dashboard.js",
+    "assets/home-dashboard.css",
+    "assets/home-density.css",
+)
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
     "kien-thuc/index.html",
@@ -89,7 +94,7 @@ def main() -> None:
         if (output / route).exists():
             errors.append(f"excluded route published: {route}")
 
-    for asset in (*REQUIRED_UX_ASSETS, *REQUIRED_EMAIL_ASSETS):
+    for asset in (*REQUIRED_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_ASSETS):
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
@@ -110,12 +115,43 @@ def main() -> None:
         "index.html",
         (
             'data-email-conversion',
+            'href="dang-ky/"',
+            'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
+            'home-ticker-grid',
+            '<b>ACB</b>',
+            '<b>VNM</b>',
+            'Khuyến nghị đã phát hành',
+            '<strong>0 mã</strong>',
+            'Danh sách tham chiếu đang theo dõi',
+            '<strong>16 mã</strong>',
+            'assets/home-dashboard.js',
+        ),
+        errors,
+    )
+    require_text(
+        output,
+        "dang-ky/index.html",
+        (
+            'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
             'data-email-interest-form',
             'name="daily_brief"',
             'name="event_alerts"',
             'assets/email-interest.js',
-            'Đăng ký nhận email',
-            'xác minh',
+            'assets/home-density.css',
+        ),
+        errors,
+    )
+    require_text(
+        output,
+        "khuyen-nghi/index.html",
+        (
+            'Khuyến nghị đã phát hành',
+            '<strong>0 mã</strong>',
+            'Mã tham chiếu đang theo dõi',
+            '<strong>16 mã</strong>',
+            '<b>ACB</b>',
+            '<b>VNM</b>',
+            'không phải khuyến nghị mua',
         ),
         errors,
     )
@@ -147,7 +183,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; email registration funnel present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; dense home + registration + concrete ticker surfaces present")
 
 
 if __name__ == "__main__":

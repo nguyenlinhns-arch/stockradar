@@ -1,16 +1,44 @@
 <!doctype html>
 <html lang="vi" data-api-mode="auto">
-<head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Danh sách khuyến nghị StockRadar theo trạng thái, vùng mua, mục tiêu, rủi ro và hiệu quả."><title>Khuyến nghị — StockRadar</title><link rel="icon" href="assets/logo.svg"><link rel="stylesheet" href="assets/styles.css?v=20260902-data1"><script src="assets/app.js?v=20260902-data1" defer></script></head>
+<head>
+  <base href="../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Danh sách khuyến nghị StockRadar đã phát hành và danh mục cổ phiếu HOSE tham chiếu đang theo dõi.">
+  <title>Khuyến nghị — StockRadar</title>
+  <link rel="icon" href="assets/logo.svg">
+  <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
+  <link rel="stylesheet" href="assets/home-density.css?v=20260903-home2">
+  <script src="assets/app.js?v=20260902-data1" defer></script>
+</head>
 <body data-proposition="active-recommendations">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
-  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/" aria-current="page">Khuyến nghị</a><a href="thay-doi-hom-nay/">Thay đổi</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
+  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/" aria-current="page">Khuyến nghị</a><a href="nganh/">Theo ngành</a><a href="hieu-qua/">Hiệu quả</a><a href="dang-ky/">Đăng ký</a></nav></div></header>
   <main id="content">
-    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Khuyến nghị</span></nav><h1>Khuyến nghị</h1></div><div class="page-heading-actions"><span class="data-pill">DATA GATE</span><a class="button button-secondary button-small" href="hieu-qua/">Hiệu quả</a></div></div></section>
+    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Khuyến nghị</span></nav><h1>Khuyến nghị StockRadar</h1><p>Chỉ các mã đã vượt đủ điều kiện dữ liệu và phát hành mới xuất hiện dưới nhãn khuyến nghị.</p></div><div class="page-heading-actions"><span class="data-pill">TRẠNG THÁI PHÁT HÀNH</span><a class="button button-primary button-small" href="dang-ky/">Đăng ký bản tin</a></div></div></section>
+
     <section class="recommendations-workspace"><div class="container">
+      <div class="home-recommendation-status">
+        <article><span>Khuyến nghị đã phát hành</span><strong>0 mã</strong><small>Chưa có mã được phát hành ở snapshot công khai hiện tại.</small></article>
+        <article><span>Mã tham chiếu đang theo dõi</span><strong>16 mã</strong><small>Danh sách bên dưới để tra cứu và theo dõi dữ liệu, không phải khuyến nghị mua.</small></article>
+      </div>
+
       <div class="recommendation-filters" aria-label="Lọc vòng đời khuyến nghị"><button class="is-active" type="button" data-recommendation-filter="ALL">Tất cả</button><button type="button" data-recommendation-filter="OPEN">Đang mở</button><button type="button" data-recommendation-filter="UNACTIVATED">Chưa kích hoạt</button><button type="button" data-recommendation-filter="CLOSED">Đã đóng</button></div>
-      <div class="recommendation-table loading" data-recommendations><div class="empty">Đang tải khuyến nghị…</div></div>
-      <section class="public-journal" id="nhat-ky"><header><div><span class="panel-label">NHẬT KÝ TRẠNG THÁI</span><h2>Biến động gần nhất</h2></div></header><div class="journal-timeline" data-recommendation-journal><div class="empty">Đang tải nhật ký…</div></div></section>
+      <div class="recommendation-table loading" data-recommendations><div class="empty">Hiện chưa có khuyến nghị được phát hành.</div></div>
+
+      <section class="recommendation-reference-list" aria-labelledby="reference-watch-title">
+        <header><div><span class="panel-label">DANH SÁCH THAM CHIẾU</span><h2 id="reference-watch-title">Các mã đang có trên StockRadar</h2></div><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu từng mã</a></header>
+        <div class="home-ticker-grid recommendation-ticker-grid">
+          <span><b>ACB</b><small>Ngân hàng</small></span><span><b>BID</b><small>Ngân hàng</small></span><span><b>CTG</b><small>Ngân hàng</small></span><span><b>FPT</b><small>Công nghệ</small></span>
+          <span><b>GAS</b><small>Dầu khí</small></span><span><b>HCM</b><small>Chứng khoán</small></span><span><b>HDB</b><small>Ngân hàng</small></span><span><b>HPG</b><small>Thép</small></span>
+          <span><b>HSG</b><small>Thép</small></span><span><b>MBB</b><small>Ngân hàng</small></span><span><b>MWG</b><small>Bán lẻ</small></span><span><b>SSI</b><small>Chứng khoán</small></span>
+          <span><b>TCB</b><small>Ngân hàng</small></span><span><b>VCI</b><small>Chứng khoán</small></span><span><b>VIC</b><small>Bất động sản</small></span><span><b>VNM</b><small>Hàng tiêu dùng</small></span>
+        </div>
+        <p class="recommendation-reference-note">Khi một mã được phát hành thành khuyến nghị, bảng phía trên mới hiển thị các trường hành động tương ứng như trạng thái, vùng mua, cắt lỗ, mục tiêu và vòng đời khuyến nghị.</p>
+      </section>
+
+      <section class="public-journal" id="nhat-ky"><header><div><span class="panel-label">NHẬT KÝ TRẠNG THÁI</span><h2>Biến động gần nhất</h2></div></header><div class="journal-timeline" data-recommendation-journal><div class="empty">Chưa có nhật ký khuyến nghị được phát hành.</div></div></section>
     </div></section>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="dang-ky/">Đăng ký</a></div></div><p class="disclaimer">Không gắn nhãn khuyến nghị cho mã chỉ đang nằm trong danh mục tham chiếu.</p></div></footer>
 </body></html>

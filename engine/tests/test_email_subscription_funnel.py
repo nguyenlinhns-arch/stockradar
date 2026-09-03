@@ -77,18 +77,40 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("Free accounts are always suppressed for product content", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
-    def test_homepage_has_email_conversion_surface(self):
+    def test_homepage_has_visible_registration_cta_and_concrete_tickers(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
-        self.assertIn("data-email-interest-form", home)
-        self.assertIn('name="daily_brief" type="checkbox"', home)
-        self.assertIn('name="event_alerts" type="checkbox"', home)
-        self.assertNotIn('name="daily_brief" type="checkbox" checked', home)
-        self.assertNotIn('name="event_alerts" type="checkbox" checked', home)
-        self.assertIn("Đăng ký nhận email", home)
-        self.assertIn("Báo cáo mỗi ngày + cảnh báo mua/bán", home)
-        self.assertIn("chưa xác minh", home)
-        self.assertIn("tối đa 30 ngày", home)
+        self.assertIn('href="dang-ky/"', home)
+        self.assertIn("Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn", home)
+        self.assertIn("home-ticker-grid", home)
+        self.assertIn("Ngân hàng TMCP Á Châu", home)
+        self.assertIn("Công ty Cổ phần Sữa Việt Nam", home)
+        self.assertIn("Khuyến nghị đã phát hành", home)
+        self.assertIn("0 mã", home)
+        self.assertIn("Danh sách tham chiếu đang theo dõi", home)
+        self.assertIn("16 mã", home)
+        self.assertIn("assets/home-dashboard.js", home)
+
+    def test_dedicated_registration_page_collects_interest_without_prechecking(self):
+        register = self.read("website/dang-ky/index.html")
+        self.assertIn("Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn", register)
+        self.assertIn("data-email-interest-form", register)
+        self.assertIn('name="daily_brief" type="checkbox"', register)
+        self.assertIn('name="event_alerts" type="checkbox"', register)
+        self.assertNotIn('name="daily_brief" type="checkbox" checked', register)
+        self.assertNotIn('name="event_alerts" type="checkbox" checked', register)
+        self.assertIn("assets/email-interest.js", register)
+        self.assertIn("assets/home-density.css", register)
+
+    def test_recommendation_page_separates_published_recommendations_from_reference_tickers(self):
+        page = self.read("website/khuyen-nghi/index.html")
+        self.assertIn("Khuyến nghị đã phát hành", page)
+        self.assertIn("0 mã", page)
+        self.assertIn("Mã tham chiếu đang theo dõi", page)
+        self.assertIn("16 mã", page)
+        self.assertIn("ACB", page)
+        self.assertIn("VNM", page)
+        self.assertIn("không phải khuyến nghị mua", page)
 
     def test_public_interest_client_calls_edge_without_privileged_secret(self):
         client = self.read("website/assets/email-interest.js")
