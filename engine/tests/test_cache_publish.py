@@ -71,6 +71,22 @@ def manifest_payload():
     }
 
 
+def report_payload(ticker, horizon, score, price):
+    return {
+        "ticker": ticker,
+        "horizon": horizon,
+        "data_status": "READY",
+        "data_grade": "DECISION_GRADE",
+        "current_price": price,
+        "new_position_state": "CHỜ MUA",
+        "holding_state": "THEO DÕI",
+        "score": score,
+        "probability_calibrated": False,
+        "thesis": ["Fundamental và cấu trúc giá cùng khung."],
+        "risks": ["Luận điểm vô hiệu nếu cấu trúc kỹ thuật bị phá vỡ."],
+    }
+
+
 def batch_payload():
     return {
         "contract_version": "1.0",
@@ -81,24 +97,14 @@ def batch_payload():
                 "horizon": "SHORT_TERM",
                 "generated_at": "2026-09-03T11:45:00+07:00",
                 "expires_at": "2026-09-03T12:45:00+07:00",
-                "payload": {
-                    "ticker": "MBB",
-                    "horizon": "SHORT_TERM",
-                    "data_status": "READY",
-                    "score": 82,
-                },
+                "payload": report_payload("MBB", "SHORT_TERM", 82, 30.5),
             },
             {
                 "ticker": "HPG",
                 "horizon": "MEDIUM_TERM",
                 "generated_at": "2026-09-03T11:45:00+07:00",
                 "expires_at": "2026-09-03T12:45:00+07:00",
-                "payload": {
-                    "ticker": "HPG",
-                    "horizon": "MEDIUM_TERM",
-                    "data_status": "READY",
-                    "score": 79,
-                },
+                "payload": report_payload("HPG", "MEDIUM_TERM", 79, 28.4),
             },
         ],
     }
