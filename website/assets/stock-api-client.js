@@ -78,10 +78,10 @@
       : 'KHÔNG CÔNG BỐ';
 
     container.innerHTML = `
-      <section class="live-stock-report" aria-live="polite">
+      <section class="live-stock-report premium-live-stock-report" aria-live="polite">
         <header class="live-report-head">
-          <div><span class="panel-label">DỮ LIỆU TÀI KHOẢN · ${escapeHtml(HORIZONS[selectedHorizon])}</span><h1>${escapeHtml(ticker)}</h1><p>${escapeHtml(company)}${company && sector ? ' · ' : ''}${escapeHtml(sector)}</p></div>
-          <span class="data-pill">DECISION-GATED</span>
+          <div><span class="panel-label">PREMIUM · ${escapeHtml(HORIZONS[selectedHorizon])}</span><h1>${escapeHtml(ticker)}</h1><p>${escapeHtml(company)}${company && sector ? ' · ' : ''}${escapeHtml(sector)}</p></div>
+          <span class="data-pill">PREMIUM</span>
         </header>
         <nav class="live-horizon-tabs" aria-label="Khung đầu tư">
           ${Object.entries(HORIZONS).map(([value, label]) => `<button type="button" data-live-horizon="${value}" class="${value === selectedHorizon ? 'is-active' : ''}">${label}</button>`).join('')}
@@ -146,6 +146,8 @@
 
   async function mountAuthenticatedStockReport() {
     const staticTarget = document.querySelector('[data-dynamic-stock-report]');
+    const premiumTarget = document.querySelector('[data-premium-stock-report]');
+    const premiumGateCopy = document.querySelector('[data-premium-gate-copy]');
     const ticker = tickerFromLocation();
     if (!staticTarget || !ticker) return;
 
@@ -158,11 +160,16 @@
 
     const ensureLiveContainer = () => {
       if (liveContainer) return liveContainer;
-      liveContainer = document.createElement('div');
-      liveContainer.className = 'container stock-api-live';
-      liveContainer.setAttribute('data-stock-api-live', '');
-      staticTarget.before(liveContainer);
-      staticTarget.hidden = true;
+      if (premiumTarget) {
+        liveContainer = premiumTarget;
+        liveContainer.hidden = false;
+      } else {
+        liveContainer = document.createElement('div');
+        liveContainer.className = 'stock-api-live';
+        liveContainer.setAttribute('data-stock-api-live', '');
+        staticTarget.after(liveContainer);
+      }
+      if (premiumGateCopy) premiumGateCopy.hidden = true;
       return liveContainer;
     };
 
@@ -185,7 +192,7 @@
       return true;
     };
 
-    try { await load(horizon); } catch (_) { /* Keep the fail-closed static surface. */ }
+    try { await load(horizon); } catch (_) { /* Keep Free and Premium-gate surfaces fail closed. */ }
   }
 
   document.addEventListener('DOMContentLoaded', mountAuthenticatedStockReport);
