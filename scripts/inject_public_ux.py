@@ -72,6 +72,13 @@ def inject_registration_cta(source: str, page: Path, output: Path) -> str:
     return source[: match.start(2)] + cta + source[match.start(2) :]
 
 
+def route_specific_head(source: str, page: Path, output: Path) -> str:
+    if page.parent.name == "khuyen-nghi":
+        css = asset_href(source, page, output, "recommendation-dense-v3.css")
+        return f'<link rel="stylesheet" href="{css}?v=20260903-reco3">\n'
+    return ""
+
+
 def inject_page(page: Path, output: Path) -> None:
     source = sanitize_public_html(page.read_text(encoding="utf-8"))
     source = inject_registration_cta(source, page, output)
@@ -85,9 +92,10 @@ def inject_page(page: Path, output: Path) -> None:
     public_js = asset_href(source, page, output, "public-ux.js")
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
     head = (
-        f'<link rel="stylesheet" href="{css}?v=20260903-public2" {HEAD_MARKER}>\n'
-        f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
-        f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
+        route_specific_head(source, page, output)
+        + f'<link rel="stylesheet" href="{css}?v=20260903-public2" {HEAD_MARKER}>\n'
+        + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
+        + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
@@ -101,6 +109,7 @@ def main() -> None:
         output / "assets" / "public-ux.css",
         output / "assets" / "public-ux.js",
         output / "assets" / "auth-production-gate.js",
+        output / "assets" / "recommendation-dense-v3.css",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
