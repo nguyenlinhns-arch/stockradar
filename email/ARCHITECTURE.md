@@ -6,18 +6,17 @@ Status: signup/consent and pre-auth interest capture foundations implemented; no
 
 Transactional mail is available where required for every account tier.
 
-Product email is split by entitlement:
+Free accounts receive transactional email only. Product email is Premium-only:
 
-- `daily` Free brief: eligible only for a verified, explicitly consented Free/Trial/Paid account with the daily preference enabled. Free content is market-wide/basic and must not expose Premium buy/sell-map detail.
-- Premium `daily`: Trial/Paid only after verification and explicit product consent.
+- `daily`: Trial/Paid only after email verification and explicit product consent.
 - `state_change` / buy-sell event alerts: Trial/Paid only after verification and explicit product consent.
-- `post_session` and `weekly`: Trial/Paid only unless a future spec explicitly defines a Free variant.
+- `post_session` and `weekly`: Trial/Paid only.
 
-A Free user may retain interest in Premium-only alert preferences, but this is **preference data, not delivery entitlement**. The private eligibility layer must mask Premium-only products until the tier is Trial/Paid. Paid content is ordered by that recipient's own watchlist ticker, preferred horizon and sector before general items.
+A Free user may retain interest in Premium email preferences, but this is **preference data, not delivery entitlement**. The private eligibility layer must keep product-email delivery disabled until the tier is Trial/Paid. Paid content is ordered by that recipient's own watchlist ticker, preferred horizon and sector before general items.
 
 ## Pre-auth email interest path
 
-While production Auth SMTP remains closed, the public homepage may collect a minimal pending registration request without pretending that signup or delivery is complete.
+While production Auth SMTP remains closed, the public website may collect a minimal pending registration request without pretending that signup or delivery is complete.
 
 1. The visitor enters an email and explicitly selects `DAILY_BRIEF`, `EVENT_ALERT`, or both. Nothing is pre-checked.
 2. The visitor explicitly accepts the current privacy/consent version.
@@ -25,7 +24,7 @@ While production Auth SMTP remains closed, the public homepage may collect a min
 4. The Edge Function enforces allowed origins, JSON/body limits, a honeypot and a daily-hashed technical request fingerprint for rate limiting.
 5. Only the Edge Function's service role may invoke `public.capture_email_subscription_interest`; `anon` and `authenticated` have no direct execute grant.
 6. The request is stored in `private.email_subscription_intents` as `PENDING_VERIFICATION` for at most 30 days. It is **interest only** and never authorizes delivery.
-7. Premium-alert interest from this queue never bypasses Trial/Paid entitlement. Actual delivery still requires normal email verification, consent, suppression checks, product entitlement and the delivery gate.
+7. Interest from this queue never bypasses Trial/Paid entitlement. Actual product-email delivery still requires normal email verification, consent, suppression checks, Premium entitlement and the delivery gate.
 
 This queue is intentionally separate from `public.product_email_preferences` and `private.product_email_eligibility`. A future verification/claim flow may reconcile a pending request only after control of the email address has been proven.
 
@@ -33,7 +32,7 @@ This queue is intentionally separate from `public.product_email_preferences` and
 
 | Window | Purpose | Default content |
 | --- | --- | --- |
-| 09:00 Vietnam time | Daily pre-session report | explicit report date/data cutoff, market state, objective Top 5 HOSE when the full-universe gate passes, objective sector view, existing lifecycle changes and known event risks; Free/Premium depth follows entitlement |
+| 09:00 Vietnam time | Daily pre-session report | Premium only: explicit report date/data cutoff, market state, objective ranked list when the full-universe gate passes, sector view, lifecycle changes and known event risks |
 | 10:30 / 11:15 / 13:30 / 14:15 | Confirmed state changes | Premium only: P0 risk/invalidation, then P1 readiness/trigger |
 | After session | Freeze the close | Premium snapshot summary, new/changed/expired recommendations |
 | Weekly | Review process | Premium state transitions, immutable outcomes and method note |
@@ -88,28 +87,22 @@ The delivery worker may retry the same operation but must never create a second 
 - P2: thesis/fundamental event.
 - P3: watch-state improvement and low-urgency digest material.
 
-Suppress when data is MOCK/STALE/INSUFFICIENT, the state did not materially change, confirmation failed, cooldown is active, consent is missing, or the recommendation has expired/closed. P0 may bypass ordinary digest batching but never consent, tier-entitlement or data-quality gates.
+Suppress when data is MOCK/STALE/INSUFFICIENT, the state did not materially change, confirmation failed, cooldown is active, consent is missing, tier is not Trial/Paid, or the recommendation has expired/closed. P0 may bypass ordinary digest batching but never consent, tier-entitlement or data-quality gates.
 
 ## Highest-tier internal delivery
 
-The internal/admin highest-tier group is:
-
-- `nguyenlinhns@gmail.com`
-- `Anh.le2910@gmail.com`
-- `phuonghan666@gmail.com`
-- `leanhtkv@gmail.com`
-
-All four receive the same highest available Premium report/alert version when delivery is permitted by the production security gate. This group is internal-only metadata and must not appear in public/customer-facing content.
+The internal/admin highest-tier group is maintained in private operational configuration. Members receive the same highest available Premium report/alert version when delivery is permitted by the production security gate. This group is internal-only metadata and must not appear in public/customer-facing content.
 
 ## Signup and preference path
 
 Once production Auth email delivery is ready, the account-based funnel is the authoritative path:
 
-1. Signup collects email/password plus optional, non-prechecked `DAILY_BRIEF` and `EVENT_ALERT` intent.
+1. Signup collects email/password plus optional, non-prechecked `DAILY_BRIEF` and `EVENT_ALERT` interest.
 2. Terms/Privacy acceptance and product-email consent are recorded server-side.
-3. Email verification activates the account. A consented Free daily preference may then be enabled; actual sending still depends on the delivery gate.
-4. Account settings allow preference changes and consent withdrawal.
-5. Watchlist rows can store per-ticker `alert_enabled`; this does not bypass the Premium event-alert entitlement.
+3. Email verification activates the account. Free remains ineligible for product email; selected product preferences stay stored as interest only.
+4. Trial/Paid may enable selected product emails after verification, consent and delivery-gate checks.
+5. Account settings allow preference changes and consent withdrawal.
+6. Watchlist rows can store per-ticker `alert_enabled`; this does not bypass Premium entitlement.
 
 The browser never becomes the email sender and never holds provider secrets.
 
