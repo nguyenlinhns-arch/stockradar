@@ -34,6 +34,7 @@ def main() -> None:
     required_files = [
         "assets/auth.js",
         "assets/auth-policy.js",
+        "assets/auth-account-security.js",
         "assets/auth-extra.js",
         "signup/index.html",
         "dang-nhap/index.html",
@@ -50,6 +51,7 @@ def main() -> None:
     account = require(site / "tai-khoan" / "index.html")
     auth = require(site / "assets" / "auth.js")
     policy = require(site / "assets" / "auth-policy.js")
+    account_security = require(site / "assets" / "auth-account-security.js")
     extra = require(site / "assets" / "auth-extra.js")
 
     checks = {
@@ -62,6 +64,8 @@ def main() -> None:
         "OTP resend": ("auth.resend", auth + extra),
         "consent metadata": ("terms_accepted", policy),
         "account profile": ("data-account-tier", account),
+        "current password input": ("name=\"current_password\"", account),
+        "current password enforcement": ("currentPassword", account_security),
         "account deletion UI": ("data-delete-account-form", account),
         "account deletion function": ("delete-account", extra),
     }
@@ -71,9 +75,16 @@ def main() -> None:
 
     # Every deployed HTML page should receive the same public auth bundle when auth is enabled.
     sample_pages = [site / "index.html", site / "signup" / "index.html", site / "dang-nhap" / "index.html"]
+    bundle = (
+        "assets/auth-config.js",
+        "assets/auth-policy.js",
+        "assets/auth-account-security.js",
+        "assets/auth.js",
+        "assets/auth-extra.js",
+    )
     for page in sample_pages:
         source = require(page)
-        for asset in ("assets/auth-config.js", "assets/auth-policy.js", "assets/auth.js", "assets/auth-extra.js"):
+        for asset in bundle:
             if asset not in source:
                 raise SystemExit(f"{page} missing injected auth asset {asset}")
 
