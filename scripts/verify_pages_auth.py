@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail the Pages release if production auth is incomplete or unsafe."""
+"""Fail the Pages release if production auth is incomplete, unsafe, or over-injected."""
 
 from __future__ import annotations
 
@@ -8,10 +8,44 @@ import re
 from pathlib import Path
 
 
+SUPABASE_CDN = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
+FULL_AUTH_ASSETS = (
+    "assets/auth-config.js",
+    "assets/auth-email-gate.js",
+    "assets/auth-policy.js",
+    "assets/auth-account-security.js",
+    "assets/auth.js",
+    "assets/auth-extra.js",
+    "assets/auth-delete-security.js",
+)
+HEAVY_AUTH_ASSETS = (
+    "assets/auth-email-gate.js",
+    "assets/auth-policy.js",
+    "assets/auth-account-security.js",
+    "assets/auth.js",
+    "assets/auth-extra.js",
+    "assets/auth-delete-security.js",
+    "assets/auth.css",
+    "assets/auth-extra.css",
+)
+
+
 def require(path: Path) -> str:
     if not path.is_file():
         raise SystemExit(f"missing required auth artifact: {path}")
     return path.read_text(encoding="utf-8")
+
+
+def require_all(source: str, markers: tuple[str, ...], label: str) -> None:
+    missing = [marker for marker in markers if marker not in source]
+    if missing:
+        raise SystemExit(f"{label} missing auth markers: {', '.join(missing)}")
+
+
+def reject_all(source: str, markers: tuple[str, ...], label: str) -> None:
+    present = [marker for marker in markers if marker in source]
+    if present:
+        raise SystemExit(f"{label} unexpectedly loads heavy auth assets: {', '.join(present)}")
 
 
 def main() -> None:
@@ -46,13 +80,18 @@ def main() -> None:
         "tai-khoan/index.html",
         "dieu-khoan/index.html",
         "quyen-rieng-tu/index.html",
+        "co-phieu/index.html",
+        "index.html",
     ]
     for relative in required_files:
         require(site / relative)
 
     signup = require(site / "signup" / "index.html")
     login = require(site / "dang-nhap" / "index.html")
+    reset = require(site / "dat-lai-mat-khau" / "index.html")
     account = require(site / "tai-khoan" / "index.html")
+    stock = require(site / "co-phieu" / "index.html")
+    home = require(site / "index.html")
     auth = require(site / "assets" / "auth.js")
     email_gate = require(site / "assets" / "auth-email-gate.js")
     policy = require(site / "assets" / "auth-policy.js")
@@ -82,22 +121,27 @@ def main() -> None:
     if missing:
         raise SystemExit("auth release checks failed: " + ", ".join(missing))
 
-    # Every deployed HTML page should receive the same public auth bundle when auth is enabled.
-    sample_pages = [site / "index.html", site / "signup" / "index.html", site / "dang-nhap" / "index.html"]
-    bundle = (
-        "assets/auth-config.js",
-        "assets/auth-email-gate.js",
-        "assets/auth-policy.js",
-        "assets/auth-account-security.js",
-        "assets/auth.js",
-        "assets/auth-extra.js",
-        "assets/auth-delete-security.js",
-    )
-    for page in sample_pages:
-        source = require(page)
-        for asset in bundle:
-            if asset not in source:
-                raise SystemExit(f"{page} missing injected auth asset {asset}")
+    # Full auth routes get the complete UI/security bundle and the Supabase browser client.
+    for label, source in (
+        ("signup", signup),
+        ("login", login),
+        ("password reset", reset),
+        ("account", account),
+    ):
+        require_all(source, FULL_AUTH_ASSETS, label)
+        require_all(source, (SUPABASE_CDN, "assets/auth.css", "assets/auth-extra.css"), label)
+
+    # Stock analysis needs the Supabase browser client for an authenticated Premium report,
+    # but not password/OTP/account-management scripts.
+    require_all(stock, (SUPABASE_CDN, "assets/auth-config.js", "assets/stock-api-client.js"), "stock analysis")
+    reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
+
+    # Public homepage only needs the tiny launch-state config. Header actions and the
+    # Premium-interest fallback are handled by the public UX layer without Supabase SDK.
+    require_all(home, ("assets/auth-config.js", "assets/auth-production-gate.js"), "homepage")
+    if SUPABASE_CDN in home:
+        raise SystemExit("homepage must not load Supabase browser SDK")
+    reject_all(home, HEAVY_AUTH_ASSETS, "homepage")
 
     # Reject obvious accidental embedding of privileged key names in public JavaScript/HTML.
     for path in [*site.rglob("*.js"), *site.rglob("*.html")]:
@@ -106,7 +150,7 @@ def main() -> None:
             raise SystemExit(f"privileged auth material detected in public artifact: {path}")
 
     state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
-    print(f"StockRadar production auth verification: PASS (email delivery {state})")
+    print(f"StockRadar production auth verification: PASS (email delivery {state}; auth bundles route-scoped)")
 
 
 if __name__ == "__main__":
