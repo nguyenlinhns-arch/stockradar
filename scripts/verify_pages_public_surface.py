@@ -13,33 +13,49 @@ from urllib.parse import urlsplit
 
 FORBIDDEN_PUBLIC_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
 FORBIDDEN_HTML_TERMS = ("DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH")
-COMMON_UX_ASSETS = (
-    "assets/public-ux.css",
-    "assets/auth-production-gate.js",
+HOME_UX_ASSETS = (
     "assets/site-v4.css",
     "assets/mobile-touch-v1.css",
-    "assets/header-auth-dedupe-v6.js",
-    "assets/public-copy-v7.js",
+    "assets/home-core-v1.js",
 )
 NON_HOME_UX_ASSETS = (
+    "assets/public-ux.css",
+    "assets/site-v4.css",
+    "assets/mobile-touch-v1.css",
     "assets/public-ux.js",
     "assets/public-fallbacks-v4.js",
     "assets/direct-ticker-nav-v1.js",
+    "assets/auth-production-gate.js",
+    "assets/header-auth-dedupe-v6.js",
+    "assets/public-copy-v7.js",
 )
-HOME_CORE_ASSET = "assets/home-core-v1.js"
+HOMEPAGE_FORBIDDEN_ASSETS = (
+    "assets/app.js",
+    "assets/home-dashboard.css",
+    "assets/public-ux.css",
+    "assets/public-ux.js",
+    "assets/public-fallbacks-v4.js",
+    "assets/direct-ticker-nav-v1.js",
+    "assets/auth-production-gate.js",
+    "assets/header-auth-dedupe-v6.js",
+    "assets/public-copy-v7.js",
+    "assets/premium-preview-v7.css",
+    "assets/home-dashboard.js",
+    "assets/email-interest.js",
+)
 REQUIRED_EMAIL_ASSETS = (
     "assets/signup-email-intent.js",
     "assets/email-preferences.js",
     "assets/email-preferences.css",
     "assets/email-interest.js",
 )
-REQUIRED_HOME_ASSETS = (
+REQUIRED_HOME_FILES = (
     "assets/home-dashboard.css",
     "assets/home-density.css",
     "assets/home-dense-v3.css",
     "assets/home-focus-v1.css",
+    "assets/home-core-v1.js",
     "assets/recommendation-dense-v3.css",
-    HOME_CORE_ASSET,
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
@@ -65,30 +81,32 @@ def is_homepage(page: Path, output: Path) -> bool:
     return page.resolve() == (output / "index.html").resolve()
 
 
+def verify_asset(page: Path, output: Path, source: str, asset: str) -> str | None:
+    pattern = rf'(?:href|src)=["\']([^"\']*{re.escape(Path(asset).name)}(?:\?[^"\']*)?)["\']'
+    match = re.search(pattern, source, flags=re.IGNORECASE)
+    if not match:
+        return f"missing injected asset {asset}: {page.relative_to(output)}"
+    reference = urlsplit(match.group(1)).path
+    base = base_href(source)
+    if base:
+        if reference != asset:
+            return f"base-relative asset path invalid on {page.relative_to(output)}: {reference} != {asset}"
+    else:
+        target = (page.parent / reference).resolve()
+        if not target.is_file():
+            return f"asset target missing on {page.relative_to(output)}: {reference}"
+    return None
+
+
 def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
     errors: list[str] = []
-    base = base_href(source)
-    required = list(COMMON_UX_ASSETS)
-    if is_homepage(page, output):
-        required.append(HOME_CORE_ASSET)
-    else:
-        required.extend(NON_HOME_UX_ASSETS)
+    required = HOME_UX_ASSETS if is_homepage(page, output) else NON_HOME_UX_ASSETS
     for asset in required:
-        pattern = rf'(?:href|src)=["\']([^"\']*{re.escape(Path(asset).name)}(?:\?[^"\']*)?)["\']'
-        match = re.search(pattern, source, flags=re.IGNORECASE)
-        if not match:
-            errors.append(f"missing injected asset {asset}: {page.relative_to(output)}")
-            continue
-        reference = urlsplit(match.group(1)).path
-        if base:
-            if reference != asset:
-                errors.append(f"base-relative asset path invalid on {page.relative_to(output)}: {reference} != {asset}")
-        else:
-            target = (page.parent / reference).resolve()
-            if not target.is_file():
-                errors.append(f"asset target missing on {page.relative_to(output)}: {reference}")
+        error = verify_asset(page, output, source, asset)
+        if error:
+            errors.append(error)
     if is_homepage(page, output):
-        for asset in (*NON_HOME_UX_ASSETS, "assets/app.js", "assets/home-dashboard.css"):
+        for asset in HOMEPAGE_FORBIDDEN_ASSETS:
             if Path(asset).name in source:
                 errors.append(f"homepage must not load legacy/heavy asset {asset}")
     return errors
@@ -134,7 +152,7 @@ def main() -> None:
         if (output / route).exists():
             errors.append(f"excluded route published: {route}")
 
-    for asset in (*COMMON_UX_ASSETS, *NON_HOME_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_ASSETS):
+    for asset in set((*HOME_UX_ASSETS, *NON_HOME_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_FILES)):
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
@@ -160,7 +178,7 @@ def main() -> None:
         (
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/site-v4.css',
-            'assets/public-copy-v7.js', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
+            'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
             'home-radar-sector-list', 'home-tier-grid', 'ticker=ACB', 'ticker=VNM', 'ticker=NKG', 'ticker=HAH',
             'Tín hiệu hành động', '<strong>0 mã</strong>', '30 mã', '10 ngành · 3 mã mỗi ngành',
             'Free bên trái · Premium bên phải', '4M · CANSLIM · Payback', 'Định giá Bear/Base/Bull',
@@ -173,11 +191,9 @@ def main() -> None:
         "home-newsletter-strip", "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành.",
         "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid",
         "home-ticker-grid", "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
-        "assets/premium-preview-v7.css", "assets/home-dashboard.js", "assets/home-dashboard.css", "assets/email-interest.js",
-        "assets/public-ux.js", "assets/public-fallbacks-v4.js", "assets/direct-ticker-nav-v1.js", "assets/app.js",
     ):
         if obsolete in home_source:
-            errors.append(f"obsolete/heavy homepage element remains: {obsolete}")
+            errors.append(f"obsolete homepage element remains: {obsolete}")
 
     require_text(
         output,
@@ -186,7 +202,7 @@ def main() -> None:
             'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'data-email-interest-form',
             'name="daily_brief"', 'name="event_alerts"', 'assets/email-interest.js', 'assets/home-density.css',
             'assets/home-dense-v3.css', 'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
-            'assets/direct-ticker-nav-v1.js',
+            'assets/direct-ticker-nav-v1.js', 'assets/auth-production-gate.js', 'assets/public-copy-v7.js',
         ),
         errors,
     )
@@ -197,7 +213,8 @@ def main() -> None:
             '<strong>0 mã</strong>', '<strong>30 mã</strong>', 'Danh sách cổ phiếu theo Radar rà soát',
             'reference-watch-table', '<b>ACB</b>', '<b>VNM</b>', '<b>NKG</b>', '<b>HAH</b>',
             'không phải khuyến nghị mua', 'assets/recommendation-dense-v3.css', 'assets/site-v4.css',
-            'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js', 'data-header-auth-actions',
+            'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js',
+            'assets/auth-production-gate.js', 'assets/public-copy-v7.js', 'data-header-auth-actions',
         ),
         errors,
     )
@@ -207,14 +224,7 @@ def main() -> None:
         "thay-doi-hom-nay/index.html", "hieu-qua/index.html", "nganh/index.html",
         "kiem-tra-co-phieu/index.html", "phan-tich/index.html", "co-phieu/index.html",
     ):
-        require_text(
-            output,
-            route,
-            ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'assets/site-v4.css',
-             'assets/mobile-touch-v1.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
-             'assets/direct-ticker-nav-v1.js', 'assets/public-copy-v7.js'),
-            errors,
-        )
+        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', *NON_HOME_UX_ASSETS), errors)
 
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
@@ -229,19 +239,12 @@ def main() -> None:
             if marker not in source:
                 errors.append(f"full-site V4 fallback marker missing: {marker}")
 
-    copy_v7 = output / "assets" / "public-copy-v7.js"
-    if copy_v7.is_file():
-        source = copy_v7.read_text(encoding="utf-8")
-        for marker in ("CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT", "MutationObserver", "Danh sách cổ phiếu theo Radar rà soát"):
+    home_core = output / "assets" / "home-core-v1.js"
+    if home_core.is_file():
+        source = home_core.read_text(encoding="utf-8")
+        for marker in ("site-v4", "emailDeliveryReady", "registrationUrl", "mountNavigation", "mountTickerSearch", "mountRegistration"):
             if marker not in source:
-                errors.append(f"public copy V7 marker missing: {marker}")
-
-    site_css = output / "assets" / "site-v4.css"
-    if site_css.is_file():
-        source = site_css.read_text(encoding="utf-8")
-        for marker in (".v4-reference-grid", ".v4-sector-grid", ".v4-zero-bar", ".header-auth-actions", ".header-login-cta", ".header-register-cta", "@media(max-width:760px)"):
-            if marker not in source:
-                errors.append(f"full-site V4 CSS marker missing: {marker}")
+                errors.append(f"homepage core marker missing: {marker}")
 
     for page in pages:
         source = page.read_text(encoding="utf-8")
@@ -265,7 +268,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; lightweight homepage core + 30-stock Radar + Free/Premium analysis present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; self-contained lean homepage + 30-stock Radar + Free/Premium analysis present")
 
 
 if __name__ == "__main__":
