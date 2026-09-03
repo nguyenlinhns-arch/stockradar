@@ -6,25 +6,30 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RadarMethodologyPublicTests(unittest.TestCase):
-    def test_radar_explains_four_source_methods_and_vietnam_adaptation(self):
+    def test_radar_keeps_four_methods_compact_and_vietnam_specific(self):
         page = (ROOT / "website" / "radar5" / "index.html").read_text(encoding="utf-8")
         required = (
             'id="phuong-phap"',
-            "StockRadar rà soát cổ phiếu như thế nào?",
+            "4 phương pháp cốt lõi",
             "4M &amp; Payback — Phil Town",
             "CANSLIM — William J. O’Neil",
             "SEPA / VCP — Mark Minervini",
             "VPA / Wyckoff — Anna Coulling &amp; Richard D. Wyckoff",
-            "Có áp dụng được tại thị trường Việt Nam?",
-            "StockRadar chỉ quét HOSE",
+            "Áp dụng Việt Nam",
+            "HOSE · thanh khoản · free float",
             "RVOL/same-time volume",
-            "Pocket Pivot của Gil Morales &amp; Chris Kacher",
+            "Pocket Pivot — Gil Morales &amp; Chris Kacher",
         )
         for marker in required:
             self.assertIn(marker, page)
 
-        for method in ("4M", "CANSLIM", "SEPA", "VPA"):
-            self.assertIn(method, page)
+        for removed in (
+            "StockRadar rà soát cổ phiếu như thế nào?",
+            "Không dùng một chỉ báo đơn lẻ",
+            "Có áp dụng được tại thị trường Việt Nam?",
+            "Bốn phương pháp được kết hợp",
+        ):
+            self.assertNotIn(removed, page)
 
     def test_methodology_styles_are_four_column_and_responsive(self):
         css = (ROOT / "website" / "assets" / "site-v4.css").read_text(encoding="utf-8")
