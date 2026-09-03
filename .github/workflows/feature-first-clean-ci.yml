@@ -1,0 +1,50 @@
+name: Validate feature-first clean production
+
+on:
+  push:
+    branches: [feature-first-clean-production]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Check homepage JavaScript
+        run: node --check website/assets/home-core-v1.js
+      - name: Build fail-closed public data
+        run: python -m engine.cli build-public
+      - name: Run regression suite
+        run: python -m unittest discover -s engine/tests -v
+      - name: Build production Pages artifact
+        run: |
+          python scripts/build_pages.py --output .pages-site
+          STOCKRADAR_ENABLE_AUTH=1 STOCKRADAR_AUTH_EMAIL_READY=0 python scripts/inject_public_ux.py .pages-site
+          STOCKRADAR_ENABLE_AUTH=1 STOCKRADAR_AUTH_EMAIL_READY=0 python scripts/verify_pages_auth.py .pages-site
+          python scripts/verify_pages_public_surface.py .pages-site
+      - name: Reject demo sample and unfinished public copy
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          forbidden = (
+              'MẪU BÁO CÁO', 'MẪU EMAIL', 'DỮ LIỆU MẪU', 'MINH HỌA', 'MINH HOẠ',
+              'CHƯA CÓ SETUP', 'ĐANG HOÀN THIỆN', 'TRẠNG THÁI CÔNG KHAI'
+          )
+          errors=[]
+          for pattern in ('*.html','*.js','*.json'):
+              for p in Path('.pages-site').rglob(pattern):
+                  text=p.read_text(encoding='utf-8').upper()
+                  for term in forbidden:
+                      if term in text:
+                          errors.append(f'{term}: {p}')
+          if errors:
+              raise SystemExit('\n'.join(errors))
+          print('Public copy clean: no demo/sample/unfinished phrases')
+          PY
