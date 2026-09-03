@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 from pathlib import Path
 
 
@@ -17,7 +18,13 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def relative_asset(page: Path, output: Path, name: str) -> str:
+def asset_href(source: str, page: Path, output: Path, name: str) -> str:
+    # Most StockRadar route pages set <base href="../"> (or another route-root
+    # base). In that case asset URLs must be relative to the HTML base, not the
+    # file-system depth of the generated page. Without a base element, fall back
+    # to the actual relative file-system path.
+    if re.search(r'<base\s+[^>]*href=["\'][^"\']+["\']', source, flags=re.IGNORECASE):
+        return f"assets/{name}"
     target = output / "assets" / name
     return os.path.relpath(target, page.parent).replace(os.sep, "/")
 
@@ -29,9 +36,9 @@ def inject_page(page: Path, output: Path) -> None:
     if "</head>" not in source:
         raise RuntimeError(f"HTML page has no closing head tag: {page}")
 
-    css = relative_asset(page, output, "public-ux.css")
-    public_js = relative_asset(page, output, "public-ux.js")
-    auth_gate_js = relative_asset(page, output, "auth-production-gate.js")
+    css = asset_href(source, page, output, "public-ux.css")
+    public_js = asset_href(source, page, output, "public-ux.js")
+    auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
     head = (
         f'<link rel="stylesheet" href="{css}?v=20260903-public1" {HEAD_MARKER}>\n'
         f'<script src="{public_js}?v=20260903-public2" defer></script>\n'
