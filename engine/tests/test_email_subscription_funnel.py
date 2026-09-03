@@ -80,7 +80,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def test_homepage_is_feature_first_and_free_premium_comparison_is_concrete(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
-        self.assertIn('href="dang-ky/"', home)
+        self.assertIn('href="signup/"', home)
         self.assertIn("home-radar-sector-list", home)
         self.assertIn("home-tier-grid", home)
         self.assertIn("Free và Premium có gì?", home)
