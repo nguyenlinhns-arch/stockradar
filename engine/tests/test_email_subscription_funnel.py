@@ -1,3 +1,5 @@
+from collections import Counter
+import json
 from pathlib import Path
 import unittest
 
@@ -21,14 +23,9 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def test_signup_auth_metadata_carries_legal_and_product_email_consent(self):
         client = self.read("website/assets/signup-email-intent.js")
         for key in (
-            "terms_accepted",
-            "terms_version",
-            "privacy_accepted",
-            "privacy_version",
-            "product_email_consent",
-            "product_email_consent_version",
-            "product_email_daily_brief",
-            "product_email_event_alerts",
+            "terms_accepted", "terms_version", "privacy_accepted", "privacy_version",
+            "product_email_consent", "product_email_consent_version",
+            "product_email_daily_brief", "product_email_event_alerts",
         ):
             self.assertIn(key, client)
 
@@ -47,9 +44,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("data-watchlist-alert-toggle", client)
 
     def test_signup_trigger_persists_preferences_and_consent_fail_closed(self):
-        migration = self.read(
-            "supabase/migrations/20260903064500_capture_signup_email_preferences_and_consent.sql"
-        ).lower()
+        migration = self.read("supabase/migrations/20260903064500_capture_signup_email_preferences_and_consent.sql").lower()
         self.assertIn("insert into public.product_email_preferences", migration)
         self.assertIn("insert into public.product_email_consent_events", migration)
         self.assertIn("'signup'", migration)
@@ -58,9 +53,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("product_email_consent_version", migration)
 
     def test_free_daily_and_premium_alert_entitlement_are_separated_server_side(self):
-        migration = self.read(
-            "supabase/migrations/20260903071000_align_free_daily_and_premium_alert_interest.sql"
-        )
+        migration = self.read("supabase/migrations/20260903071000_align_free_daily_and_premium_alert_interest.sql")
         lowered = migration.lower()
         self.assertIn("free product email requires daily_brief enabled", lowered)
         self.assertIn("pref.event_alerts and prof.account_tier in ('trial','paid')", lowered)
@@ -77,17 +70,19 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("Free accounts are always suppressed for product content", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
-    def test_homepage_has_premium_previews_and_concrete_tickers(self):
+    def test_homepage_has_premium_previews_and_30_radar_review_tickers(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
         self.assertIn('href="dang-ky/"', home)
         self.assertIn("home-ticker-grid", home)
-        self.assertIn("<b>ACB</b>", home)
-        self.assertIn("<b>VNM</b>", home)
+        for ticker in ("ACB", "VNM", "NKG", "CMG", "PVD", "FRT", "VHM", "POW", "GMD", "HAH"):
+            self.assertIn(f"<b>{ticker}</b>", home)
         self.assertIn("Tín hiệu hành động hiện tại", home)
         self.assertIn("0 mã", home)
-        self.assertIn("Danh sách cổ phiếu đang theo dõi", home)
-        self.assertIn("16 mã", home)
+        self.assertIn("Danh sách cổ phiếu theo Radar rà soát", home)
+        self.assertIn("30 mã", home)
+        self.assertIn("10 nhóm ngành", home)
+        self.assertIn("3 mã mỗi ngành", home)
         self.assertIn("MẪU BÁO CÁO CHUYÊN SÂU", home)
         self.assertIn("4M &amp; Payback Time", home)
         self.assertIn("Định giá Bear / Base / Bull", home)
@@ -96,10 +91,22 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("[StockRadar Premium] TOP 30 HOSE", home)
         self.assertIn("assets/premium-preview-v7.css", home)
         self.assertIn("assets/home-dashboard.js", home)
+        self.assertNotIn("Danh sách cổ phiếu đang theo dõi", home)
         self.assertNotIn("Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành.", home)
         self.assertNotIn("DỮ LIỆU HOSE THAM CHIẾU", home)
         self.assertNotIn("Chưa phát hành", home)
         self.assertNotIn("Chưa sẵn sàng", home)
+
+    def test_radar_review_payload_is_30_tickers_10_sectors_3_each(self):
+        payload = json.loads(self.read("website/public/data/ticker-universe.json"))
+        items = payload["items"]
+        counts = Counter(item["sector"] for item in items)
+        self.assertEqual(payload.get("selection_label"), "Danh sách cổ phiếu theo Radar rà soát")
+        self.assertEqual(payload.get("selection_kind"), "RADAR_REVIEW_BALANCED_30")
+        self.assertEqual(len(items), 30)
+        self.assertEqual(len(counts), 10)
+        self.assertEqual(set(counts.values()), {3})
+        self.assertTrue(all(item["exchange"] == "HOSE" for item in items))
 
     def test_dedicated_registration_page_collects_interest_without_prechecking(self):
         register = self.read("website/dang-ky/index.html")
@@ -112,15 +119,16 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("assets/email-interest.js", register)
         self.assertIn("assets/home-density.css", register)
 
-    def test_recommendation_page_separates_published_recommendations_from_reference_tickers(self):
+    def test_recommendation_page_uses_30_stock_radar_review_list(self):
         page = self.read("website/khuyen-nghi/index.html")
-        self.assertIn("Khuyến nghị đã phát hành", page)
+        self.assertIn("Tín hiệu hành động hiện tại", page)
         self.assertIn("0 mã", page)
-        self.assertIn("Mã tham chiếu đang theo dõi", page)
-        self.assertIn("16 mã", page)
-        self.assertIn("ACB", page)
-        self.assertIn("VNM", page)
+        self.assertIn("Danh sách cổ phiếu theo Radar rà soát", page)
+        self.assertIn("30 mã", page)
+        for ticker in ("ACB", "VNM", "NKG", "HAH"):
+            self.assertIn(f">{ticker}<", page)
         self.assertIn("không phải khuyến nghị mua", page)
+        self.assertNotIn("Mã tham chiếu đang theo dõi", page)
 
     def test_public_interest_client_calls_edge_without_privileged_secret(self):
         client = self.read("website/assets/email-interest.js")
@@ -133,9 +141,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("service_role", client.lower())
 
     def test_pre_auth_interest_queue_never_authorizes_delivery(self):
-        migration = self.read(
-            "supabase/migrations/20260903074211_add_public_email_subscription_interest_queue.sql"
-        ).lower()
+        migration = self.read("supabase/migrations/20260903074211_add_public_email_subscription_interest_queue.sql").lower()
         self.assertIn("private.email_subscription_intents", migration)
         self.assertIn("pending_verification", migration)
         self.assertIn("interval '30 days'", migration)
