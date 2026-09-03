@@ -18,7 +18,7 @@
   }
 
   function registrationUrl() {
-    return new URL(emailDeliveryReady() ? 'signup/' : 'dang-ky/', document.baseURI).href;
+    return new URL('dang-ky/', document.baseURI).href;
   }
 
   function setSearchMessage(form, message, kind = '') {
@@ -81,7 +81,6 @@
   }
 
   function mountRegistration() {
-    const ready = emailDeliveryReady();
     const href = registrationUrl();
     document.querySelectorAll('a[href]').forEach(link => {
       let parsed;
@@ -89,25 +88,24 @@
       const path = parsed.pathname.replace(/\/+$/, '');
       if (!/(?:\/signup|\/dang-ky)$/.test(path)) return;
       link.href = href;
-      if (!ready && /Đăng ký Premium|Tạo tài khoản|Đăng ký StockRadar/i.test(link.textContent || '')) {
-        link.textContent = 'Đăng ký quan tâm';
-      }
-      if (!ready && link.classList.contains('header-register-cta')) {
+      if (link.classList.contains('header-register-cta')) {
         link.textContent = 'Đăng ký';
-        link.setAttribute('aria-label', 'Đăng ký quan tâm StockRadar Premium');
+        link.setAttribute('aria-label', 'So sánh gói Free và Premium StockRadar');
       }
     });
 
     const compact = document.querySelector('.home-register-compact');
-    if (compact && !ready) {
+    if (compact) {
       const text = compact.querySelector('span');
       const action = compact.querySelector('a');
-      if (text) text.textContent = 'Free: tra cứu, Radar và phân tích công khai · Premium: đăng ký quan tâm để nhận thông tin mở quyền.';
-      if (action) action.textContent = 'Đăng ký quan tâm';
+      if (text) text.textContent = 'Free: tra cứu và theo dõi · Premium: phân tích sâu, email và cảnh báo hành động.';
+      if (action) action.textContent = 'So sánh gói';
     }
 
     const mobile = document.querySelector('.mobile-newsletter-bar a');
-    if (mobile && !ready) mobile.textContent = 'Quan tâm';
+    if (mobile) mobile.textContent = 'Xem gói';
+
+    emailDeliveryReady();
   }
 
   function mount() {
