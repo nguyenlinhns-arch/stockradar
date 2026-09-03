@@ -15,6 +15,8 @@ REQUIRED_UX_ASSETS = (
     "assets/public-ux.css",
     "assets/public-ux.js",
     "assets/auth-production-gate.js",
+    "assets/site-v4.css",
+    "assets/public-fallbacks-v4.js",
 )
 REQUIRED_EMAIL_ASSETS = (
     "assets/signup-email-intent.js",
@@ -121,6 +123,8 @@ def main() -> None:
             'Đăng ký nhận bản tin chứng khoán mỗi ngày từ StockRadar.vn',
             'header-newsletter-cta',
             'assets/home-dense-v3.css',
+            'assets/site-v4.css',
+            'assets/public-fallbacks-v4.js',
             'home-watchlist-grid',
             'home-ticker-grid',
             '<b>ACB</b>',
@@ -145,6 +149,7 @@ def main() -> None:
             'assets/email-interest.js',
             'assets/home-density.css',
             'assets/home-dense-v3.css',
+            'assets/site-v4.css',
         ),
         errors,
     )
@@ -161,27 +166,55 @@ def main() -> None:
             '<b>VNM</b>',
             'không phải khuyến nghị mua',
             'assets/recommendation-dense-v3.css',
+            'assets/site-v4.css',
         ),
         errors,
     )
-    require_text(
-        output,
+
+    for route in (
         "radar5/index.html",
-        ('data-global-register-cta', 'href="dang-ky/"'),
-        errors,
-    )
-    require_text(
-        output,
+        "breakout/index.html",
+        "risk/index.html",
+        "track-record/index.html",
+        "thay-doi-hom-nay/index.html",
+        "hieu-qua/index.html",
+        "nganh/index.html",
         "kiem-tra-co-phieu/index.html",
-        ('data-global-register-cta', 'href="dang-ky/"'),
-        errors,
-    )
+        "phan-tich/index.html",
+        "co-phieu/index.html",
+    ):
+        require_text(
+            output,
+            route,
+            ('data-global-register-cta', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js'),
+            errors,
+        )
+
     require_text(
         output,
         "quyen-rieng-tu/index.html",
         ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'),
         errors,
     )
+
+    fallback_js = output / "assets" / "public-fallbacks-v4.js"
+    if fallback_js.is_file():
+        source = fallback_js.read_text(encoding="utf-8")
+        for marker in (
+            "radar-reference", "breakout-reference", "risk-reference", "today-reference",
+            "performance-method", "track-method", "sector-reference", "lookup-reference",
+            "report-reference", "referenceGrid", "sectorGrid", "enhanceNavigation",
+            "TRẠNG THÁI DỮ LIỆU", "CHƯA PHÁT HÀNH",
+        ):
+            if marker not in source:
+                errors.append(f"full-site V4 fallback marker missing: {marker}")
+
+    site_css = output / "assets" / "site-v4.css"
+    if site_css.is_file():
+        source = site_css.read_text(encoding="utf-8")
+        for marker in (".v4-reference-grid", ".v4-sector-grid", ".v4-zero-bar", "@media(max-width:760px)"):
+            if marker not in source:
+                errors.append(f"full-site V4 CSS marker missing: {marker}")
 
     for page in pages:
         source = page.read_text(encoding="utf-8")
@@ -204,7 +237,10 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; dense home + visible registration + concrete ticker surfaces present")
+    print(
+        f"Verified production public surface: {len(pages)} HTML pages; "
+        "dense responsive V4 + visible registration + truthful reference fallbacks present"
+    )
 
 
 if __name__ == "__main__":

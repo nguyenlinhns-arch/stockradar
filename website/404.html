@@ -4,11 +4,27 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <title>Đang chuyển tới báo cáo — StockRadar</title>
-  <style>body{font:16px system-ui;margin:0;display:grid;place-items:center;min-height:100vh;background:#f3f6f8;color:#102c46}main{max-width:560px;padding:32px;background:#fff;border-top:4px solid #c8202f}a{color:#1769aa}</style>
+  <meta name="description" content="Trang không tồn tại trên StockRadar. Quay lại bảng điều hành, tra cứu mã HOSE hoặc đăng ký nhận bản tin chứng khoán.">
+  <title>Không tìm thấy trang — StockRadar</title>
+  <link rel="icon" href="assets/logo.svg">
+  <style>
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:20px;background:#eef2f5;color:#172433;font:15px/1.55 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}.not-found{width:min(720px,100%);background:#fff;border:1px solid #dce3e9;border-top:4px solid #cf2430}.not-found-head{padding:24px 26px 18px;border-bottom:1px solid #dce3e9}.brand{display:inline-block}.brand img{width:190px;display:block}.not-found h1{margin:18px 0 6px;color:#0d2b49;font-size:30px;line-height:1.08}.not-found p{margin:0;color:#667585}.not-found-actions{padding:18px 26px;display:flex;flex-wrap:wrap;gap:8px}.not-found-actions a{min-height:40px;padding:0 14px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #cbd4dc;border-radius:4px;background:#fff;color:#0d2b49;font-weight:800;text-decoration:none}.not-found-actions a.primary{background:#cf2430;border-color:#cf2430;color:#fff}.not-found-note{padding:12px 26px 18px;color:#8995a1;font-size:11px}@media(max-width:520px){body{padding:8px}.not-found-head,.not-found-actions,.not-found-note{padding-left:16px;padding-right:16px}.not-found h1{font-size:24px}.not-found-actions a{width:100%}}
+  </style>
 </head>
 <body>
-  <main><h1>Đang mở báo cáo cổ phiếu…</h1><p>Nếu trang không tự chuyển, hãy quay lại <a id="home" href="./">StockRadar</a>.</p></main>
-  <script>(()=>{const marker='/co-phieu/';const index=location.pathname.toLowerCase().indexOf(marker);if(index>=0){const ticker=location.pathname.slice(index+marker.length).split('/')[0].toUpperCase().replace(/[^A-Z0-9]/g,'');if(ticker){location.replace(location.pathname.slice(0,index)+marker+'?ticker='+encodeURIComponent(ticker)+location.search.replace(/^\?/,'&'));return;}}document.getElementById('home').href=location.pathname.split('/').slice(0,2).join('/')+'/';})();</script>
+  <main class="not-found">
+    <div class="not-found-head">
+      <a class="brand" id="home" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
+      <h1>Không tìm thấy trang này.</h1>
+      <p>Nếu bạn đang mở trực tiếp một mã cổ phiếu, StockRadar sẽ thử chuyển tới trang tra cứu. Nếu không, hãy dùng các lối tắt bên dưới.</p>
+    </div>
+    <div class="not-found-actions">
+      <a class="primary" id="home-action" href="./">Về trang chủ</a>
+      <a id="lookup" href="kiem-tra-co-phieu/">Tra cứu mã HOSE</a>
+      <a id="register" href="dang-ky/">Đăng ký bản tin</a>
+    </div>
+    <div class="not-found-note">StockRadar chỉ phát hành dữ liệu và tín hiệu khi nguồn tương ứng đạt điều kiện.</div>
+  </main>
+  <script>(()=>{const parts=location.pathname.split('/').filter(Boolean);const repoIndex=parts.indexOf('stockradar');const root=repoIndex>=0?'/'+parts.slice(0,repoIndex+1).join('/')+'/':'/';const marker='/co-phieu/';const index=location.pathname.toLowerCase().indexOf(marker);if(index>=0){const ticker=location.pathname.slice(index+marker.length).split('/')[0].toUpperCase().replace(/[^A-Z0-9]/g,'');if(ticker){location.replace(root+'co-phieu/?ticker='+encodeURIComponent(ticker));return;}}document.getElementById('home').href=root;document.getElementById('home-action').href=root;document.getElementById('lookup').href=root+'kiem-tra-co-phieu/';document.getElementById('register').href=root+'dang-ky/';})();</script>
 </body>
 </html>
