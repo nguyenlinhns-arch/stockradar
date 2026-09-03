@@ -19,6 +19,20 @@ When `https://stockradar.vn/` becomes the live canonical host, replace Site URL 
 
 Keep email confirmations enabled.
 
+## Email delivery launch gate
+
+Production currently sets:
+
+- `STOCKRADAR_AUTH_EMAIL_READY="0"`
+
+This is intentional. While custom SMTP is not verified end to end, public signup, signup-OTP resend, login OTP recovery, and forgot-password sending fail closed in the browser. Normal sign-in for an existing verified account remains available.
+
+After custom SMTP, sender domain, Auth URLs, OTP template, recovery template, and a real mailbox test all pass, change the production flag to:
+
+- `STOCKRADAR_AUTH_EMAIL_READY="1"`
+
+Do not flip this flag merely because SMTP credentials were entered; first complete an actual signup → email delivery → OTP verify → login → recovery test.
+
 ## Email templates
 
 StockRadar uses a 6-digit email OTP for signup verification. In **Authentication → Email Templates → Confirm signup**, use the versioned repository template:
@@ -31,11 +45,11 @@ For password recovery use:
 
 - `supabase/email-templates/recovery.html`
 
-Before sending verification/recovery traffic at scale, configure a production SMTP provider in Supabase Auth. Supabase's built-in sender is suitable for early testing but should not be treated as the production delivery channel.
+The organization is on Supabase Free. The default hosted sender is testing-only and is not the public delivery channel. Before opening registration to arbitrary users, connect a custom SMTP provider and verify its sending domain. Issue #1 tracks this launch gate.
 
 ## Production build configuration
 
-The Pages workflow publishes only the Supabase project URL and a browser-safe `sb_publishable_...` key. Never expose a secret/service-role key.
+The Pages workflow publishes only the Supabase project URL and a browser-safe `sb_publishable_...` key. Never expose a secret/service-role/SMTP key.
 
 Production release sequence:
 
@@ -47,7 +61,7 @@ Production release sequence:
 
 The workflow uses `cancel-in-progress: true`, so a newer `main` commit cancels stale Pages runs and becomes the only release candidate.
 
-The verifier blocks deployment when production auth is disabled, Supabase config is incomplete, a privileged key appears in public output, or OTP/legal/password-hardening/account-deletion surfaces are missing.
+The verifier blocks deployment when production auth is disabled, email-delivery state is not explicitly declared, Supabase config is incomplete, a privileged key appears in public output, or OTP/legal/password-hardening/account-deletion surfaces are missing.
 
 ## Implemented flows
 
@@ -55,6 +69,7 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 - Signup confirmation: six-digit email OTP using `verifyOtp`.
 - Resend signup OTP with a persistent 60-second UI cooldown plus Supabase server-side rate limiting.
 - Resume verification from the login page for users who registered but have not confirmed their email.
+- Fail-closed production email gate until custom SMTP is ready.
 - Sign in with email + password.
 - Persistent managed session and automatic token refresh.
 - Sign out.
@@ -62,7 +77,8 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 - Change password while signed in only after supplying the current password; recovery-token password reset remains separate.
 - User profile in `public.profiles`: default tier `FREE`; status moves from `PENDING` to `ACTIVE` after email verification.
 - RLS restricts profile reads to the signed-in user and does not let the browser edit entitlement fields.
-- Versioned terms/privacy consent receipts in `public.consent_receipts` created from signup metadata.
+- Database grants are least-privilege: `anon` has no direct table privileges; `authenticated` receives only `SELECT` on `profiles`, with RLS restricting rows to the signed-in user. `consent_receipts` is not directly granted to browser roles.
+- Versioned terms/privacy consent receipts in `public.consent_receipts` created by the server-side signup trigger.
 - Public Terms and Privacy pages.
 - Self-service account deletion requires current-password reauthentication plus explicit `XOA` confirmation before the authenticated Edge Function is invoked.
 - `delete-account` Edge Function uses the current Supabase publishable/secret key model, keeps server-only secret material inside Supabase, validates the user JWT, restricts browser origins, and deletes related profile/consent rows through database cascades.
@@ -73,7 +89,7 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 - Passwords and OTPs are never sent to StockRadar market-data/analytics endpoints.
 - Pending signup email is stored only in session storage for UX continuity; password and OTP are not persisted there.
 - Public Pages code may contain only the Supabase project URL and publishable key.
-- Secret/service-role credentials remain server-side only.
+- Secret/service-role/SMTP credentials remain server-side only.
 - Paid entitlement must come from trusted backend/billing state, never client-editable metadata.
 - Never collect broker passwords, trading OTPs, broker API secrets, order credentials, NAV, bank OTPs, or portfolio-control credentials through StockRadar authentication.
 
@@ -83,4 +99,5 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 - Production auth artifact verifier: PASS.
 - Supabase Security Advisor: no unresolved warnings introduced by the change.
 - Supabase Performance Advisor: no unresolved warnings introduced by the change.
+- Verify effective browser grants remain least-privilege after schema changes.
 - Test one real signup mailbox end to end after any email-template, SMTP, Site URL, redirect, or canonical-domain change.
