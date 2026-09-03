@@ -20,6 +20,7 @@ class DatasetInspection:
     sha256: str
     row_count: int
     covered_tickers: int | None
+    tickers: frozenset[str] | None = None
 
     def to_manifest_entry(self, *, snapshot_id: str, as_of: str) -> dict[str, Any]:
         payload: dict[str, Any] = {
@@ -66,9 +67,21 @@ def _normalized_ticker(value: object) -> str | None:
     return ticker
 
 
-def inspect_csv_dataset(path: Path, *, ticker_column: str | None = None) -> DatasetInspection:
+def inspect_csv_dataset(
+    path: Path,
+    *,
+    ticker_column: str | None = None,
+    exchange_column: str | None = None,
+    expected_exchange: str | None = None,
+) -> DatasetInspection:
     row_count = 0
     tickers: set[str] | None = set() if ticker_column else None
+    expected_exchange_normalized = str(expected_exchange or "").strip().upper() or None
+    if expected_exchange_normalized and not exchange_column:
+        raise ProductionBundleError(
+            f"exchange_column is required when expected_exchange is set for {path.name}"
+        )
+
     with path.open("r", encoding="utf-8-sig", newline="") as handle:
         reader = csv.DictReader(handle)
         if reader.fieldnames is None:
@@ -77,6 +90,11 @@ def inspect_csv_dataset(path: Path, *, ticker_column: str | None = None) -> Data
             raise ProductionBundleError(
                 f"ticker column {ticker_column!r} is missing from {path.name}"
             )
+        if exchange_column and exchange_column not in reader.fieldnames:
+            raise ProductionBundleError(
+                f"exchange column {exchange_column!r} is missing from {path.name}"
+            )
+
         for row in reader:
             row_count += 1
             if tickers is not None:
@@ -86,11 +104,20 @@ def inspect_csv_dataset(path: Path, *, ticker_column: str | None = None) -> Data
                         f"blank ticker at row {row_count + 1} in {path.name}"
                     )
                 tickers.add(ticker)
+            if expected_exchange_normalized:
+                exchange = str(row.get(exchange_column or "") or "").strip().upper()
+                if exchange != expected_exchange_normalized:
+                    raise ProductionBundleError(
+                        f"non-{expected_exchange_normalized} row in {path.name} at row {row_count + 1}: {exchange or '<blank>'}"
+                    )
+
+    frozen_tickers = frozenset(tickers) if tickers is not None else None
     return DatasetInspection(
         path=path,
         sha256=_sha256(path),
         row_count=row_count,
-        covered_tickers=len(tickers) if tickers is not None else None,
+        covered_tickers=len(frozen_tickers) if frozen_tickers is not None else None,
+        tickers=frozen_tickers,
     )
 
 
@@ -131,12 +158,16 @@ def build_manifest_from_descriptor(
     snapshot = dict(snapshot_raw)
     snapshot_id = str(snapshot.get("snapshot_id") or "").strip()
     snapshot_as_of = str(snapshot.get("as_of") or "").strip()
+    snapshot_exchange = str(snapshot.get("exchange") or "").strip().upper()
     if not snapshot_id:
         raise ProductionBundleError("snapshot.snapshot_id is required")
     if not snapshot_as_of:
         raise ProductionBundleError("snapshot.as_of is required")
+    if snapshot_exchange != "HOSE":
+        raise ProductionBundleError("production bundle exchange must be HOSE")
 
     datasets: dict[str, Any] = {}
+    inspections: dict[str, DatasetInspection] = {}
     for name in REQUIRED_DATASETS:
         raw_spec = dataset_specs.get(name)
         if not isinstance(raw_spec, Mapping):
@@ -150,11 +181,37 @@ def build_manifest_from_descriptor(
         ticker_column = str(raw_spec.get("ticker_column") or "").strip() or None
         if name in COVERAGE_DATASETS and not ticker_column:
             raise ProductionBundleError(f"ticker_column is required for {name}")
-        inspection = inspect_csv_dataset(path, ticker_column=ticker_column)
+
+        exchange_column = str(raw_spec.get("exchange_column") or "").strip() or None
+        expected_exchange = None
+        if name == "security_master":
+            if not exchange_column:
+                raise ProductionBundleError("exchange_column is required for security_master")
+            expected_exchange = snapshot_exchange
+        elif exchange_column:
+            expected_exchange = snapshot_exchange
+
+        inspection = inspect_csv_dataset(
+            path,
+            ticker_column=ticker_column,
+            exchange_column=exchange_column,
+            expected_exchange=expected_exchange,
+        )
+        inspections[name] = inspection
         datasets[name] = inspection.to_manifest_entry(
             snapshot_id=snapshot_id,
             as_of=_dataset_as_of(raw_spec, snapshot_as_of),
         )
+
+    universe_tickers = inspections["security_master"].tickers or frozenset()
+    for name in ("ohlcv", "fundamentals"):
+        dataset_tickers = inspections[name].tickers or frozenset()
+        outside = sorted(dataset_tickers - universe_tickers)
+        if outside:
+            preview = ", ".join(outside[:5])
+            raise ProductionBundleError(
+                f"{name} contains ticker outside HOSE security_master: {preview}"
+            )
 
     return {
         "contract_version": CONTRACT_VERSION,
