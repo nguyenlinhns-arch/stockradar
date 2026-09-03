@@ -68,6 +68,26 @@ def sanitize_public_html(source: str) -> str:
     return source
 
 
+def optimize_homepage_assets(source: str, page: Path, output: Path) -> str:
+    if not is_homepage(page, output):
+        return source
+    source = re.sub(
+        r'\s*<link\b[^>]*href=["\'][^"\']*assets/home-dashboard\.css(?:\?[^"\']*)?["\'][^>]*>\s*',
+        "\n",
+        source,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+    source = re.sub(
+        r'\s*<script\b[^>]*src=["\'][^"\']*assets/app\.js(?:\?[^"\']*)?["\'][^>]*>\s*</script>\s*',
+        "\n",
+        source,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+    return source
+
+
 def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
     if not is_homepage(page, output):
         return source
@@ -143,6 +163,7 @@ def route_specific_head(source: str, page: Path, output: Path) -> str:
 
 def inject_page(page: Path, output: Path) -> None:
     source = sanitize_public_html(page.read_text(encoding="utf-8"))
+    source = optimize_homepage_assets(source, page, output)
     source = remove_home_top_strip(source, page, output)
     source = normalize_header_auth_actions(source, page, output)
     if HEAD_MARKER in source:
@@ -157,7 +178,6 @@ def inject_page(page: Path, output: Path) -> None:
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
     auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
     copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
-    direct_ticker_js = asset_href(source, page, output, "direct-ticker-nav-v1.js")
 
     head = (
         route_specific_head(source, page, output)
@@ -166,19 +186,23 @@ def inject_page(page: Path, output: Path) -> None:
         + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
     )
 
-    if not is_homepage(page, output):
+    if is_homepage(page, output):
+        home_core_js = asset_href(source, page, output, "home-core-v1.js")
+        head += f'<script src="{home_core_js}?v=20260903-homecore1" defer></script>\n'
+    else:
         public_js = asset_href(source, page, output, "public-ux.js")
         fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
+        direct_ticker_js = asset_href(source, page, output, "direct-ticker-nav-v1.js")
         head += (
             f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
             + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
+            + f'<script src="{direct_ticker_js}?v=20260903-direct1" defer></script>\n'
         )
 
     head += (
         f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
         + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
         + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
-        + f'<script src="{direct_ticker_js}?v=20260903-direct1" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
@@ -199,6 +223,7 @@ def main() -> None:
         output / "assets" / "header-auth-dedupe-v6.js",
         output / "assets" / "public-copy-v7.js",
         output / "assets" / "direct-ticker-nav-v1.js",
+        output / "assets" / "home-core-v1.js",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
