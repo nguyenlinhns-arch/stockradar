@@ -1,0 +1,54 @@
+/* Focused homepage layer: one Radar surface + one Free/Premium comparison. */
+.app-home .home-focus-section{padding:10px 0}
+.app-home .home-focus-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr);gap:12px;align-items:start}
+.app-home .home-focus-panel{background:#fff;border:1px solid var(--line);box-shadow:0 3px 12px rgba(18,43,68,.04)}
+.app-home .home-focus-head{min-height:58px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
+.app-home .home-focus-head h2{margin:2px 0 0;color:var(--navy);font-size:18px;line-height:1.2}
+.app-home .home-focus-head p{margin:3px 0 0;color:var(--muted);font-size:10px;line-height:1.4}
+.app-home .home-signal-summary{display:grid;grid-template-columns:150px 1fr;border-bottom:1px solid var(--line);background:#fbfcfd}
+.app-home .home-signal-summary>div{padding:10px 14px}
+.app-home .home-signal-summary>div:first-child{border-right:1px solid var(--line)}
+.app-home .home-signal-summary span,.app-home .home-signal-summary strong,.app-home .home-signal-summary small{display:block}
+.app-home .home-signal-summary span{font-size:8px;color:var(--muted);font-weight:850;text-transform:uppercase}
+.app-home .home-signal-summary strong{margin-top:2px;color:var(--navy);font-size:22px}
+.app-home .home-signal-summary small{margin-top:2px;color:var(--muted);font-size:9px;line-height:1.35}
+.app-home .home-radar-sector-list{display:grid}
+.app-home .home-radar-sector-row{min-height:44px;padding:7px 12px;display:grid;grid-template-columns:150px minmax(0,1fr) auto;gap:10px;align-items:center;border-bottom:1px solid #edf1f4}
+.app-home .home-radar-sector-row:last-child{border-bottom:0}
+.app-home .home-radar-sector-row>strong{color:var(--navy);font-size:11px}
+.app-home .home-radar-tickers{display:flex;gap:6px;flex-wrap:wrap}
+.app-home .home-radar-tickers a{display:inline-flex;align-items:center;justify-content:center;min-width:46px;min-height:28px;padding:0 8px;border:1px solid #dce5ec;background:#f8fafc;color:var(--navy);font-size:11px;font-weight:900}
+.app-home .home-radar-tickers a:hover{border-color:#9db4c7;background:#eef4f8;text-decoration:none}
+.app-home .home-radar-sector-row em{padding:4px 6px;border-radius:3px;background:#edf3f7;color:#35546e;font-size:8px;font-style:normal;font-weight:900;white-space:nowrap}
+.app-home .home-radar-note{padding:9px 12px;border-top:1px solid var(--line);background:#fbfcfd;color:var(--muted);font-size:9px;line-height:1.45}
+.app-home .home-quick-panel .home-focus-body{padding:14px}
+.app-home .home-quick-actions{display:grid;gap:8px}
+.app-home .home-quick-actions a{min-height:48px;padding:9px 11px;border:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fff}
+.app-home .home-quick-actions a:hover{background:#f8fafc;text-decoration:none}
+.app-home .home-quick-actions strong{display:block;color:var(--navy);font-size:11px}
+.app-home .home-quick-actions span{display:block;margin-top:2px;color:var(--muted);font-size:9px}
+.app-home .home-quick-actions b{color:var(--blue);font-size:16px}
+.app-home .home-tier-section{padding:0 0 14px}
+.app-home .home-tier-section-head{padding:12px 0 9px;display:flex;align-items:end;justify-content:space-between;gap:16px}
+.app-home .home-tier-section-head h2{margin:2px 0 0;color:var(--navy);font-size:20px}
+.app-home .home-tier-section-head p{margin:0;max-width:600px;color:var(--muted);font-size:10px;line-height:1.45;text-align:right}
+.app-home .home-tier-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.app-home .home-tier-card{min-width:0;background:#fff;border:1px solid var(--line);box-shadow:0 3px 12px rgba(18,43,68,.04)}
+.app-home .home-tier-card.is-free{border-top:4px solid #60758a}
+.app-home .home-tier-card.is-premium{border-top:4px solid var(--red)}
+.app-home .home-tier-card-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:start;justify-content:space-between;gap:12px}
+.app-home .home-tier-card-head h3{margin:5px 0 2px;color:var(--navy);font-size:18px}
+.app-home .home-tier-card-head p{margin:0;color:var(--muted);font-size:10px;line-height:1.45}
+.app-home .home-tier-badge{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;border-radius:999px;font-size:9px;font-weight:900;letter-spacing:.07em}
+.app-home .home-tier-badge.is-free{background:#eef3f6;color:#35536b}
+.app-home .home-tier-badge.is-premium{background:#fff0f2;color:#9b1830}
+.app-home .home-tier-feature-list{display:grid;grid-template-columns:1fr 1fr}
+.app-home .home-tier-feature{min-height:67px;padding:11px 14px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.app-home .home-tier-feature:nth-child(2n){border-right:0}
+.app-home .home-tier-feature strong{display:block;color:var(--navy);font-size:11px}
+.app-home .home-tier-feature span{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}
+.app-home .home-tier-actions{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fbfcfd}
+.app-home .home-tier-actions span{color:var(--muted);font-size:9px;line-height:1.4}
+.app-home .home-tier-actions .button{min-height:38px;white-space:nowrap}
+@media(max-width:900px){.app-home .home-focus-grid{grid-template-columns:1fr}.app-home .home-tier-grid{grid-template-columns:1fr}.app-home .home-tier-section-head{display:block}.app-home .home-tier-section-head p{margin-top:4px;text-align:left}}
+@media(max-width:560px){.app-home .home-focus-section{padding:7px 0}.app-home .home-focus-head{padding:10px 11px}.app-home .home-signal-summary{grid-template-columns:1fr 1fr}.app-home .home-signal-summary>div{padding:9px 10px}.app-home .home-radar-sector-row{grid-template-columns:105px 1fr;padding:7px 9px}.app-home .home-radar-sector-row em{display:none}.app-home .home-radar-tickers{gap:4px}.app-home .home-radar-tickers a{min-width:42px;min-height:30px;padding:0 6px}.app-home .home-tier-feature-list{grid-template-columns:1fr}.app-home .home-tier-feature{min-height:0;border-right:0}.app-home .home-tier-actions{display:block}.app-home .home-tier-actions .button{width:100%;margin-top:8px}.app-home .home-tier-card-head{padding:12px}.app-home .home-tier-feature{padding:10px 12px}}
