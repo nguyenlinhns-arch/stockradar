@@ -1,0 +1,43 @@
+name: Validate premium preview V7
+
+on:
+  push:
+    branches: [premium-preview-production-v7]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Check V7 JavaScript syntax
+        run: |
+          node --check website/assets/public-copy-v7.js
+          node --check website/assets/header-auth-dedupe-v6.js
+      - name: Build fail-closed public data
+        run: python -m engine.cli build-public
+      - name: Run regression suite
+        run: python -m unittest discover -s engine/tests -v
+      - name: Build and verify production Pages artifact
+        env:
+          STOCKRADAR_ENABLE_AUTH: "1"
+          STOCKRADAR_AUTH_EMAIL_READY: "0"
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
+        run: |
+          python scripts/build_pages.py --output .pages-site
+          python scripts/inject_public_ux.py .pages-site
+          python scripts/verify_pages_auth.py .pages-site
+          python scripts/verify_pages_public_surface.py .pages-site
+          grep -q 'MẪU BÁO CÁO CHUYÊN SÂU' .pages-site/index.html
+          grep -q 'MẪU EMAIL GÓI TRẢ PHÍ' .pages-site/index.html
+          grep -q 'public-copy-v7.js?v=20260903-site7' .pages-site/index.html
+          ! grep -Rqi 'Chưa phát hành' .pages-site/*.html .pages-site/*/*.html
+          ! grep -Rqi 'Chưa sẵn sàng' .pages-site/*.html .pages-site/*/*.html
