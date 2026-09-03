@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -24,13 +25,7 @@ AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {
 AUTH_ROUTES = {"signup", "dang-nhap", "dat-lai-mat-khau", "tai-khoan"}
 PREMIUM_CLIENT_ROUTES = {"co-phieu"}
 EXCLUDED_NAMES = {
-    "server.py",
-    "__pycache__",
-    "kien-thuc",
-    "demo1",
-    "email",
-    "theo-doi",
-    "pro",
+    "server.py", "__pycache__", "kien-thuc", "demo1", "email", "theo-doi", "pro",
 }
 PUBLIC_AUTH_HEAD = """\
 <script src="assets/auth-config.js?v=20260903-auth7" defer></script>
@@ -91,17 +86,13 @@ def write_auth_config(output: Path) -> None:
         raise RuntimeError("Refusing to publish a privileged Supabase key to GitHub Pages")
 
     payload = {
-        "provider": "supabase",
-        "supabaseUrl": url,
-        "supabasePublishableKey": key,
-        "configured": bool(url and key),
-        "emailDeliveryReady": email_ready,
+        "provider": "supabase", "supabaseUrl": url, "supabasePublishableKey": key,
+        "configured": bool(url and key), "emailDeliveryReady": email_ready,
     }
     target = output / "assets" / "auth-config.js"
     target.write_text(
         "window.STOCKRADAR_AUTH_CONFIG = Object.freeze("
-        + json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-        + ");\n",
+        + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ");\n",
         encoding="utf-8",
     )
 
@@ -124,6 +115,84 @@ def inject_auth_bundle(source: str, page: Path, output: Path) -> str:
     else:
         head = PUBLIC_AUTH_HEAD
     return source.replace("</head>", head + "</head>", 1)
+
+
+def radar_items(output: Path) -> list[dict[str, object]]:
+    path = output / "public" / "data" / "ticker-universe.json"
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    items = payload.get("items")
+    if not isinstance(items, list):
+        raise RuntimeError("Radar ticker universe items must be a list")
+    clean: list[dict[str, object]] = []
+    seen: set[str] = set()
+    for raw in items:
+        if not isinstance(raw, dict):
+            raise RuntimeError("Radar ticker item must be an object")
+        ticker = str(raw.get("ticker") or "").strip().upper()
+        if not re.fullmatch(r"[A-Z]{3}", ticker):
+            raise RuntimeError(f"Invalid public Radar ticker: {ticker!r}")
+        if str(raw.get("exchange") or "").strip().upper() != "HOSE":
+            raise RuntimeError(f"Non-HOSE ticker cannot get a public stock route: {ticker}")
+        if ticker in seen:
+            raise RuntimeError(f"Duplicate public Radar ticker: {ticker}")
+        seen.add(ticker)
+        clean.append(raw)
+    return clean
+
+
+def generate_radar_ticker_pages(output: Path) -> tuple[str, ...]:
+    """Generate shareable static routes only for the already-public Radar 30 list.
+
+    This does not expose the internal 405-row HOSE reference set and does not imply a buy ranking.
+    """
+    template_path = output / "co-phieu" / "index.html"
+    template = template_path.read_text(encoding="utf-8")
+    tickers: list[str] = []
+    for item in radar_items(output):
+        ticker = str(item["ticker"]).upper()
+        company = str(item.get("company_name") or "").strip()
+        sector = str(item.get("sector") or "HOSE").strip()
+        identity = f"{company} · {sector}" if company else sector
+        title = f"{ticker} — Phân tích Free & Premium | StockRadar"
+        description = (
+            f"Phân tích {ticker} ({identity}) trên StockRadar: bản Free công khai và cấu trúc Premium chuyên sâu. "
+            "Radar rà soát không đồng nghĩa khuyến nghị mua."
+        )
+        canonical = f"https://stockradar.vn/co-phieu/{ticker}/"
+
+        source = template.replace('<base href="../">', '<base href="../../">', 1)
+        source = re.sub(r'<title>.*?</title>', f'<title>{title}</title>', source, count=1, flags=re.DOTALL)
+        source = re.sub(
+            r'<meta\s+name="description"\s+content="[^"]*">',
+            f'<meta name="description" content="{description}">',
+            source,
+            count=1,
+        )
+        social = (
+            f'<link rel="canonical" href="{canonical}">\n'
+            f'<meta property="og:site_name" content="StockRadar">\n'
+            f'<meta property="og:type" content="website">\n'
+            f'<meta property="og:title" content="{title}">\n'
+            f'<meta property="og:description" content="{description}">\n'
+            f'<meta property="og:url" content="{canonical}">\n'
+            f'<meta name="twitter:card" content="summary">\n'
+            f'<meta name="twitter:title" content="{title}">\n'
+            f'<meta name="twitter:description" content="{description}">\n'
+        )
+        source = source.replace("</head>", social + "</head>", 1)
+        source = source.replace('<body data-proposition="stock-report">', f'<body data-proposition="stock-report" data-static-ticker="{ticker}">', 1)
+
+        target = output / "co-phieu" / ticker / "index.html"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(source, encoding="utf-8")
+        tickers.append(ticker)
+
+    home_path = output / "index.html"
+    home = home_path.read_text(encoding="utf-8")
+    for ticker in tickers:
+        home = home.replace(f"co-phieu/?ticker={ticker}", f"co-phieu/{ticker}/")
+    home_path.write_text(home, encoding="utf-8")
+    return tuple(tickers)
 
 
 def _payload_requests_production(payload: dict[str, object]) -> bool:
@@ -151,12 +220,10 @@ def enforce_production_data_gate(payloads: list[tuple[Path, dict[str, object]]])
     production_payloads = [(path, payload) for path, payload in payloads if _payload_requests_production(payload)]
     if not production_payloads:
         return
-
     manifest = os.environ.get("STOCKRADAR_PRODUCTION_MANIFEST", "").strip()
     if not manifest:
         raise RuntimeError(
-            "Production-looking public data requires STOCKRADAR_PRODUCTION_MANIFEST; "
-            "refusing to publish without a validated data contract."
+            "Production-looking public data requires STOCKRADAR_PRODUCTION_MANIFEST; refusing to publish without a validated data contract."
         )
     try:
         max_age_hours = float(os.environ.get("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS", "6"))
@@ -164,7 +231,6 @@ def enforce_production_data_gate(payloads: list[tuple[Path, dict[str, object]]])
         raise RuntimeError("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS must be numeric") from error
     if max_age_hours <= 0:
         raise RuntimeError("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS must be positive")
-
     result = require_publishable_manifest(manifest, max_age_seconds=int(max_age_hours * 3600))
     for path, payload in production_payloads:
         payload_snapshot_id = _payload_snapshot_id(payload)
@@ -178,6 +244,7 @@ def build(output: Path) -> None:
         shutil.rmtree(output)
     shutil.copytree(WEBSITE, output, ignore=ignore)
     write_auth_config(output)
+    public_radar_tickers = generate_radar_ticker_pages(output)
 
     for page in output.rglob("*.html"):
         source = page.read_text(encoding="utf-8")
@@ -190,44 +257,26 @@ def build(output: Path) -> None:
     (output / ".nojekyll").write_text("", encoding="utf-8")
 
     required = [
-        output / "index.html",
-        output / "assets" / "app.js",
-        output / "public" / "data" / "radar.json",
-        output / "public" / "data" / "recommendations.json",
-        output / "public" / "data" / "ticker-universe.json",
-        output / "public" / "data" / "stock-reports.json",
-        output / "public" / "data" / "today-changes.json",
-        output / "public" / "data" / "recommendation-journal.json",
-        output / "public" / "data" / "track-record.json",
-        output / "track-record" / "index.html",
-        output / "radar5" / "index.html",
-        output / "breakout" / "index.html",
-        output / "risk" / "index.html",
-        output / "nganh" / "index.html",
-        output / "phan-tich" / "index.html",
-        output / "khuyen-nghi" / "index.html",
-        output / "hieu-qua" / "index.html",
-        output / "co-phieu" / "index.html",
-        output / "kiem-tra-co-phieu" / "index.html",
-        output / "thay-doi-hom-nay" / "index.html",
-        output / "dieu-khoan" / "index.html",
-        output / "quyen-rieng-tu" / "index.html",
-        output / "404.html",
+        output / "index.html", output / "assets" / "app.js",
+        output / "public" / "data" / "radar.json", output / "public" / "data" / "recommendations.json",
+        output / "public" / "data" / "ticker-universe.json", output / "public" / "data" / "stock-reports.json",
+        output / "public" / "data" / "today-changes.json", output / "public" / "data" / "recommendation-journal.json",
+        output / "public" / "data" / "track-record.json", output / "track-record" / "index.html",
+        output / "radar5" / "index.html", output / "breakout" / "index.html", output / "risk" / "index.html",
+        output / "nganh" / "index.html", output / "phan-tich" / "index.html", output / "khuyen-nghi" / "index.html",
+        output / "hieu-qua" / "index.html", output / "co-phieu" / "index.html", output / "kiem-tra-co-phieu" / "index.html",
+        output / "thay-doi-hom-nay" / "index.html", output / "dieu-khoan" / "index.html",
+        output / "quyen-rieng-tu" / "index.html", output / "404.html",
     ]
+    required.extend(output / "co-phieu" / ticker / "index.html" for ticker in public_radar_tickers)
     if AUTH_ENABLED:
         required.extend([
-            output / "assets" / "auth.css",
-            output / "assets" / "auth-extra.css",
-            output / "assets" / "auth-email-gate.js",
-            output / "assets" / "auth-policy.js",
-            output / "assets" / "auth-account-security.js",
-            output / "assets" / "auth.js",
-            output / "assets" / "auth-extra.js",
-            output / "assets" / "auth-delete-security.js",
-            output / "assets" / "auth-config.js",
-            output / "signup" / "index.html",
-            output / "dang-nhap" / "index.html",
-            output / "dat-lai-mat-khau" / "index.html",
+            output / "assets" / "auth.css", output / "assets" / "auth-extra.css",
+            output / "assets" / "auth-email-gate.js", output / "assets" / "auth-policy.js",
+            output / "assets" / "auth-account-security.js", output / "assets" / "auth.js",
+            output / "assets" / "auth-extra.js", output / "assets" / "auth-delete-security.js",
+            output / "assets" / "auth-config.js", output / "signup" / "index.html",
+            output / "dang-nhap" / "index.html", output / "dat-lai-mat-khau" / "index.html",
             output / "tai-khoan" / "index.html",
         ])
     missing = [str(path) for path in required if not path.is_file()]
