@@ -30,23 +30,23 @@
     const button = form.querySelector('button[type="submit"]');
 
     if (!validEmail(email)) {
-      setMessage(message, 'Nhập email hợp lệ để đăng ký.', 'error');
+      setMessage(message, 'Nhập email hợp lệ để ghi nhận nhu cầu Premium.', 'error');
       form.elements.email?.focus();
       return;
     }
     if (!dailyBrief && !eventAlerts) {
-      setMessage(message, 'Chọn ít nhất Báo cáo hằng ngày hoặc Cảnh báo mua/bán.', 'error');
+      setMessage(message, 'Chọn ít nhất Báo cáo Premium hằng ngày hoặc Cảnh báo hành động Premium.', 'error');
       return;
     }
     if (!privacyAccepted) {
-      setMessage(message, 'Cần đồng ý lưu email và lựa chọn đăng ký trước khi tiếp tục.', 'error');
+      setMessage(message, 'Cần đồng ý lưu email và lựa chọn quan tâm trước khi tiếp tục.', 'error');
       return;
     }
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     if (button) button.disabled = true;
-    setMessage(message, 'Đang ghi nhận đăng ký…');
+    setMessage(message, 'Đang ghi nhận nhu cầu…');
 
     try {
       const response = await fetch(endpoint(), {
@@ -68,19 +68,19 @@
       let payload = {};
       try { payload = await response.json(); } catch (_) {}
       if (!response.ok || payload.accepted !== true) {
-        throw new Error(payload.message || 'Chưa thể ghi nhận đăng ký email lúc này.');
+        throw new Error(payload.message || 'Chưa thể ghi nhận nhu cầu Premium lúc này.');
       }
 
       form.reset();
       setMessage(
         message,
-        payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Chưa có email nội dung nào được gửi ở bước này.',
+        payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bước này chưa kích hoạt báo cáo hoặc cảnh báo Premium.',
         'success'
       );
     } catch (error) {
       const text = error?.name === 'AbortError'
-        ? 'Kết nối đăng ký email quá thời gian. Vui lòng thử lại.'
-        : String(error?.message || 'Chưa thể ghi nhận đăng ký email lúc này.');
+        ? 'Kết nối ghi nhận email quá thời gian. Vui lòng thử lại.'
+        : String(error?.message || 'Chưa thể ghi nhận nhu cầu Premium lúc này.');
       setMessage(message, text, 'error');
     } finally {
       clearTimeout(timeout);
