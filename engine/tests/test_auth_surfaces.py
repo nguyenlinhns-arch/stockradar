@@ -33,6 +33,9 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("data-auth-signup-form", gate)
         self.assertIn("data-auth-login-otp-form", gate)
         self.assertIn("data-auth-forgot-form", gate)
+        self.assertIn("addEventListener('submit'", gate)
+        self.assertIn("addEventListener('click'", gate)
+        self.assertIn("stopImmediatePropagation", gate)
         self.assertIn('STOCKRADAR_AUTH_EMAIL_READY: "0"', workflow)
 
     def test_unverified_users_can_resume_with_login_otp(self) -> None:
