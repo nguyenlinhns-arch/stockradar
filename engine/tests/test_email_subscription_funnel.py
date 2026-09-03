@@ -19,7 +19,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
         self.assertIn('name="selected_plan" value="free" checked', signup)
         self.assertIn('name="selected_plan" value="premium"', signup)
-        self.assertIn("Free chỉ nhận email hệ thống cần thiết cho tài khoản.", signup)
+        self.assertIn("Free không nhận email báo cáo/khuyến nghị hằng ngày", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
     def test_signup_auth_metadata_carries_legal_and_product_email_consent(self):
@@ -124,7 +124,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertEqual(set(counts.values()), {3})
         self.assertTrue(all(item["exchange"] == "HOSE" for item in items))
 
-    def test_registration_page_compares_free_and_premium_before_signup(self):
+    def test_registration_page_compares_free_premium_and_keeps_optional_interest(self):
         register = self.read("website/dang-ky/index.html")
         self.assertIn('data-proposition="plans"', register)
         self.assertIn("data-plan-free", register)
@@ -134,7 +134,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('href="signup/?plan=premium"', register)
         self.assertIn("StockRadar Free", register)
         self.assertIn("StockRadar Premium", register)
-        self.assertNotIn("data-email-interest-form", register)
+        self.assertIn("data-email-interest-form", register)
+        self.assertIn("assets/email-interest.js", register)
 
     def test_recommendation_page_uses_30_stock_radar_review_list(self):
         page = self.read("website/khuyen-nghi/index.html")
