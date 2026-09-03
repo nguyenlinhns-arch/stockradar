@@ -189,10 +189,10 @@ def main() -> None:
     require_text(
         output, "dang-ky/index.html",
         (
-            'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'data-email-interest-form',
-            'name="daily_brief"', 'name="event_alerts"', 'assets/email-interest.js', 'assets/home-density.css',
-            'assets/home-dense-v3.css', 'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
-            'assets/direct-ticker-nav-v1.js', 'assets/auth-production-gate.js', 'assets/public-copy-v7.js',
+            'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/?plan=free"', 'href="signup/?plan=premium"',
+            'data-proposition="plans"', 'data-plan-free', 'data-plan-premium', 'data-plan-comparison', 'assets/plans-v1.css',
+            'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js',
+            'assets/auth-production-gate.js', 'assets/public-copy-v7.js',
         ), errors,
     )
     require_text(
@@ -218,9 +218,9 @@ def main() -> None:
         "co-phieu/index.html": ('4M · Payback · CANSLIM', 'Định giá Bear · Base · Bull', 'Kế hoạch giao dịch'),
     }
     for route, features in route_features.items():
-        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', *NON_HOME_UX_ASSETS, *features), errors)
+        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS, *features), errors)
 
-    require_text(output, "phan-tich/index.html", ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', *NON_HOME_UX_ASSETS), errors)
+    require_text(output, "phan-tich/index.html", ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS), errors)
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
     fallback_js = output / "assets" / "public-fallbacks-v4.js"
