@@ -1,0 +1,40 @@
+name: Validate clean StockRadar production copy
+
+on:
+  push:
+    branches: [remove-data-gate-copy-20260903]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Validate scripts
+        run: |
+          python -m py_compile scripts/inject_public_ux.py scripts/verify_pages_public_surface.py
+          node --check website/assets/public-ux.js
+          node --check website/assets/auth-production-gate.js
+      - name: Build public data
+        run: python -m engine.cli build-public
+      - name: Run regression suite
+        run: python -m unittest discover -s engine/tests -v
+      - name: Build Pages artifact
+        env:
+          STOCKRADAR_ENABLE_AUTH: "1"
+          STOCKRADAR_AUTH_EMAIL_READY: "0"
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
+        run: python scripts/build_pages.py --output .pages-site
+      - name: Apply production UX
+        run: python scripts/inject_public_ux.py .pages-site
+      - name: Verify auth
+        run: python scripts/verify_pages_auth.py .pages-site
+      - name: Verify production surface
+        run: python scripts/verify_pages_public_surface.py .pages-site
