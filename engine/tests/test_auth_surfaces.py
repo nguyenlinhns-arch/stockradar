@@ -17,12 +17,22 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("verifyOtp", auth)
         self.assertIn("type: 'email'", auth)
         self.assertIn("auth.resend", auth)
-        self.assertIn("OTP_RESEND_DEADLINE_KEY", extra)
+        self.assertIn("SIGNUP_OTP_DEADLINE_KEY", extra)
         self.assertIn("dieu-khoan/", signup)
         self.assertIn("quyen-rieng-tu/", signup)
         self.assertIn("terms_accepted", policy)
         self.assertIn("privacy_accepted", policy)
         self.assertIn("2026-09-03", policy)
+
+    def test_unverified_users_can_resume_with_login_otp(self) -> None:
+        login = (WEBSITE / "dang-nhap" / "index.html").read_text(encoding="utf-8")
+        extra = (WEBSITE / "assets" / "auth-extra.js").read_text(encoding="utf-8")
+        self.assertIn("data-auth-login-otp-form", login)
+        self.assertIn("data-auth-login-otp-send", login)
+        self.assertIn("one-time-code", login)
+        self.assertIn("LOGIN_OTP_DEADLINE_KEY", extra)
+        self.assertIn("client.auth.resend", extra)
+        self.assertIn("client.auth.verifyOtp", extra)
 
     def test_account_deletion_is_authenticated_backend_operation(self) -> None:
         account = (WEBSITE / "tai-khoan" / "index.html").read_text(encoding="utf-8")
