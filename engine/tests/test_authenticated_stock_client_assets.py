@@ -12,8 +12,12 @@ class AuthenticatedStockClientAssetTests(unittest.TestCase):
         self.assertIn("assets/stock-api.css", page)
         self.assertIn("assets/stock-api-client.js", page)
         self.assertIn("data-dynamic-stock-report", page)
+        self.assertIn("data-premium-stock-report", page)
+        self.assertIn("data-premium-gate-copy", page)
+        self.assertIn("Phân tích cơ bản", page)
+        self.assertIn("Phân tích chuyên sâu & kế hoạch hành động", page)
 
-    def test_client_requires_session_and_only_replaces_static_on_ready(self):
+    def test_client_requires_session_and_routes_ready_report_to_premium_column(self):
         source = (WEBSITE / "assets" / "stock-api-client.js").read_text(encoding="utf-8")
         for marker in (
             "client.auth.getSession()",
@@ -21,10 +25,14 @@ class AuthenticatedStockClientAssetTests(unittest.TestCase):
             "/functions/v1/stock-api",
             "Authorization: `Bearer ${auth.session.access_token}`",
             "if (!response.ok || payload.status !== 'READY') return false",
-            "staticTarget.hidden = true",
+            "const premiumTarget = document.querySelector('[data-premium-stock-report]')",
+            "const premiumGateCopy = document.querySelector('[data-premium-gate-copy]')",
+            "liveContainer.hidden = false",
+            "if (premiumGateCopy) premiumGateCopy.hidden = true",
             "if (response.status === 429)",
         ):
             self.assertIn(marker, source)
+        self.assertNotIn("staticTarget.hidden = true", source)
         self.assertIn(
             "if (!response.ok || payload.status !== 'READY') return false;\n\n      const container = ensureLiveContainer();",
             source,
