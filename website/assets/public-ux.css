@@ -22,14 +22,36 @@ html.auth-email-pending a[href$="signup/"].auth-nav-signup {
   opacity: .78;
 }
 
+.global-register-cta {
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--red);
+  border-radius: 4px;
+  background: var(--red);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+.global-register-cta:hover { background: #b71e29; border-color: #b71e29; color: #fff; }
+
 @media (max-width: 930px) {
   .operations-status-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .site-header .nav { gap: 10px; }
+  .global-register-cta { min-height: 34px; padding: 0 10px; font-size: 11px; }
 }
 
 @media (max-width: 700px) {
   .operations-status-grid article:last-child {
     grid-column: auto;
   }
+  .site-header .brand img { width: min(150px, 42vw); }
+  .global-register-cta { min-height: 32px; padding: 0 9px; font-size: 10px; }
 }
