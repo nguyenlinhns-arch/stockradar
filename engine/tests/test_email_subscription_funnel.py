@@ -56,7 +56,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("product_email_consent_version", migration)
 
     def test_product_email_entitlement_is_premium_only_server_side(self):
-        migration = self.read("supabase/migrations/20260903095900_restrict_product_email_to_premium.sql")
+        migration = self.read("supabase/migrations/20260903100503_restrict_product_email_to_premium.sql")
         lowered = migration.lower()
         self.assertIn("premium product email requires trial or paid", lowered)
         self.assertIn("prof.account_tier in ('trial','paid')", lowered)
