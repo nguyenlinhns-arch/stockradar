@@ -92,8 +92,8 @@ class V21ProductRulesTests(unittest.TestCase):
             self.assertEqual(db.execute("SELECT COUNT(*) FROM recommendation_events").fetchone()[0], 2)
             db.close()
 
-    def test_r6_free_user_receives_transactional_only(self) -> None:
-        self.assertFalse(
+    def test_r6_free_user_receives_daily_after_verification_and_consent(self) -> None:
+        self.assertTrue(
             can_receive_email(
                 AccountTier.FREE,
                 EmailKind.PRODUCT_DAILY,
