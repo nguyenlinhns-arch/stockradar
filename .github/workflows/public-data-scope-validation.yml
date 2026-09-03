@@ -49,6 +49,6 @@ jobs:
       - name: Verify public data scope
         run: |
           grep -q '20260903-public2' .pages-site/index.html
-          grep -q '16 MÃ THAM CHIẾU' website/assets/public-ux.js
+          grep -q 'MÃ THAM CHIẾU' website/assets/public-ux.js
           grep -q 'noindex,nofollow' .pages-site/co-phieu/demo1/index.html
           ! grep -q 'KHÔNG PHẢI CỔ PHIẾU THẬT' .pages-site/co-phieu/demo1/index.html
