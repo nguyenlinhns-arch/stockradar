@@ -86,8 +86,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         for ticker in ("ACB", "VNM", "NKG", "CMG", "PVD", "FRT", "VHM", "POW", "GMD", "HAH"):
             self.assertIn(f"ticker={ticker}", home)
         for feature in (
-            "Radar 30", "4M · CANSLIM", "Bear · Base · Bull", "Pivot · Breakout",
-            "Buy Zone · Stop · Target", "So sánh theo ngành", "Hiệu quả khuyến nghị",
+            "Radar 30", "4M · CANSLIM · Payback", "So sánh theo ngành", "Hiệu quả khuyến nghị",
             "Định giá Bear / Base / Bull", "SEPA/VCP · Stage · Pivot",
             "VPA · RVOL · dòng tiền lớn", "Email & cảnh báo trong phiên",
         ):
@@ -97,6 +96,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("4 mốc quét/ngày", home)
         self.assertIn("10:30 · 11:15 · 13:30 · 14:15", home)
         self.assertIn("assets/home-focus-v1.css", home)
+        self.assertNotIn("home-status-band", home)
+        self.assertNotIn("home-status-grid", home)
         self.assertNotIn("assets/premium-preview-v7.css", home)
         self.assertNotIn("assets/home-dashboard.js", home)
         self.assertNotIn("assets/email-interest.js", home)
