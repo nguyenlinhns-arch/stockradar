@@ -40,6 +40,9 @@ jobs:
           STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
         run: python scripts/build_pages.py --output .pages-site
 
+      - name: Verify production auth artifact
+        run: python scripts/verify_pages_auth.py .pages-site
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:
