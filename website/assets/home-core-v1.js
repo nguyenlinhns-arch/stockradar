@@ -102,7 +102,7 @@
     if (compact && !ready) {
       const text = compact.querySelector('span');
       const action = compact.querySelector('a');
-      if (text) text.textContent = 'Free: tra cứu & phân tích công khai · Premium: có thể đăng ký quan tâm trong khi email xác minh đang hoàn thiện.';
+      if (text) text.textContent = 'Free: tra cứu, Radar và phân tích công khai · Premium: đăng ký quan tâm để nhận thông tin mở quyền.';
       if (action) action.textContent = 'Đăng ký quan tâm';
     }
 

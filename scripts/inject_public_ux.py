@@ -11,24 +11,30 @@ from pathlib import Path
 
 HEAD_MARKER = "data-stockradar-public-ux"
 PUBLIC_HTML_REPLACEMENTS = (
-    ("Dữ liệu đã vượt Data Gate", "Dữ liệu đã đạt điều kiện phát hành"),
-    ("dữ liệu và quyền sử dụng đã vượt qua Data Gate", "dữ liệu và quyền sử dụng đã đạt điều kiện phát hành"),
-    ("dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate", "dữ liệu thị trường và quyền sử dụng đã đạt điều kiện phát hành"),
-    ("DATA GATE", "TRẠNG THÁI DỮ LIỆU"),
-    ("Data Gate", "điều kiện phát hành dữ liệu"),
-    ("CHỜ NGUỒN ĐƯỢC CẤP QUYỀN", "ĐANG CẬP NHẬT GIÁ"),
-    ("CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN", "ĐANG CẬP NHẬT DỮ LIỆU"),
-    ("TẠM CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT"),
-    ("CHƯA SẴN SÀNG", "ĐANG CẬP NHẬT"),
-    ("Chưa sẵn sàng", "Đang cập nhật"),
-    ("chưa sẵn sàng", "đang cập nhật"),
-    ("CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT"),
-    ("Chưa phát hành", "Đang cập nhật"),
-    ("chưa phát hành", "đang cập nhật"),
-    ("ĐANG KHÓA", "ĐANG CẬP NHẬT"),
-    ("CHƯA KẾT NỐI", "ĐANG CẬP NHẬT"),
-    ("CHƯA ĐỦ NGUỒN GIÁ", "ĐANG CẬP NHẬT GIÁ"),
-    ("CHƯA ĐỦ DỮ LIỆU", "ĐANG CẬP NHẬT DỮ LIỆU"),
+    ("Dữ liệu đã vượt Data Gate", "Dữ liệu StockRadar"),
+    ("dữ liệu và quyền sử dụng đã vượt qua Data Gate", "dữ liệu StockRadar"),
+    ("dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate", "dữ liệu StockRadar"),
+    ("DATA GATE", "STOCKRADAR"),
+    ("Data Gate", "StockRadar"),
+    ("CHỜ NGUỒN ĐƯỢC CẤP QUYỀN", "PHÂN TÍCH GIÁ & THANH KHOẢN"),
+    ("CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN", "PHÂN TÍCH STOCKRADAR"),
+    ("TẠM CHƯA PHÁT HÀNH", "STOCKRADAR"),
+    ("CHƯA SẴN SÀNG", "STOCKRADAR"),
+    ("Chưa sẵn sàng", "StockRadar"),
+    ("chưa sẵn sàng", "StockRadar"),
+    ("CHƯA PHÁT HÀNH", "STOCKRADAR"),
+    ("Chưa phát hành", "StockRadar"),
+    ("chưa phát hành", "StockRadar"),
+    ("ĐANG KHÓA", "STOCKRADAR"),
+    ("CHƯA KẾT NỐI", "PHÂN TÍCH GIÁ & THANH KHOẢN"),
+    ("CHƯA ĐỦ NGUỒN GIÁ", "PHÂN TÍCH GIÁ & THANH KHOẢN"),
+    ("CHƯA ĐỦ DỮ LIỆU", "PHÂN TÍCH STOCKRADAR"),
+    ("Đang kiểm tra phiên đăng nhập…", "Tài khoản StockRadar"),
+    ("Đang tải tùy chọn email…", "Báo cáo & cảnh báo Premium"),
+    ("Đang kiểm tra điều kiện tài khoản…", "Email Premium theo quyền tài khoản"),
+    ("Đang tải tùy chọn…", "Ưu tiên phân tích & danh sách theo dõi"),
+    ("Đang tải danh sách…", ""),
+    ("Đang kiểm tra…", "StockRadar"),
 )
 
 
@@ -73,17 +79,11 @@ def optimize_homepage_assets(source: str, page: Path, output: Path) -> str:
         return source
     source = re.sub(
         r'\s*<link\b[^>]*href=["\'][^"\']*assets/home-dashboard\.css(?:\?[^"\']*)?["\'][^>]*>\s*',
-        "\n",
-        source,
-        count=1,
-        flags=re.IGNORECASE,
+        "\n", source, count=1, flags=re.IGNORECASE,
     )
     source = re.sub(
         r'\s*<script\b[^>]*src=["\'][^"\']*assets/app\.js(?:\?[^"\']*)?["\'][^>]*>\s*</script>\s*',
-        "\n",
-        source,
-        count=1,
-        flags=re.IGNORECASE,
+        "\n", source, count=1, flags=re.IGNORECASE,
     )
     return source
 
@@ -93,10 +93,7 @@ def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
         return source
     return re.sub(
         r'\s*<div\s+class=["\']home-newsletter-strip["\']>.*?</div>\s*</div>\s*',
-        "\n",
-        source,
-        count=1,
-        flags=re.IGNORECASE | re.DOTALL,
+        "\n", source, count=1, flags=re.IGNORECASE | re.DOTALL,
     )
 
 
@@ -108,37 +105,26 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
         nav = match.group(0)
         nav = re.sub(
             r'<a\b[^>]*href=["\'][^"\']*dang-(?:ky|nhap)/["\'][^>]*>.*?</a>',
-            "",
-            nav,
-            flags=re.IGNORECASE | re.DOTALL,
+            "", nav, flags=re.IGNORECASE | re.DOTALL,
         )
         return nav
 
     source = re.sub(
-        r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>',
-        clean_nav,
-        source,
-        count=1,
-        flags=re.IGNORECASE | re.DOTALL,
+        r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>', clean_nav, source,
+        count=1, flags=re.IGNORECASE | re.DOTALL,
     )
-
     source = re.sub(
         r'<a\b[^>]*class=["\'][^"\']*(?:header-newsletter-cta|global-register-cta)[^"\']*["\'][^>]*>.*?</a>',
-        "",
-        source,
-        flags=re.IGNORECASE | re.DOTALL,
+        "", source, flags=re.IGNORECASE | re.DOTALL,
     )
     source = re.sub(
-        r'<div\b[^>]*data-header-auth-actions[^>]*>.*?</div>',
-        "",
-        source,
+        r'<div\b[^>]*data-header-auth-actions[^>]*>.*?</div>', "", source,
         flags=re.IGNORECASE | re.DOTALL,
     )
 
     match = re.search(
         r'(<header\b[^>]*class=["\'][^"\']*\bsite-header\b[^"\']*["\'][^>]*>.*?)(</div>\s*</header>)',
-        source,
-        flags=re.IGNORECASE | re.DOTALL,
+        source, flags=re.IGNORECASE | re.DOTALL,
     )
     if not match:
         return source
@@ -179,7 +165,7 @@ def inject_page(page: Path, output: Path) -> None:
         head = (
             route_specific_head(source, page, output)
             + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1" {HEAD_MARKER}>\n'
-            + f'<script src="{home_core_js}?v=20260903-homecore3" defer></script>\n'
+            + f'<script src="{home_core_js}?v=20260903-homecore4" defer></script>\n'
         )
     else:
         public_css = asset_href(source, page, output, "public-ux.css")
@@ -193,12 +179,12 @@ def inject_page(page: Path, output: Path) -> None:
         head = (
             route_specific_head(source, page, output)
             + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
-            + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7">\n'
+            + f'<link rel="stylesheet" href="{site_css}?v=20260903-site8">\n'
             + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
             + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
-            + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
+            + f'<script src="{fallback_js}?v=20260903-site5" defer></script>\n'
             + f'<script src="{direct_ticker_js}?v=20260903-direct1" defer></script>\n'
-            + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
+            + f'<script src="{auth_gate_js}?v=20260903-public2" defer></script>\n'
             + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
             + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
         )

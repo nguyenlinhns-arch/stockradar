@@ -21,10 +21,11 @@ class HomepageAssetBudgetTests(unittest.TestCase):
     def test_home_core_owns_navigation_search_and_registration_readiness(self):
         source = (ROOT / "website" / "assets" / "home-core-v1.js").read_text(encoding="utf-8")
         for marker in (
-            "site-v4", "mountNavigation", "mountTickerSearch", "mountRegistration",
+            "mountNavigation", "mountTickerSearch", "mountRegistration",
             "emailDeliveryReady", "registrationUrl", "signup/", "dang-ky/", "window.location.assign",
         ):
             self.assertIn(marker, source)
+        self.assertNotIn("đang hoàn thiện", source.lower())
 
     def test_built_homepage_is_self_contained_while_radar_keeps_full_runtime(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -39,10 +40,10 @@ class HomepageAssetBudgetTests(unittest.TestCase):
             for heavy in (
                 "public-ux.css", "public-ux.js", "public-fallbacks-v4.js", "direct-ticker-nav-v1.js",
                 "auth-production-gate.js", "header-auth-dedupe-v6.js", "public-copy-v7.js",
-                "assets/app.js", "home-dashboard.css",
+                "assets/app.js", "home-dashboard.css", "site-v4.css",
             ):
                 self.assertNotIn(heavy, home)
-            for essential in ("home-core-v1.js", "site-v4.css", "mobile-touch-v1.css"):
+            for essential in ("home-core-v1.js", "mobile-touch-v1.css"):
                 self.assertIn(essential, home)
 
             for full in (

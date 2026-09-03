@@ -1,21 +1,18 @@
 <!doctype html>
 <html lang="vi" data-api-mode="auto">
-<head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Tra cứu mã cổ phiếu HOSE theo bốn mục tiêu đầu tư trên StockRadar."><title>Tra cứu cổ phiếu — StockRadar</title><link rel="icon" href="assets/logo.svg"><link rel="stylesheet" href="assets/styles.css?v=20260902-data1"><script src="assets/app.js?v=20260902-data1" defer></script></head>
+<head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Tra cứu cổ phiếu HOSE theo bốn khung đầu tư và hệ phương pháp StockRadar."><title>Tra cứu cổ phiếu — StockRadar</title><link rel="icon" href="assets/logo.svg"><link rel="stylesheet" href="assets/styles.css?v=20260902-data1"><script src="assets/app.js?v=20260902-data1" defer></script></head>
 <body data-proposition="ticker-search">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/" aria-current="page">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="thay-doi-hom-nay/">Thay đổi</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
   <main id="content">
-    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Tra cứu mã</span></nav><h1>Tra cứu cổ phiếu HOSE</h1></div><span class="data-pill">TRA MÃ SẴN SÀNG</span></div></section>
+    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Tra cứu mã</span></nav><h1>Tra cứu cổ phiếu HOSE</h1><p>Nhập mã 3 ký tự để mở phân tích Free/Premium.</p></div><span class="data-pill">4 KHUNG ĐẦU TƯ</span></div></section>
     <section class="search-workspace operational-search-page"><div class="narrow">
-      <div class="search-panel lookup-search-panel">
-        <form class="stock-search-form" data-stock-search-form><label for="ticker-check">Mã cổ phiếu</label><input id="ticker-check" name="ticker" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="3" pattern="[A-Za-z]{3}" placeholder="VD: FPT"><button class="button button-primary" type="submit">Tra cứu</button></form>
-        <div class="search-result" data-stock-search-result aria-live="polite"></div>
-      </div>
+      <div class="search-panel lookup-search-panel"><form class="stock-search-form" data-stock-search-form><label for="ticker-check">Mã cổ phiếu</label><input id="ticker-check" name="ticker" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="3" pattern="[A-Za-z]{3}" placeholder="VD: FPT"><button class="button button-primary" type="submit">Phân tích</button></form><div class="search-result" data-stock-search-result aria-live="polite"></div></div>
       <nav class="horizon-tabs operations-horizons" aria-label="Phạm vi báo cáo"><span class="horizon-tab"><span>5–20 phiên</span>Ngắn hạn</span><span class="horizon-tab"><span>1–6 tháng</span>Trung hạn</span><span class="horizon-tab"><span>6–18 tháng</span>Dài hạn</span><span class="horizon-tab"><span>2–5 năm+</span>Tích sản</span></nav>
-      <div class="lookup-status-line"><span>Phạm vi: <strong>HOSE</strong></span><span>Tra mã: <strong>SẴN SÀNG</strong></span><span>Giá: <strong data-feed-status>ĐANG KIỂM TRA</strong></span><span>Nguồn: <strong data-reference-count>—</strong></span></div>
-      <div data-data-readiness="TRẠNG THÁI DỮ LIỆU" data-compact="true"><div class="empty">Đang kiểm tra…</div></div>
-      <section class="recent-panel"><span class="panel-label">MÃ ĐÃ TRA</span><div class="recent-tickers" data-recent-tickers><span>Chưa có mã đã tra.</span></div></section>
+      <div class="lookup-status-line"><span>Phạm vi <strong>HOSE</strong></span><span>Radar <strong>30 mã</strong></span><span>Phân tích <strong>4M · CANSLIM</strong></span><span>Kế hoạch <strong>Buy Zone · Stop · Target</strong></span></div>
+      <div data-data-readiness="TRA CỨU STOCKRADAR" data-compact="true"></div>
+      <section class="recent-panel"><span class="panel-label">LỊCH SỬ TRA CỨU</span><div class="recent-tickers" data-recent-tickers></div></section>
     </div></section>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Kết quả chỉ được phát hành khi dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Tra cứu hỗ trợ ngắn hạn, trung hạn, dài hạn và tích sản trên cổ phiếu HOSE.</p></div></footer>
 </body></html>
