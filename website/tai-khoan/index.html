@@ -4,17 +4,18 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Tài khoản StockRadar, trạng thái email, gói dịch vụ và bảo mật mật khẩu.">
+  <meta name="description" content="Tài khoản StockRadar, tùy chọn phân tích, danh sách theo dõi, trạng thái email, gói dịch vụ và bảo mật.">
   <title>Tài khoản — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth5">
-  <script src="assets/app.js?v=20260903-auth5" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth7">
+  <script src="assets/app.js?v=20260903-auth7" defer></script>
+  <script src="assets/account-preferences.js?v=20260903-personalization1" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
   <main id="content">
-    <section class="page-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Tài khoản</span></nav><h1>Tài khoản StockRadar</h1><p>Email, trạng thái xác minh, gói dịch vụ và bảo mật mật khẩu.</p></div><span class="data-pill">AUTH</span></div></section>
+    <section class="page-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Tài khoản</span></nav><h1>Tài khoản StockRadar</h1><p>Hồ sơ, tùy chọn phân tích, danh sách theo dõi và bảo mật.</p></div><span class="data-pill">AUTH</span></div></section>
     <section class="section" data-auth-account><div class="narrow">
       <p class="auth-message" data-auth-account-status aria-live="polite">Đang kiểm tra phiên đăng nhập…</p>
       <div class="auth-guest" data-auth-account-guest hidden><h2>Chưa đăng nhập</h2><p>Đăng nhập để xem và quản lý tài khoản StockRadar.</p><div class="hero-actions"><a class="button button-primary" href="dang-nhap/">Đăng nhập</a><a class="button button-secondary" href="signup/">Tạo tài khoản</a></div></div>
@@ -23,7 +24,56 @@
           <article class="auth-account-card"><span class="panel-label">HỒ SƠ</span><h2>Thông tin tài khoản</h2><div class="auth-account-list"><div class="auth-account-row"><span>Email</span><strong data-account-email>—</strong></div><div class="auth-account-row"><span>Xác minh email</span><strong data-account-verified>—</strong></div><div class="auth-account-row"><span>Ngày tạo</span><strong data-account-created>—</strong></div><div class="auth-account-row"><span>Gói hiện tại</span><strong data-account-tier>—</strong></div><div class="auth-account-row"><span>Trạng thái</span><strong data-account-status>—</strong></div></div></article>
           <article class="auth-account-card"><span class="panel-label">BẢO MẬT</span><h2>Đổi mật khẩu</h2><form class="auth-form" data-auth-update-password-form data-require-current-password novalidate><div class="auth-field"><label for="account-current-password">Mật khẩu hiện tại</label><div class="auth-password-wrap"><input id="account-current-password" name="current_password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-current-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="account-password">Mật khẩu mới</label><div class="auth-password-wrap"><input id="account-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="account-password-confirm">Nhập lại mật khẩu mới</label><div class="auth-password-wrap"><input id="account-password-confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password-confirm" aria-pressed="false">Hiện</button></div></div><button class="button button-secondary" type="submit">Đổi mật khẩu</button><p class="auth-message" data-auth-message aria-live="polite">Cần xác nhận mật khẩu hiện tại trước khi đổi.</p></form></article>
         </div>
-        <div class="auth-security-note"><strong>Quyền truy cập:</strong> gói và trạng thái tài khoản được đọc từ bảng `profiles` trên Supabase với RLS, không dựa vào giá trị có thể tự sửa trong trình duyệt.</div>
+
+        <section class="account-personalization" data-account-personalization aria-labelledby="personalization-title">
+          <header class="account-section-head"><div><span class="panel-label">CÁ NHÂN HÓA</span><h2 id="personalization-title">Theo dõi đúng thứ bạn quan tâm</h2><p>StockRadar chỉ dùng các lựa chọn này để ưu tiên nội dung đã có; không yêu cầu tài khoản chứng khoán, NAV, giá vốn, OTP hay quyền giao dịch.</p></div></header>
+          <p class="auth-message" data-personalization-status aria-live="polite">Đang tải tùy chọn…</p>
+
+          <div class="account-personalization-grid">
+            <article class="auth-account-card preference-card">
+              <span class="panel-label">ƯU TIÊN PHÂN TÍCH</span>
+              <h3>Khung đầu tư &amp; ngành</h3>
+              <form class="auth-form" data-account-preferences-form novalidate>
+                <fieldset class="choice-fieldset"><legend>Khung đầu tư</legend><div class="choice-grid">
+                  <label><input type="checkbox" name="preferred_horizons" value="SHORT_TERM"><span>Ngắn hạn</span></label>
+                  <label><input type="checkbox" name="preferred_horizons" value="MEDIUM_TERM"><span>Trung hạn</span></label>
+                  <label><input type="checkbox" name="preferred_horizons" value="LONG_TERM"><span>Dài hạn</span></label>
+                  <label><input type="checkbox" name="preferred_horizons" value="ACCUMULATION"><span>Tích sản</span></label>
+                </div></fieldset>
+                <fieldset class="choice-fieldset"><legend>Ngành ưu tiên · tối đa 3</legend><div class="choice-grid choice-grid-sector">
+                  <label><input type="checkbox" name="preferred_sectors" value="Ngân hàng"><span>Ngân hàng</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Chứng khoán"><span>Chứng khoán</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Thép"><span>Thép</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Bất động sản"><span>Bất động sản</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Bán lẻ"><span>Bán lẻ</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Công nghệ"><span>Công nghệ</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Dầu khí"><span>Dầu khí</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Hàng tiêu dùng"><span>Hàng tiêu dùng</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Công nghiệp"><span>Công nghiệp</span></label>
+                  <label><input type="checkbox" name="preferred_sectors" value="Tiện ích"><span>Tiện ích</span></label>
+                </div></fieldset>
+                <button class="button button-secondary" type="submit">Lưu ưu tiên</button>
+                <p class="auth-message" data-auth-message aria-live="polite">Có thể để trống; hệ thống sẽ dùng thứ tự trung tính.</p>
+              </form>
+            </article>
+
+            <article class="auth-account-card preference-card">
+              <div class="watchlist-card-head"><div><span class="panel-label">DANH SÁCH THEO DÕI</span><h3>Mã quan tâm</h3></div><strong data-watchlist-limit>—</strong></div>
+              <form class="auth-form compact-watchlist-form" data-account-watchlist-form novalidate>
+                <div class="watchlist-form-grid">
+                  <div class="auth-field"><label for="watch-ticker">Mã</label><input id="watch-ticker" name="ticker" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="3" pattern="[A-Za-z]{3}" placeholder="VD: MBB" required></div>
+                  <div class="auth-field"><label for="watch-horizon">Khung</label><select id="watch-horizon" name="horizon"><option value="SHORT_TERM">Ngắn hạn</option><option value="MEDIUM_TERM">Trung hạn</option><option value="LONG_TERM">Dài hạn</option><option value="ACCUMULATION">Tích sản</option></select></div>
+                </div>
+                <label class="inline-choice"><input type="checkbox" name="owns_stock"><span>Tôi đang sở hữu mã này — chỉ để ưu tiên góc nhìn nắm giữ, không lưu giá vốn.</span></label>
+                <button class="button button-primary" type="submit">Thêm / cập nhật</button>
+                <p class="auth-message" data-watchlist-message aria-live="polite">Free/Trial tối đa 3 mục; Paid tối đa 20. Cảnh báo email chưa tự bật từ lựa chọn này.</p>
+              </form>
+              <div class="account-watchlist" data-account-watchlist><div class="account-empty-state">Đang tải danh sách…</div></div>
+            </article>
+          </div>
+        </section>
+
+        <div class="auth-security-note"><strong>Quyền truy cập:</strong> hồ sơ, tùy chọn và watchlist được bảo vệ bằng Supabase RLS. Gói tài khoản không dựa vào giá trị người dùng có thể tự sửa trong trình duyệt.</div>
         <section class="danger-zone" aria-labelledby="delete-account-title"><span class="panel-label">VÙNG NGUY HIỂM</span><h2 id="delete-account-title">Xóa tài khoản</h2><p>Xóa vĩnh viễn tài khoản StockRadar, hồ sơ và dữ liệu liên kết. Hành động này không thể hoàn tác và cần xác minh lại mật khẩu hiện tại.</p><form class="auth-form" data-delete-account-form data-delete-account-reauth novalidate><div class="auth-field"><label for="delete-current-password">Mật khẩu hiện tại</label><div class="auth-password-wrap"><input id="delete-current-password" name="delete_current_password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="delete-current-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="confirm-delete">Nhập <strong>XOA</strong> để xác nhận</label><input id="confirm-delete" name="confirm_delete" type="text" autocomplete="off" maxlength="3" placeholder="XOA"></div><button class="button" type="submit" disabled>Xóa tài khoản vĩnh viễn</button><p class="auth-message" data-auth-message aria-live="polite">Mật khẩu chỉ được gửi tới Supabase Auth để xác minh lại danh tính.</p></form></section>
         <div class="legal-actions"><a href="dieu-khoan/">Điều khoản sử dụng</a><a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a></div>
       </div>
