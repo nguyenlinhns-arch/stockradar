@@ -42,6 +42,10 @@ def has_base(source: str) -> bool:
     return bool(re.search(r'<base\s+[^>]*href=["\'][^"\']+["\']', source, flags=re.IGNORECASE))
 
 
+def is_homepage(page: Path, output: Path) -> bool:
+    return page.resolve() == (output / "index.html").resolve()
+
+
 def asset_href(source: str, page: Path, output: Path, name: str) -> str:
     if has_base(source):
         return f"assets/{name}"
@@ -65,7 +69,7 @@ def sanitize_public_html(source: str) -> str:
 
 
 def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
-    if page.resolve() != (output / "index.html").resolve():
+    if not is_homepage(page, output):
         return source
     return re.sub(
         r'\s*<div\s+class=["\']home-newsletter-strip["\']>.*?</div>\s*</div>\s*',
@@ -150,20 +154,28 @@ def inject_page(page: Path, output: Path) -> None:
     public_css = asset_href(source, page, output, "public-ux.css")
     site_css = asset_href(source, page, output, "site-v4.css")
     mobile_css = asset_href(source, page, output, "mobile-touch-v1.css")
-    public_js = asset_href(source, page, output, "public-ux.js")
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
-    fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
     auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
     copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
     direct_ticker_js = asset_href(source, page, output, "direct-ticker-nav-v1.js")
+
     head = (
         route_specific_head(source, page, output)
         + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
         + f'<link rel="stylesheet" href="{site_css}?v=20260903-site7">\n'
         + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1">\n'
-        + f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
-        + f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
-        + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
+    )
+
+    if not is_homepage(page, output):
+        public_js = asset_href(source, page, output, "public-ux.js")
+        fallback_js = asset_href(source, page, output, "public-fallbacks-v4.js")
+        head += (
+            f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
+            + f'<script src="{fallback_js}?v=20260903-site4" defer></script>\n'
+        )
+
+    head += (
+        f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
         + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
         + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
         + f'<script src="{direct_ticker_js}?v=20260903-direct1" defer></script>\n'
