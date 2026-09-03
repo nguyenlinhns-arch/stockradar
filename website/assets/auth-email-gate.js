@@ -16,7 +16,7 @@
     const target = form.querySelector('[data-auth-message]');
     if (target) {
       target.className = 'auth-message error';
-      target.textContent = message;
+      if (target.textContent !== message) target.textContent = message;
     }
   }
 
@@ -37,9 +37,5 @@
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    enforce();
-    const observer = new MutationObserver(enforce);
-    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden'] });
-  });
+  document.addEventListener('DOMContentLoaded', enforce);
 })();
