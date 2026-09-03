@@ -32,20 +32,20 @@
 
     if (recommendation) {
       const heading = recommendation.querySelector('.home-panel-head h2');
-      if (heading) heading.textContent = 'Cổ phiếu đang theo dõi';
+      if (heading) heading.textContent = 'Danh sách cổ phiếu theo Radar rà soát';
 
       const summaryItems = recommendation.querySelectorAll('.home-recommendation-summary > div');
       if (summaryItems[0]) {
         const label = summaryItems[0].querySelector('span');
         const note = summaryItems[0].querySelector('small');
         if (label) label.textContent = 'Tín hiệu hành động';
-        if (note) note.textContent = 'Chưa có mã đạt chuẩn hành động.';
+        if (note) note.textContent = 'Không có mã đạt chuẩn hành động tại snapshot hiện tại.';
       }
       if (summaryItems[1]) {
         const label = summaryItems[1].querySelector('span');
         const note = summaryItems[1].querySelector('small');
-        if (label) label.textContent = 'Danh sách theo dõi';
-        if (note) note.textContent = '16 mã HOSE đang được theo dõi.';
+        if (label) label.textContent = 'Danh sách cổ phiếu theo Radar rà soát';
+        if (note) note.textContent = '30 mã HOSE · 10 ngành · 3 mã mỗi ngành.';
       }
 
       const watchNote = recommendation.querySelector('.home-watch-note');
@@ -56,7 +56,7 @@
       const heading = sector.querySelector('.home-panel-head h2');
       const description = sector.querySelector('.home-panel-head p');
       if (heading) heading.textContent = 'Theo nhóm ngành';
-      if (description) description.textContent = '8 nhóm ngành trên HOSE.';
+      if (description) description.textContent = '10 nhóm ngành · 3 mã mỗi ngành.';
     }
   }
 
@@ -120,7 +120,7 @@
     if (!target) return;
     const filtered = activeSector === 'ALL' ? items : items.filter(item => item.sector === activeSector);
     text(count, `${filtered.length} mã`);
-    target.innerHTML = filtered.length ? filtered.map(tickerButton).join('') : '<div class="market-data-empty">Chưa có mã trong nhóm này.</div>';
+    target.innerHTML = filtered.length ? filtered.map(tickerButton).join('') : '<div class="market-data-empty">Không có mã trong nhóm này.</div>';
   }
 
   function triggerLookup(ticker) {
@@ -154,7 +154,7 @@
       renderStats(root, payload);
       renderSectors(root, items);
       renderTable(root, items);
-      text(message, `Danh mục tham chiếu công khai · snapshot ${formatSnapshot(payload.as_of)} (GMT+7)`);
+      text(message, `Danh sách Radar rà soát · snapshot ${formatSnapshot(payload.as_of)} (GMT+7)`);
 
       root.addEventListener('click', event => {
         const filter = event.target.closest('[data-home-sector-filter]');
@@ -168,7 +168,7 @@
         if (ticker) triggerLookup(ticker);
       });
     } catch (_) {
-      text(message, 'Dữ liệu tham chiếu tạm thời chưa tải được. Danh sách tĩnh trên trang vẫn giữ để người dùng nhìn thấy các mã hiện có.');
+      text(message, 'Dữ liệu Radar đang cập nhật. Danh sách tĩnh trên trang vẫn hiển thị phạm vi rà soát hiện tại.');
     }
   }
 
