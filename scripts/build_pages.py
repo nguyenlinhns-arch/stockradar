@@ -22,6 +22,7 @@ WEBSITE = ROOT / "website"
 DEFAULT_OUTPUT = ROOT / ".pages-site"
 AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
 AUTH_ROUTES = {"signup", "dang-nhap", "dat-lai-mat-khau", "tai-khoan"}
+PREMIUM_CLIENT_ROUTES = {"co-phieu"}
 EXCLUDED_NAMES = {
     "server.py",
     "__pycache__",
@@ -31,17 +32,24 @@ EXCLUDED_NAMES = {
     "theo-doi",
     "pro",
 }
-AUTH_HEAD = """\
-<link rel="stylesheet" href="assets/auth.css?v=20260903-auth6">
-<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth6">
+PUBLIC_AUTH_HEAD = """\
+<script src="assets/auth-config.js?v=20260903-auth7" defer></script>
+"""
+PREMIUM_CLIENT_HEAD = """\
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth6" defer></script>
-<script src="assets/auth-email-gate.js?v=20260903-auth6" defer></script>
-<script src="assets/auth-policy.js?v=20260903-auth6" defer></script>
-<script src="assets/auth-account-security.js?v=20260903-auth6" defer></script>
-<script src="assets/auth.js?v=20260903-auth6" defer></script>
-<script src="assets/auth-extra.js?v=20260903-auth6" defer></script>
-<script src="assets/auth-delete-security.js?v=20260903-auth6" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth7" defer></script>
+"""
+FULL_AUTH_HEAD = """\
+<link rel="stylesheet" href="assets/auth.css?v=20260903-auth7">
+<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth7">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth7" defer></script>
+<script src="assets/auth-email-gate.js?v=20260903-auth7" defer></script>
+<script src="assets/auth-policy.js?v=20260903-auth7" defer></script>
+<script src="assets/auth-account-security.js?v=20260903-auth7" defer></script>
+<script src="assets/auth.js?v=20260903-auth7" defer></script>
+<script src="assets/auth-extra.js?v=20260903-auth7" defer></script>
+<script src="assets/auth-delete-security.js?v=20260903-auth7" defer></script>
 """
 
 
@@ -98,12 +106,24 @@ def write_auth_config(output: Path) -> None:
     )
 
 
-def inject_auth_bundle(source: str) -> str:
-    if not AUTH_ENABLED or "assets/auth.js" in source:
+def page_route(page: Path, output: Path) -> str:
+    relative = page.resolve().relative_to(output.resolve())
+    return relative.parts[0] if len(relative.parts) > 1 else ""
+
+
+def inject_auth_bundle(source: str, page: Path, output: Path) -> str:
+    if not AUTH_ENABLED or "assets/auth-config.js" in source:
         return source
     if "</head>" not in source:
         raise RuntimeError("HTML page has no closing head tag")
-    return source.replace("</head>", AUTH_HEAD + "</head>", 1)
+    route = page_route(page, output)
+    if route in AUTH_ROUTES:
+        head = FULL_AUTH_HEAD
+    elif route in PREMIUM_CLIENT_ROUTES:
+        head = PREMIUM_CLIENT_HEAD
+    else:
+        head = PUBLIC_AUTH_HEAD
+    return source.replace("</head>", head + "</head>", 1)
 
 
 def _payload_requests_production(payload: dict[str, object]) -> bool:
@@ -145,16 +165,11 @@ def enforce_production_data_gate(payloads: list[tuple[Path, dict[str, object]]])
     if max_age_hours <= 0:
         raise RuntimeError("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS must be positive")
 
-    result = require_publishable_manifest(
-        manifest,
-        max_age_seconds=int(max_age_hours * 3600),
-    )
+    result = require_publishable_manifest(manifest, max_age_seconds=int(max_age_hours * 3600))
     for path, payload in production_payloads:
         payload_snapshot_id = _payload_snapshot_id(payload)
         if payload_snapshot_id and payload_snapshot_id != result.snapshot_id:
-            raise RuntimeError(
-                f"Public payload snapshot does not match production manifest: {path}"
-            )
+            raise RuntimeError(f"Public payload snapshot does not match production manifest: {path}")
 
 
 def build(output: Path) -> None:
@@ -167,13 +182,9 @@ def build(output: Path) -> None:
     for page in output.rglob("*.html"):
         source = page.read_text(encoding="utf-8")
         source = source.replace('data-api-mode="auto"', 'data-api-mode="disabled"')
-        source = inject_auth_bundle(source)
+        source = inject_auth_bundle(source, page, output)
         if 'name="robots"' not in source:
-            source = source.replace(
-                "<head>",
-                '<head><meta name="robots" content="noindex,nofollow">',
-                1,
-            )
+            source = source.replace("<head>", '<head><meta name="robots" content="noindex,nofollow">', 1)
         page.write_text(source, encoding="utf-8")
 
     (output / ".nojekyll").write_text("", encoding="utf-8")
