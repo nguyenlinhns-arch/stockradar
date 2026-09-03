@@ -157,10 +157,9 @@ def main() -> None:
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
             'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
-            'Radar 30', 'Phân tích doanh nghiệp', '4M · CANSLIM', 'Bear · Base · Bull', 'Pivot · Breakout',
-            'Buy Zone · Stop · Target', '30 mã', '10 ngành · 3 mã mỗi ngành', 'Free và Premium có gì?',
-            'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot', 'VPA · RVOL · dòng tiền lớn',
-            'Email & cảnh báo trong phiên', '4 mốc quét/ngày',
+            'Radar 30', '30 mã', '10 ngành · 3 mã mỗi ngành', 'Free và Premium có gì?',
+            '4M · CANSLIM · Payback', 'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot',
+            'VPA · RVOL · dòng tiền lớn', 'Email & cảnh báo trong phiên', '4 mốc quét/ngày',
         ), errors,
     )
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
@@ -169,6 +168,7 @@ def main() -> None:
         "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid", "home-ticker-grid",
         "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
         "Free bên trái · Premium bên phải", "Trạng thái công khai", "Chưa có setup", "đang hoàn thiện",
+        "home-status-band", "home-status-grid",
     ):
         if obsolete.lower() in home_source.lower():
             errors.append(f"obsolete homepage element remains: {obsolete}")
@@ -270,7 +270,7 @@ def main() -> None:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
     print(
-        f"Verified production public surface: {len(pages)} HTML pages; feature-first homepage + product pages + 30 Radar ticker routes; no demo/sample/unfinished public copy"
+        f"Verified production public surface: {len(pages)} HTML pages; homepage feature strip removed; feature-first product pages + 30 Radar ticker routes; no demo/sample/unfinished public copy"
     )
 
 
