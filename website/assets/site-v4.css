@@ -80,6 +80,24 @@ html.site-v4{background:#eef2f5}
 .v4-method-grid strong{display:block;color:var(--navy);font-size:11px}
 .v4-method-grid span{display:block;margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}
 
+/* Radar methodology: four source methods + Vietnam adaptation. */
+.site-v4 .radar-methodology{padding:0 0 30px}
+.site-v4 .radar-method-card{margin-top:0}
+.site-v4 .radar-method-head{padding:12px 14px}
+.site-v4 .radar-method-head h2{font-size:18px}
+.site-v4 .radar-method-head p{max-width:920px;font-size:10px}
+.site-v4 .radar-method-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.site-v4 .radar-method-grid article{min-height:190px;padding:14px;border-right:1px solid var(--line);border-bottom:0}
+.site-v4 .radar-method-grid article:last-child{border-right:0}
+.site-v4 .radar-method-grid strong{font-size:12px;line-height:1.35}
+.site-v4 .radar-method-grid span{margin-top:8px;font-size:10px;line-height:1.55}
+.site-v4 .radar-method-grid span b{color:#35546e}
+.site-v4 .radar-method-grid small{display:block;margin-top:8px;color:var(--muted);font-size:9px;line-height:1.45}
+.site-v4 .radar-vietnam-note,.site-v4 .radar-support-tools{display:grid;grid-template-columns:235px 1fr;gap:14px;padding:11px 14px;border-top:1px solid var(--line);font-size:10px;line-height:1.5}
+.site-v4 .radar-vietnam-note{background:#f7fafc}
+.site-v4 .radar-vietnam-note strong,.site-v4 .radar-support-tools strong{color:var(--navy)}
+.site-v4 .radar-vietnam-note span,.site-v4 .radar-support-tools span{color:var(--muted)}
+
 /* Make long operational tables usable on smaller screens. */
 .site-v4 .radar-table,.site-v4 .recommendation-table,.site-v4 .performance-table{overflow-x:auto;scrollbar-width:thin}
 .site-v4 .radar-workspace-grid,.site-v4 .dashboard-grid{gap:12px}
@@ -104,6 +122,10 @@ html.site-v4{background:#eef2f5}
   .v4-sector-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .v4-sector-card:nth-child(4n){border-right:1px solid var(--line)}
   .v4-sector-card:nth-child(2n){border-right:0}
+  .site-v4 .radar-method-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .site-v4 .radar-method-grid article{border-bottom:1px solid var(--line)}
+  .site-v4 .radar-method-grid article:nth-child(2n){border-right:0}
+  .site-v4 .radar-method-grid article:nth-child(n+3){border-bottom:0}
 }
 
 @media(max-width:760px){
@@ -127,6 +149,10 @@ html.site-v4{background:#eef2f5}
   .v4-method-grid{grid-template-columns:1fr}
   .v4-method-grid article{border-right:0;border-bottom:1px solid var(--line)}
   .v4-method-grid article:last-child{border-bottom:0}
+  .site-v4 .radar-method-grid{grid-template-columns:1fr}
+  .site-v4 .radar-method-grid article,.site-v4 .radar-method-grid article:nth-child(n+3){min-height:0;border-right:0;border-bottom:1px solid var(--line)}
+  .site-v4 .radar-method-grid article:last-child{border-bottom:0}
+  .site-v4 .radar-vietnam-note,.site-v4 .radar-support-tools{grid-template-columns:1fr;gap:5px}
   .site-v4 .radar-workspace,.site-v4 .search-workspace,.site-v4 .sector-workspace,.site-v4 .performance-workspace,.site-v4 .today-changes-workspace,.site-v4 .recommendations-workspace,.site-v4 .stock-report-shell{padding:8px 0 20px!important}
 }
 
