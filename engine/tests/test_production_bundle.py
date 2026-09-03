@@ -60,7 +60,11 @@ def descriptor():
             "market_status_checked": True,
         },
         "datasets": {
-            "security_master": {"path": "security_master.csv", "ticker_column": "ticker"},
+            "security_master": {
+                "path": "security_master.csv",
+                "ticker_column": "ticker",
+                "exchange_column": "exchange",
+            },
             "ohlcv": {"path": "ohlcv.csv", "ticker_column": "ticker"},
             "fundamentals": {"path": "fundamentals.csv", "ticker_column": "ticker"},
             "corporate_actions": {"path": "corporate_actions.csv"},
@@ -72,9 +76,21 @@ def descriptor():
 class ProductionBundleTests(unittest.TestCase):
     def populate(self, root: Path):
         tickers = ["MBB", "HPG", "ACB"]
-        write_csv(root / "security_master.csv", ["ticker", "name"], [{"ticker": t, "name": t} for t in tickers])
-        write_csv(root / "ohlcv.csv", ["ticker", "date", "close"], [{"ticker": t, "date": "2026-09-03", "close": "1"} for t in tickers])
-        write_csv(root / "fundamentals.csv", ["ticker", "roe"], [{"ticker": t, "roe": "0.1"} for t in tickers])
+        write_csv(
+            root / "security_master.csv",
+            ["ticker", "name", "exchange"],
+            [{"ticker": ticker, "name": ticker, "exchange": "HOSE"} for ticker in tickers],
+        )
+        write_csv(
+            root / "ohlcv.csv",
+            ["ticker", "date", "close"],
+            [{"ticker": ticker, "date": "2026-09-03", "close": "1"} for ticker in tickers],
+        )
+        write_csv(
+            root / "fundamentals.csv",
+            ["ticker", "roe"],
+            [{"ticker": ticker, "roe": "0.1"} for ticker in tickers],
+        )
         write_csv(root / "corporate_actions.csv", ["event_id"], [])
         write_csv(root / "events.csv", ["event_id"], [])
 
@@ -119,6 +135,72 @@ class ProductionBundleTests(unittest.TestCase):
             del payload["datasets"]["ohlcv"]["ticker_column"]
             with self.assertRaisesRegex(ProductionBundleError, "ticker_column is required"):
                 build_manifest_from_descriptor(root, payload)
+
+    def test_security_master_requires_exchange_column(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            payload = descriptor()
+            del payload["datasets"]["security_master"]["exchange_column"]
+            with self.assertRaisesRegex(ProductionBundleError, "exchange_column is required"):
+                build_manifest_from_descriptor(root, payload)
+
+    def test_non_hose_security_master_row_is_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            write_csv(
+                root / "security_master.csv",
+                ["ticker", "name", "exchange"],
+                [
+                    {"ticker": "MBB", "name": "MBB", "exchange": "HOSE"},
+                    {"ticker": "HPG", "name": "HPG", "exchange": "HOSE"},
+                    {"ticker": "AAA", "name": "AAA", "exchange": "HNX"},
+                ],
+            )
+            with self.assertRaisesRegex(ProductionBundleError, "non-HOSE row"):
+                build_manifest_from_descriptor(root, descriptor())
+
+    def test_snapshot_exchange_must_be_hose(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            payload = descriptor()
+            payload["snapshot"]["exchange"] = "HNX"
+            with self.assertRaisesRegex(ProductionBundleError, "exchange must be HOSE"):
+                build_manifest_from_descriptor(root, payload)
+
+    def test_ohlcv_ticker_outside_security_master_is_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            write_csv(
+                root / "ohlcv.csv",
+                ["ticker", "date", "close"],
+                [
+                    {"ticker": "MBB", "date": "2026-09-03", "close": "1"},
+                    {"ticker": "HPG", "date": "2026-09-03", "close": "1"},
+                    {"ticker": "XYZ", "date": "2026-09-03", "close": "1"},
+                ],
+            )
+            with self.assertRaisesRegex(ProductionBundleError, "outside HOSE security_master"):
+                build_manifest_from_descriptor(root, descriptor())
+
+    def test_fundamental_ticker_outside_security_master_is_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            write_csv(
+                root / "fundamentals.csv",
+                ["ticker", "roe"],
+                [
+                    {"ticker": "MBB", "roe": "0.1"},
+                    {"ticker": "HPG", "roe": "0.1"},
+                    {"ticker": "XYZ", "roe": "0.1"},
+                ],
+            )
+            with self.assertRaisesRegex(ProductionBundleError, "outside HOSE security_master"):
+                build_manifest_from_descriptor(root, descriptor())
 
     def test_invalid_ticker_is_rejected(self):
         with TemporaryDirectory() as directory:
