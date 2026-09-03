@@ -18,11 +18,11 @@ class HomepageAssetBudgetTests(unittest.TestCase):
         self.assertIn('"home-core-v1.js"', source)
         self.assertIn("if is_homepage(page, output):", source)
 
-    def test_home_core_owns_navigation_search_and_registration_readiness(self):
+    def test_home_core_owns_navigation_search_and_plan_registration(self):
         source = (ROOT / "website" / "assets" / "home-core-v1.js").read_text(encoding="utf-8")
         for marker in (
             "mountNavigation", "mountTickerSearch", "mountRegistration",
-            "emailDeliveryReady", "registrationUrl", "signup/", "dang-ky/", "window.location.assign",
+            "emailDeliveryReady", "registrationUrl", "dang-ky/", "So sánh gói", "window.location.assign",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("đang hoàn thiện", source.lower())

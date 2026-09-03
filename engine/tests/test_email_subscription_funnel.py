@@ -17,8 +17,9 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('name="email_event_alerts" type="checkbox"', signup)
         self.assertNotIn('name="email_daily_brief" type="checkbox" checked', signup)
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
-        self.assertIn("Premium", signup)
-        self.assertIn("Free không nhận email", signup)
+        self.assertIn('name="selected_plan" value="free" checked', signup)
+        self.assertIn('name="selected_plan" value="premium"', signup)
+        self.assertIn("Free chỉ nhận email hệ thống cần thiết cho tài khoản.", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
     def test_signup_auth_metadata_carries_legal_and_product_email_consent(self):
@@ -123,15 +124,17 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertEqual(set(counts.values()), {3})
         self.assertTrue(all(item["exchange"] == "HOSE" for item in items))
 
-    def test_dedicated_registration_page_collects_interest_without_prechecking(self):
+    def test_registration_page_compares_free_and_premium_before_signup(self):
         register = self.read("website/dang-ky/index.html")
-        self.assertIn("data-email-interest-form", register)
-        self.assertIn('name="daily_brief" type="checkbox"', register)
-        self.assertIn('name="event_alerts" type="checkbox"', register)
-        self.assertNotIn('name="daily_brief" type="checkbox" checked', register)
-        self.assertNotIn('name="event_alerts" type="checkbox" checked', register)
-        self.assertIn("assets/email-interest.js", register)
-        self.assertIn("assets/home-density.css", register)
+        self.assertIn('data-proposition="plans"', register)
+        self.assertIn("data-plan-free", register)
+        self.assertIn("data-plan-premium", register)
+        self.assertIn("data-plan-comparison", register)
+        self.assertIn('href="signup/?plan=free"', register)
+        self.assertIn('href="signup/?plan=premium"', register)
+        self.assertIn("StockRadar Free", register)
+        self.assertIn("StockRadar Premium", register)
+        self.assertNotIn("data-email-interest-form", register)
 
     def test_recommendation_page_uses_30_stock_radar_review_list(self):
         page = self.read("website/khuyen-nghi/index.html")
