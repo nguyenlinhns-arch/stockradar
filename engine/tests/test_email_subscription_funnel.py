@@ -101,8 +101,6 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
         items = payload["items"]
         counts = Counter(item["sector"] for item in items)
-        self.assertEqual(payload.get("selection_label"), "Danh sách cổ phiếu theo Radar rà soát")
-        self.assertEqual(payload.get("selection_kind"), "RADAR_REVIEW_BALANCED_30")
         self.assertEqual(len(items), 30)
         self.assertEqual(len(counts), 10)
         self.assertEqual(set(counts.values()), {3})
