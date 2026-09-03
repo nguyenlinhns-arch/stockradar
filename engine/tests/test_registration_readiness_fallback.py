@@ -20,7 +20,7 @@ class RegistrationReadinessFallbackTests(unittest.TestCase):
         self.assertIn("emailDeliveryReady() ? 'signup/' : 'dang-ky/'", source)
         self.assertIn("if (!emailDeliveryReady()) return false", source)
 
-    def test_registration_page_is_plan_comparison_before_account_creation(self):
+    def test_registration_page_combines_plan_comparison_and_optional_premium_interest(self):
         page = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
         self.assertIn('data-proposition="plans"', page)
         self.assertIn("StockRadar Free", page)
@@ -28,7 +28,8 @@ class RegistrationReadinessFallbackTests(unittest.TestCase):
         self.assertIn('href="signup/?plan=free"', page)
         self.assertIn('href="signup/?plan=premium"', page)
         self.assertIn("data-plan-comparison", page)
-        self.assertNotIn("data-email-interest-form", page)
+        self.assertIn("data-email-interest-form", page)
+        self.assertIn("assets/email-interest.js", page)
 
 
 if __name__ == "__main__":
