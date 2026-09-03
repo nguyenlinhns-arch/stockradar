@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
   <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email3">
   <link rel="stylesheet" href="assets/home-dashboard.css?v=20260903-home1">
+  <link rel="stylesheet" href="assets/home-density.css?v=20260903-home2">
   <script src="assets/app.js?v=20260902-data1" defer></script>
   <script src="assets/email-interest.js?v=20260903-email1" defer></script>
 </head>
@@ -35,9 +36,10 @@
     <section class="section">
       <div class="narrow newsletter-register-grid">
         <article class="newsletter-register-card">
-          <h2>Đăng ký email</h2>
+          <span class="panel-label">ĐĂNG KÝ</span>
+          <h2>Email nhận bản tin</h2>
           <form class="email-interest-form" data-email-interest-form novalidate>
-            <label for="register-email">Email nhận bản tin</label>
+            <label for="register-email">Email</label>
             <input id="register-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com">
             <div class="email-interest-options">
               <label class="email-interest-check"><input name="daily_brief" type="checkbox"><span>Nhận <strong>bản tin chứng khoán hằng ngày</strong>.</span></label>
@@ -45,18 +47,18 @@
               <label class="email-interest-check email-interest-privacy"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và lựa chọn đăng ký để phục vụ xác minh và quản lý email theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
             </div>
             <div class="email-interest-honeypot" aria-hidden="true"><label for="register-company">Công ty</label><input id="register-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
-            <button class="button button-primary" type="submit">Đăng ký nhận bản tin mỗi ngày</button>
+            <button class="button button-primary" type="submit">Đăng ký</button>
             <p class="email-interest-message" data-email-interest-message aria-live="polite">Yêu cầu được ghi nhận ở trạng thái chờ xác minh. Chưa có báo cáo/cảnh báo nào được gửi ở bước này.</p>
           </form>
         </article>
 
         <aside class="newsletter-benefits-card">
           <span class="panel-label">BẠN SẼ NHẬN GÌ?</span>
-          <h2>Ngắn gọn, có ngày dữ liệu rõ ràng</h2>
+          <h2>Bản tin gọn, có ngày dữ liệu rõ ràng</h2>
           <div class="newsletter-benefit-list">
             <article><strong>09:00 · Bản tin hằng ngày</strong><span>Trạng thái thị trường, dữ liệu tham chiếu và các thay đổi đáng chú ý khi đủ điều kiện phát hành.</span></article>
             <article><strong>Premium · Cảnh báo hành động</strong><span>Cảnh báo mua/bán chỉ khi có tín hiệu đạt chuẩn tại các mốc quét; không có tín hiệu thì không gửi.</span></article>
-            <article><strong>Quản lý đăng ký</strong><span>Có thể thay đổi lựa chọn hoặc rút đồng ý sau khi tài khoản/email được xác minh.</span></article>
+            <article><strong>HOSE</strong><span>StockRadar tập trung hệ thống phân tích và sàng lọc cổ phiếu trên HOSE.</span></article>
           </div>
           <p class="newsletter-legal-note">Cảnh báo mua/bán không phải cam kết lợi nhuận. Việc phát hành còn phụ thuộc dữ liệu, quyền sử dụng và điều kiện vận hành hệ thống.</p>
         </aside>
