@@ -53,11 +53,15 @@ class StockApiGatewayContractTests(unittest.TestCase):
         ):
             self.assertIn(marker, source)
 
-    def test_edge_function_requires_user_jwt_before_service_role_rpc(self):
+    def test_edge_function_requires_user_jwt_and_premium_tier_before_service_role_report(self):
         source = EDGE.read_text(encoding="utf-8")
         for marker in (
             "authClient.auth.getUser(token)",
             'Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")',
+            'const PREMIUM_TIERS = new Set(["TRIAL", "PAID"])',
+            '.select("account_tier,account_status")',
+            'PREMIUM_TIERS.has(accountTier)',
+            '"PREMIUM_REQUIRED"',
             'serviceClient.rpc("consume_stockradar_api_quota"',
             'serviceClient.rpc("fetch_stockradar_cached_report"',
             'p_bucket: "stock_report"',
@@ -67,6 +71,7 @@ class StockApiGatewayContractTests(unittest.TestCase):
             '"https://stockradar.vn"',
         ):
             self.assertIn(marker, source)
+        self.assertLess(source.index('PREMIUM_TIERS.has(accountTier)'), source.index('serviceClient.rpc("consume_stockradar_api_quota"'))
         self.assertNotIn("console.log(authorization", source)
         self.assertNotIn("console.log(token", source)
         self.assertNotIn("verify_jwt", source.lower())
