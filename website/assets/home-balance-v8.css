@@ -1,0 +1,59 @@
+/* Homepage balance layer: keep the two primary information blocks equal and concise. */
+@media (min-width: 861px) {
+  .app-home .home-primary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: stretch !important;
+  }
+
+  .app-home .home-recommendation-panel,
+  .app-home .home-sector-panel {
+    min-width: 0;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app-home .home-newsletter-panel {
+    grid-column: 1 / -1 !important;
+  }
+
+  .app-home .home-recommendation-panel .home-watchlist-grid,
+  .app-home .home-sector-panel .home-sector-list {
+    flex: 1;
+  }
+
+  .app-home .home-watch-col {
+    display: grid;
+    grid-template-rows: repeat(8, minmax(36px, 1fr));
+  }
+
+  .app-home .home-sector-list {
+    display: grid;
+    grid-template-rows: repeat(8, minmax(45px, 1fr));
+  }
+}
+
+.app-home .home-panel-head p {
+  max-width: 360px;
+  line-height: 1.35;
+}
+
+.app-home .home-watch-note {
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* The legacy secondary dashboard strip is intentionally not shown on the homepage. */
+.app-home .home-secondary-grid {
+  display: none !important;
+}
+
+@media (max-width: 860px) {
+  .app-home .home-primary-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-home .home-newsletter-panel {
+    grid-column: auto !important;
+  }
+}
