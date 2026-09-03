@@ -80,10 +80,53 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def test_homepage_has_email_conversion_surface(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
+        self.assertIn("data-email-interest-form", home)
+        self.assertIn('name="daily_brief" type="checkbox"', home)
+        self.assertIn('name="event_alerts" type="checkbox"', home)
+        self.assertNotIn('name="daily_brief" type="checkbox" checked', home)
+        self.assertNotIn('name="event_alerts" type="checkbox" checked', home)
         self.assertIn("Đăng ký nhận email", home)
         self.assertIn("Báo cáo mỗi ngày + cảnh báo mua/bán", home)
-        self.assertIn("Free:", home)
-        self.assertIn("Premium:", home)
+        self.assertIn("chờ xác minh", home)
+        self.assertIn("tối đa 30 ngày", home)
+
+    def test_public_interest_client_calls_edge_without_privileged_secret(self):
+        client = self.read("website/assets/email-interest.js")
+        self.assertIn("/functions/v1/email-interest", client)
+        self.assertIn("privacy_accepted", client)
+        self.assertIn("consent_version", client)
+        self.assertIn("PENDING_VERIFICATION", client)
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", client)
+        self.assertNotIn("service_role", client.lower())
+
+    def test_pre_auth_interest_queue_never_authorizes_delivery(self):
+        migration = self.read(
+            "supabase/migrations/20260903074211_add_public_email_subscription_interest_queue.sql"
+        ).lower()
+        self.assertIn("private.email_subscription_intents", migration)
+        self.assertIn("pending_verification", migration)
+        self.assertIn("interval '30 days'", migration)
+        self.assertIn("revoke all on function public.capture_email_subscription_interest", migration)
+        self.assertIn("grant execute on function public.capture_email_subscription_interest", migration)
+        self.assertIn("to service_role", migration)
+        self.assertIn("never authorizes delivery", migration)
+
+    def test_public_interest_edge_has_origin_honeypot_and_rate_limit_contract(self):
+        edge = self.read("supabase/functions/email-interest/index.ts")
+        self.assertIn("ALLOWED_ORIGINS", edge)
+        self.assertIn("payload.company", edge)
+        self.assertIn("capture_email_subscription_interest", edge)
+        self.assertIn("rate limit exceeded", edge)
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", edge)
+        self.assertIn("PENDING_VERIFICATION", edge)
+        self.assertIn("Chưa gửi báo cáo hoặc cảnh báo", edge)
+
+    def test_privacy_page_discloses_pending_interest_retention(self):
+        privacy = self.read("website/quyen-rieng-tu/index.html")
+        self.assertIn("Đăng ký email trước khi xác minh tài khoản", privacy)
+        self.assertIn("chờ xác minh", privacy)
+        self.assertIn("tối đa 30 ngày", privacy)
+        self.assertIn("không lưu địa chỉ IP thô", privacy)
 
 
 if __name__ == "__main__":
