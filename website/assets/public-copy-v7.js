@@ -107,7 +107,7 @@
     const style = document.createElement('style');
     style.dataset.stockradarHomePolish = '';
     style.textContent = `
-      .app-home .home-watch-row[data-public-lookup-ready="1"]{cursor:pointer;transition:background .15s ease,box-shadow .15s ease}
+      .app-home .home-watch-row[data-public-lookup-ready="1"]{cursor:pointer;transition:background .15s ease}
       .app-home .home-watch-row[data-public-lookup-ready="1"]:hover{background:#f4f8fb}
       .app-home .home-watch-row[data-public-lookup-ready="1"]:focus-visible{outline:2px solid #1f6fae;outline-offset:-2px;background:#f4f8fb}
       .app-home .home-register-compact span{max-width:52ch}
