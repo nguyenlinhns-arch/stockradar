@@ -43,13 +43,17 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("stopImmediatePropagation", security)
         self.assertIn("password === currentPassword", security)
 
-    def test_account_deletion_is_authenticated_backend_operation(self) -> None:
+    def test_account_deletion_reauthenticates_before_backend_delete(self) -> None:
         account = (WEBSITE / "tai-khoan" / "index.html").read_text(encoding="utf-8")
-        extra = (WEBSITE / "assets" / "auth-extra.js").read_text(encoding="utf-8")
+        security = (WEBSITE / "assets" / "auth-delete-security.js").read_text(encoding="utf-8")
         self.assertIn("data-delete-account-form", account)
-        self.assertIn("DELETE_ACCOUNT", extra)
-        self.assertIn("client.functions.invoke('delete-account'", extra)
+        self.assertIn("data-delete-account-reauth", account)
+        self.assertIn('name="delete_current_password"', account)
         self.assertIn("XOA", account)
+        self.assertIn("signInWithPassword", security)
+        self.assertIn("DELETE_ACCOUNT", security)
+        self.assertIn("client.functions.invoke('delete-account'", security)
+        self.assertIn("stopImmediatePropagation", security)
 
     def test_legal_pages_exist_and_are_versioned(self) -> None:
         for route in ("dieu-khoan", "quyen-rieng-tu"):
