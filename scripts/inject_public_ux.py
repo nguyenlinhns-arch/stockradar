@@ -53,6 +53,23 @@ def sanitize_public_html(source: str) -> str:
     return source
 
 
+def remove_home_top_strip(source: str, page: Path, output: Path) -> str:
+    """Keep the homepage header compact by removing the old top newsletter ribbon.
+
+    Registration remains available in the main header, homepage conversion modules,
+    mobile CTA and the dedicated /dang-ky/ page.
+    """
+    if page.resolve() != (output / "index.html").resolve():
+        return source
+    return re.sub(
+        r'\s*<div\s+class=["\']home-newsletter-strip["\']>.*?</div>\s*</div>\s*',
+        "\n",
+        source,
+        count=1,
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+
+
 def inject_registration_cta(source: str, page: Path, output: Path) -> str:
     if REGISTER_MARKER in source or "header-newsletter-cta" in source:
         return source
@@ -81,6 +98,7 @@ def route_specific_head(source: str, page: Path, output: Path) -> str:
 
 def inject_page(page: Path, output: Path) -> None:
     source = sanitize_public_html(page.read_text(encoding="utf-8"))
+    source = remove_home_top_strip(source, page, output)
     source = inject_registration_cta(source, page, output)
     if HEAD_MARKER in source:
         page.write_text(source, encoding="utf-8")
