@@ -7,8 +7,8 @@
   <meta name="description" content="Tài khoản StockRadar, trạng thái email, gói dịch vụ và bảo mật mật khẩu.">
   <title>Tài khoản — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth2">
-  <script src="assets/app.js?v=20260903-auth2" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth3">
+  <script src="assets/app.js?v=20260903-auth3" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -24,9 +24,11 @@
           <article class="auth-account-card"><span class="panel-label">BẢO MẬT</span><h2>Đổi mật khẩu</h2><form class="auth-form" data-auth-update-password-form novalidate><div class="auth-field"><label for="account-password">Mật khẩu mới</label><div class="auth-password-wrap"><input id="account-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="account-password-confirm">Nhập lại</label><div class="auth-password-wrap"><input id="account-password-confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password-confirm" aria-pressed="false">Hiện</button></div></div><button class="button button-secondary" type="submit">Đổi mật khẩu</button><p class="auth-message" data-auth-message aria-live="polite"></p></form></article>
         </div>
         <div class="auth-security-note"><strong>Quyền truy cập:</strong> gói và trạng thái tài khoản được đọc từ bảng `profiles` trên Supabase với RLS, không dựa vào giá trị có thể tự sửa trong trình duyệt.</div>
+        <section class="danger-zone" aria-labelledby="delete-account-title"><span class="panel-label">VÙNG NGUY HIỂM</span><h2 id="delete-account-title">Xóa tài khoản</h2><p>Xóa vĩnh viễn tài khoản StockRadar, hồ sơ và dữ liệu liên kết. Hành động này không thể hoàn tác.</p><form class="auth-form" data-delete-account-form novalidate><div class="auth-field"><label for="confirm-delete">Nhập <strong>XOA</strong> để xác nhận</label><input id="confirm-delete" name="confirm_delete" type="text" autocomplete="off" maxlength="3" placeholder="XOA"></div><button class="button" type="submit" disabled>Xóa tài khoản vĩnh viễn</button><p class="auth-message" data-auth-message aria-live="polite"></p></form></section>
+        <div class="legal-actions"><a href="dieu-khoan/">Điều khoản sử dụng</a><a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a></div>
       </div>
     </div></section>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu hoặc mã OTP xác minh tài khoản StockRadar.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="radar5/">Radar</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu hoặc mã OTP xác minh tài khoản StockRadar.</p></div></footer>
 </body>
 </html>
