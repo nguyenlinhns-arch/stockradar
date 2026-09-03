@@ -8,8 +8,12 @@
   <title>Chọn gói Free hoặc Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-plans1">
+  <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email3">
+  <link rel="stylesheet" href="assets/home-density.css?v=20260903-home2">
+  <link rel="stylesheet" href="assets/home-dense-v3.css?v=20260903-dense3">
   <link rel="stylesheet" href="assets/plans-v1.css?v=20260904-plans1">
   <script src="assets/app.js?v=20260904-plans1" defer></script>
+  <script src="assets/email-interest.js?v=20260903-email2" defer></script>
 </head>
 <body data-proposition="plans">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -92,6 +96,28 @@
                 <tr><td>Phí sử dụng</td><td><strong>0đ</strong></td><td class="plan-premium"><strong>199.000đ / 30 ngày*</strong></td></tr>
               </tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="plan-comparison" aria-labelledby="premium-notify-title">
+          <div class="plan-comparison-header">
+            <span class="panel-label">THÔNG BÁO PREMIUM</span>
+            <h2 id="premium-notify-title">Chỉ muốn nhận thông báo khi Premium mở thanh toán?</h2>
+            <p>Để lại email và chọn loại nội dung bạn quan tâm. Đây là lựa chọn bổ sung; đăng ký tài khoản Free/Premium vẫn thực hiện bằng hai nút phía trên.</p>
+          </div>
+          <div style="padding:22px 26px 26px;max-width:760px">
+            <form class="email-interest-form" data-email-interest-form novalidate>
+              <label for="register-email">Email</label>
+              <input id="register-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com">
+              <div class="email-interest-options">
+                <label class="email-interest-check"><input name="daily_brief" type="checkbox"><span>Quan tâm <strong>báo cáo Premium hằng ngày</strong>.</span></label>
+                <label class="email-interest-check"><input name="event_alerts" type="checkbox"><span>Quan tâm <strong>cảnh báo hành động Premium trong phiên</strong>.</span></label>
+                <label class="email-interest-check email-interest-privacy"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và lựa chọn quan tâm theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
+              </div>
+              <div class="email-interest-honeypot" aria-hidden="true"><label for="register-company">Công ty</label><input id="register-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
+              <button class="button button-secondary" type="submit">Nhận thông báo mở Premium</button>
+              <p class="email-interest-message" data-email-interest-message aria-live="polite">Chỉ gửi thông tin liên quan đến lựa chọn bạn đã đăng ký.</p>
+            </form>
           </div>
         </section>
 
