@@ -1,37 +1,81 @@
 # StockRadar authentication deployment
 
-StockRadar uses GitHub Pages for the public site, so passwords must not be handled by the static site itself. The browser integration is wired to Supabase Auth with email/password and fails closed until the public Supabase project configuration is supplied.
+StockRadar uses GitHub Pages for the public site and Supabase Auth for identity. Passwords and OTPs are handled by Supabase; the static site never stores plaintext credentials.
 
-## Production configuration
+Current Supabase project: `StockRadar` (`xamviatbxufjlpiwhebb`, Singapore).
 
-1. Create or select the StockRadar Supabase project.
-2. In **Authentication → URL Configuration**, set the production Site URL and allow redirects to:
-   - `/tai-khoan/`
-   - `/dat-lai-mat-khau/`
-3. Keep email confirmation enabled for public signups.
-4. Before sending real verification/recovery traffic at scale, configure a production SMTP provider in Supabase Auth.
-5. In the GitHub repository **Settings → Secrets and variables → Actions → Variables**, add:
-   - `STOCKRADAR_SUPABASE_URL`
-   - `STOCKRADAR_SUPABASE_PUBLISHABLE_KEY`
-6. Re-run the Pages workflow. `scripts/build_pages.py` writes these public values into the deployed `assets/auth-config.js`.
+Current temporary production URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
 
-The publishable/anon key is intended for browser use. Never place a Supabase secret key or service-role key in GitHub Pages, repository variables exposed to the build artifact, JavaScript, or HTML. The build fails if a clearly privileged key is detected.
+## Required Supabase Auth configuration
+
+In **Authentication → URL Configuration**:
+
+- Site URL: `https://nguyenlinhns-arch.github.io/stockradar/` while GitHub Pages is the live host.
+- Add exact redirects:
+  - `https://nguyenlinhns-arch.github.io/stockradar/tai-khoan/`
+  - `https://nguyenlinhns-arch.github.io/stockradar/dat-lai-mat-khau/`
+
+When `https://stockradar.vn/` becomes the live canonical host, replace Site URL with that domain and add the equivalent `/tai-khoan/` and `/dat-lai-mat-khau/` redirects before switching traffic.
+
+Keep email confirmations enabled.
+
+## Email templates
+
+StockRadar uses a 6-digit email OTP for signup verification. In **Authentication → Email Templates → Confirm signup**, use the versioned repository template:
+
+- `supabase/email-templates/confirm-signup.html`
+
+The template must contain `{{ .Token }}`. If the confirmation template only contains `{{ .ConfirmationURL }}`, Supabase sends a link instead of the six-digit OTP expected by the signup UI.
+
+For password recovery use:
+
+- `supabase/email-templates/recovery.html`
+
+Before sending verification/recovery traffic at scale, configure a production SMTP provider in Supabase Auth. Supabase's built-in sender is suitable for early testing but should not be treated as the production delivery channel.
+
+## Production build configuration
+
+The Pages workflow publishes only the Supabase project URL and a browser-safe `sb_publishable_...` key. Never expose a secret/service-role key.
+
+Production release sequence:
+
+1. `python -m engine.cli build-public`
+2. `python -m unittest discover -s engine/tests -v`
+3. `python scripts/build_pages.py --output .pages-site` with auth enabled and public Supabase config.
+4. `python scripts/verify_pages_auth.py .pages-site`
+5. Only after all checks pass may GitHub Pages deploy.
+
+The verifier blocks deployment when production auth is disabled, Supabase config is incomplete, a privileged key appears in public output, or OTP/legal/account-deletion surfaces are missing.
 
 ## Implemented flows
 
-- Sign up with email + password.
-- Email verification redirect to `/tai-khoan/`.
+- Signup: email + password + terms/privacy consent.
+- Signup confirmation: six-digit email OTP using `verifyOtp`.
+- Resend signup OTP with a persistent 60-second UI cooldown plus Supabase server-side rate limiting.
+- Resume verification from the login page for users who registered but have not confirmed their email.
 - Sign in with email + password.
-- Persistent managed session + automatic token refresh.
+- Persistent managed session and automatic token refresh.
 - Sign out.
-- Forgot-password email.
-- Password recovery at `/dat-lai-mat-khau/`.
+- Forgot-password email and reset page.
 - Change password while signed in.
-- Account page showing email, verification status and creation date.
-- Global login/register or account/logout controls injected into every deployed HTML page.
+- User profile in `public.profiles`: default tier `FREE`; status moves from `PENDING` to `ACTIVE` after email verification.
+- RLS restricts profile reads to the signed-in user and does not let the browser edit entitlement fields.
+- Versioned terms/privacy consent receipts in `public.consent_receipts` created from signup metadata.
+- Public Terms and Privacy pages.
+- Self-service account deletion through authenticated Supabase Edge Function `delete-account`; related profile and consent rows cascade on Auth user deletion.
+- Global login/register or account/logout controls on deployed HTML pages.
 
 ## Security boundaries
 
-- Passwords are passed only to the managed authentication SDK and are never sent to StockRadar analytics or market-data endpoints.
-- The account page's `FREE` label is presentation only. Paid entitlements must later come from a trusted billing/backend source and must never be authorized from client-editable metadata.
-- Do not collect broker passwords, trading OTPs, broker API secrets, order credentials, NAV, or portfolio-control credentials through this auth flow.
+- Passwords and OTPs are never sent to StockRadar market-data/analytics endpoints.
+- Pending signup email is stored only in session storage for UX continuity; password and OTP are not persisted there.
+- Public Pages code may contain only the Supabase project URL and publishable key.
+- Paid entitlement must come from trusted backend/billing state, never client-editable metadata.
+- Never collect broker passwords, trading OTPs, broker API secrets, order credentials, NAV, bank OTPs, or portfolio-control credentials through StockRadar authentication.
+
+## Release checks after Auth changes
+
+- GitHub Actions regression suite: PASS.
+- Production auth artifact verifier: PASS.
+- Supabase Security Advisor: zero unresolved auth-schema warnings introduced by the change.
+- Test one real signup mailbox end to end after any email-template, SMTP, Site URL, redirect, or canonical-domain change.
