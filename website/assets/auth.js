@@ -12,6 +12,8 @@
   );
 
   let authClient = null;
+  const PENDING_SIGNUP_KEY = 'sr_pending_signup_email';
+  const OTP_RESEND_SECONDS = 60;
 
   function siteUrl(path = '') {
     return new URL(String(path).replace(/^\/+/, ''), document.baseURI).toString();
@@ -48,6 +50,10 @@
     return String(value || '').trim().toLowerCase();
   }
 
+  function normalizeOtp(value) {
+    return String(value || '').replace(/\D/g, '').slice(0, 6);
+  }
+
   function passwordProblem(value) {
     const password = String(value || '');
     if (password.length < 8) return 'Mật khẩu cần ít nhất 8 ký tự.';
@@ -58,8 +64,10 @@
   function friendlyError(error) {
     const raw = String(error?.message || '').toLowerCase();
     if (raw.includes('invalid login credentials')) return 'Email hoặc mật khẩu không đúng.';
-    if (raw.includes('email not confirmed')) return 'Email chưa được xác minh. Hãy kiểm tra hộp thư rồi thử lại.';
+    if (raw.includes('email not confirmed')) return 'Email chưa được xác minh. Hãy nhập OTP 6 số hoặc kiểm tra email xác minh.';
     if (raw.includes('user already registered') || raw.includes('already been registered')) return 'Email này đã được đăng ký. Hãy đăng nhập hoặc dùng chức năng quên mật khẩu.';
+    if (raw.includes('token') && (raw.includes('expired') || raw.includes('invalid'))) return 'Mã OTP không đúng hoặc đã hết hạn. Hãy kiểm tra lại hoặc gửi mã mới.';
+    if (raw.includes('otp') && raw.includes('expired')) return 'Mã OTP đã hết hạn. Hãy gửi mã mới.';
     if (raw.includes('rate limit') || raw.includes('too many')) return 'Có quá nhiều yêu cầu. Vui lòng thử lại sau.';
     if (raw.includes('password')) return 'Mật khẩu chưa đạt yêu cầu bảo mật.';
     return 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
@@ -76,6 +84,18 @@
     } catch (_) {
       return siteUrl('tai-khoan/');
     }
+  }
+
+  function pendingSignupEmail() {
+    try { return normalizeEmail(sessionStorage.getItem(PENDING_SIGNUP_KEY)); } catch (_) { return ''; }
+  }
+
+  function setPendingSignupEmail(email) {
+    try { sessionStorage.setItem(PENDING_SIGNUP_KEY, normalizeEmail(email)); } catch (_) {}
+  }
+
+  function clearPendingSignupEmail() {
+    try { sessionStorage.removeItem(PENDING_SIGNUP_KEY); } catch (_) {}
   }
 
   function passwordToggles() {
@@ -130,13 +150,119 @@
     });
   }
 
+  function startOtpCooldown(button, seconds = OTP_RESEND_SECONDS) {
+    if (!button) return;
+    if (button._srOtpTimer) clearInterval(button._srOtpTimer);
+    if (!button.dataset.defaultLabel) button.dataset.defaultLabel = button.textContent.trim();
+    let left = seconds;
+    button.disabled = true;
+    button.textContent = `Gửi lại sau ${left}s`;
+    button._srOtpTimer = setInterval(() => {
+      left -= 1;
+      if (left <= 0) {
+        clearInterval(button._srOtpTimer);
+        button._srOtpTimer = null;
+        button.disabled = false;
+        button.textContent = button.dataset.defaultLabel;
+        return;
+      }
+      button.textContent = `Gửi lại sau ${left}s`;
+    }, 1000);
+  }
+
+  function showOtpStep(signupForm, otpForm, email, { cooldown = false } = {}) {
+    if (!signupForm || !otpForm) return;
+    const normalized = normalizeEmail(email);
+    if (!normalized) return;
+    setPendingSignupEmail(normalized);
+    signupForm.hidden = true;
+    otpForm.hidden = false;
+    const emailTarget = otpForm.querySelector('[data-auth-otp-email]');
+    if (emailTarget) emailTarget.textContent = normalized;
+    const otpInput = otpForm.elements.otp;
+    if (otpInput) {
+      otpInput.value = '';
+      setTimeout(() => otpInput.focus(), 0);
+    }
+    if (cooldown) startOtpCooldown(otpForm.querySelector('[data-auth-otp-resend]'));
+  }
+
+  function showSignupStep(signupForm, otpForm, email = '') {
+    if (!signupForm || !otpForm) return;
+    clearPendingSignupEmail();
+    otpForm.hidden = true;
+    signupForm.hidden = false;
+    if (signupForm.elements.email && email) signupForm.elements.email.value = normalizeEmail(email);
+    setTimeout(() => signupForm.elements.email?.focus(), 0);
+  }
+
   function wireSignup() {
     const form = document.querySelector('[data-auth-signup-form]');
+    const otpForm = document.querySelector('[data-auth-signup-otp-form]');
     if (!form) return;
     if (!providerReady) {
       lockForm(form, 'Đăng ký đang chờ kết nối dịch vụ xác thực. Website chưa nhận mật khẩu.');
+      if (otpForm) lockForm(otpForm, 'Xác minh OTP đang chờ kết nối dịch vụ xác thực.');
       return;
     }
+
+    if (otpForm) {
+      const existing = pendingSignupEmail();
+      if (existing) showOtpStep(form, otpForm, existing);
+
+      otpForm.elements.otp?.addEventListener('input', event => {
+        event.target.value = normalizeOtp(event.target.value);
+      });
+
+      otpForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        const message = otpForm.querySelector('[data-auth-message]');
+        const email = pendingSignupEmail();
+        const token = normalizeOtp(otpForm.elements.otp?.value);
+        if (!email) return showSignupStep(form, otpForm);
+        if (!/^\d{6}$/.test(token)) return setMessage(message, 'Nhập đúng mã OTP gồm 6 chữ số.', 'error');
+        setBusy(otpForm, true, 'Đang xác minh…');
+        try {
+          const { data, error } = await authClient.auth.verifyOtp({ email, token, type: 'email' });
+          if (error) throw error;
+          if (!data?.session) throw new Error('missing verified session');
+          clearPendingSignupEmail();
+          setMessage(message, 'Xác minh thành công. Đang mở tài khoản…', 'success');
+          location.href = siteUrl('tai-khoan/?verified=1');
+        } catch (error) {
+          setMessage(message, friendlyError(error), 'error');
+        } finally {
+          setBusy(otpForm, false);
+        }
+      });
+
+      otpForm.querySelector('[data-auth-otp-resend]')?.addEventListener('click', async event => {
+        const button = event.currentTarget;
+        const message = otpForm.querySelector('[data-auth-message]');
+        const email = pendingSignupEmail();
+        if (!email) return showSignupStep(form, otpForm);
+        button.disabled = true;
+        try {
+          const { error } = await authClient.auth.resend({
+            type: 'signup',
+            email,
+            options: { emailRedirectTo: siteUrl('tai-khoan/?verified=1') }
+          });
+          if (error) throw error;
+          setMessage(message, 'Đã gửi lại mã xác minh. Kiểm tra cả Inbox và Spam.', 'success');
+          startOtpCooldown(button);
+        } catch (error) {
+          button.disabled = false;
+          setMessage(message, friendlyError(error), 'error');
+        }
+      });
+
+      otpForm.querySelector('[data-auth-otp-change]')?.addEventListener('click', () => {
+        const email = pendingSignupEmail();
+        showSignupStep(form, otpForm, email);
+      });
+    }
+
     form.addEventListener('submit', async event => {
       event.preventDefault();
       const message = form.querySelector('[data-auth-message]');
@@ -151,23 +277,31 @@
       if (!terms) return setMessage(message, 'Cần đồng ý Điều khoản và Chính sách quyền riêng tư để tạo tài khoản.', 'error');
 
       setBusy(form, true, 'Đang tạo tài khoản…');
-      setMessage(message, 'Đang tạo tài khoản bảo mật…');
+      setMessage(message, 'Đang tạo tài khoản và gửi mã xác minh…');
       try {
         const { data, error } = await authClient.auth.signUp({
           email,
           password,
           options: { emailRedirectTo: siteUrl('tai-khoan/?verified=1') }
         });
-        if (error) throw error;
         form.elements.password.value = '';
         form.elements.password_confirm.value = '';
+        if (error) throw error;
         if (data?.session) {
+          clearPendingSignupEmail();
           setMessage(message, 'Tạo tài khoản thành công. Đang mở trang tài khoản…', 'success');
           location.href = siteUrl('tai-khoan/');
           return;
         }
-        setMessage(message, 'Đã tạo tài khoản. Hãy mở email xác minh của StockRadar trước khi đăng nhập.', 'success');
+        if (otpForm) {
+          showOtpStep(form, otpForm, email, { cooldown: true });
+          setMessage(otpForm.querySelector('[data-auth-message]'), 'Mã xác minh đã được gửi. Nhập OTP 6 số từ email StockRadar.', 'success');
+        } else {
+          setMessage(message, 'Đã tạo tài khoản. Kiểm tra email để xác minh.', 'success');
+        }
       } catch (error) {
+        form.elements.password.value = '';
+        form.elements.password_confirm.value = '';
         setMessage(message, friendlyError(error), 'error');
       } finally {
         setBusy(form, false);
@@ -198,6 +332,7 @@
         const { error } = await authClient.auth.signInWithPassword({ email, password });
         form.elements.password.value = '';
         if (error) throw error;
+        clearPendingSignupEmail();
         setMessage(message, 'Đăng nhập thành công.', 'success');
         location.href = safeNext(params.get('next'));
       } catch (error) {
@@ -274,6 +409,17 @@
     }
   }
 
+  async function accountProfile(userId) {
+    if (!authClient || !userId) return null;
+    const { data, error } = await authClient
+      .from('profiles')
+      .select('account_tier,account_status,created_at')
+      .eq('id', userId)
+      .maybeSingle();
+    if (error) return null;
+    return data || null;
+  }
+
   async function renderAccount() {
     const root = document.querySelector('[data-auth-account]');
     if (!root) return;
@@ -294,15 +440,21 @@
       setMessage(status, 'Bạn chưa đăng nhập.', '');
       return;
     }
+    if (user.email_confirmed_at) clearPendingSignupEmail();
     if (guest) guest.hidden = true;
     if (details) details.hidden = false;
+    const profile = await accountProfile(user.id);
     const emailTarget = root.querySelector('[data-account-email]');
     const verifiedTarget = root.querySelector('[data-account-verified]');
     const createdTarget = root.querySelector('[data-account-created]');
+    const tierTarget = root.querySelector('[data-account-tier]');
+    const accountStatusTarget = root.querySelector('[data-account-status]');
     if (emailTarget) emailTarget.textContent = user.email || '—';
     if (verifiedTarget) verifiedTarget.textContent = user.email_confirmed_at ? 'Đã xác minh' : 'Chưa xác minh';
-    if (createdTarget) createdTarget.textContent = formatDate(user.created_at);
-    setMessage(status, 'Phiên đăng nhập đang hoạt động.', 'success');
+    if (createdTarget) createdTarget.textContent = formatDate(profile?.created_at || user.created_at);
+    if (tierTarget) tierTarget.textContent = profile?.account_tier || '—';
+    if (accountStatusTarget) accountStatusTarget.textContent = profile?.account_status || '—';
+    setMessage(status, profile ? 'Phiên đăng nhập và hồ sơ tài khoản đang hoạt động.' : 'Phiên đăng nhập đang hoạt động; hồ sơ tài khoản đang đồng bộ.', profile ? 'success' : '');
   }
 
   async function init() {
@@ -322,7 +474,8 @@
           }
         }
       );
-      authClient.auth.onAuthStateChange(() => {
+      authClient.auth.onAuthStateChange((_event, session) => {
+        if (session?.user?.email_confirmed_at) clearPendingSignupEmail();
         refreshNav();
         renderAccount();
       });
