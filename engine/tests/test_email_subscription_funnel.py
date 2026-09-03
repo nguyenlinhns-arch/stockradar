@@ -11,7 +11,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_signup_collects_daily_and_premium_alert_intent_without_prechecking(self):
+    def test_signup_collects_free_daily_and_premium_alert_intent_without_prechecking(self):
         signup = self.read("website/signup/index.html")
         self.assertIn('name="email_daily_brief" type="checkbox"', signup)
         self.assertIn('name="email_event_alerts" type="checkbox"', signup)
@@ -19,7 +19,10 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
         self.assertIn('name="selected_plan" value="free" checked', signup)
         self.assertIn('name="selected_plan" value="premium"', signup)
-        self.assertIn("Free không nhận email báo cáo/khuyến nghị hằng ngày", signup)
+        self.assertIn("bản rà soát thị trường lúc 09:00 mỗi ngày", signup)
+        self.assertIn("cảnh báo điểm mua/bán trong phiên", signup)
+        self.assertIn("FREE + PREMIUM", signup)
+        self.assertIn("PREMIUM", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
     def test_signup_auth_metadata_carries_legal_and_product_email_consent(self):
@@ -31,7 +34,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         ):
             self.assertIn(key, client)
 
-    def test_account_exposes_tier_aware_email_center_and_ticker_alerts(self):
+    def test_account_exposes_free_daily_and_premium_alert_controls(self):
         account = self.read("website/tai-khoan/index.html")
         client = self.read("website/assets/email-preferences.js")
         self.assertIn("data-product-email-preferences", account)
@@ -42,8 +45,9 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("product_email_consent_events", client)
         self.assertIn("PREMIUM_TIERS", client)
         self.assertIn("profile.account_tier === 'FREE'", client)
-        self.assertIn("master.disabled = !active || !premium", client)
-        self.assertIn("Free không nhận email báo cáo/khuyến nghị hằng ngày", client)
+        self.assertIn("master.disabled = !active", client)
+        self.assertIn("Free · bản tin 09:00", client)
+        self.assertIn("Cảnh báo mua/bán chỉ dành cho Premium", client)
         self.assertIn("alert_enabled", client)
         self.assertIn("data-watchlist-alert-toggle", client)
 
@@ -56,25 +60,25 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("false,", migration)
         self.assertIn("product_email_consent_version", migration)
 
-    def test_product_email_entitlement_is_premium_only_server_side(self):
-        migration = self.read("supabase/migrations/20260903100503_restrict_product_email_to_premium.sql")
+    def test_product_email_entitlement_allows_free_daily_but_masks_premium_alerts(self):
+        migration = self.read("supabase/migrations/20260904060000_restore_free_daily_premium_intraday_email.sql")
         lowered = migration.lower()
-        self.assertIn("premium product email requires trial or paid", lowered)
-        self.assertIn("prof.account_tier in ('trial','paid')", lowered)
-        self.assertIn("pref.daily_brief and prof.account_tier in ('trial','paid')", lowered)
+        self.assertIn("tier = 'free' and not coalesce(new.daily_brief, false)", lowered)
+        self.assertIn("pref.daily_brief and prof.account_tier in ('free','trial','paid')", lowered)
+        self.assertIn("pref.event_alerts and prof.account_tier in ('trial','paid')", lowered)
+        self.assertIn("daily_brief_content_tier", lowered)
+        self.assertIn("then 'free'", lowered)
         self.assertIn("eligible_for_premium", lowered)
         self.assertIn("create or replace function public.handle_email_verified()", lowered)
-        self.assertIn("daily_brief_content_tier", lowered)
-        self.assertIn("else 'none'", lowered)
-        self.assertIn("fail closed any previously enabled free product-email preference", lowered)
+        self.assertIn("prof.account_tier = 'free' and pref.daily_brief is true", lowered)
 
-    def test_email_architecture_matches_premium_only_product_email(self):
+    def test_email_architecture_matches_free_daily_and_premium_alert_split(self):
         architecture = self.read("email/ARCHITECTURE.md")
-        self.assertIn("Free accounts receive transactional email only", architecture)
-        self.assertIn("`daily`: Trial/Paid only", architecture)
+        self.assertIn("`daily`: Free/Trial/Paid", architecture)
         self.assertIn("`state_change` / buy-sell event alerts: Trial/Paid only", architecture)
-        self.assertIn("preference data, not delivery entitlement", architecture)
-        self.assertNotIn("`daily` Free brief", architecture)
+        self.assertIn("09:00 Vietnam time", architecture)
+        self.assertIn("10:30 / 11:15 / 13:30 / 14:15", architecture)
+        self.assertIn("Preference data is not delivery entitlement", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
     def test_homepage_is_feature_first_and_free_premium_comparison_is_concrete(self):
@@ -124,7 +128,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertEqual(set(counts.values()), {3})
         self.assertTrue(all(item["exchange"] == "HOSE" for item in items))
 
-    def test_registration_page_compares_free_premium_and_keeps_optional_interest(self):
+    def test_registration_page_compares_free_daily_and_premium_intraday(self):
         register = self.read("website/dang-ky/index.html")
         self.assertIn('data-proposition="plans"', register)
         self.assertIn("data-plan-free", register)
@@ -134,6 +138,9 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('href="signup/?plan=premium"', register)
         self.assertIn("StockRadar Free", register)
         self.assertIn("StockRadar Premium", register)
+        self.assertIn("Có · bản cơ bản", register)
+        self.assertIn("cảnh báo điểm mua/bán trong phiên", register.lower())
+        self.assertIn("10:30 · 11:15 · 13:30 · 14:15", register)
         self.assertIn("data-email-interest-form", register)
         self.assertIn("assets/email-interest.js", register)
 
