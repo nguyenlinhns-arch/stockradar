@@ -1,0 +1,72 @@
+name: Validate final Radar Review 30 V8
+
+on:
+  push:
+    branches:
+      - radar-review-30-v8-release
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Check integrated JavaScript
+        run: |
+          node --check website/assets/home-dashboard.js
+          node --check website/assets/public-copy-v7.js
+          node --check website/assets/public-fallbacks-v4.js
+          node --check website/assets/header-auth-dedupe-v6.js
+      - name: Build fail-closed public data
+        run: python -m engine.cli build-public
+      - name: Verify Radar 30 and Premium preservation
+        run: |
+          python - <<'PY'
+          import json
+          from collections import Counter
+          from pathlib import Path
+          payload=json.loads(Path('website/public/data/ticker-universe.json').read_text(encoding='utf-8'))
+          items=payload['items']
+          counts=Counter(x['sector'] for x in items)
+          assert len(items)==30, len(items)
+          assert len(counts)==10, counts
+          assert set(counts.values())=={3}, counts
+          assert all(x['exchange']=='HOSE' for x in items)
+          public_copy=Path('website/assets/public-copy-v7.js').read_text(encoding='utf-8')
+          assert 'Danh sách cổ phiếu theo Radar rà soát' in public_copy
+          assert '30 mã HOSE · 10 ngành · 3 mã mỗi ngành.' in public_copy
+          assert "document.querySelector('.premium-preview-section')?.remove()" not in public_copy
+          assert "document.querySelector('.home-ticker-strip')?.remove()" not in public_copy
+          assert "['TOP 30 STOCKRADAR', 'TOP CỔ PHIẾU STOCKRADAR']" not in public_copy
+          dashboard=Path('website/assets/home-dashboard.js').read_text(encoding='utf-8')
+          assert '16 mã HOSE đang được theo dõi.' not in dashboard
+          balance=Path('website/assets/home-balance-v8.css').read_text(encoding='utf-8')
+          assert 'repeat(15' in balance and 'repeat(10' in balance
+          print(counts)
+          PY
+      - name: Run regression suite
+        run: python -m unittest discover -s engine/tests -v
+      - name: Build and verify production Pages artifact
+        env:
+          STOCKRADAR_ENABLE_AUTH: "1"
+          STOCKRADAR_AUTH_EMAIL_READY: "0"
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
+        run: |
+          python scripts/build_pages.py --output .pages-site
+          python scripts/inject_public_ux.py .pages-site
+          python scripts/verify_pages_auth.py .pages-site
+          python scripts/verify_pages_public_surface.py .pages-site
+          grep -q 'Danh sách cổ phiếu theo Radar rà soát' .pages-site/index.html
+          grep -q '<strong>30 mã</strong>' .pages-site/index.html
+          grep -q 'MẪU BÁO CÁO CHUYÊN SÂU' .pages-site/index.html
+          grep -q 'MẪU EMAIL GÓI TRẢ PHÍ' .pages-site/index.html
+          grep -q '<b>NKG</b>' .pages-site/index.html
+          grep -q '<b>HAH</b>' .pages-site/index.html
