@@ -61,6 +61,21 @@ The Supabase production project contains:
 
 The delivery gate cannot set `sending_enabled=true` unless provider configuration, sender-domain verification, unsubscribe, bounce/complaint handling, compliance approval and an evidence reference are all present. Current state remains **sending disabled** until those conditions are met.
 
+## Signup and account preference funnel — 2026-09-03
+
+The production website has one account-based funnel for the two primary email goals:
+
+- signup captures optional, non-prechecked intent for `DAILY_BRIEF` and `EVENT_ALERT`;
+- legal acceptance and product-email intent are passed into Supabase Auth user metadata at signup;
+- `handle_new_user` stores Terms/Privacy receipts and, when at least one product-email option is selected, creates fail-closed email preferences plus an append-only `SIGNUP` consent event;
+- after email verification, a Free account that explicitly selected the daily brief may have that preference enabled automatically; actual provider delivery still remains subject to the delivery gate;
+- Free may retain Premium-alert interest in preferences, but the private eligibility view masks Premium-only products unless the account tier is Trial/Paid;
+- the account center lets an authenticated user change daily-report and buy/sell-alert preferences and withdraw consent;
+- each watchlist row stores `alert_enabled` so later event delivery can respect ticker-level alert preferences;
+- production CI verifies the signup fields, account preference center, required assets and no-demo public surface.
+
+This separation is mandatory: **preference/consent is not delivery entitlement**. A selected Premium alert on a Free account must never be interpreted by a sender as authorization to deliver a Premium buy/sell alert.
+
 ## Analytics and privacy
 
 Track `email_open` and `email_click` only where lawful and consented. Do not include broker credentials, private portfolio values, private holdings, personal cost basis or individualized order language in public/customer-wide content. Every email states data time, horizon, lifecycle state, and informational/educational boundary.
@@ -68,5 +83,7 @@ Track `email_open` and `email_click` only where lawful and consented. Do not inc
 ## Production status
 
 Consent/outbox/suppression/delivery-gate foundation: **PASS**.
+
+Signup/account preference funnel and tier-aware entitlement boundary: **PASS**.
 
 Actual product-email sending remains governed by the fail-closed delivery gate and must not be bypassed.
