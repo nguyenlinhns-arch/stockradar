@@ -143,10 +143,12 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
 
 
 def route_specific_head(source: str, page: Path, output: Path) -> str:
+    professional_css = asset_href(source, page, output, "professional-v5.css")
+    head = f'<link rel="stylesheet" href="{professional_css}?v=20260904-pro5">\n'
     if page.parent.name == "khuyen-nghi":
         css = asset_href(source, page, output, "recommendation-dense-v3.css")
-        return f'<link rel="stylesheet" href="{css}?v=20260903-reco3">\n'
-    return ""
+        head += f'<link rel="stylesheet" href="{css}?v=20260903-reco3">\n'
+    return head
 
 
 def inject_page(page: Path, output: Path) -> None:
@@ -205,6 +207,7 @@ def main() -> None:
         output / "assets" / "auth-production-gate.js",
         output / "assets" / "recommendation-dense-v3.css",
         output / "assets" / "site-v4.css",
+        output / "assets" / "professional-v5.css",
         output / "assets" / "mobile-touch-v1.css",
         output / "assets" / "public-fallbacks-v4.js",
         output / "assets" / "header-auth-dedupe-v6.js",
