@@ -16,6 +16,11 @@ REQUIRED_UX_ASSETS = (
     "assets/public-ux.js",
     "assets/auth-production-gate.js",
 )
+REQUIRED_EMAIL_ASSETS = (
+    "assets/signup-email-intent.js",
+    "assets/email-preferences.js",
+    "assets/email-preferences.css",
+)
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
     "kien-thuc/index.html",
@@ -58,6 +63,17 @@ def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
     return errors
 
 
+def require_text(output: Path, relative_path: str, expected: tuple[str, ...], errors: list[str]) -> None:
+    path = output / relative_path
+    if not path.is_file():
+        errors.append(f"required page missing: {relative_path}")
+        return
+    source = path.read_text(encoding="utf-8")
+    for text in expected:
+        if text not in source:
+            errors.append(f"required production hook missing in {relative_path}: {text}")
+
+
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
@@ -72,9 +88,28 @@ def main() -> None:
         if (output / route).exists():
             errors.append(f"excluded route published: {route}")
 
-    for asset in REQUIRED_UX_ASSETS:
+    for asset in (*REQUIRED_UX_ASSETS, *REQUIRED_EMAIL_ASSETS):
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
+
+    require_text(
+        output,
+        "signup/index.html",
+        ('name="email_daily_brief"', 'name="email_event_alerts"', 'assets/signup-email-intent.js'),
+        errors,
+    )
+    require_text(
+        output,
+        "tai-khoan/index.html",
+        ('data-product-email-preferences', 'data-product-email-form', 'assets/email-preferences.js'),
+        errors,
+    )
+    require_text(
+        output,
+        "index.html",
+        ('data-email-conversion', 'Đăng ký nhận email'),
+        errors,
+    )
 
     for page in pages:
         source = page.read_text(encoding="utf-8")
@@ -97,7 +132,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages")
+    print(f"Verified production public surface: {len(pages)} HTML pages; email subscription funnel present")
 
 
 if __name__ == "__main__":
