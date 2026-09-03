@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="vi" data-api-mode="auto">
-<head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Phân tích cổ phiếu HOSE trên StockRadar với bản Free bên trái và bản Premium chuyên sâu bên phải."><title>Phân tích Free & Premium — StockRadar</title><link rel="icon" href="assets/logo.svg"><link rel="stylesheet" href="assets/styles.css?v=20260903-data2"><link rel="stylesheet" href="assets/stock-api.css?v=20260903-api2"><script src="assets/app.js?v=20260903-data2" defer></script><script src="assets/stock-api-client.js?v=20260903-api1" defer></script></head>
+<head><base href="../"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Phân tích cổ phiếu HOSE trên StockRadar với bản Free bên trái và bản Premium chuyên sâu bên phải."><title>Phân tích Free & Premium — StockRadar</title><link rel="icon" href="assets/logo.svg"><link rel="stylesheet" href="assets/styles.css?v=20260903-data2"><link rel="stylesheet" href="assets/stock-api.css?v=20260903-api3"><script src="assets/app.js?v=20260903-data2" defer></script><script src="assets/stock-api-client.js?v=20260903-api2" defer></script></head>
 <body data-proposition="stock-report">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/" aria-current="page">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="thay-doi-hom-nay/">Thay đổi</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
@@ -26,25 +26,29 @@
               <div><span class="analysis-tier-badge is-premium">PREMIUM</span><h2 id="premium-analysis-title">Phân tích chuyên sâu & kế hoạch hành động</h2><p>Đi sâu từ chất lượng doanh nghiệp đến định giá, dòng tiền, điểm mua và quản trị rủi ro.</p></div>
             </header>
 
-            <div class="premium-analysis-stack">
-              <section class="premium-analysis-block"><span class="premium-analysis-step">01</span><div><h3>4M · Payback · CANSLIM</h3><p>Meaning, Moat, Management, Owner Earnings/FCF, tăng trưởng quý/năm, ROE, catalyst, chất lượng lợi nhuận và vị thế ngành.</p></div></section>
-              <section class="premium-analysis-block"><span class="premium-analysis-step">02</span><div><h3>Định giá Bear · Base · Bull</h3><p>P/E, Forward P/E, P/B, PEG, EV/EBITDA, DCF/Owner Earnings, Fair Value, Margin of Safety, Upside và Downside.</p></div></section>
-              <section class="premium-analysis-block"><span class="premium-analysis-step">03</span><div><h3>SEPA · VCP · Stage · VPA</h3><p>MA10/50/150/200, Relative Strength, Stage 1–4, Pivot, Pocket Pivot, Breakout/Retest, RVOL và dấu vết dòng tiền lớn.</p></div></section>
-              <section class="premium-analysis-block"><span class="premium-analysis-step">04</span><div><h3>Kế hoạch giao dịch</h3><p>Setup, Buy Zone, tỷ trọng, Stop-loss, Target gần, Target 3–6 tháng, Target 12 tháng, Upside/Downside và Risk/Reward.</p></div></section>
-              <section class="premium-analysis-block"><span class="premium-analysis-step">05</span><div><h3>Cảnh báo hành động</h3><p>Pocket Pivot, Early Breakout, Confirmed Breakout, nhồi lệnh, hạ tỷ trọng và cắt lỗ/bán — chỉ gửi khi tín hiệu đạt chuẩn.</p></div></section>
-            </div>
+            <div class="premium-live-report-slot" data-premium-stock-report hidden></div>
 
-            <div class="premium-analysis-delivery">
-              <div><span>Báo cáo hằng ngày</span><strong>Premium</strong></div>
-              <div><span>Cảnh báo trong phiên</span><strong>10:30 · 11:15 · 13:30 · 14:15</strong></div>
-              <div><span>Kênh chính</span><strong>Email + website</strong></div>
-            </div>
+            <div data-premium-gate-copy>
+              <div class="premium-analysis-stack">
+                <section class="premium-analysis-block"><span class="premium-analysis-step">01</span><div><h3>4M · Payback · CANSLIM</h3><p>Meaning, Moat, Management, Owner Earnings/FCF, tăng trưởng quý/năm, ROE, catalyst, chất lượng lợi nhuận và vị thế ngành.</p></div></section>
+                <section class="premium-analysis-block"><span class="premium-analysis-step">02</span><div><h3>Định giá Bear · Base · Bull</h3><p>P/E, Forward P/E, P/B, PEG, EV/EBITDA, DCF/Owner Earnings, Fair Value, Margin of Safety, Upside và Downside.</p></div></section>
+                <section class="premium-analysis-block"><span class="premium-analysis-step">03</span><div><h3>SEPA · VCP · Stage · VPA</h3><p>MA10/50/150/200, Relative Strength, Stage 1–4, Pivot, Pocket Pivot, Breakout/Retest, RVOL và dấu vết dòng tiền lớn.</p></div></section>
+                <section class="premium-analysis-block"><span class="premium-analysis-step">04</span><div><h3>Kế hoạch giao dịch</h3><p>Setup, Buy Zone, tỷ trọng, Stop-loss, Target gần, Target 3–6 tháng, Target 12 tháng, Upside/Downside và Risk/Reward.</p></div></section>
+                <section class="premium-analysis-block"><span class="premium-analysis-step">05</span><div><h3>Cảnh báo hành động</h3><p>Pocket Pivot, Early Breakout, Confirmed Breakout, nhồi lệnh, hạ tỷ trọng và cắt lỗ/bán — chỉ gửi khi tín hiệu đạt chuẩn.</p></div></section>
+              </div>
 
-            <div class="premium-analysis-cta">
-              <strong>Mở toàn bộ lớp phân tích Premium</strong>
-              <p>Free không nhận email báo cáo hằng ngày. Premium mới có báo cáo chuyên sâu và cảnh báo hành động theo quyền tài khoản.</p>
-              <a class="button button-primary" href="signup/">Đăng ký StockRadar</a>
-              <a class="button button-secondary" href="dang-nhap/">Đã có tài khoản</a>
+              <div class="premium-analysis-delivery">
+                <div><span>Báo cáo hằng ngày</span><strong>Premium</strong></div>
+                <div><span>Cảnh báo trong phiên</span><strong>10:30 · 11:15 · 13:30 · 14:15</strong></div>
+                <div><span>Kênh chính</span><strong>Email + website</strong></div>
+              </div>
+
+              <div class="premium-analysis-cta">
+                <strong>Mở toàn bộ lớp phân tích Premium</strong>
+                <p>Free không nhận email báo cáo hằng ngày. Premium mới có báo cáo chuyên sâu và cảnh báo hành động theo quyền tài khoản.</p>
+                <a class="button button-primary" href="signup/">Đăng ký StockRadar</a>
+                <a class="button button-secondary" href="dang-nhap/">Đã có tài khoản</a>
+              </div>
             </div>
           </aside>
         </div>
