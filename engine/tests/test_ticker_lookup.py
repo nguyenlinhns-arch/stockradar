@@ -31,7 +31,7 @@ class TickerLookupV212Tests(unittest.TestCase):
     def test_ticker_01_non_original_example_is_resolved_from_master(self) -> None:
         self.assertEqual(self.master.resolve(" vci ").ticker, "VCI")
         suggestions = self.master.autocomplete("H")
-        self.assertTrue({"HPG", "HDB", "HCM", "HSG"}.issubset({item.ticker for item in suggestions}))
+        self.assertTrue({"HPG", "HCM", "HSG", "HAH"}.issubset({item.ticker for item in suggestions}))
 
     def test_ticker_02_03_04_cache_miss_hit_and_stale_refresh(self) -> None:
         calls = []

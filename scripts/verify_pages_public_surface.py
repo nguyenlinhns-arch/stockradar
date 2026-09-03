@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
+from collections import Counter
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -66,9 +68,7 @@ def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
         reference = urlsplit(match.group(1)).path
         if base:
             if reference != asset:
-                errors.append(
-                    f"base-relative asset path invalid on {page.relative_to(output)}: {reference} != {asset}"
-                )
+                errors.append(f"base-relative asset path invalid on {page.relative_to(output)}: {reference} != {asset}")
         else:
             target = (page.parent / reference).resolve()
             if not target.is_file():
@@ -120,18 +120,22 @@ def main() -> None:
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
-    require_text(
-        output,
-        "signup/index.html",
-        ('name="email_daily_brief"', 'name="email_event_alerts"', 'assets/signup-email-intent.js'),
-        errors,
-    )
-    require_text(
-        output,
-        "tai-khoan/index.html",
-        ('data-product-email-preferences', 'data-product-email-form', 'assets/email-preferences.js'),
-        errors,
-    )
+    universe_path = output / "public" / "data" / "ticker-universe.json"
+    if not universe_path.is_file():
+        errors.append("Radar review universe missing")
+    else:
+        payload = json.loads(universe_path.read_text(encoding="utf-8"))
+        items = payload.get("items", [])
+        counts = Counter(item.get("sector") for item in items)
+        if len(items) != 30:
+            errors.append(f"Radar review must contain 30 tickers, got {len(items)}")
+        if len(counts) != 10 or set(counts.values()) != {3}:
+            errors.append(f"Radar review sector balance must be 10x3, got {dict(counts)}")
+        if any(item.get("exchange") != "HOSE" for item in items):
+            errors.append("Radar review contains non-HOSE ticker")
+
+    require_text(output, "signup/index.html", ('name="email_daily_brief"', 'name="email_event_alerts"', 'assets/signup-email-intent.js'), errors)
+    require_text(output, "tai-khoan/index.html", ('data-product-email-preferences', 'data-product-email-form', 'assets/email-preferences.js'), errors)
     require_text(
         output,
         "index.html",
@@ -149,10 +153,14 @@ def main() -> None:
             'home-ticker-grid',
             '<b>ACB</b>',
             '<b>VNM</b>',
+            '<b>NKG</b>',
+            '<b>HAH</b>',
             'Tín hiệu hành động hiện tại',
             '<strong>0 mã</strong>',
-            'Danh sách cổ phiếu đang theo dõi',
-            '<strong>16 mã</strong>',
+            'Danh sách cổ phiếu theo Radar rà soát',
+            '<strong>30 mã</strong>',
+            '10 nhóm ngành',
+            '3 mã mỗi ngành',
             'MẪU BÁO CÁO CHUYÊN SÂU',
             '4M &amp; Payback Time',
             'Định giá Bear / Base / Bull',
@@ -170,6 +178,8 @@ def main() -> None:
         errors.append("obsolete homepage recommendation/reference sentence remains")
     if "DỮ LIỆU HOSE THAM CHIẾU" in home_source:
         errors.append("obsolete HOSE reference section remains on homepage")
+    if "Danh sách cổ phiếu đang theo dõi" in home_source:
+        errors.append("obsolete tracking-list wording remains on homepage")
 
     require_text(
         output,
@@ -194,10 +204,13 @@ def main() -> None:
         "khuyen-nghi/index.html",
         (
             '<strong>0 mã</strong>',
-            '<strong>16 mã</strong>',
+            '<strong>30 mã</strong>',
+            'Danh sách cổ phiếu theo Radar rà soát',
             'reference-watch-table',
             '<b>ACB</b>',
             '<b>VNM</b>',
+            '<b>NKG</b>',
+            '<b>HAH</b>',
             'không phải khuyến nghị mua',
             'assets/recommendation-dense-v3.css',
             'assets/site-v4.css',
@@ -207,30 +220,13 @@ def main() -> None:
     )
 
     for route in (
-        "radar5/index.html",
-        "breakout/index.html",
-        "risk/index.html",
-        "track-record/index.html",
-        "thay-doi-hom-nay/index.html",
-        "hieu-qua/index.html",
-        "nganh/index.html",
-        "kiem-tra-co-phieu/index.html",
-        "phan-tich/index.html",
-        "co-phieu/index.html",
+        "radar5/index.html", "breakout/index.html", "risk/index.html", "track-record/index.html",
+        "thay-doi-hom-nay/index.html", "hieu-qua/index.html", "nganh/index.html",
+        "kiem-tra-co-phieu/index.html", "phan-tich/index.html", "co-phieu/index.html",
     ):
-        require_text(
-            output,
-            route,
-            ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'),
-            errors,
-        )
+        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'), errors)
 
-    require_text(
-        output,
-        "quyen-rieng-tu/index.html",
-        ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'),
-        errors,
-    )
+    require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
     fallback_js = output / "assets" / "public-fallbacks-v4.js"
     if fallback_js.is_file():
@@ -238,8 +234,7 @@ def main() -> None:
         for marker in (
             "radar-reference", "breakout-reference", "risk-reference", "today-reference",
             "performance-method", "track-method", "sector-reference", "lookup-reference",
-            "report-reference", "referenceGrid", "sectorGrid", "enhanceNavigation",
-            "TRẠNG THÁI DỮ LIỆU",
+            "report-reference", "referenceGrid", "sectorGrid", "enhanceNavigation", "TRẠNG THÁI DỮ LIỆU",
         ):
             if marker not in source:
                 errors.append(f"full-site V4 fallback marker missing: {marker}")
@@ -247,18 +242,14 @@ def main() -> None:
     copy_v7 = output / "assets" / "public-copy-v7.js"
     if copy_v7.is_file():
         source = copy_v7.read_text(encoding="utf-8")
-        for marker in ("CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT", "MutationObserver"):
+        for marker in ("CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH", "ĐANG CẬP NHẬT", "MutationObserver", "Danh sách cổ phiếu theo Radar rà soát"):
             if marker not in source:
                 errors.append(f"public copy V7 marker missing: {marker}")
 
     site_css = output / "assets" / "site-v4.css"
     if site_css.is_file():
         source = site_css.read_text(encoding="utf-8")
-        for marker in (
-            ".v4-reference-grid", ".v4-sector-grid", ".v4-zero-bar",
-            ".header-auth-actions", ".header-login-cta", ".header-register-cta",
-            "@media(max-width:760px)",
-        ):
+        for marker in (".v4-reference-grid", ".v4-sector-grid", ".v4-zero-bar", ".header-auth-actions", ".header-login-cta", ".header-register-cta", "@media(max-width:760px)"):
             if marker not in source:
                 errors.append(f"full-site V4 CSS marker missing: {marker}")
 
@@ -284,10 +275,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(
-        f"Verified production public surface: {len(pages)} HTML pages; "
-        "premium previews + polished public wording + single Login/Register header pair present"
-    )
+    print(f"Verified production public surface: {len(pages)} HTML pages; 30-stock 10x3 Radar review + Premium previews + single Login/Register header pair present")
 
 
 if __name__ == "__main__":

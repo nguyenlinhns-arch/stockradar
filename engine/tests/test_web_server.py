@@ -56,7 +56,7 @@ class WebServerTests(unittest.TestCase):
         with urllib.request.urlopen(self.base + "/api/tickers?q=H") as response:
             payload = json.load(response)
             tickers = {item["ticker"] for item in payload["items"]}
-            self.assertTrue({"HPG", "HDB", "HCM", "HSG"}.issubset(tickers))
+            self.assertTrue({"HPG", "HAH", "HCM", "HSG"}.issubset(tickers))
             self.assertFalse(payload["full_universe"])
         with urllib.request.urlopen(self.base + "/api/stocks/VCI/quick") as response:
             payload = json.load(response)
