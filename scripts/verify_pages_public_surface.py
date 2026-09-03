@@ -20,12 +20,13 @@ COMMON_UX_ASSETS = (
     "assets/mobile-touch-v1.css",
     "assets/header-auth-dedupe-v6.js",
     "assets/public-copy-v7.js",
-    "assets/direct-ticker-nav-v1.js",
 )
-DATA_PATCH_UX_ASSETS = (
+NON_HOME_UX_ASSETS = (
     "assets/public-ux.js",
     "assets/public-fallbacks-v4.js",
+    "assets/direct-ticker-nav-v1.js",
 )
+HOME_CORE_ASSET = "assets/home-core-v1.js"
 REQUIRED_EMAIL_ASSETS = (
     "assets/signup-email-intent.js",
     "assets/email-preferences.js",
@@ -38,6 +39,7 @@ REQUIRED_HOME_ASSETS = (
     "assets/home-dense-v3.css",
     "assets/home-focus-v1.css",
     "assets/recommendation-dense-v3.css",
+    HOME_CORE_ASSET,
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html",
@@ -67,8 +69,10 @@ def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
     errors: list[str] = []
     base = base_href(source)
     required = list(COMMON_UX_ASSETS)
-    if not is_homepage(page, output):
-        required.extend(DATA_PATCH_UX_ASSETS)
+    if is_homepage(page, output):
+        required.append(HOME_CORE_ASSET)
+    else:
+        required.extend(NON_HOME_UX_ASSETS)
     for asset in required:
         pattern = rf'(?:href|src)=["\']([^"\']*{re.escape(Path(asset).name)}(?:\?[^"\']*)?)["\']'
         match = re.search(pattern, source, flags=re.IGNORECASE)
@@ -84,9 +88,9 @@ def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
             if not target.is_file():
                 errors.append(f"asset target missing on {page.relative_to(output)}: {reference}")
     if is_homepage(page, output):
-        for asset in DATA_PATCH_UX_ASSETS:
+        for asset in (*NON_HOME_UX_ASSETS, "assets/app.js", "assets/home-dashboard.css"):
             if Path(asset).name in source:
-                errors.append(f"homepage must not load data-patch asset {asset}")
+                errors.append(f"homepage must not load legacy/heavy asset {asset}")
     return errors
 
 
@@ -130,7 +134,7 @@ def main() -> None:
         if (output / route).exists():
             errors.append(f"excluded route published: {route}")
 
-    for asset in (*COMMON_UX_ASSETS, *DATA_PATCH_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_ASSETS):
+    for asset in (*COMMON_UX_ASSETS, *NON_HOME_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_ASSETS):
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
@@ -156,7 +160,7 @@ def main() -> None:
         (
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/site-v4.css',
-            'assets/public-copy-v7.js', 'assets/direct-ticker-nav-v1.js', 'assets/mobile-touch-v1.css',
+            'assets/public-copy-v7.js', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
             'home-radar-sector-list', 'home-tier-grid', 'ticker=ACB', 'ticker=VNM', 'ticker=NKG', 'ticker=HAH',
             'Tín hiệu hành động', '<strong>0 mã</strong>', '30 mã', '10 ngành · 3 mã mỗi ngành',
             'Free bên trái · Premium bên phải', '4M · CANSLIM · Payback', 'Định giá Bear/Base/Bull',
@@ -169,8 +173,8 @@ def main() -> None:
         "home-newsletter-strip", "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành.",
         "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid",
         "home-ticker-grid", "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
-        "assets/premium-preview-v7.css", "assets/home-dashboard.js", "assets/email-interest.js",
-        "assets/public-ux.js", "assets/public-fallbacks-v4.js",
+        "assets/premium-preview-v7.css", "assets/home-dashboard.js", "assets/home-dashboard.css", "assets/email-interest.js",
+        "assets/public-ux.js", "assets/public-fallbacks-v4.js", "assets/direct-ticker-nav-v1.js", "assets/app.js",
     ):
         if obsolete in home_source:
             errors.append(f"obsolete/heavy homepage element remains: {obsolete}")
@@ -182,6 +186,7 @@ def main() -> None:
             'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'data-email-interest-form',
             'name="daily_brief"', 'name="event_alerts"', 'assets/email-interest.js', 'assets/home-density.css',
             'assets/home-dense-v3.css', 'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
+            'assets/direct-ticker-nav-v1.js',
         ),
         errors,
     )
@@ -192,7 +197,7 @@ def main() -> None:
             '<strong>0 mã</strong>', '<strong>30 mã</strong>', 'Danh sách cổ phiếu theo Radar rà soát',
             'reference-watch-table', '<b>ACB</b>', '<b>VNM</b>', '<b>NKG</b>', '<b>HAH</b>',
             'không phải khuyến nghị mua', 'assets/recommendation-dense-v3.css', 'assets/site-v4.css',
-            'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'data-header-auth-actions',
+            'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js', 'data-header-auth-actions',
         ),
         errors,
     )
@@ -206,7 +211,8 @@ def main() -> None:
             output,
             route,
             ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'assets/site-v4.css',
-             'assets/mobile-touch-v1.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'),
+             'assets/mobile-touch-v1.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
+             'assets/direct-ticker-nav-v1.js', 'assets/public-copy-v7.js'),
             errors,
         )
 
@@ -259,7 +265,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; lean homepage + 30-stock Radar + Free/Premium analysis + one-step ticker navigation present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; lightweight homepage core + 30-stock Radar + Free/Premium analysis present")
 
 
 if __name__ == "__main__":
