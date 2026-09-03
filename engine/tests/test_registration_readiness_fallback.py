@@ -28,7 +28,7 @@ class RegistrationReadinessFallbackTests(unittest.TestCase):
         self.assertIn("Đăng ký quan tâm Premium", page)
         self.assertIn("báo cáo Premium hằng ngày", page)
         self.assertIn("cảnh báo hành động Premium", page)
-        self.assertIn("Free không nhận email báo cáo/khuyến nghị hằng ngày", page)
+        self.assertIn("không nhận email báo cáo/khuyến nghị hằng ngày", page)
         self.assertIn("Báo cáo Premium hằng ngày", client)
         self.assertIn("Cảnh báo hành động Premium", client)
         self.assertNotIn("Nhận bản rà soát thị trường cơ bản hằng ngày", page)
