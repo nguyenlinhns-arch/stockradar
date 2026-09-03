@@ -17,17 +17,24 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: '3.13'
-      - name: Check homepage JavaScript
-        run: node --check website/assets/home-core-v1.js
+      - name: Check public JavaScript
+        run: |
+          node --check website/assets/home-core-v1.js
+          node --check website/assets/public-fallbacks-v4.js
       - name: Build fail-closed public data
         run: python -m engine.cli build-public
       - name: Run regression suite
         run: python -m unittest discover -s engine/tests -v
       - name: Build production Pages artifact
+        env:
+          STOCKRADAR_ENABLE_AUTH: "1"
+          STOCKRADAR_AUTH_EMAIL_READY: "0"
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
         run: |
           python scripts/build_pages.py --output .pages-site
-          STOCKRADAR_ENABLE_AUTH=1 STOCKRADAR_AUTH_EMAIL_READY=0 python scripts/inject_public_ux.py .pages-site
-          STOCKRADAR_ENABLE_AUTH=1 STOCKRADAR_AUTH_EMAIL_READY=0 python scripts/verify_pages_auth.py .pages-site
+          python scripts/inject_public_ux.py .pages-site
+          python scripts/verify_pages_auth.py .pages-site
           python scripts/verify_pages_public_surface.py .pages-site
       - name: Reject demo sample and unfinished public copy
         run: |
