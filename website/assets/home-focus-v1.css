@@ -1,4 +1,5 @@
 /* Focused homepage layer: one Radar surface + one Free/Premium comparison. */
+.app-home .portal-utility,.app-home .market-tape,.app-home .product-subnav{display:none!important}
 .app-home .home-focus-section{padding:10px 0}
 .app-home .home-focus-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr);gap:12px;align-items:start}
 .app-home .home-focus-panel{background:#fff;border:1px solid var(--line);box-shadow:0 3px 12px rgba(18,43,68,.04)}
