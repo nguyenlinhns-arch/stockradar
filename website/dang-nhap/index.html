@@ -4,11 +4,11 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Đăng nhập StockRadar bằng email và mật khẩu.">
+  <meta name="description" content="Đăng nhập StockRadar bằng email và mật khẩu, hỗ trợ xác minh OTP 6 số.">
   <title>Đăng nhập — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth1">
-  <script src="assets/app.js?v=20260903-auth1" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth3">
+  <script src="assets/app.js?v=20260903-auth3" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -18,8 +18,8 @@
       <section class="auth-intro">
         <span class="panel-label">ĐĂNG NHẬP</span>
         <h1>Quay lại bảng điều hành StockRadar.</h1>
-        <p>Dùng đúng email và mật khẩu đã đăng ký. Phiên đăng nhập được tự làm mới bởi nhà cung cấp xác thực.</p>
-        <ul class="auth-benefits"><li>Giữ phiên đăng nhập trên thiết bị hiện tại.</li><li>Có thể đăng xuất ngay từ thanh điều hướng.</li><li>Khôi phục mật khẩu qua email nếu quên.</li></ul>
+        <p>Dùng đúng email và mật khẩu đã đăng ký. Nếu tài khoản chưa xác minh, có thể gửi lại và nhập OTP 6 số ngay tại trang này.</p>
+        <ul class="auth-benefits"><li>Giữ phiên đăng nhập trên thiết bị hiện tại.</li><li>Khôi phục mật khẩu qua email nếu quên.</li><li>Gửi lại OTP cho tài khoản chưa xác minh.</li></ul>
       </section>
       <section class="auth-card" aria-labelledby="login-title">
         <div class="auth-card-header"><span class="auth-config-pill">SECURE AUTH</span><h2 id="login-title">Đăng nhập</h2><p>Nhập thông tin tài khoản StockRadar.</p></div>
@@ -29,11 +29,12 @@
           <button class="button button-primary" type="submit">Đăng nhập</button>
           <p class="auth-message" data-auth-message aria-live="polite"></p>
         </form>
+        <details class="auth-recovery"><summary>Chưa xác minh email? Gửi lại OTP</summary><form class="auth-form" data-auth-login-otp-form novalidate><div class="auth-field"><label for="verify-email">Email đã đăng ký</label><input id="verify-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div><button class="button button-secondary" type="button" data-auth-login-otp-send>Gửi OTP 6 số</button><div class="auth-field"><label for="verify-otp">Mã OTP</label><input class="auth-otp-input" id="verify-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000"></div><button class="button button-primary" type="submit">Xác minh email</button><p class="auth-message" data-auth-message aria-live="polite"></p></form></details>
         <details class="auth-recovery"><summary>Quên mật khẩu?</summary><form class="auth-form" data-auth-forgot-form novalidate><div class="auth-field"><label for="recover-email">Email đã đăng ký</label><input id="recover-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div><button class="button button-secondary" type="submit">Gửi liên kết đặt lại</button><p class="auth-message" data-auth-message aria-live="polite"></p></form></details>
         <p class="auth-switch">Chưa có tài khoản? <a href="signup/">Đăng ký miễn phí</a></p>
       </section>
     </div>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu StockRadar hoặc mã xác minh email cho người khác.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="signup/">Đăng ký</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu hoặc mã OTP xác minh tài khoản StockRadar.</p></div></footer>
 </body>
 </html>
