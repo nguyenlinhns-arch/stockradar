@@ -6,7 +6,7 @@
 
   document.documentElement.classList.add('auth-email-pending');
 
-  const message = 'Đăng ký mới và khôi phục qua email đang tạm thời chưa khả dụng trong khi hệ thống email xác minh được hoàn thiện.';
+  const message = 'Tính năng này sử dụng email xác minh. Bạn có thể đăng ký quan tâm Premium để nhận thông tin mở quyền.';
 
   function disableForm(form, customMessage = message) {
     if (!form || form.dataset.emailGateLocked === '1') return;
@@ -27,15 +27,18 @@
   function patchSignupPage() {
     const form = document.querySelector('[data-auth-signup-form]');
     if (!form) return;
-    disableForm(form, 'Tạo tài khoản mới đang tạm khóa cho đến khi email xác minh hoạt động ổn định.');
-    disableForm(document.querySelector('[data-auth-signup-otp-form]'), 'Xác minh OTP đang tạm khóa cùng luồng đăng ký mới.');
+    disableForm(form, 'Đăng ký tài khoản mới sử dụng email xác minh. Hãy đăng ký quan tâm Premium tại biểu mẫu quan tâm.');
+    disableForm(document.querySelector('[data-auth-signup-otp-form]'));
+    form.hidden = true;
+    const otp = document.querySelector('[data-auth-signup-otp-form]');
+    if (otp) otp.hidden = true;
 
     const intro = document.querySelector('.auth-intro');
     if (intro) {
       const h1 = intro.querySelector('h1');
       const p = intro.querySelector('p');
-      if (h1) h1.innerHTML = 'Tạo tài khoản mới<br>đang tạm khóa.';
-      if (p) p.innerHTML = `Email xác minh production đang được hoàn thiện. Bạn vẫn có thể <a href="${interestHref()}">đăng ký quan tâm Premium</a> để StockRadar ghi nhận nhu cầu trước.`;
+      if (h1) h1.innerHTML = 'StockRadar<br>Premium';
+      if (p) p.innerHTML = `Để lại email tại <a href="${interestHref()}">Đăng ký quan tâm Premium</a> để nhận thông tin mở quyền tài khoản và báo cáo Premium.`;
       intro.querySelector('.auth-stepper')?.setAttribute('hidden', '');
       intro.querySelector('.auth-benefits')?.setAttribute('hidden', '');
     }
@@ -45,9 +48,9 @@
       const pill = header.querySelector('.auth-config-pill');
       const title = header.querySelector('h2');
       const p = header.querySelector('p');
-      if (pill) pill.textContent = 'CHỜ EMAIL XÁC MINH';
-      if (title) title.textContent = 'Tạo tài khoản';
-      if (p) p.innerHTML = `Trong thời gian chờ, <a href="${interestHref()}">ghi nhận email quan tâm Premium</a> mà không kích hoạt gửi nội dung.`;
+      if (pill) pill.textContent = 'PREMIUM';
+      if (title) title.textContent = 'Đăng ký quan tâm Premium';
+      if (p) p.innerHTML = `<a href="${interestHref()}">Mở biểu mẫu đăng ký quan tâm</a> để StockRadar ghi nhận email của bạn.`;
     }
   }
 
@@ -88,7 +91,7 @@
     const note = document.createElement('p');
     note.className = 'auth-email-gate-note';
     note.dataset.authEmailGateNote = '';
-    note.innerHTML = `Đăng nhập bằng mật khẩu vẫn hoạt động. Đăng ký mới, gửi lại OTP và khôi phục mật khẩu qua email đang tạm khóa. <a href="${interestHref()}">Đăng ký quan tâm Premium</a>.`;
+    note.innerHTML = `Đăng nhập bằng email và mật khẩu vẫn hoạt động. <a href="${interestHref()}">Đăng ký quan tâm Premium</a>.`;
     card.append(note);
   }
 
