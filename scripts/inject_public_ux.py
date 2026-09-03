@@ -40,29 +40,6 @@ def inject_page(page: Path, output: Path) -> None:
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
 
 
-def retire_public_mock_route(output: Path) -> None:
-    page = output / "co-phieu" / "demo1" / "index.html"
-    if not page.is_file():
-        return
-    page.write_text(
-        """<!doctype html>
-<html lang="vi">
-<head>
-  <base href="../../">
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="robots" content="noindex,nofollow">
-  <meta http-equiv="refresh" content="0;url=kiem-tra-co-phieu/">
-  <title>StockRadar</title>
-  <script>location.replace(new URL('kiem-tra-co-phieu/', document.baseURI).href);</script>
-</head>
-<body><p>Đang chuyển đến trang tra cứu StockRadar…</p></body>
-</html>
-""",
-        encoding="utf-8",
-    )
-
-
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
@@ -82,8 +59,6 @@ def main() -> None:
         raise RuntimeError("No HTML pages found in Pages artifact")
     for page in pages:
         inject_page(page, output)
-
-    retire_public_mock_route(output)
 
 
 if __name__ == "__main__":
