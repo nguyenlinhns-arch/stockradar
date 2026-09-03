@@ -231,12 +231,14 @@
       menu.insertAdjacentHTML('beforeend', '<a href="dang-ky/">Đăng ký</a>');
     }
     document.querySelectorAll('.footer-links').forEach(links => {
+      if (links.dataset.v4Footer === '1') return;
       const desired = [
         ['radar5/', 'Radar'], ['kiem-tra-co-phieu/', 'Tra cứu'], ['khuyen-nghi/', 'Khuyến nghị'],
         ['nganh/', 'Theo ngành'], ['hieu-qua/', 'Hiệu quả'], ['dang-ky/', 'Đăng ký'],
         ['dieu-khoan/', 'Điều khoản'], ['quyen-rieng-tu/', 'Quyền riêng tư']
       ];
       links.innerHTML = desired.map(([href, label]) => `<a href="${href}">${label}</a>`).join('');
+      links.dataset.v4Footer = '1';
     });
   }
 
