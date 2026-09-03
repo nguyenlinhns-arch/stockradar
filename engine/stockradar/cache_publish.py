@@ -10,7 +10,8 @@ from typing import Any, Mapping
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-from .production_data import ProductionDataGateError, require_publishable_manifest
+from .production_data import require_publishable_manifest
+from .report_contract import validate_report_payload
 
 
 HORIZONS = frozenset({"SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"})
@@ -173,10 +174,11 @@ def load_cache_batch(
             raise CachePublishError(
                 f"item {index} contains forbidden secret-shaped field: {sensitive[0]}"
             )
-        if report_object.get("ticker") is not None and _normalize_ticker(report_object.get("ticker")) != ticker:
-            raise CachePublishError(f"item {index} payload ticker mismatch")
-        if report_object.get("horizon") is not None and _normalize_horizon(report_object.get("horizon")) != horizon:
-            raise CachePublishError(f"item {index} payload horizon mismatch")
+        report_object = validate_report_payload(
+            report_object,
+            expected_ticker=ticker,
+            expected_horizon=horizon,
+        )
 
         records.append(
             CacheRecord(
