@@ -13,6 +13,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 WEBSITE = ROOT / "website"
 DEFAULT_OUTPUT = ROOT / ".pages-site"
+AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
+AUTH_ROUTES = {"signup", "dang-nhap", "dat-lai-mat-khau", "tai-khoan"}
 EXCLUDED_NAMES = {
     "server.py",
     "__pycache__",
@@ -45,12 +47,17 @@ def validate_output(output: Path) -> Path:
 
 def ignore(directory: str, names: list[str]) -> set[str]:
     excluded = {name for name in names if name in EXCLUDED_NAMES or name.endswith(".sqlite")}
-    if Path(directory).resolve() == WEBSITE.resolve() and "data" in names:
-        excluded.add("data")
+    if Path(directory).resolve() == WEBSITE.resolve():
+        if "data" in names:
+            excluded.add("data")
+        if not AUTH_ENABLED:
+            excluded.update(name for name in AUTH_ROUTES if name in names)
     return excluded
 
 
 def write_auth_config(output: Path) -> None:
+    if not AUTH_ENABLED:
+        return
     url = os.environ.get("STOCKRADAR_SUPABASE_URL", "").strip().rstrip("/")
     key = os.environ.get("STOCKRADAR_SUPABASE_PUBLISHABLE_KEY", "").strip()
     if bool(url) != bool(key):
@@ -77,7 +84,7 @@ def write_auth_config(output: Path) -> None:
 
 
 def inject_auth_bundle(source: str) -> str:
-    if "assets/auth.js" in source:
+    if not AUTH_ENABLED or "assets/auth.js" in source:
         return source
     if "</head>" not in source:
         raise RuntimeError("HTML page has no closing head tag")
@@ -108,9 +115,6 @@ def build(output: Path) -> None:
     required = [
         output / "index.html",
         output / "assets" / "app.js",
-        output / "assets" / "auth.css",
-        output / "assets" / "auth.js",
-        output / "assets" / "auth-config.js",
         output / "public" / "data" / "radar.json",
         output / "public" / "data" / "recommendations.json",
         output / "public" / "data" / "ticker-universe.json",
@@ -129,12 +133,18 @@ def build(output: Path) -> None:
         output / "co-phieu" / "index.html",
         output / "kiem-tra-co-phieu" / "index.html",
         output / "thay-doi-hom-nay" / "index.html",
-        output / "signup" / "index.html",
-        output / "dang-nhap" / "index.html",
-        output / "dat-lai-mat-khau" / "index.html",
-        output / "tai-khoan" / "index.html",
         output / "404.html",
     ]
+    if AUTH_ENABLED:
+        required.extend([
+            output / "assets" / "auth.css",
+            output / "assets" / "auth.js",
+            output / "assets" / "auth-config.js",
+            output / "signup" / "index.html",
+            output / "dang-nhap" / "index.html",
+            output / "dat-lai-mat-khau" / "index.html",
+            output / "tai-khoan" / "index.html",
+        ])
     missing = [str(path) for path in required if not path.is_file()]
     if missing:
         raise RuntimeError(f"Missing Pages assets: {missing}")
