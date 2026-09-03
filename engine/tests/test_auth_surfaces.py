@@ -34,6 +34,15 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("client.auth.resend", extra)
         self.assertIn("client.auth.verifyOtp", extra)
 
+    def test_signed_in_password_change_requires_current_password(self) -> None:
+        account = (WEBSITE / "tai-khoan" / "index.html").read_text(encoding="utf-8")
+        security = (WEBSITE / "assets" / "auth-account-security.js").read_text(encoding="utf-8")
+        self.assertIn("data-require-current-password", account)
+        self.assertIn('name="current_password"', account)
+        self.assertIn("currentPassword", security)
+        self.assertIn("stopImmediatePropagation", security)
+        self.assertIn("password === currentPassword", security)
+
     def test_account_deletion_is_authenticated_backend_operation(self) -> None:
         account = (WEBSITE / "tai-khoan" / "index.html").read_text(encoding="utf-8")
         extra = (WEBSITE / "assets" / "auth-extra.js").read_text(encoding="utf-8")
