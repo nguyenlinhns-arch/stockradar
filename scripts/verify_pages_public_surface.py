@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the generated GitHub Pages artifact is production-facing and self-contained."""
+"""Verify the generated GitHub Pages artifact is production-facing and feature-first."""
 
 from __future__ import annotations
 
@@ -11,64 +11,35 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-FORBIDDEN_PUBLIC_TERMS = (
-    "DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW",
+FORBIDDEN_ASSET_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
+FORBIDDEN_HTML_TERMS = (
+    *FORBIDDEN_ASSET_TERMS,
+    "DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH", "CHƯA CÓ SETUP",
+    "ĐANG HOÀN THIỆN", "TRẠNG THÁI CÔNG KHAI", "ĐANG TẢI", "ĐANG KIỂM TRA",
+    "CHỜ DỮ LIỆU", "CHƯA ĐỦ MẪU", "DỮ LIỆU THAM CHIẾU", "MÃ THAM CHIẾU",
     "MẪU BÁO CÁO", "MẪU EMAIL", "DỮ LIỆU MẪU", "MINH HỌA", "MINH HOẠ",
 )
-FORBIDDEN_HTML_TERMS = (
-    "DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH",
-    "CHƯA CÓ SETUP", "ĐANG HOÀN THIỆN", "TRẠNG THÁI CÔNG KHAI",
-)
-HOME_UX_ASSETS = (
-    "assets/mobile-touch-v1.css",
-    "assets/home-core-v1.js",
-)
+HOME_UX_ASSETS = ("assets/mobile-touch-v1.css", "assets/home-core-v1.js")
 NON_HOME_UX_ASSETS = (
-    "assets/public-ux.css",
-    "assets/site-v4.css",
-    "assets/mobile-touch-v1.css",
-    "assets/public-ux.js",
-    "assets/public-fallbacks-v4.js",
-    "assets/direct-ticker-nav-v1.js",
-    "assets/auth-production-gate.js",
-    "assets/header-auth-dedupe-v6.js",
-    "assets/public-copy-v7.js",
+    "assets/public-ux.css", "assets/site-v4.css", "assets/mobile-touch-v1.css",
+    "assets/public-ux.js", "assets/public-fallbacks-v4.js", "assets/direct-ticker-nav-v1.js",
+    "assets/auth-production-gate.js", "assets/header-auth-dedupe-v6.js", "assets/public-copy-v7.js",
 )
 HOMEPAGE_FORBIDDEN_ASSETS = (
-    "assets/app.js",
-    "assets/home-dashboard.css",
-    "assets/site-v4.css",
-    "assets/public-ux.css",
-    "assets/public-ux.js",
-    "assets/public-fallbacks-v4.js",
-    "assets/direct-ticker-nav-v1.js",
-    "assets/auth-production-gate.js",
-    "assets/header-auth-dedupe-v6.js",
-    "assets/public-copy-v7.js",
-    "assets/premium-preview-v7.css",
-    "assets/home-dashboard.js",
-    "assets/email-interest.js",
+    "assets/app.js", "assets/home-dashboard.css", "assets/site-v4.css", "assets/public-ux.css",
+    "assets/public-ux.js", "assets/public-fallbacks-v4.js", "assets/direct-ticker-nav-v1.js",
+    "assets/auth-production-gate.js", "assets/header-auth-dedupe-v6.js", "assets/public-copy-v7.js",
+    "assets/premium-preview-v7.css", "assets/home-dashboard.js", "assets/email-interest.js",
 )
 REQUIRED_EMAIL_ASSETS = (
-    "assets/signup-email-intent.js",
-    "assets/email-preferences.js",
-    "assets/email-preferences.css",
-    "assets/email-interest.js",
+    "assets/signup-email-intent.js", "assets/email-preferences.js", "assets/email-preferences.css", "assets/email-interest.js",
 )
 REQUIRED_HOME_FILES = (
-    "assets/home-dashboard.css",
-    "assets/home-density.css",
-    "assets/home-dense-v3.css",
-    "assets/home-focus-v1.css",
-    "assets/home-core-v1.js",
-    "assets/recommendation-dense-v3.css",
+    "assets/home-dashboard.css", "assets/home-density.css", "assets/home-dense-v3.css",
+    "assets/home-focus-v1.css", "assets/home-core-v1.js", "assets/recommendation-dense-v3.css",
 )
 EXCLUDED_PUBLIC_ROUTES = (
-    "co-phieu/demo1/index.html",
-    "kien-thuc/index.html",
-    "pro/index.html",
-    "email/index.html",
-    "theo-doi/index.html",
+    "co-phieu/demo1/index.html", "kien-thuc/index.html", "pro/index.html", "email/index.html", "theo-doi/index.html",
 )
 
 
@@ -181,24 +152,22 @@ def main() -> None:
     require_text(output, "signup/index.html", ('name="email_daily_brief"', 'name="email_event_alerts"', 'assets/signup-email-intent.js'), errors)
     require_text(output, "tai-khoan/index.html", ('data-product-email-preferences', 'data-product-email-form', 'assets/email-preferences.js'), errors)
     require_text(
-        output,
-        "index.html",
+        output, "index.html",
         (
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
             'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
-            'Radar 30', 'Phân tích doanh nghiệp', '4M · CANSLIM', 'Bear · Base · Bull',
-            'Pivot · Breakout', 'Buy Zone · Stop · Target', '30 mã', '10 ngành · 3 mã mỗi ngành',
-            'Free và Premium có gì?', 'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot',
-            'VPA · RVOL · dòng tiền lớn', 'Email &amp; cảnh báo trong phiên', '4 mốc quét/ngày',
-        ),
-        errors,
+            'Radar 30', 'Phân tích doanh nghiệp', '4M · CANSLIM', 'Bear · Base · Bull', 'Pivot · Breakout',
+            'Buy Zone · Stop · Target', '30 mã', '10 ngành · 3 mã mỗi ngành', 'Free và Premium có gì?',
+            'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot', 'VPA · RVOL · dòng tiền lớn',
+            'Email & cảnh báo trong phiên', '4 mốc quét/ngày',
+        ), errors,
     )
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
     for obsolete in (
         "home-newsletter-strip", "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành.",
-        "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid",
-        "home-ticker-grid", "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
+        "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid", "home-ticker-grid",
+        "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
         "Free bên trái · Premium bên phải", "Trạng thái công khai", "Chưa có setup", "đang hoàn thiện",
     ):
         if obsolete.lower() in home_source.lower():
@@ -208,60 +177,59 @@ def main() -> None:
         errors.append("Radar ticker routes require 30 unique public tickers")
     for ticker in radar_tickers:
         require_text(
-            output,
-            f"co-phieu/{ticker}/index.html",
+            output, f"co-phieu/{ticker}/index.html",
             (
-                '<base href="../../">',
-                f'<title>{ticker} — Phân tích Free &amp; Premium | StockRadar</title>',
+                '<base href="../../">', f'<title>{ticker} — Phân tích Free &amp; Premium | StockRadar</title>',
                 f'<link rel="canonical" href="https://stockradar.vn/co-phieu/{ticker}/">',
                 f'<meta property="og:url" content="https://stockradar.vn/co-phieu/{ticker}/">',
-                f'data-static-ticker="{ticker}"',
-                'name="robots" content="noindex,nofollow"',
-                'assets/stock-page-context-v1.js',
-            ),
-            errors,
+                f'data-static-ticker="{ticker}"', 'name="robots" content="noindex,nofollow"', 'assets/stock-page-context-v1.js',
+            ), errors,
         )
 
     require_text(
-        output,
-        "dang-ky/index.html",
+        output, "dang-ky/index.html",
         (
             'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'data-email-interest-form',
             'name="daily_brief"', 'name="event_alerts"', 'assets/email-interest.js', 'assets/home-density.css',
             'assets/home-dense-v3.css', 'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
             'assets/direct-ticker-nav-v1.js', 'assets/auth-production-gate.js', 'assets/public-copy-v7.js',
-        ),
-        errors,
+        ), errors,
     )
     require_text(
-        output,
-        "khuyen-nghi/index.html",
+        output, "khuyen-nghi/index.html",
         (
             '<strong>0 mã</strong>', '<strong>30 mã</strong>', 'Danh sách cổ phiếu theo Radar rà soát',
             'reference-watch-table', '<b>ACB</b>', '<b>VNM</b>', '<b>NKG</b>', '<b>HAH</b>',
             'không phải khuyến nghị mua', 'assets/recommendation-dense-v3.css', 'assets/site-v4.css',
             'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js',
             'assets/auth-production-gate.js', 'assets/public-copy-v7.js', 'data-header-auth-actions',
-        ),
-        errors,
+        ), errors,
     )
 
-    for route in (
-        "radar5/index.html", "breakout/index.html", "risk/index.html", "track-record/index.html",
-        "thay-doi-hom-nay/index.html", "hieu-qua/index.html", "nganh/index.html",
-        "kiem-tra-co-phieu/index.html", "phan-tich/index.html", "co-phieu/index.html",
-    ):
-        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', *NON_HOME_UX_ASSETS), errors)
+    route_features = {
+        "radar5/index.html": ('RADAR 30 · HOSE', '30 mã', '4M · SEPA · VPA'),
+        "breakout/index.html": ('Pocket Pivot · Early Breakout · Confirmed Breakout · Retest', 'SEPA · VCP · VPA · RVOL'),
+        "risk/index.html": ('Stop-loss · Hạ tỷ trọng · Cắt lỗ · Risk/Reward', '4 MỐC QUÉT TRONG PHIÊN'),
+        "track-record/index.html": ('Dấu thời gian · Entry · Target/Stop · Vòng đời khuyến nghị', 'NHẬT KÝ APPEND-ONLY'),
+        "thay-doi-hom-nay/index.html": ('Setup · Vùng giá · Dòng tiền · Market Direction', '4 MỐC QUÉT TRONG PHIÊN'),
+        "hieu-qua/index.html": ('Kích hoạt · Entry · Target/Stop · Benchmark', 'PHƯƠNG PHÁP ĐO NHẤT QUÁN'),
+        "nganh/index.html": ('10 nhóm ngành · 3 mã mỗi ngành · 30 cổ phiếu HOSE', 'SO SÁNH CÙNG NGÀNH'),
+        "kiem-tra-co-phieu/index.html": ('4 KHUNG ĐẦU TƯ', 'Buy Zone · Stop · Target'),
+        "co-phieu/index.html": ('4M · Payback · CANSLIM', 'Định giá Bear · Base · Bull', 'Kế hoạch giao dịch'),
+    }
+    for route, features in route_features.items():
+        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', *NON_HOME_UX_ASSETS, *features), errors)
 
+    require_text(output, "phan-tich/index.html", ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', *NON_HOME_UX_ASSETS), errors)
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
     fallback_js = output / "assets" / "public-fallbacks-v4.js"
     if fallback_js.is_file():
         source = fallback_js.read_text(encoding="utf-8")
         for marker in (
-            "radar-reference", "breakout-reference", "risk-reference", "today-reference",
-            "performance-method", "track-method", "sector-reference", "lookup-reference",
-            "report-reference", "referenceGrid", "sectorGrid", "enhanceNavigation", "TRẠNG THÁI DỮ LIỆU",
+            "radar-reference", "breakout-reference", "risk-reference", "today-reference", "performance-method",
+            "track-method", "sector-reference", "lookup-reference", "report-reference", "referenceGrid", "sectorGrid",
+            "featureGrid", "hideBlockedSurface", "enhanceNavigation", "TÍNH NĂNG STOCKRADAR",
         ):
             if marker not in source:
                 errors.append(f"full-site V4 fallback marker missing: {marker}")
@@ -275,29 +243,35 @@ def main() -> None:
         if "đang hoàn thiện" in source.lower():
             errors.append("homepage core contains unfinished-state copy")
 
+    auth_gate = output / "assets" / "auth-production-gate.js"
+    if auth_gate.is_file():
+        source = auth_gate.read_text(encoding="utf-8").lower()
+        for phrase in ("đang hoàn thiện", "tạm khóa", "chờ email xác minh"):
+            if phrase in source:
+                errors.append(f"auth gate exposes unfinished-state copy: {phrase}")
+
     for page in pages:
         source = page.read_text(encoding="utf-8")
         upper = source.upper()
-        for term in FORBIDDEN_PUBLIC_TERMS:
-            if term in upper:
-                errors.append(f"forbidden public term {term}: {page.relative_to(output)}")
         for term in FORBIDDEN_HTML_TERMS:
             if term in upper:
-                errors.append(f"unfinished/internal HTML term {term}: {page.relative_to(output)}")
+                errors.append(f"unfinished/sample public HTML term {term}: {page.relative_to(output)}")
         errors.extend(verify_injected_assets(page, output, source))
         errors.extend(verify_header_auth_pair(page, output, source))
 
     for suffix in ("*.js", "*.json"):
         for path in output.rglob(suffix):
             upper = path.read_text(encoding="utf-8").upper()
-            for term in FORBIDDEN_PUBLIC_TERMS:
+            for term in FORBIDDEN_ASSET_TERMS:
                 if term in upper:
-                    errors.append(f"forbidden public term {term}: {path.relative_to(output)}")
+                    errors.append(f"forbidden fake-data term {term}: {path.relative_to(output)}")
 
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; feature-first homepage + 30 static Radar ticker routes + concrete Free/Premium features present")
+    print(
+        f"Verified production public surface: {len(pages)} HTML pages; feature-first homepage + product pages + 30 Radar ticker routes; no demo/sample/unfinished public copy"
+    )
 
 
 if __name__ == "__main__":
