@@ -1,5 +1,11 @@
 /* Focused homepage layer: one Radar surface + one Free/Premium comparison. */
 .app-home .portal-utility,.app-home .market-tape,.app-home .product-subnav{display:none!important}
+.app-home .header-auth-actions{margin-left:auto;display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.app-home .header-login-cta,.app-home .header-register-cta{min-height:36px;padding:0 13px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:850;line-height:1;white-space:nowrap;text-decoration:none}
+.app-home .header-login-cta{border:1px solid #b9c8d5;background:#fff;color:var(--navy)}
+.app-home .header-login-cta:hover{border-color:#7e97ab;background:#f5f8fa;color:var(--navy)}
+.app-home .header-register-cta{border:1px solid var(--red);background:var(--red);color:#fff}
+.app-home .header-register-cta:hover{border-color:#b71e29;background:#b71e29;color:#fff}
 .app-home .home-focus-section{padding:10px 0}
 .app-home .home-focus-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr);gap:12px;align-items:start}
 .app-home .home-focus-panel{background:#fff;border:1px solid var(--line);box-shadow:0 3px 12px rgba(18,43,68,.04)}
@@ -51,5 +57,7 @@
 .app-home .home-tier-actions{padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;background:#fbfcfd}
 .app-home .home-tier-actions span{color:var(--muted);font-size:9px;line-height:1.4}
 .app-home .home-tier-actions .button{min-height:38px;white-space:nowrap}
+@media(max-width:1020px){.app-home .header-auth-actions{gap:4px}.app-home .header-login-cta,.app-home .header-register-cta{min-height:34px;padding:0 9px;font-size:10px}}
 @media(max-width:900px){.app-home .home-focus-grid{grid-template-columns:1fr}.app-home .home-tier-grid{grid-template-columns:1fr}.app-home .home-tier-section-head{display:block}.app-home .home-tier-section-head p{margin-top:4px;text-align:left}}
-@media(max-width:560px){.app-home .home-focus-section{padding:7px 0}.app-home .home-focus-head{padding:10px 11px}.app-home .home-signal-summary{grid-template-columns:1fr 1fr}.app-home .home-signal-summary>div{padding:9px 10px}.app-home .home-radar-sector-row{grid-template-columns:105px 1fr;padding:7px 9px}.app-home .home-radar-sector-row em{display:none}.app-home .home-radar-tickers{gap:4px}.app-home .home-radar-tickers a{min-width:42px;min-height:30px;padding:0 6px}.app-home .home-tier-feature-list{grid-template-columns:1fr}.app-home .home-tier-feature{min-height:0;border-right:0}.app-home .home-tier-actions{display:block}.app-home .home-tier-actions .button{width:100%;margin-top:8px}.app-home .home-tier-card-head{padding:12px}.app-home .home-tier-feature{padding:10px 12px}}
+@media(max-width:760px){.app-home .header-auth-actions{gap:4px}.app-home .header-login-cta,.app-home .header-register-cta{min-height:34px;padding:0 8px;font-size:9px}}
+@media(max-width:560px){.app-home .header-login-cta,.app-home .header-register-cta{min-height:32px;padding:0 6px;font-size:8px}.app-home .home-focus-section{padding:7px 0}.app-home .home-focus-head{padding:10px 11px}.app-home .home-signal-summary{grid-template-columns:1fr 1fr}.app-home .home-signal-summary>div{padding:9px 10px}.app-home .home-radar-sector-row{grid-template-columns:105px 1fr;padding:7px 9px}.app-home .home-radar-sector-row em{display:none}.app-home .home-radar-tickers{gap:4px}.app-home .home-radar-tickers a{min-width:42px;min-height:30px;padding:0 6px}.app-home .home-tier-feature-list{grid-template-columns:1fr}.app-home .home-tier-feature{min-height:0;border-right:0}.app-home .home-tier-actions{display:block}.app-home .home-tier-actions .button{width:100%;margin-top:8px}.app-home .home-tier-card-head{padding:12px}.app-home .home-tier-feature{padding:10px 12px}}
