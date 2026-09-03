@@ -25,10 +25,10 @@ EXCLUDED_NAMES = {
     "pro",
 }
 AUTH_HEAD = """\
-<link rel="stylesheet" href="assets/auth.css?v=20260903-auth1">
+<link rel="stylesheet" href="assets/auth.css?v=20260903-auth2">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth1" defer></script>
-<script src="assets/auth.js?v=20260903-auth1" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth2" defer></script>
+<script src="assets/auth.js?v=20260903-auth2" defer></script>
 """
 
 
