@@ -11,10 +11,15 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
-FORBIDDEN_PUBLIC_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
-FORBIDDEN_HTML_TERMS = ("DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH")
+FORBIDDEN_PUBLIC_TERMS = (
+    "DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW",
+    "MẪU BÁO CÁO", "MẪU EMAIL", "DỮ LIỆU MẪU", "MINH HỌA", "MINH HOẠ",
+)
+FORBIDDEN_HTML_TERMS = (
+    "DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH",
+    "CHƯA CÓ SETUP", "ĐANG HOÀN THIỆN", "TRẠNG THÁI CÔNG KHAI",
+)
 HOME_UX_ASSETS = (
-    "assets/site-v4.css",
     "assets/mobile-touch-v1.css",
     "assets/home-core-v1.js",
 )
@@ -32,6 +37,7 @@ NON_HOME_UX_ASSETS = (
 HOMEPAGE_FORBIDDEN_ASSETS = (
     "assets/app.js",
     "assets/home-dashboard.css",
+    "assets/site-v4.css",
     "assets/public-ux.css",
     "assets/public-ux.js",
     "assets/public-fallbacks-v4.js",
@@ -179,12 +185,12 @@ def main() -> None:
         "index.html",
         (
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
-            'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/site-v4.css',
-            'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
+            'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
             'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
-            'Tín hiệu hành động', '<strong>0 mã</strong>', '30 mã', '10 ngành · 3 mã mỗi ngành',
-            'Free bên trái · Premium bên phải', '4M · CANSLIM · Payback', 'Định giá Bear/Base/Bull',
-            'SEPA/VCP · VPA · RVOL', 'Free không nhận email báo cáo/khuyến nghị hằng ngày',
+            'Radar 30', 'Phân tích doanh nghiệp', '4M · CANSLIM', 'Bear · Base · Bull',
+            'Pivot · Breakout', 'Buy Zone · Stop · Target', '30 mã', '10 ngành · 3 mã mỗi ngành',
+            'Free và Premium có gì?', 'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot',
+            'VPA · RVOL · dòng tiền lớn', 'Email &amp; cảnh báo trong phiên', '4 mốc quét/ngày',
         ),
         errors,
     )
@@ -193,8 +199,9 @@ def main() -> None:
         "home-newsletter-strip", "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành.",
         "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid",
         "home-ticker-grid", "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
+        "Free bên trái · Premium bên phải", "Trạng thái công khai", "Chưa có setup", "đang hoàn thiện",
     ):
-        if obsolete in home_source:
+        if obsolete.lower() in home_source.lower():
             errors.append(f"obsolete homepage element remains: {obsolete}")
 
     if len(set(radar_tickers)) != 30:
@@ -262,9 +269,11 @@ def main() -> None:
     home_core = output / "assets" / "home-core-v1.js"
     if home_core.is_file():
         source = home_core.read_text(encoding="utf-8")
-        for marker in ("site-v4", "emailDeliveryReady", "registrationUrl", "mountNavigation", "mountTickerSearch", "mountRegistration"):
+        for marker in ("emailDeliveryReady", "registrationUrl", "mountNavigation", "mountTickerSearch", "mountRegistration"):
             if marker not in source:
                 errors.append(f"homepage core marker missing: {marker}")
+        if "đang hoàn thiện" in source.lower():
+            errors.append("homepage core contains unfinished-state copy")
 
     for page in pages:
         source = page.read_text(encoding="utf-8")
@@ -288,7 +297,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; lean homepage + 30 static Radar ticker routes + Free/Premium analysis present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; feature-first homepage + 30 static Radar ticker routes + concrete Free/Premium features present")
 
 
 if __name__ == "__main__":
