@@ -10,6 +10,15 @@ from pathlib import Path
 
 
 HEAD_MARKER = "data-stockradar-public-ux"
+PUBLIC_HTML_REPLACEMENTS = (
+    ("Dữ liệu đã vượt Data Gate", "Dữ liệu đã đạt điều kiện phát hành"),
+    ("dữ liệu và quyền sử dụng đã vượt qua Data Gate", "dữ liệu và quyền sử dụng đã đạt điều kiện phát hành"),
+    ("dữ liệu thị trường và quyền sử dụng đã vượt qua Data Gate", "dữ liệu thị trường và quyền sử dụng đã đạt điều kiện phát hành"),
+    ("DATA GATE", "TRẠNG THÁI DỮ LIỆU"),
+    ("Data Gate", "điều kiện phát hành dữ liệu"),
+    ("CHỜ NGUỒN ĐƯỢC CẤP QUYỀN", "TẠM CHƯA PHÁT HÀNH"),
+    ("CHỜ DỮ LIỆU ĐƯỢC CẤP QUYỀN", "CHƯA ĐỦ DỮ LIỆU"),
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -29,9 +38,16 @@ def asset_href(source: str, page: Path, output: Path, name: str) -> str:
     return os.path.relpath(target, page.parent).replace(os.sep, "/")
 
 
+def sanitize_public_html(source: str) -> str:
+    for before, after in PUBLIC_HTML_REPLACEMENTS:
+        source = source.replace(before, after)
+    return source
+
+
 def inject_page(page: Path, output: Path) -> None:
-    source = page.read_text(encoding="utf-8")
+    source = sanitize_public_html(page.read_text(encoding="utf-8"))
     if HEAD_MARKER in source:
+        page.write_text(source, encoding="utf-8")
         return
     if "</head>" not in source:
         raise RuntimeError(f"HTML page has no closing head tag: {page}")
@@ -41,7 +57,7 @@ def inject_page(page: Path, output: Path) -> None:
     auth_gate_js = asset_href(source, page, output, "auth-production-gate.js")
     head = (
         f'<link rel="stylesheet" href="{css}?v=20260903-public1" {HEAD_MARKER}>\n'
-        f'<script src="{public_js}?v=20260903-public2" defer></script>\n'
+        f'<script src="{public_js}?v=20260903-public3" defer></script>\n'
         f'<script src="{auth_gate_js}?v=20260903-public1" defer></script>\n'
     )
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
