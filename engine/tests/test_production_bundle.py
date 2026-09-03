@@ -1,6 +1,5 @@
 import csv
 from datetime import datetime, timezone
-import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
@@ -124,7 +123,7 @@ class ProductionBundleTests(unittest.TestCase):
     def test_invalid_ticker_is_rejected(self):
         with TemporaryDirectory() as directory:
             path = Path(directory) / "bad.csv"
-            write_csv(path, ["ticker"], [{"ticker": "BTC"}, {"ticker": "AB12"}])
+            write_csv(path, ["ticker"], [{"ticker": "MBB"}, {"ticker": "AB12"}])
             with self.assertRaisesRegex(ProductionBundleError, "invalid ticker"):
                 inspect_csv_dataset(path, ticker_column="ticker")
 
