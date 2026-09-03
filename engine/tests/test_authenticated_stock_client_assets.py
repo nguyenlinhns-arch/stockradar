@@ -25,9 +25,9 @@ class AuthenticatedStockClientAssetTests(unittest.TestCase):
             "if (response.status === 429)",
         ):
             self.assertIn(marker, source)
-        self.assertLess(
-            source.index("if (!response.ok || payload.status !== 'READY') return false"),
-            source.index("staticTarget.hidden = true"),
+        self.assertIn(
+            "if (!response.ok || payload.status !== 'READY') return false;\n\n      const container = ensureLiveContainer();",
+            source,
         )
 
     def test_probability_is_hidden_unless_calibrated_and_formatted_without_plus_sign(self):
