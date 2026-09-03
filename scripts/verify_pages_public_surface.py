@@ -115,7 +115,7 @@ def main() -> None:
             'name="event_alerts"',
             'assets/email-interest.js',
             'Đăng ký nhận email',
-            'chờ xác minh',
+            'xác minh',
         ),
         errors,
     )
