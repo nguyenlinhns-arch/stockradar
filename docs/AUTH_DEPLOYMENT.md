@@ -45,7 +45,9 @@ Production release sequence:
 4. `python scripts/verify_pages_auth.py .pages-site`
 5. Only after all checks pass may GitHub Pages deploy.
 
-The verifier blocks deployment when production auth is disabled, Supabase config is incomplete, a privileged key appears in public output, or OTP/legal/account-deletion surfaces are missing.
+The workflow uses `cancel-in-progress: true`, so a newer `main` commit cancels stale Pages runs and becomes the only release candidate.
+
+The verifier blocks deployment when production auth is disabled, Supabase config is incomplete, a privileged key appears in public output, or OTP/legal/password-hardening/account-deletion surfaces are missing.
 
 ## Implemented flows
 
@@ -57,12 +59,13 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 - Persistent managed session and automatic token refresh.
 - Sign out.
 - Forgot-password email and reset page.
-- Change password while signed in.
+- Change password while signed in only after supplying the current password; recovery-token password reset remains separate.
 - User profile in `public.profiles`: default tier `FREE`; status moves from `PENDING` to `ACTIVE` after email verification.
 - RLS restricts profile reads to the signed-in user and does not let the browser edit entitlement fields.
 - Versioned terms/privacy consent receipts in `public.consent_receipts` created from signup metadata.
 - Public Terms and Privacy pages.
-- Self-service account deletion through authenticated Supabase Edge Function `delete-account`; related profile and consent rows cascade on Auth user deletion.
+- Self-service account deletion requires current-password reauthentication plus explicit `XOA` confirmation before the authenticated Edge Function is invoked.
+- `delete-account` Edge Function uses the current Supabase publishable/secret key model, keeps server-only secret material inside Supabase, validates the user JWT, restricts browser origins, and deletes related profile/consent rows through database cascades.
 - Global login/register or account/logout controls on deployed HTML pages.
 
 ## Security boundaries
@@ -70,6 +73,7 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 - Passwords and OTPs are never sent to StockRadar market-data/analytics endpoints.
 - Pending signup email is stored only in session storage for UX continuity; password and OTP are not persisted there.
 - Public Pages code may contain only the Supabase project URL and publishable key.
+- Secret/service-role credentials remain server-side only.
 - Paid entitlement must come from trusted backend/billing state, never client-editable metadata.
 - Never collect broker passwords, trading OTPs, broker API secrets, order credentials, NAV, bank OTPs, or portfolio-control credentials through StockRadar authentication.
 
@@ -77,5 +81,6 @@ The verifier blocks deployment when production auth is disabled, Supabase config
 
 - GitHub Actions regression suite: PASS.
 - Production auth artifact verifier: PASS.
-- Supabase Security Advisor: zero unresolved auth-schema warnings introduced by the change.
+- Supabase Security Advisor: no unresolved warnings introduced by the change.
+- Supabase Performance Advisor: no unresolved warnings introduced by the change.
 - Test one real signup mailbox end to end after any email-template, SMTP, Site URL, redirect, or canonical-domain change.
