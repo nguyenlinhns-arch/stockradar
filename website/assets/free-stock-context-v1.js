@@ -43,21 +43,21 @@
         </div>
         <div class="free-context-grid">
           <article><strong>Free đang có</strong><ul><li>Mã và thông tin doanh nghiệp/ngành khi đã đối chiếu công khai.</li><li>Bốn góc nhìn đầu tư tách biệt.</li><li>Trạng thái và lịch sử khuyến nghị công khai nếu đã phát hành.</li></ul></article>
-          <article><strong>Free chưa suy luận</strong><ul><li>Không dựng giá, định giá, Buy Zone, Stop hay Target khi nguồn chưa đạt chuẩn.</li><li>Không biến danh sách Radar thành khuyến nghị mua.</li><li>Không biến “chưa đủ dữ liệu” thành nhận định tích cực hoặc tiêu cực.</li></ul></article>
+          <article><strong>Free chưa suy luận</strong><ul><li>Không dựng giá, định giá, Buy Zone, Stop hay Target khi nguồn chưa đạt chuẩn.</li><li>Không biến danh sách Radar thành khuyến nghị mua.</li><li>Không biến trạng thái thiếu dữ liệu thành nhận định tích cực hoặc tiêu cực.</li></ul></article>
         </div>
-        <div class="free-context-conclusion"><span>Kết luận hiện tại</span><strong>CHƯA ĐỦ DỮ LIỆU ĐỂ ĐƯA RA HÀNH ĐỘNG MUA/BÁN</strong><p>Đây là kết luận có chủ đích của bản Free khi dữ liệu chưa đáp ứng điều kiện phát hành, không phải lỗi tra cứu.</p></div>
+        <div class="free-context-conclusion"><span>Kết luận hiện tại</span><strong>CHƯA CÓ CƠ SỞ DỮ LIỆU ĐỦ ĐỂ ĐƯA RA HÀNH ĐỘNG MUA/BÁN</strong><p>Đây là kết luận có chủ đích của bản Free khi dữ liệu chưa đáp ứng điều kiện phát hành, không phải lỗi tra cứu.</p></div>
       </section>`;
   }
 
   async function enhance(target) {
     if (!target || target.querySelector('[data-free-stock-context]')) return;
-    // A full public report already has its own evidence/position sections; do not duplicate it.
     if (target.querySelector('.position-detail-grid, .ticker-history, .evidence-grid')) return;
     if (!target.querySelector('.data-readiness, .ticker-accepted, .lookup-quick-result')) return;
     const ticker = tickerFromLocation();
     if (!ticker) return;
     const payload = await loadUniverse();
     if (target.querySelector('[data-free-stock-context]')) return;
+    if (target.querySelector('.position-detail-grid, .ticker-history, .evidence-grid')) return;
     const security = Array.isArray(payload.items) ? payload.items.find(item => item.ticker === ticker) : null;
     target.insertAdjacentHTML('afterbegin', markup(ticker, security));
   }
