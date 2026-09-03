@@ -1,6 +1,6 @@
 # StockRadar Product Specification V2.1.2
 
-Status: current MVP contract, 2026-09-01. It incorporates Change Request V2.1, Execution Priority Addendum V2.1.1 and Change Request V2.1.2. It supersedes V1/V2 wherever they conflict; non-conflicting controls remain in force.
+Status: current MVP contract, updated 2026-09-04 for email entitlement. It incorporates Change Request V2.1, Execution Priority Addendum V2.1.1 and Change Request V2.1.2. It supersedes V1/V2 wherever they conflict; non-conflicting controls remain in force.
 
 ## Product promise
 
@@ -43,7 +43,7 @@ On-demand lookup never replaces the full-universe gate for Top 10, Top sector or
 
 ## Public information architecture
 
-The eight primary destinations are Home, Cổ phiếu nổi bật, Theo ngành, Khuyến nghị, Hôm nay có gì thay đổi, Phân tích cổ phiếu, Hiệu quả, and Tài khoản/Nâng cấp. Knowledge, paid email, watchlist and publication audit remain secondary navigation.
+The eight primary destinations are Home, Cổ phiếu nổi bật, Theo ngành, Khuyến nghị, Hôm nay có gì thay đổi, Phân tích cổ phiếu, Hiệu quả, and Tài khoản/Nâng cấp. Knowledge, email, watchlist and publication audit remain secondary navigation.
 
 Home is a live-demo surface, not a text-first marketing page. Above the fold it asks for a ticker and returns price/freshness when licensed, sector/rank, four horizon views, new-position and holding views, recent recommendation history and a ticker-specific Trial CTA. A 30–60 second Today Changes view shows only meaningful changes.
 
@@ -54,18 +54,18 @@ Every ticker report separates: four independent horizon assessments and freshnes
 ## Entitlements and price test
 
 - Public: quick lookup, basic four-horizon view, partial ranking, public recommendation list/history/P&L, performance and a sample report.
-- Free: public value plus end-of-session Top 10 when eligible, basic sector view, summary reports, personalization and 1–3 watchlist tickers. Free users receive transactional email only and never daily product content.
-- Trial (7 days): up to three watchlist tickers and personalized product email only after verification and consent.
-- Advanced: full reports, buy zone/target/risk, journal/history, around 20 watchlist tickers, personalized daily/change emails and paid-only updates.
+- Free: public value plus end-of-session Top 10 when eligible, basic sector view, summary reports, personalization and 1–3 watchlist tickers. After verified email and explicit product consent, Free may receive the basic StockRadar market review at 09:00 Vietnam time every day. Free does not receive intraday buy/sell action alerts.
+- Trial (7 days): Free rights plus personalized product email and Premium intraday action alerts after verification and consent; up to three watchlist tickers.
+- Advanced/Paid: full reports, buy zone/target/risk, journal/history, around 20 watchlist tickers, the 09:00 report, and buy/sell action alerts at 10:30, 11:15, 13:30 and 14:15 when a signal meets the action gate.
 - Standard planned price: 299,000 VND per 30 days.
 - Founding test price: 199,000 VND per 30 days.
 - No charge may occur while billing, privacy, security, data-rights or compliance gates are blocked.
 
-The 30-day value is ongoing monitoring, evaluation, update, reminder, journal and P/L maintenance—not merely website access.
+The 30-day paid value is ongoing monitoring, evaluation, update, reminder, journal and P/L maintenance—not merely website access. Premium alerts are event-driven: if no action signal passes the gate, no buy/sell alert is sent for that checkpoint.
 
 ## Current implementation boundary
 
-The code implements lookup/autocomplete contracts, dynamic ticker shell, quick/partial result handling, cache, independent TTL, watchlist deduplication, intraday-universe union, rate-limit reference logic, analytics and regression tests. The Pages artifact uses a visibly MOCK reference fixture and cannot claim full-HOSE support. Licensed current security master/data, production queue/cache, auth, email and billing remain blocked.
+The code implements lookup/autocomplete contracts, dynamic ticker shell, quick/partial result handling, cache, independent TTL, watchlist deduplication, intraday-universe union, rate-limit reference logic, analytics, tier-aware email entitlement and regression tests. Actual outbound email sending remains behind the production sender/delivery gate until provider, sender-domain, unsubscribe, bounce/complaint and compliance controls are deliberately enabled.
 
 ## Explicitly out of scope before Ads evidence
 
@@ -73,8 +73,8 @@ No board/terminal, native app, forum/social, chart suite, newsfeed, large AI cha
 
 ## Operational modes
 
-`INTERNAL`, `RESEARCH_ONLY`, `COMPLIANCE_REVIEW`, `PRODUCTION_APPROVED`. GitHub Pages is fixed to `RESEARCH_ONLY`, static/no-write, MOCK/SHADOW and noindex.
+`INTERNAL`, `RESEARCH_ONLY`, `COMPLIANCE_REVIEW`, `PRODUCTION_APPROVED`.
 
 ## Production gates
 
-Production requires licensed current HOSE data; reproducible full-universe reconciliation; four horizon calibrations; resolved corporate actions and benchmark source; shadow history; secure auth, privacy operations, email and billing; monitoring and correction procedures; data-rights approval; formal Vietnamese compliance/legal review; and `PRODUCTION_APPROVED` mode. Until every gate passes, the product must not claim live Top HOSE, production recommendations, production performance or paid readiness.
+Production requires licensed current HOSE data; reproducible full-universe reconciliation; four horizon calibrations; resolved corporate actions and benchmark source; shadow history; secure auth, privacy operations, email and billing; monitoring and correction procedures; data-rights approval; formal Vietnamese compliance/legal review; and `PRODUCTION_APPROVED` mode. Until every gate passes, the product must not claim unsupported live Top HOSE, production recommendations, production performance or paid readiness.
