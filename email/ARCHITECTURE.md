@@ -1,6 +1,6 @@
 # Email Architecture Contract
 
-Status: signup/consent foundation implemented; no production sender is connected.
+Status: signup/consent and pre-auth interest capture foundations implemented; no production sender is connected.
 
 ## Entitlement gate
 
@@ -14,6 +14,20 @@ Product email is split by entitlement:
 - `post_session` and `weekly`: Trial/Paid only unless a future spec explicitly defines a Free variant.
 
 A Free user may retain interest in Premium-only alert preferences, but this is **preference data, not delivery entitlement**. The private eligibility layer must mask Premium-only products until the tier is Trial/Paid. Paid content is ordered by that recipient's own watchlist ticker, preferred horizon and sector before general items.
+
+## Pre-auth email interest path
+
+While production Auth SMTP remains closed, the public homepage may collect a minimal pending registration request without pretending that signup or delivery is complete.
+
+1. The visitor enters an email and explicitly selects `DAILY_BRIEF`, `EVENT_ALERT`, or both. Nothing is pre-checked.
+2. The visitor explicitly accepts the current privacy/consent version.
+3. GitHub Pages calls the public `email-interest` Edge Function. The browser receives no service-role/provider secret.
+4. The Edge Function enforces allowed origins, JSON/body limits, a honeypot and a daily-hashed technical request fingerprint for rate limiting.
+5. Only the Edge Function's service role may invoke `public.capture_email_subscription_interest`; `anon` and `authenticated` have no direct execute grant.
+6. The request is stored in `private.email_subscription_intents` as `PENDING_VERIFICATION` for at most 30 days. It is **interest only** and never authorizes delivery.
+7. Premium-alert interest from this queue never bypasses Trial/Paid entitlement. Actual delivery still requires normal email verification, consent, suppression checks, product entitlement and the delivery gate.
+
+This queue is intentionally separate from `public.product_email_preferences` and `private.product_email_eligibility`. A future verification/claim flow may reconcile a pending request only after control of the email address has been proven.
 
 ## Delivery windows
 
@@ -89,7 +103,7 @@ All four receive the same highest available Premium report/alert version when de
 
 ## Signup and preference path
 
-The production website contains the account-based email funnel:
+Once production Auth email delivery is ready, the account-based funnel is the authoritative path:
 
 1. Signup collects email/password plus optional, non-prechecked `DAILY_BRIEF` and `EVENT_ALERT` intent.
 2. Terms/Privacy acceptance and product-email consent are recorded server-side.
@@ -103,4 +117,4 @@ The browser never becomes the email sender and never holds provider secrets.
 
 Before enabling actual delivery: verified sender domain; production-grade Auth SMTP; double opt-in or documented lawful consent basis; one-click unsubscribe; suppression list; bounce/complaint handling; rate limits; encrypted secrets; minimal retention; delivery audit; provider webhook verification; disaster disable switch; and Vietnamese legal/privacy review.
 
-GitHub Pages hosts the signup/account UI and client-side Supabase Auth integration, but does not send product email itself. Public signup remains fail-closed while production Auth email delivery is not proven ready. Product email delivery remains disabled until the backend provider/security gate is deliberately opened with evidence.
+GitHub Pages hosts the pending-interest, signup/account and preference UI, but does not send product email itself. Public account signup remains fail-closed while production Auth email delivery is not proven ready. Product email delivery remains disabled until the backend provider/security gate is deliberately opened with evidence.

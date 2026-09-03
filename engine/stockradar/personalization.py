@@ -45,7 +45,11 @@ def can_receive_email(
         return False
     if kind is EmailKind.MARKETING:
         return marketing_consent
-    return tier in {AccountTier.TRIAL, AccountTier.PAID} and product_consent
+    if kind is EmailKind.PRODUCT_DAILY:
+        return tier in {AccountTier.FREE, AccountTier.TRIAL, AccountTier.PAID} and product_consent
+    if kind in {EmailKind.PRODUCT_ALERT, EmailKind.PRODUCT_WEEKLY}:
+        return tier in {AccountTier.TRIAL, AccountTier.PAID} and product_consent
+    return False
 
 
 def enforce_watchlist_limit(tier: AccountTier, existing_tickers: Iterable[str], new_ticker: str) -> tuple[str, ...]:
