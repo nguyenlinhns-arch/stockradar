@@ -1,0 +1,34 @@
+name: Validate pre-auth email capture
+
+on:
+  push:
+    branches: [email-preauth-interest]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Build fail-closed public data
+        run: python -m engine.cli build-public
+      - name: Run regression suite
+        run: python -m unittest discover -s engine/tests -v
+      - name: Build and verify Pages artifact
+        env:
+          STOCKRADAR_ENABLE_AUTH: "1"
+          STOCKRADAR_AUTH_EMAIL_READY: "0"
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
+        run: |
+          python scripts/build_pages.py --output .pages-site
+          python scripts/inject_public_ux.py .pages-site
+          python scripts/verify_pages_auth.py .pages-site
+          python scripts/verify_pages_public_surface.py .pages-site
