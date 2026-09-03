@@ -13,14 +13,18 @@ from urllib.parse import urlsplit
 
 FORBIDDEN_PUBLIC_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
 FORBIDDEN_HTML_TERMS = ("DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH")
-REQUIRED_UX_ASSETS = (
+COMMON_UX_ASSETS = (
     "assets/public-ux.css",
-    "assets/public-ux.js",
     "assets/auth-production-gate.js",
     "assets/site-v4.css",
-    "assets/public-fallbacks-v4.js",
+    "assets/mobile-touch-v1.css",
     "assets/header-auth-dedupe-v6.js",
     "assets/public-copy-v7.js",
+    "assets/direct-ticker-nav-v1.js",
+)
+DATA_PATCH_UX_ASSETS = (
+    "assets/public-ux.js",
+    "assets/public-fallbacks-v4.js",
 )
 REQUIRED_EMAIL_ASSETS = (
     "assets/signup-email-intent.js",
@@ -55,10 +59,17 @@ def base_href(source: str) -> str | None:
     return match.group(1) if match else None
 
 
+def is_homepage(page: Path, output: Path) -> bool:
+    return page.resolve() == (output / "index.html").resolve()
+
+
 def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
     errors: list[str] = []
     base = base_href(source)
-    for asset in REQUIRED_UX_ASSETS:
+    required = list(COMMON_UX_ASSETS)
+    if not is_homepage(page, output):
+        required.extend(DATA_PATCH_UX_ASSETS)
+    for asset in required:
         pattern = rf'(?:href|src)=["\']([^"\']*{re.escape(Path(asset).name)}(?:\?[^"\']*)?)["\']'
         match = re.search(pattern, source, flags=re.IGNORECASE)
         if not match:
@@ -72,6 +83,10 @@ def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
             target = (page.parent / reference).resolve()
             if not target.is_file():
                 errors.append(f"asset target missing on {page.relative_to(output)}: {reference}")
+    if is_homepage(page, output):
+        for asset in DATA_PATCH_UX_ASSETS:
+            if Path(asset).name in source:
+                errors.append(f"homepage must not load data-patch asset {asset}")
     return errors
 
 
@@ -115,7 +130,7 @@ def main() -> None:
         if (output / route).exists():
             errors.append(f"excluded route published: {route}")
 
-    for asset in (*REQUIRED_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_ASSETS):
+    for asset in (*COMMON_UX_ASSETS, *DATA_PATCH_UX_ASSETS, *REQUIRED_EMAIL_ASSETS, *REQUIRED_HOME_ASSETS):
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
@@ -139,51 +154,23 @@ def main() -> None:
         output,
         "index.html",
         (
-            'data-email-conversion',
-            'href="signup/"',
-            'href="dang-nhap/"',
-            'data-header-auth-actions',
-            'assets/home-dense-v3.css',
-            'assets/home-focus-v1.css',
-            'assets/site-v4.css',
-            'assets/public-fallbacks-v4.js',
-            'assets/public-copy-v7.js',
-            'home-radar-sector-list',
-            'home-tier-grid',
-            'ticker=ACB',
-            'ticker=VNM',
-            'ticker=NKG',
-            'ticker=HAH',
-            'Tín hiệu hành động',
-            '<strong>0 mã</strong>',
-            '30 mã',
-            '10 ngành · 3 mã mỗi ngành',
-            'Free bên trái · Premium bên phải',
-            '4M · CANSLIM · Payback',
-            'Định giá Bear/Base/Bull',
-            'SEPA/VCP · VPA · RVOL',
-            'Free không nhận email báo cáo/khuyến nghị hằng ngày',
+            'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
+            'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/site-v4.css',
+            'assets/public-copy-v7.js', 'assets/direct-ticker-nav-v1.js', 'assets/mobile-touch-v1.css',
+            'home-radar-sector-list', 'home-tier-grid', 'ticker=ACB', 'ticker=VNM', 'ticker=NKG', 'ticker=HAH',
+            'Tín hiệu hành động', '<strong>0 mã</strong>', '30 mã', '10 ngành · 3 mã mỗi ngành',
+            'Free bên trái · Premium bên phải', '4M · CANSLIM · Payback', 'Định giá Bear/Base/Bull',
+            'SEPA/VCP · VPA · RVOL', 'Free không nhận email báo cáo/khuyến nghị hằng ngày',
         ),
         errors,
     )
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
-    if "home-newsletter-strip" in home_source:
-        errors.append("homepage top newsletter strip must be removed")
-    if "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành." in home_source:
-        errors.append("obsolete homepage recommendation/reference sentence remains")
-    if "DỮ LIỆU HOSE THAM CHIẾU" in home_source:
-        errors.append("obsolete HOSE reference section remains on homepage")
-    if "Danh sách cổ phiếu đang theo dõi" in home_source:
-        errors.append("obsolete tracking-list wording remains on homepage")
     for obsolete in (
-        "home-watchlist-grid",
-        "home-ticker-grid",
-        "premium-preview-section",
-        "MẪU BÁO CÁO CHUYÊN SÂU",
-        "MẪU EMAIL GÓI TRẢ PHÍ",
-        "assets/premium-preview-v7.css",
-        "assets/home-dashboard.js",
-        "assets/email-interest.js",
+        "home-newsletter-strip", "Mã tham chiếu đang theo dõi được tách khỏi khuyến nghị đã phát hành.",
+        "DỮ LIỆU HOSE THAM CHIẾU", "Danh sách cổ phiếu đang theo dõi", "home-watchlist-grid",
+        "home-ticker-grid", "premium-preview-section", "MẪU BÁO CÁO CHUYÊN SÂU", "MẪU EMAIL GÓI TRẢ PHÍ",
+        "assets/premium-preview-v7.css", "assets/home-dashboard.js", "assets/email-interest.js",
+        "assets/public-ux.js", "assets/public-fallbacks-v4.js",
     ):
         if obsolete in home_source:
             errors.append(f"obsolete/heavy homepage element remains: {obsolete}")
@@ -192,16 +179,9 @@ def main() -> None:
         output,
         "dang-ky/index.html",
         (
-            'data-header-auth-actions',
-            'href="dang-nhap/"',
-            'href="signup/"',
-            'data-email-interest-form',
-            'name="daily_brief"',
-            'name="event_alerts"',
-            'assets/email-interest.js',
-            'assets/home-density.css',
-            'assets/home-dense-v3.css',
-            'assets/site-v4.css',
+            'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'data-email-interest-form',
+            'name="daily_brief"', 'name="event_alerts"', 'assets/email-interest.js', 'assets/home-density.css',
+            'assets/home-dense-v3.css', 'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js',
         ),
         errors,
     )
@@ -209,18 +189,10 @@ def main() -> None:
         output,
         "khuyen-nghi/index.html",
         (
-            '<strong>0 mã</strong>',
-            '<strong>30 mã</strong>',
-            'Danh sách cổ phiếu theo Radar rà soát',
-            'reference-watch-table',
-            '<b>ACB</b>',
-            '<b>VNM</b>',
-            '<b>NKG</b>',
-            '<b>HAH</b>',
-            'không phải khuyến nghị mua',
-            'assets/recommendation-dense-v3.css',
-            'assets/site-v4.css',
-            'data-header-auth-actions',
+            '<strong>0 mã</strong>', '<strong>30 mã</strong>', 'Danh sách cổ phiếu theo Radar rà soát',
+            'reference-watch-table', '<b>ACB</b>', '<b>VNM</b>', '<b>NKG</b>', '<b>HAH</b>',
+            'không phải khuyến nghị mua', 'assets/recommendation-dense-v3.css', 'assets/site-v4.css',
+            'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'data-header-auth-actions',
         ),
         errors,
     )
@@ -230,7 +202,13 @@ def main() -> None:
         "thay-doi-hom-nay/index.html", "hieu-qua/index.html", "nganh/index.html",
         "kiem-tra-co-phieu/index.html", "phan-tich/index.html", "co-phieu/index.html",
     ):
-        require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'assets/site-v4.css', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'), errors)
+        require_text(
+            output,
+            route,
+            ('data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/"', 'assets/site-v4.css',
+             'assets/mobile-touch-v1.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/public-copy-v7.js'),
+            errors,
+        )
 
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
@@ -281,7 +259,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; focused 30-stock Radar + Free/Premium comparison + single Login/Register header pair present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; lean homepage + 30-stock Radar + Free/Premium analysis + one-step ticker navigation present")
 
 
 if __name__ == "__main__":
