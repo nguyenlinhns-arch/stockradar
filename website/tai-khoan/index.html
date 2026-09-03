@@ -4,29 +4,29 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Tài khoản StockRadar, trạng thái email và bảo mật mật khẩu.">
+  <meta name="description" content="Tài khoản StockRadar, trạng thái email, gói dịch vụ và bảo mật mật khẩu.">
   <title>Tài khoản — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth1">
-  <script src="assets/app.js?v=20260903-auth1" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260903-auth2">
+  <script src="assets/app.js?v=20260903-auth2" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
   <main id="content">
-    <section class="page-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Tài khoản</span></nav><h1>Tài khoản StockRadar</h1><p>Email, trạng thái xác minh và bảo mật mật khẩu.</p></div><span class="data-pill">AUTH</span></div></section>
+    <section class="page-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Tài khoản</span></nav><h1>Tài khoản StockRadar</h1><p>Email, trạng thái xác minh, gói dịch vụ và bảo mật mật khẩu.</p></div><span class="data-pill">AUTH</span></div></section>
     <section class="section" data-auth-account><div class="narrow">
       <p class="auth-message" data-auth-account-status aria-live="polite">Đang kiểm tra phiên đăng nhập…</p>
       <div class="auth-guest" data-auth-account-guest hidden><h2>Chưa đăng nhập</h2><p>Đăng nhập để xem và quản lý tài khoản StockRadar.</p><div class="hero-actions"><a class="button button-primary" href="dang-nhap/">Đăng nhập</a><a class="button button-secondary" href="signup/">Tạo tài khoản</a></div></div>
       <div data-auth-account-details hidden>
         <div class="auth-account-grid">
-          <article class="auth-account-card"><span class="panel-label">HỒ SƠ</span><h2>Thông tin tài khoản</h2><div class="auth-account-list"><div class="auth-account-row"><span>Email</span><strong data-account-email>—</strong></div><div class="auth-account-row"><span>Xác minh email</span><strong data-account-verified>—</strong></div><div class="auth-account-row"><span>Ngày tạo</span><strong data-account-created>—</strong></div><div class="auth-account-row"><span>Gói mặc định</span><strong>FREE</strong></div></div></article>
+          <article class="auth-account-card"><span class="panel-label">HỒ SƠ</span><h2>Thông tin tài khoản</h2><div class="auth-account-list"><div class="auth-account-row"><span>Email</span><strong data-account-email>—</strong></div><div class="auth-account-row"><span>Xác minh email</span><strong data-account-verified>—</strong></div><div class="auth-account-row"><span>Ngày tạo</span><strong data-account-created>—</strong></div><div class="auth-account-row"><span>Gói hiện tại</span><strong data-account-tier>—</strong></div><div class="auth-account-row"><span>Trạng thái</span><strong data-account-status>—</strong></div></div></article>
           <article class="auth-account-card"><span class="panel-label">BẢO MẬT</span><h2>Đổi mật khẩu</h2><form class="auth-form" data-auth-update-password-form novalidate><div class="auth-field"><label for="account-password">Mật khẩu mới</label><div class="auth-password-wrap"><input id="account-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="account-password-confirm">Nhập lại</label><div class="auth-password-wrap"><input id="account-password-confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password-confirm" aria-pressed="false">Hiện</button></div></div><button class="button button-secondary" type="submit">Đổi mật khẩu</button><p class="auth-message" data-auth-message aria-live="polite"></p></form></article>
         </div>
-        <div class="auth-security-note"><strong>Lưu ý:</strong> nhãn FREE trên giao diện không phải bằng chứng quyền trả phí. Quyền PRO sau này phải được xác thực từ backend/billing, không dựa vào dữ liệu chỉnh được ở trình duyệt.</div>
+        <div class="auth-security-note"><strong>Quyền truy cập:</strong> gói và trạng thái tài khoản được đọc từ bảng `profiles` trên Supabase với RLS, không dựa vào giá trị có thể tự sửa trong trình duyệt.</div>
       </div>
     </div></section>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu hoặc mã xác minh tài khoản StockRadar.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu hoặc mã OTP xác minh tài khoản StockRadar.</p></div></footer>
 </body>
 </html>
