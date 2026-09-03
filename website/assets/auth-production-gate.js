@@ -20,18 +20,22 @@
     }
   }
 
+  function interestHref() {
+    return new URL('dang-ky/', document.baseURI).href;
+  }
+
   function patchSignupPage() {
     const form = document.querySelector('[data-auth-signup-form]');
     if (!form) return;
-    disableForm(form, 'Đăng ký mới đang tạm khóa cho đến khi email xác minh hoạt động ổn định.');
+    disableForm(form, 'Tạo tài khoản mới đang tạm khóa cho đến khi email xác minh hoạt động ổn định.');
     disableForm(document.querySelector('[data-auth-signup-otp-form]'), 'Xác minh OTP đang tạm khóa cùng luồng đăng ký mới.');
 
     const intro = document.querySelector('.auth-intro');
     if (intro) {
       const h1 = intro.querySelector('h1');
       const p = intro.querySelector('p');
-      if (h1) h1.innerHTML = 'Đăng ký mới<br>đang tạm khóa.';
-      if (p) p.textContent = 'StockRadar chỉ mở đăng ký công khai sau khi email xác minh hoạt động ổn định và được kiểm tra đầy đủ.';
+      if (h1) h1.innerHTML = 'Tạo tài khoản mới<br>đang tạm khóa.';
+      if (p) p.innerHTML = `Email xác minh production đang được hoàn thiện. Bạn vẫn có thể <a href="${interestHref()}">đăng ký quan tâm Premium</a> để StockRadar ghi nhận nhu cầu trước.`;
       intro.querySelector('.auth-stepper')?.setAttribute('hidden', '');
       intro.querySelector('.auth-benefits')?.setAttribute('hidden', '');
     }
@@ -41,9 +45,9 @@
       const pill = header.querySelector('.auth-config-pill');
       const title = header.querySelector('h2');
       const p = header.querySelector('p');
-      if (pill) pill.textContent = 'TẠM CHƯA MỞ';
-      if (title) title.textContent = 'Đăng ký';
-      if (p) p.textContent = 'Tài khoản mới sẽ được mở lại ngay khi luồng email xác minh sẵn sàng.';
+      if (pill) pill.textContent = 'CHỜ EMAIL XÁC MINH';
+      if (title) title.textContent = 'Tạo tài khoản';
+      if (p) p.innerHTML = `Trong thời gian chờ, <a href="${interestHref()}">ghi nhận email quan tâm Premium</a> mà không kích hoạt gửi nội dung.`;
     }
   }
 
@@ -66,10 +70,14 @@
     }
   }
 
-  function removeSignupLinks() {
+  function routeSignupLinksToInterest() {
     document.querySelectorAll('a[href$="signup/"], a[href*="/signup/"]').forEach(link => {
-      if (link.closest('[data-auth-account]')) return;
-      link.hidden = true;
+      if (link.closest('[data-auth-signup-form], [data-auth-signup-otp-form]')) return;
+      link.href = interestHref();
+      if (link.classList.contains('header-register-cta')) link.textContent = 'Đăng ký';
+      if (/Đăng ký Premium|Tạo tài khoản|Đăng ký StockRadar/i.test(link.textContent || '')) {
+        link.textContent = 'Đăng ký quan tâm';
+      }
     });
   }
 
@@ -80,7 +88,7 @@
     const note = document.createElement('p');
     note.className = 'auth-email-gate-note';
     note.dataset.authEmailGateNote = '';
-    note.textContent = 'Đăng nhập bằng mật khẩu vẫn hoạt động. Đăng ký mới, gửi lại OTP và khôi phục mật khẩu qua email đang tạm khóa.';
+    note.innerHTML = `Đăng nhập bằng mật khẩu vẫn hoạt động. Đăng ký mới, gửi lại OTP và khôi phục mật khẩu qua email đang tạm khóa. <a href="${interestHref()}">Đăng ký quan tâm Premium</a>.`;
     card.append(note);
   }
 
@@ -88,7 +96,7 @@
   function applyGate() {
     patchSignupPage();
     patchLoginPage();
-    removeSignupLinks();
+    routeSignupLinksToInterest();
     addGateNote();
   }
 
