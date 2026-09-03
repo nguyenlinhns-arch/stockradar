@@ -22,7 +22,10 @@
     ['Free: bản tin thị trường · Premium: TOP 30, phân tích chuyên sâu và cảnh báo hành động.', 'Free: tra cứu & nội dung công khai · Premium: TOP 30, báo cáo hằng ngày + cảnh báo hành động.'],
     ['Free: nhận bản rà soát thị trường cơ bản hằng ngày sau khi xác minh email và đồng ý nhận.', 'Free: tra cứu cổ phiếu và sử dụng nội dung công khai; chỉ nhận email hệ thống cần thiết cho tài khoản.'],
     ['Báo cáo StockRadar hằng ngày — bản rà soát thị trường cơ bản cho Free; nội dung sâu hơn khi tài khoản có quyền Premium.', 'Báo cáo StockRadar hằng ngày — dành cho tài khoản Premium; Free không nhận email báo cáo hằng ngày.'],
-    ['Sau khi xác minh, bản tin Free đã đăng ký có thể được bật; cảnh báo mua/bán vẫn tuân theo quyền Premium.', 'Sau khi xác minh, tài khoản Free có thể dùng các tính năng công khai; email báo cáo và cảnh báo chỉ kích hoạt theo quyền Premium.']
+    ['Sau khi xác minh, bản tin Free đã đăng ký có thể được bật; cảnh báo mua/bán vẫn tuân theo quyền Premium.', 'Sau khi xác minh, tài khoản Free có thể dùng các tính năng công khai; email báo cáo và cảnh báo chỉ kích hoạt theo quyền Premium.'],
+    ['Free nhận bản rà soát cơ bản; Trial/Paid có thể nhận nội dung Premium và cảnh báo điểm mua/bán.', 'Free không nhận email nội dung; Trial/Paid có thể nhận báo cáo Premium và cảnh báo điểm mua/bán.'],
+    ['Bản rà soát thị trường cơ bản ở Free; nội dung sâu hơn ở Premium khi dữ liệu đủ điều kiện phát hành.', 'Báo cáo hằng ngày thuộc Premium và chỉ gửi khi dữ liệu, quyền tài khoản và điều kiện phát hành đạt chuẩn.'],
+    ['Ở Free, công tắc này chỉ kích hoạt bản tin hằng ngày; cảnh báo mua/bán chỉ có hiệu lực khi tài khoản có quyền Premium.', 'Công tắc gửi email nội dung chỉ bật cho Trial/Paid; Free chỉ lưu nhu cầu Premium.']
   ];
 
   function normalizeText(value) {
