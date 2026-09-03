@@ -156,6 +156,7 @@ def main() -> None:
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
+    radar_tickers: list[str] = []
     universe_path = output / "public" / "data" / "ticker-universe.json"
     if not universe_path.is_file():
         errors.append("Radar review universe missing")
@@ -163,6 +164,7 @@ def main() -> None:
         payload = json.loads(universe_path.read_text(encoding="utf-8"))
         items = payload.get("items", [])
         counts = Counter(item.get("sector") for item in items)
+        radar_tickers = [str(item.get("ticker") or "").upper() for item in items]
         if len(items) != 30:
             errors.append(f"Radar review must contain 30 tickers, got {len(items)}")
         if len(counts) != 10 or set(counts.values()) != {3}:
@@ -179,7 +181,7 @@ def main() -> None:
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/site-v4.css',
             'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
-            'home-radar-sector-list', 'home-tier-grid', 'ticker=ACB', 'ticker=VNM', 'ticker=NKG', 'ticker=HAH',
+            'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
             'Tín hiệu hành động', '<strong>0 mã</strong>', '30 mã', '10 ngành · 3 mã mỗi ngành',
             'Free bên trái · Premium bên phải', '4M · CANSLIM · Payback', 'Định giá Bear/Base/Bull',
             'SEPA/VCP · VPA · RVOL', 'Free không nhận email báo cáo/khuyến nghị hằng ngày',
@@ -194,6 +196,24 @@ def main() -> None:
     ):
         if obsolete in home_source:
             errors.append(f"obsolete homepage element remains: {obsolete}")
+
+    if len(set(radar_tickers)) != 30:
+        errors.append("Radar ticker routes require 30 unique public tickers")
+    for ticker in radar_tickers:
+        require_text(
+            output,
+            f"co-phieu/{ticker}/index.html",
+            (
+                '<base href="../../">',
+                f'<title>{ticker} — Phân tích Free &amp; Premium | StockRadar</title>',
+                f'<link rel="canonical" href="https://stockradar.vn/co-phieu/{ticker}/">',
+                f'<meta property="og:url" content="https://stockradar.vn/co-phieu/{ticker}/">',
+                f'data-static-ticker="{ticker}"',
+                'name="robots" content="noindex,nofollow"',
+                'assets/stock-page-context-v1.js',
+            ),
+            errors,
+        )
 
     require_text(
         output,
@@ -268,7 +288,7 @@ def main() -> None:
     if errors:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
-    print(f"Verified production public surface: {len(pages)} HTML pages; self-contained lean homepage + 30-stock Radar + Free/Premium analysis present")
+    print(f"Verified production public surface: {len(pages)} HTML pages; lean homepage + 30 static Radar ticker routes + Free/Premium analysis present")
 
 
 if __name__ == "__main__":
