@@ -7,10 +7,17 @@ import argparse
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from engine.stockradar.production_data import require_publishable_manifest
+
+
 WEBSITE = ROOT / "website"
 DEFAULT_OUTPUT = ROOT / ".pages-site"
 AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
@@ -99,6 +106,57 @@ def inject_auth_bundle(source: str) -> str:
     return source.replace("</head>", AUTH_HEAD + "</head>", 1)
 
 
+def _payload_requests_production(payload: dict[str, object]) -> bool:
+    status = str(payload.get("data_status") or payload.get("status") or "").strip().upper()
+    return bool(
+        payload.get("full_universe")
+        or payload.get("is_top5_hose")
+        or str(payload.get("recommendation_mode") or "").strip().upper() == "PRODUCTION_APPROVED"
+        or (status and not status.startswith("BLOCKED"))
+    )
+
+
+def _payload_snapshot_id(payload: dict[str, object]) -> str | None:
+    direct = str(payload.get("snapshot_id") or "").strip()
+    if direct:
+        return direct
+    snapshot = payload.get("snapshot")
+    if isinstance(snapshot, dict):
+        nested = str(snapshot.get("snapshot_id") or "").strip()
+        return nested or None
+    return None
+
+
+def enforce_production_data_gate(payloads: list[tuple[Path, dict[str, object]]]) -> None:
+    production_payloads = [(path, payload) for path, payload in payloads if _payload_requests_production(payload)]
+    if not production_payloads:
+        return
+
+    manifest = os.environ.get("STOCKRADAR_PRODUCTION_MANIFEST", "").strip()
+    if not manifest:
+        raise RuntimeError(
+            "Production-looking public data requires STOCKRADAR_PRODUCTION_MANIFEST; "
+            "refusing to publish without a validated data contract."
+        )
+    try:
+        max_age_hours = float(os.environ.get("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS", "6"))
+    except ValueError as error:
+        raise RuntimeError("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS must be numeric") from error
+    if max_age_hours <= 0:
+        raise RuntimeError("STOCKRADAR_PRODUCTION_MAX_AGE_HOURS must be positive")
+
+    result = require_publishable_manifest(
+        manifest,
+        max_age_seconds=int(max_age_hours * 3600),
+    )
+    for path, payload in production_payloads:
+        payload_snapshot_id = _payload_snapshot_id(payload)
+        if payload_snapshot_id and payload_snapshot_id != result.snapshot_id:
+            raise RuntimeError(
+                f"Public payload snapshot does not match production manifest: {path}"
+            )
+
+
 def build(output: Path) -> None:
     output = validate_output(output)
     if output.exists():
@@ -168,8 +226,14 @@ def build(output: Path) -> None:
         raise RuntimeError("The Python server must not be included in GitHub Pages")
 
     public_data = sorted((output / "public" / "data").glob("*.json"))
+    parsed_payloads: list[tuple[Path, dict[str, object]]] = []
     for path in public_data:
-        json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(payload, dict):
+            raise RuntimeError(f"Public data payload must be a JSON object: {path}")
+        parsed_payloads.append((path, payload))
+    enforce_production_data_gate(parsed_payloads)
+
     for path in [*public_data, output / "assets" / "app.js"]:
         source = path.read_text(encoding="utf-8").upper()
         for forbidden in ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE"):
