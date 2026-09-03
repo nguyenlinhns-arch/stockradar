@@ -1,19 +1,28 @@
 # Email Architecture Contract
 
-Status: design contract only; no production sender is connected.
+Status: signup/consent foundation implemented; no production sender is connected.
 
 ## Entitlement gate
 
-Transactional mail is available where required for every account tier. Product content (`daily`, `state_change`, `post_session`, `weekly`) is eligible only for verified, consented Trial/Paid accounts. Free accounts are always suppressed for product content even if an obsolete opt-in flag exists. Paid content is ordered by watchlist ticker, preferred horizon and sector before general items.
+Transactional mail is available where required for every account tier.
+
+Product email is split by entitlement:
+
+- `daily` Free brief: eligible only for a verified, explicitly consented Free/Trial/Paid account with the daily preference enabled. Free content is market-wide/basic and must not expose Premium buy/sell-map detail.
+- Premium `daily`: Trial/Paid only after verification and explicit product consent.
+- `state_change` / buy-sell event alerts: Trial/Paid only after verification and explicit product consent.
+- `post_session` and `weekly`: Trial/Paid only unless a future spec explicitly defines a Free variant.
+
+A Free user may retain interest in Premium-only alert preferences, but this is **preference data, not delivery entitlement**. The private eligibility layer must mask Premium-only products until the tier is Trial/Paid. Paid content is ordered by that recipient's own watchlist ticker, preferred horizon and sector before general items.
 
 ## Delivery windows
 
 | Window | Purpose | Default content |
 | --- | --- | --- |
-| 09:00 Vietnam time | Daily pre-session report | explicit report date/data cutoff, market state, objective Top 5 HOSE, objective sector Top 5, existing lifecycle changes and known event risks |
-| 10:30 / 11:15 / 13:30 / 14:15 | Confirmed state changes | P0 risk/invalidation, then P1 readiness/trigger |
-| After session | Freeze the close | snapshot summary, new/changed/expired recommendations |
-| Weekly | Review process | state transitions, immutable outcomes and method note |
+| 09:00 Vietnam time | Daily pre-session report | explicit report date/data cutoff, market state, objective Top 5 HOSE when the full-universe gate passes, objective sector view, existing lifecycle changes and known event risks; Free/Premium depth follows entitlement |
+| 10:30 / 11:15 / 13:30 / 14:15 | Confirmed state changes | Premium only: P0 risk/invalidation, then P1 readiness/trigger |
+| After session | Freeze the close | Premium snapshot summary, new/changed/expired recommendations |
+| Weekly | Review process | Premium state transitions, immutable outcomes and method note |
 
 These are scheduled scans, not realtime-by-the-second promises. A scan may produce no email.
 
@@ -44,12 +53,12 @@ Corrections preserve the original report date but prepend `[CẬP NHẬT]` or `[
 Every candidate email event contains:
 
 - `operation_id` and deterministic `idempotency_key`;
-- `recommendation_id`, `snapshot_id`, ticker and horizon;
+- `recommendation_id`, `snapshot_id`, ticker and horizon where applicable;
 - previous/current internal state plus approved public label;
 - event priority and reason;
 - Data Grade, source time, detected time and validity boundary;
 - `report_date`, `market_session_reference`, `data_cutoff_at`, `generated_at`;
-- recipient preference/consent version;
+- recipient tier, preference/consent version and effective product entitlement;
 - confirmation, debounce and cooldown results.
 
 Suggested idempotency key:
@@ -65,7 +74,7 @@ The delivery worker may retry the same operation but must never create a second 
 - P2: thesis/fundamental event.
 - P3: watch-state improvement and low-urgency digest material.
 
-Suppress when data is MOCK/STALE/INSUFFICIENT, the state did not materially change, confirmation failed, cooldown is active, consent is missing, or the recommendation has expired/closed. P0 may bypass ordinary digest batching but never consent or data-quality gates.
+Suppress when data is MOCK/STALE/INSUFFICIENT, the state did not materially change, confirmation failed, cooldown is active, consent is missing, or the recommendation has expired/closed. P0 may bypass ordinary digest batching but never consent, tier-entitlement or data-quality gates.
 
 ## Highest-tier internal delivery
 
@@ -78,8 +87,20 @@ The internal/admin highest-tier group is:
 
 All four receive the same highest available Premium report/alert version when delivery is permitted by the production security gate. This group is internal-only metadata and must not appear in public/customer-facing content.
 
+## Signup and preference path
+
+The production website contains the account-based email funnel:
+
+1. Signup collects email/password plus optional, non-prechecked `DAILY_BRIEF` and `EVENT_ALERT` intent.
+2. Terms/Privacy acceptance and product-email consent are recorded server-side.
+3. Email verification activates the account. A consented Free daily preference may then be enabled; actual sending still depends on the delivery gate.
+4. Account settings allow preference changes and consent withdrawal.
+5. Watchlist rows can store per-ticker `alert_enabled`; this does not bypass the Premium event-alert entitlement.
+
+The browser never becomes the email sender and never holds provider secrets.
+
 ## Mandatory production controls
 
-Before enabling delivery: verified sender domain; double opt-in or documented lawful consent basis; one-click unsubscribe; suppression list; bounce/complaint handling; rate limits; encrypted secrets; minimal retention; delivery audit; provider webhook verification; disaster disable switch; and Vietnamese legal/privacy review.
+Before enabling actual delivery: verified sender domain; production-grade Auth SMTP; double opt-in or documented lawful consent basis; one-click unsubscribe; suppression list; bounce/complaint handling; rate limits; encrypted secrets; minimal retention; delivery audit; provider webhook verification; disaster disable switch; and Vietnamese legal/privacy review.
 
-GitHub Pages contains only the explanatory UI at `/email/`. It collects no email address and cannot send messages.
+GitHub Pages hosts the signup/account UI and client-side Supabase Auth integration, but does not send product email itself. Public signup remains fail-closed while production Auth email delivery is not proven ready. Product email delivery remains disabled until the backend provider/security gate is deliberately opened with evidence.
