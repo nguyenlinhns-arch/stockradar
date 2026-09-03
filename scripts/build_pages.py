@@ -25,10 +25,13 @@ EXCLUDED_NAMES = {
     "pro",
 }
 AUTH_HEAD = """\
-<link rel="stylesheet" href="assets/auth.css?v=20260903-auth2">
+<link rel="stylesheet" href="assets/auth.css?v=20260903-auth3">
+<link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth3">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth2" defer></script>
-<script src="assets/auth.js?v=20260903-auth2" defer></script>
+<script src="assets/auth-config.js?v=20260903-auth3" defer></script>
+<script src="assets/auth-policy.js?v=20260903-auth3" defer></script>
+<script src="assets/auth.js?v=20260903-auth3" defer></script>
+<script src="assets/auth-extra.js?v=20260903-auth3" defer></script>
 """
 
 
@@ -133,12 +136,17 @@ def build(output: Path) -> None:
         output / "co-phieu" / "index.html",
         output / "kiem-tra-co-phieu" / "index.html",
         output / "thay-doi-hom-nay" / "index.html",
+        output / "dieu-khoan" / "index.html",
+        output / "quyen-rieng-tu" / "index.html",
         output / "404.html",
     ]
     if AUTH_ENABLED:
         required.extend([
             output / "assets" / "auth.css",
+            output / "assets" / "auth-extra.css",
+            output / "assets" / "auth-policy.js",
             output / "assets" / "auth.js",
+            output / "assets" / "auth-extra.js",
             output / "assets" / "auth-config.js",
             output / "signup" / "index.html",
             output / "dang-nhap" / "index.html",
