@@ -50,8 +50,8 @@
       if (name) name.textContent = premium ? 'Premium' : 'Free';
       if (note) {
         note.textContent = premium
-          ? 'Premium có giá sáng lập dự kiến 199.000đ/30 ngày. Tạo tài khoản không phát sinh thanh toán; bước thanh toán riêng chỉ xuất hiện khi cổng thanh toán được kích hoạt và bạn xác nhận.'
-          : 'Free có phí 0đ. Bạn có thể nâng Premium sau từ trang tài khoản.';
+          ? 'Premium kế thừa bản rà soát 09:00 của Free và bổ sung cảnh báo điểm mua/bán trong phiên tại 10:30, 11:15, 13:30 và 14:15 khi tín hiệu đủ chuẩn. Giá sáng lập dự kiến 199.000đ/30 ngày; tạo tài khoản chưa phát sinh thanh toán.'
+          : 'Free có phí 0đ và đủ quyền nhận bản rà soát thị trường cơ bản lúc 09:00 hằng ngày sau khi email được xác minh và bạn chọn đồng ý nhận.';
       }
       if (submit) submit.textContent = premium
         ? 'Tạo tài khoản Premium & gửi mã xác minh'
