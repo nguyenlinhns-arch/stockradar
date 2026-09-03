@@ -5,6 +5,9 @@
     ['Danh sách cổ phiếu đang theo dõi', 'Danh sách cổ phiếu theo Radar rà soát'],
     ['Mã tham chiếu đang theo dõi', 'Danh sách cổ phiếu theo Radar rà soát'],
     ['danh sách cổ phiếu theo dõi', 'danh sách cổ phiếu theo Radar rà soát'],
+    ['DATA GATE', 'TRẠNG THÁI DỮ LIỆU'],
+    ['Data Gate', 'điều kiện dữ liệu'],
+    ['GATE', 'CẬP NHẬT'],
     ['CHƯA SẴN SÀNG', 'ĐANG CẬP NHẬT'],
     ['Chưa sẵn sàng', 'Đang cập nhật'],
     ['chưa sẵn sàng', 'đang cập nhật'],
@@ -13,13 +16,18 @@
     ['chưa phát hành', 'đang cập nhật'],
     ['ĐANG KHÓA', 'ĐANG CẬP NHẬT'],
     ['CHƯA KẾT NỐI', 'ĐANG CẬP NHẬT'],
+    ['CHỜ DỮ LIỆU', 'ĐANG CẬP NHẬT'],
     ['CHƯA ĐỦ NGUỒN GIÁ', 'ĐANG CẬP NHẬT GIÁ'],
     ['CHƯA ĐỦ DỮ LIỆU', 'ĐANG CẬP NHẬT DỮ LIỆU'],
     ['TẠM CHƯA PHÁT HÀNH', 'ĐANG CẬP NHẬT'],
+    ['INTERNAL REFERENCE', 'THAM CHIẾU HOSE'],
+    ['Hồ sơ nội bộ', 'Phạm vi dữ liệu'],
+    ['HOSE · Tra mã vận hành · Giá/OHLCV đang chờ nguồn được cấp quyền', 'HOSE · Tra cứu cổ phiếu · 4 khung đầu tư'],
+    ['Giá/OHLCV chưa kết nối', 'Tín hiệu chỉ phát hành khi dữ liệu đạt chuẩn'],
     ['Radar chưa phát hành thứ hạng khi nguồn giá chưa đạt điều kiện; danh sách tham chiếu vẫn được hiển thị cụ thể.', 'Radar rà soát danh sách cổ phiếu cân bằng theo ngành và cập nhật trạng thái theo dữ liệu đạt chuẩn.'],
     ['Chưa có cảnh báo hành động được phát hành ở dữ liệu công khai hiện tại.', 'Không có cảnh báo hành động tại dữ liệu công khai hiện tại.'],
     ['Khi chưa có khuyến nghị đã đóng, tỷ lệ thắng và lợi nhuận trung bình được để trống thay vì ước đoán.', 'Khi không có khuyến nghị đã đóng, tỷ lệ thắng và lợi nhuận trung bình được để trống thay vì ước đoán.'],
-    ['Free: bản tin thị trường · Premium: TOP 30, phân tích chuyên sâu và cảnh báo hành động.', 'Free: tra cứu & nội dung công khai · Premium: TOP 30, báo cáo hằng ngày + cảnh báo hành động.'],
+    ['Free: bản tin thị trường · Premium: TOP 30, phân tích chuyên sâu và cảnh báo hành động.', 'Free: tra cứu & nội dung công khai · Premium: báo cáo hằng ngày + cảnh báo hành động.'],
     ['Free: nhận bản rà soát thị trường cơ bản hằng ngày sau khi xác minh email và đồng ý nhận.', 'Free: tra cứu cổ phiếu và sử dụng nội dung công khai; chỉ nhận email hệ thống cần thiết cho tài khoản.'],
     ['Báo cáo StockRadar hằng ngày — bản rà soát thị trường cơ bản cho Free; nội dung sâu hơn khi tài khoản có quyền Premium.', 'Báo cáo StockRadar hằng ngày — dành cho tài khoản Premium; Free không nhận email báo cáo hằng ngày.'],
     ['Sau khi xác minh, bản tin Free đã đăng ký có thể được bật; cảnh báo mua/bán vẫn tuân theo quyền Premium.', 'Sau khi xác minh, tài khoản Free có thể dùng các tính năng công khai; email báo cáo và cảnh báo chỉ kích hoạt theo quyền Premium.'],
@@ -74,7 +82,7 @@
     const form = document.querySelector('[data-stock-search-form]');
     const input = form?.querySelector('input[name="ticker"]');
     if (!form || !input) {
-      window.location.href = new URL(`kiem-tra-co-phieu/?ticker=${encodeURIComponent(ticker)}`, document.baseURI).href;
+      window.location.href = new URL(`co-phieu/?ticker=${encodeURIComponent(ticker)}`, document.baseURI).href;
       return;
     }
     input.value = ticker;
@@ -133,7 +141,7 @@
       const description = register.querySelector('span');
       const action = register.querySelector('a');
       if (heading) heading.textContent = 'StockRadar Premium';
-      if (description) description.textContent = 'Free: tra cứu & nội dung công khai · Premium: TOP 30, báo cáo hằng ngày + cảnh báo hành động.';
+      if (description) description.textContent = 'Free: tra cứu & phân tích công khai · Premium: báo cáo sâu, email hằng ngày và cảnh báo hành động.';
       if (action) {
         action.textContent = 'Đăng ký';
         action.href = signupHref();
@@ -145,8 +153,8 @@
       ['Phạm vi', 'HOSE'],
       ['Radar rà soát', '30 mã'],
       ['Nhóm ngành', '10 × 3'],
-      ['Tín hiệu', 'Chỉ khi đạt chuẩn'],
-      ['Premium', 'Email & cảnh báo hành động']
+      ['Khung đầu tư', '4 chiến lược'],
+      ['Tín hiệu', 'Chỉ khi đạt chuẩn']
     ];
     statusItems.forEach((item, index) => {
       const copy = statusCopy[index];
@@ -181,7 +189,7 @@
     if (mobileBar) {
       const label = mobileBar.querySelector('span');
       const action = mobileBar.querySelector('a');
-      if (label) label.textContent = 'Premium: TOP 30 + báo cáo hằng ngày + cảnh báo hành động';
+      if (label) label.textContent = 'Premium: phân tích sâu + email + cảnh báo hành động';
       if (action) {
         action.textContent = 'Đăng ký';
         action.href = signupHref();
