@@ -69,6 +69,14 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("pref.daily_brief is true", lowered)
         self.assertIn("gate.current_consent_version", lowered)
 
+    def test_email_architecture_matches_v214_free_and_premium_entitlement(self):
+        architecture = self.read("email/ARCHITECTURE.md")
+        self.assertIn("`daily` Free brief", architecture)
+        self.assertIn("`state_change` / buy-sell event alerts: Trial/Paid only", architecture)
+        self.assertIn("preference data, not delivery entitlement", architecture)
+        self.assertNotIn("Free accounts are always suppressed for product content", architecture)
+        self.assertIn("Public signup remains fail-closed", architecture)
+
     def test_homepage_has_email_conversion_surface(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
