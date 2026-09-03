@@ -122,7 +122,7 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
         return source
 
     login_href = route_href(source, page, output, "dang-nhap")
-    register_href = route_href(source, page, output, "dang-ky")
+    register_href = route_href(source, page, output, "signup")
     actions = (
         '<div class="header-auth-actions" data-header-auth-actions>'
         f'<a class="header-login-cta" href="{login_href}">Đăng nhập</a>'
