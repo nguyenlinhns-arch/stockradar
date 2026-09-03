@@ -1,0 +1,35 @@
+/* Production-facing StockRadar cleanup layer. */
+.operations-status-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+html.auth-email-pending .auth-nav-signup,
+html.auth-email-pending a[href$="signup/"].auth-nav-signup {
+  display: none !important;
+}
+
+.auth-email-gate-note {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  border-left: 4px solid var(--amber);
+  background: var(--amber-soft);
+  color: #74520d;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+[data-email-gate-locked] {
+  opacity: .78;
+}
+
+@media (max-width: 930px) {
+  .operations-status-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .operations-status-grid article:last-child {
+    grid-column: auto;
+  }
+}
