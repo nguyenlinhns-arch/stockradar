@@ -4,11 +4,13 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Tạo tài khoản StockRadar bằng email, mật khẩu và mã OTP 6 số.">
-  <title>Đăng ký — StockRadar</title>
+  <meta name="description" content="Tạo tài khoản StockRadar để đăng ký nhận báo cáo hằng ngày và lưu nhu cầu cảnh báo điểm mua/bán qua email.">
+  <title>Đăng ký nhận báo cáo & cảnh báo — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260903-auth3">
+  <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email2">
   <script src="assets/app.js?v=20260903-auth3" defer></script>
+  <script src="assets/signup-email-intent.js?v=20260903-email2" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -16,37 +18,45 @@
   <main id="content" class="auth-shell">
     <div class="container auth-layout">
       <section class="auth-intro">
-        <span class="panel-label">TÀI KHOẢN STOCKRADAR</span>
-        <h1>Đăng ký bằng email,<br>mật khẩu và OTP 6 số.</h1>
-        <p>Tài khoản Miễn phí giúp lưu phiên đăng nhập và là nền tảng để dùng watchlist, cá nhân hóa và nâng cấp gói sau này.</p>
+        <span class="panel-label">EMAIL STOCKRADAR</span>
+        <h1>Nhận báo cáo mỗi ngày.<br>Nhận cảnh báo khi có hành động.</h1>
+        <p>Tạo một tài khoản để đăng ký email, lưu danh sách mã quan tâm và quản lý tùy chọn theo dõi. StockRadar chỉ gửi cảnh báo mua/bán khi có tín hiệu hành động đủ điều kiện phát hành.</p>
         <div class="auth-stepper" aria-label="Quy trình đăng ký">
           <span class="auth-step is-active"><b>1</b>Email + mật khẩu</span>
-          <span class="auth-step"><b>2</b>Nhập OTP 6 số</span>
-          <span class="auth-step"><b>3</b>Hoàn tất</span>
+          <span class="auth-step"><b>2</b>Xác minh email</span>
+          <span class="auth-step"><b>3</b>Nhận đúng loại email</span>
         </div>
         <ul class="auth-benefits">
-          <li>OTP chỉ dùng để xác minh tài khoản StockRadar, không liên quan OTP môi giới/ngân hàng.</li>
-          <li>Mật khẩu được xử lý bởi Supabase Auth; StockRadar không lưu mật khẩu dạng rõ.</li>
-          <li>Mã OTP có thời hạn và Supabase áp dụng rate limit phía server.</li>
+          <li><strong>Free:</strong> nhận bản rà soát thị trường cơ bản hằng ngày sau khi xác minh email và đồng ý nhận.</li>
+          <li><strong>Premium:</strong> nhận cảnh báo mua/bán tại các mốc 10:30, 11:15, 13:30 và 14:15 khi có tín hiệu đủ chuẩn.</li>
+          <li>OTP tại đây chỉ xác minh tài khoản StockRadar, không liên quan OTP môi giới hoặc ngân hàng.</li>
         </ul>
       </section>
       <section class="auth-card" aria-labelledby="signup-title">
-        <div class="auth-card-header"><span class="auth-config-pill">EMAIL + PASSWORD + OTP</span><h2 id="signup-title">Đăng ký</h2><p>Tạo tài khoản rồi nhập mã xác minh 6 số được gửi tới email.</p></div>
+        <div class="auth-card-header"><span class="auth-config-pill">EMAIL + PASSWORD + OTP</span><h2 id="signup-title">Tạo tài khoản</h2><p>Chọn loại email bạn quan tâm; không lựa chọn nào được bật sẵn.</p></div>
         <form class="auth-form" data-auth-signup-form novalidate>
-          <div class="auth-field"><label for="signup-email">Email</label><input id="signup-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
+          <div class="auth-field"><label for="signup-email">Email nhận thông tin</label><input id="signup-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
           <div class="auth-field"><label for="signup-password">Mật khẩu</label><div class="auth-password-wrap"><input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="Ít nhất 8 ký tự"><button class="auth-password-toggle" type="button" data-password-toggle="signup-password" aria-pressed="false">Hiện</button></div></div>
           <div class="auth-field"><label for="signup-password-confirm">Nhập lại mật khẩu</label><div class="auth-password-wrap"><input id="signup-password-confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="signup-password-confirm" aria-pressed="false">Hiện</button></div></div>
           <label class="auth-check"><input name="terms" type="checkbox" required><span>Tôi đã đọc và đồng ý với <a href="dieu-khoan/" target="_blank" rel="noopener">Điều khoản sử dụng</a> và <a href="quyen-rieng-tu/" target="_blank" rel="noopener">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
-          <button class="button button-primary" type="submit">Tạo tài khoản &amp; gửi OTP</button>
+
+          <fieldset class="signup-email-options">
+            <legend>Email tôi muốn nhận</legend>
+            <label class="auth-check"><input name="email_daily_brief" type="checkbox"><span><strong>Báo cáo StockRadar hằng ngày</strong> — bản rà soát thị trường cơ bản cho Free; nội dung sâu hơn khi tài khoản có quyền Premium.</span></label>
+            <label class="auth-check"><input name="email_event_alerts" type="checkbox"><span><strong>Cảnh báo điểm mua/bán</strong> <span class="email-choice-badge">Premium</span> — thông báo khi có hành động được xác nhận như đạt điểm mua, nhồi lệnh, hạ tỷ trọng hoặc cắt lỗ/bán.</span></label>
+            <p class="signup-email-note">Các lựa chọn không được chọn sẵn. Bạn có thể thay đổi hoặc rút đồng ý bất kỳ lúc nào trong Tài khoản. Nếu chọn cảnh báo mua/bán khi đang ở Free, StockRadar lưu nhu cầu này và chỉ kích hoạt gửi khi tài khoản có quyền Premium.</p>
+          </fieldset>
+
+          <button class="button button-primary" type="submit">Tạo tài khoản &amp; gửi mã xác minh</button>
           <p class="auth-message" data-auth-message aria-live="polite">Mật khẩu và OTP không được đưa vào analytics hoặc dữ liệu thị trường.</p>
         </form>
 
         <form class="auth-form auth-otp-panel" data-auth-signup-otp-form novalidate hidden>
           <div class="auth-otp-heading"><span class="auth-otp-icon" aria-hidden="true">#</span><div><strong>Nhập mã OTP 6 số</strong><span>Mã đã gửi tới <b data-auth-otp-email>—</b></span></div></div>
           <div class="auth-field"><label for="signup-otp">Mã xác minh</label><input class="auth-otp-input" id="signup-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" aria-describedby="signup-otp-help"><small id="signup-otp-help">Chỉ nhập 6 chữ số từ email StockRadar.</small></div>
-          <button class="button button-primary" type="submit">Xác minh &amp; đăng nhập</button>
+          <button class="button button-primary" type="submit">Xác minh &amp; mở Tài khoản</button>
           <div class="auth-otp-actions"><button type="button" class="auth-link-button" data-auth-otp-resend>Gửi lại mã</button><button type="button" class="auth-link-button" data-auth-otp-change>Đổi email</button></div>
-          <p class="auth-message" data-auth-message aria-live="polite">Nếu email đang hiển thị nút xác minh thay vì mã số, bạn vẫn có thể dùng nút đó làm phương án dự phòng.</p>
+          <p class="auth-message" data-auth-message aria-live="polite">Sau khi xác minh, bản tin Free đã đăng ký có thể được bật; cảnh báo mua/bán vẫn tuân theo quyền Premium.</p>
         </form>
 
         <p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>
