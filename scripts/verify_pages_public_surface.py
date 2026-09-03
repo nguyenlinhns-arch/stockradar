@@ -10,6 +10,7 @@ from urllib.parse import urlsplit
 
 
 FORBIDDEN_PUBLIC_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
+FORBIDDEN_HTML_TERMS = ("DATA GATE",)
 REQUIRED_UX_ASSETS = (
     "assets/public-ux.css",
     "assets/public-ux.js",
@@ -46,16 +47,11 @@ def verify_injected_assets(page: Path, output: Path, source: str) -> list[str]:
             continue
         reference = urlsplit(match.group(1)).path
         if base:
-            # All route pages use a base that resolves navigation/assets from the
-            # site root; injected assets must therefore be base-relative.
             if reference != asset:
                 errors.append(
                     f"base-relative asset path invalid on {page.relative_to(output)}: {reference} != {asset}"
                 )
         else:
-            expected = Path(asset) if page.parent == output else Path(
-                Path(asset).name
-            )
             target = (page.parent / reference).resolve()
             if not target.is_file():
                 errors.append(f"asset target missing on {page.relative_to(output)}: {reference}")
@@ -86,6 +82,9 @@ def main() -> None:
         for term in FORBIDDEN_PUBLIC_TERMS:
             if term in upper:
                 errors.append(f"forbidden public term {term}: {page.relative_to(output)}")
+        for term in FORBIDDEN_HTML_TERMS:
+            if term in upper:
+                errors.append(f"internal HTML term {term}: {page.relative_to(output)}")
         errors.extend(verify_injected_assets(page, output, source))
 
     for suffix in ("*.js", "*.json"):
