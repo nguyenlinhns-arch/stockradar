@@ -11,7 +11,7 @@ from pathlib import Path
 
 HEAD_MARKER = "data-stockradar-public-ux"
 CONVERSION_ROUTES = {
-    "radar5", "kiem-tra-co-phieu", "khuyen-nghi", "hieu-qua", "nganh",
+    "radar5", "kiem-tra-co-phieu", "phan-tich", "khuyen-nghi", "hieu-qua", "nganh",
     "co-phieu", "breakout", "risk", "track-record", "thay-doi-hom-nay",
 }
 PUBLIC_HTML_REPLACEMENTS = (
@@ -140,11 +140,13 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
 
     login_href = route_href(source, page, output, "dang-nhap")
     lead_href = route_href(source, page, output, "nhan-ban-tin")
+    plans_href = route_href(source, page, output, "dang-ky")
     signup_href = route_href(source, page, output, "signup")
     actions = (
         '<div class="header-auth-actions" data-header-auth-actions>'
         f'<a class="header-login-cta" href="{login_href}">Đăng nhập</a>'
         f'<a class="header-register-cta" href="{lead_href}">Nhận email 09:00</a>'
+        f'<a href="{plans_href}" hidden aria-hidden="true" tabindex="-1">So sánh gói</a>'
         f'<a href="{signup_href}" hidden aria-hidden="true" tabindex="-1">Tạo tài khoản trực tiếp</a>'
         '</div>'
     )
@@ -159,6 +161,7 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
         return source
 
     lead_href = route_href(source, page, output, "nhan-ban-tin")
+    plans_href = route_href(source, page, output, "dang-ky")
     premium_href = route_href(source, page, output, "thanh-toan") + "?plan=premium"
     rail = (
         '<section class="conversion-rail" data-conversion-rail>'
@@ -168,6 +171,7 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
         '<p>Free giúp theo dõi thị trường mỗi ngày; Premium bổ sung Buy Zone · Stop · Target · R/R và cảnh báo hành động tại 10:30 · 11:15 · 13:30 · 14:15 khi tín hiệu đủ chuẩn.</p></div>'
         '<div class="conversion-rail-actions">'
         f'<a class="conversion-free" href="{lead_href}">Nhận email 09:00</a>'
+        f'<a class="conversion-free" href="{plans_href}">So sánh gói</a>'
         f'<a class="conversion-premium" href="{premium_href}">Premium · 199.000đ</a>'
         '</div></div></section>'
     )
