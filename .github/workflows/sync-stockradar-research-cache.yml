@@ -2,6 +2,9 @@
 name: Sync StockRadar Research Cache
 
 on:
+  workflow_run:
+    workflows: ["StockRadar Publish Internal Research Bundle"]
+    types: [completed]
   workflow_dispatch:
   push:
     branches: [main]
@@ -10,11 +13,13 @@ on:
       - "scripts/sync_internal_research_cache.py"
       - "supabase/functions/stock-research-sync/**"
   schedule:
-    # Vietnam: 10:40, 11:25, 13:40, 14:25 and 20:05 on weekdays.
+    # Vietnam: 08:30 morning recovery, four intraday refreshes, 16:30 post-close recovery and 20:05 final retry.
+    - cron: "30 1 * * 1-5"
     - cron: "40 3 * * 1-5"
     - cron: "25 4 * * 1-5"
     - cron: "40 6 * * 1-5"
     - cron: "25 7 * * 1-5"
+    - cron: "30 9 * * 1-5"
     - cron: "5 13 * * 1-5"
 
 permissions:
@@ -23,10 +28,11 @@ permissions:
 
 concurrency:
   group: stockradar-research-cache-sync
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   sync:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -69,7 +75,10 @@ jobs:
               supportsAllDrives=True,
               includeItemsFromAllDrives=True,
           ).execute()
-          files = [f for f in result.get("files", []) if f.get("mimeType") == "application/json"]
+          files = [
+              f for f in result.get("files", [])
+              if f.get("mimeType") == "application/json" and not f.get("name", "").endswith("_manifest.json")
+          ]
           if not files:
               raise SystemExit("No internal StockRadar ticker lookup JSON found in Drive feed folder")
           selected = files[0]
