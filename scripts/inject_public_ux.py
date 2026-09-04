@@ -10,6 +10,10 @@ from pathlib import Path
 
 
 HEAD_MARKER = "data-stockradar-public-ux"
+CONVERSION_ROUTES = {
+    "radar5", "kiem-tra-co-phieu", "khuyen-nghi", "hieu-qua", "nganh",
+    "co-phieu", "breakout", "risk", "track-record", "thay-doi-hom-nay",
+}
 PUBLIC_HTML_REPLACEMENTS = (
     ("Dữ liệu đã vượt Data Gate", "Dữ liệu StockRadar"),
     ("dữ liệu và quyền sử dụng đã vượt qua Data Gate", "dữ liệu StockRadar"),
@@ -50,6 +54,11 @@ def has_base(source: str) -> bool:
 
 def is_homepage(page: Path, output: Path) -> bool:
     return page.resolve() == (output / "index.html").resolve()
+
+
+def top_route(page: Path, output: Path) -> str:
+    relative = page.resolve().relative_to(output.resolve())
+    return relative.parts[0] if len(relative.parts) > 1 else ""
 
 
 def asset_href(source: str, page: Path, output: Path, name: str) -> str:
@@ -130,21 +139,58 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
         return source
 
     login_href = route_href(source, page, output, "dang-nhap")
-    register_href = route_href(source, page, output, "dang-ky")
+    lead_href = route_href(source, page, output, "nhan-ban-tin")
     signup_href = route_href(source, page, output, "signup")
     actions = (
         '<div class="header-auth-actions" data-header-auth-actions>'
         f'<a class="header-login-cta" href="{login_href}">Đăng nhập</a>'
-        f'<a class="header-register-cta" href="{register_href}">Đăng ký</a>'
+        f'<a class="header-register-cta" href="{lead_href}">Nhận email 09:00</a>'
         f'<a href="{signup_href}" hidden aria-hidden="true" tabindex="-1">Tạo tài khoản trực tiếp</a>'
         '</div>'
     )
     return source[: match.start(2)] + actions + source[match.start(2) :]
 
 
+def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
+    route = top_route(page, output)
+    if route not in CONVERSION_ROUTES or "data-conversion-rail" in source:
+        return source
+    if "</main>" not in source:
+        return source
+
+    lead_href = route_href(source, page, output, "nhan-ban-tin")
+    premium_href = route_href(source, page, output, "thanh-toan") + "?plan=premium"
+    rail = (
+        '<section class="conversion-rail" data-conversion-rail>'
+        '<div class="container conversion-rail-inner">'
+        '<div class="conversion-rail-copy"><span>FREE → PREMIUM</span>'
+        '<strong>Nhận bản rà soát 09:00 miễn phí. Nâng Premium khi cần cảnh báo trong phiên.</strong>'
+        '<p>Free giúp theo dõi thị trường mỗi ngày; Premium bổ sung Buy Zone · Stop · Target · R/R và cảnh báo hành động tại 10:30 · 11:15 · 13:30 · 14:15 khi tín hiệu đủ chuẩn.</p></div>'
+        '<div class="conversion-rail-actions">'
+        f'<a class="conversion-free" href="{lead_href}">Nhận email 09:00</a>'
+        f'<a class="conversion-premium" href="{premium_href}">Premium · 199.000đ</a>'
+        '</div></div></section>'
+    )
+    source = source.replace("</main>", rail + "</main>", 1)
+
+    if "conversion-mobile-cta" not in source and "</body>" in source:
+        mobile = (
+            '<div class="conversion-mobile-cta">'
+            '<span><strong>FREE 09:00</strong>Bắt đầu bằng email miễn phí</span>'
+            f'<a href="{lead_href}">Nhận email</a>'
+            '</div>'
+        )
+        source = source.replace("</body>", mobile + "</body>", 1)
+    return source
+
+
 def route_specific_head(source: str, page: Path, output: Path) -> str:
     professional_css = asset_href(source, page, output, "professional-v5.css")
-    head = f'<link rel="stylesheet" href="{professional_css}?v=20260904-pro5">\n'
+    conversion_css = asset_href(source, page, output, "conversion-v1.css")
+    head = (
+        f'<link rel="stylesheet" href="{professional_css}?v=20260904-pro5">\n'
+        f'<link rel="stylesheet" href="{conversion_css}?v=20260904-funnel1">\n'
+    )
     if page.parent.name == "khuyen-nghi":
         css = asset_href(source, page, output, "recommendation-dense-v3.css")
         head += f'<link rel="stylesheet" href="{css}?v=20260903-reco3">\n'
@@ -156,6 +202,7 @@ def inject_page(page: Path, output: Path) -> None:
     source = optimize_homepage_assets(source, page, output)
     source = remove_home_top_strip(source, page, output)
     source = normalize_header_auth_actions(source, page, output)
+    source = inject_conversion_rail(source, page, output)
     if HEAD_MARKER in source:
         page.write_text(source, encoding="utf-8")
         return
@@ -169,7 +216,7 @@ def inject_page(page: Path, output: Path) -> None:
         head = (
             route_specific_head(source, page, output)
             + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1" {HEAD_MARKER}>\n'
-            + f'<script src="{home_core_js}?v=20260903-homecore4" defer></script>\n'
+            + f'<script src="{home_core_js}?v=20260904-homecore5" defer></script>\n'
         )
     else:
         public_css = asset_href(source, page, output, "public-ux.css")
@@ -208,6 +255,7 @@ def main() -> None:
         output / "assets" / "recommendation-dense-v3.css",
         output / "assets" / "site-v4.css",
         output / "assets" / "professional-v5.css",
+        output / "assets" / "conversion-v1.css",
         output / "assets" / "mobile-touch-v1.css",
         output / "assets" / "public-fallbacks-v4.js",
         output / "assets" / "header-auth-dedupe-v6.js",
