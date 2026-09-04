@@ -20,8 +20,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('name="selected_plan" value="free" checked', signup)
         self.assertIn('name="selected_plan" value="premium"', signup)
         self.assertIn("Free chỉ nhận email hệ thống", signup)
-        self.assertIn("báo cáo Premium 09:00", signup)
-        self.assertIn("Action Alert Premium", signup)
+        self.assertIn("Báo cáo StockRadar lúc 09:00", signup)
+        self.assertIn("Action Alert trong phiên", signup)
         self.assertIn("PREMIUM", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
@@ -105,7 +105,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         for feature in (
             "Radar HOSE", "Full HOSE → Full-Scan Gate → Ranking", "So sánh theo ngành",
             "Hiệu quả khuyến nghị", "Market/Sector", "VPA/RVOL",
-            "Email & cảnh báo trong phiên",
+            "Email &amp; cảnh báo trong phiên",
         ):
             self.assertIn(feature, home)
         self.assertIn("4 mốc/ngày", home)
