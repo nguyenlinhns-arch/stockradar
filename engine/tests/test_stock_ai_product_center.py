@@ -5,10 +5,13 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = ROOT / "supabase" / "migrations" / "20260904130000_make_free_stock_ai_10_per_vietnam_day.sql"
 EDGE = ROOT / "supabase" / "functions" / "stock-ai" / "index.ts"
+CORE = ROOT / "supabase" / "functions" / "_shared" / "stockradar-core.ts"
 INJECTOR = ROOT / "scripts" / "inject_ai_assistant.py"
 VERIFIER = ROOT / "scripts" / "verify_ai_assistant.py"
 AUTH_STATE = ROOT / "website" / "assets" / "auth-state-v2.js"
+AUTH_BRIDGE = ROOT / "website" / "assets" / "auth-storage-bridge-v1.js"
 PAID_NAV = ROOT / "website" / "assets" / "paid-nav-v1.js"
+LOGIN = ROOT / "website" / "dang-nhap" / "index.html"
 PAGES = ROOT / ".github" / "workflows" / "pages.yml"
 FAST = ROOT / ".github" / "workflows" / "pages-fast-hotfix.yml"
 
@@ -35,6 +38,23 @@ class StockAiProductCenterTests(unittest.TestCase):
         self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay", source)
         self.assertNotIn("redactForFree", source)
 
+    def test_research_normalizer_keeps_current_drive_bundle_schema(self):
+        source = CORE.read_text(encoding="utf-8")
+        for marker in (
+            "payload.quote",
+            "payload.setup",
+            "payload.scores",
+            "payload.risk",
+            "payload.trade_plan",
+            "payload.research_v7",
+            "market_context",
+            "**Kết luận:**",
+            "chưa phù hợp mua mới",
+        ):
+            self.assertIn(marker, source)
+        self.assertIn("analysis = mergeObjects", source)
+        self.assertIn("Góc nhìn nghiên cứu — chưa phải khuyến nghị hành động đã xác nhận", source)
+
     def test_homepage_transform_places_ai_before_supporting_product_sections(self):
         source = INJECTOR.read_text(encoding="utf-8")
         for marker in (
@@ -48,16 +68,20 @@ class StockAiProductCenterTests(unittest.TestCase):
             "Khuyến nghị",
             "Hiệu quả",
             "sr-ai-nav-link",
+            "auth-storage-bridge-v1.js",
             "auth-state-v2.js",
         ):
             self.assertIn(marker, source)
         self.assertIn("main_match.end()", source)
         self.assertIn("sr-ai-support-title", source)
+        self.assertIn('output / "assets" / "auth-storage-bridge-v1.js"', source)
         self.assertIn('output / "assets" / "auth-state-v2.js"', source)
 
-    def test_browser_auth_state_is_shared_by_header_and_ai(self):
+    def test_browser_auth_state_is_shared_by_header_ai_and_login_returns_home(self):
         auth_state = AUTH_STATE.read_text(encoding="utf-8")
+        bridge = AUTH_BRIDGE.read_text(encoding="utf-8")
         paid_nav = PAID_NAV.read_text(encoding="utf-8")
+        login = LOGIN.read_text(encoding="utf-8")
 
         for source in (auth_state, paid_nav):
             self.assertIn("const STORAGE_KEY = 'stockradar-auth'", source)
@@ -67,12 +91,18 @@ class StockAiProductCenterTests(unittest.TestCase):
             self.assertIn("Nâng Premium", source)
             self.assertIn("Đăng xuất", source)
 
+        self.assertIn("stockradar-auth", bridge)
+        self.assertIn("sb-${projectRef}-auth-token", bridge)
+        self.assertIn("originalGetItem", bridge)
+        self.assertIn("originalSetItem", bridge)
+        self.assertIn("originalRemoveItem", bridge)
         self.assertIn("Guest -> Free -> Premium", auth_state)
         self.assertIn("header.querySelectorAll('[data-auth-nav]').forEach(node => node.remove())", auth_state)
         self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", auth_state)
         self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", paid_nav)
         self.assertIn("replace(/\\bTRIAL\\b/g, 'Premium')", auth_state)
         self.assertIn("replace(/\\bPAID\\b/g, 'Premium')", auth_state)
+        self.assertIn("url.searchParams.set('next', '../')", login)
 
     def test_ai_verifier_locks_primary_surface_and_single_h1(self):
         source = VERIFIER.read_text(encoding="utf-8")
