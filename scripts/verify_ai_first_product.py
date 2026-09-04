@@ -54,10 +54,21 @@ def main() -> None:
         "stock-ai",
         "KHÁCH · 3 CÂU / NGÀY",
         "FREE · 10 CÂU / NGÀY",
-        "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
+        "PREMIUM · AI KHÔNG GIỚI HẠN · ACTION ALERT",
         "dang-ky/?plan=free",
-        "dang-ky/?plan=premium",
+        "thanh-toan/?plan=premium",
+        "Nâng Premium",
+        "currentAccountTier",
+        "storageKey: STORAGE_KEY",
     ), "AI client access model", errors)
+    for forbidden in (
+        "PAID · AI KHÔNG GIỚI HẠN",
+        "TRIAL · AI",
+        "dang-ky/?plan=premium",
+        "Xem gói Paid",
+    ):
+        if forbidden in ai:
+            errors.append(f"AI client access model exposes stale state/route: {forbidden}")
 
     require(plans, (
         "Đăng ký & thanh toán",
