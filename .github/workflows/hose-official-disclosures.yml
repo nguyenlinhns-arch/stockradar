@@ -1,0 +1,98 @@
+name: StockRadar HOSE Official Disclosures
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/acquire_hose_official_disclosures.py'
+      - '.github/workflows/hose-official-disclosures.yml'
+  schedule:
+    # Asia/Ho_Chi_Minh: 09:00, 10:20, 11:05, 13:20, 14:05, 15:35 trading weekdays.
+    - cron: '0 2 * * 1-5'
+    - cron: '20 3 * * 1-5'
+    - cron: '5 4 * * 1-5'
+    - cron: '20 6 * * 1-5'
+    - cron: '5 7 * * 1-5'
+    - cron: '35 8 * * 1-5'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  official-disclosures:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check pandas requests
+
+      - name: Reuse latest append-only HOSE disclosure history when available
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/previous
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-official-disclosures-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -n "$id" ]; then
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/hose-disclosures-prev.zip
+            unzip -q -o /tmp/hose-disclosures-prev.zip -d artifacts/previous
+          fi
+
+      - name: Poll official HOSE listed-company RSS and append history
+        shell: bash
+        run: |
+          set -euo pipefail
+          history="$(find artifacts/previous -name 'hose_official_disclosures_history.csv' -print -quit || true)"
+          if [ -n "$history" ]; then
+            python scripts/acquire_hose_official_disclosures.py --history "$history" --output-dir artifacts/hose-official
+          else
+            python scripts/acquire_hose_official_disclosures.py --output-dir artifacts/hose-official
+          fi
+
+      - name: Enforce official-feed QA and fail closed
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          manifest = json.loads(Path('artifacts/hose-official/hose_official_disclosures_manifest.json').read_text(encoding='utf-8'))
+          current = pd.read_csv('artifacts/hose-official/hose_official_disclosures_current.csv')
+          history = pd.read_csv('artifacts/hose-official/hose_official_disclosures_history.csv')
+          failures = []
+          if manifest.get('source_ready_internal') is not True:
+              failures.append('SOURCE_NOT_READY')
+          if int(manifest.get('feed_items_observed') or 0) <= 0:
+              failures.append('ZERO_FEED_ITEMS')
+          if current['guid'].astype(str).duplicated().any():
+              failures.append('CURRENT_DUPLICATE_GUID')
+          if history['guid'].astype(str).duplicated().any():
+              failures.append('HISTORY_DUPLICATE_GUID')
+          if manifest.get('publication_allowed') is not False:
+              failures.append('PUBLICATION_MUST_REMAIN_CLOSED')
+          if manifest.get('catalyst_alpha_weight_allowed') is not False:
+              failures.append('CATALYST_ALPHA_MUST_REMAIN_ZERO')
+          if failures:
+              raise SystemExit('HOSE official disclosure QA failed: ' + ','.join(failures))
+          print(json.dumps({
+              'feed_items_observed': len(current),
+              'history_rows': len(history),
+              'history_unique_tickers': manifest.get('history_unique_tickers'),
+              'source_ready_internal': True,
+              'publication_allowed': False,
+          }, ensure_ascii=False))
+          PY
+
+      - name: Upload internal official-disclosure artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-hose-official-disclosures-v1
+          path: artifacts/hose-official/
+          retention-days: 90
+          if-no-files-found: error
