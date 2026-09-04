@@ -80,10 +80,8 @@ def main() -> None:
         "assets/auth-extra.js",
         "assets/auth-delete-security.js",
         "assets/signup-link-v1.js",
-        "assets/email-confirm-v1.js",
         "assets/home-core-v1.js",
         "signup/index.html",
-        "xac-minh-email/index.html",
         "dang-nhap/index.html",
         "dat-lai-mat-khau/index.html",
         "tai-khoan/index.html",
@@ -96,9 +94,7 @@ def main() -> None:
         require(site / relative)
 
     signup = require(site / "signup" / "index.html")
-    email_confirm = require(site / "xac-minh-email" / "index.html")
-    signup_link = require(site / "assets" / "signup-link-v1.js")
-    email_confirm_js = require(site / "assets" / "email-confirm-v1.js")
+    signup_client = require(site / "assets" / "signup-link-v1.js")
     login = require(site / "dang-nhap" / "index.html")
     reset = require(site / "dat-lai-mat-khau" / "index.html")
     account = require(site / "tai-khoan" / "index.html")
@@ -114,12 +110,10 @@ def main() -> None:
     checks = {
         "signup email field": ('type="email"', signup),
         "signup password field": ('type="password"', signup),
-        "signup email-link client": ("assets/signup-link-v1.js", signup),
-        "signup sent panel": ("data-signup-email-sent", signup),
-        "email confirmation route": ("assets/email-confirm-v1.js", email_confirm),
-        "email confirmation session detection": ("detectSessionInUrl: true", email_confirm_js),
-        "signup edge call": ("/functions/v1/signup-link", signup_link),
-        "signup direct Premium continuation": ("thanh-toan/?plan=premium", signup_link),
+        "signup direct client": ("assets/signup-link-v1.js", signup),
+        "signup edge call": ("/functions/v1/signup-link", signup_client),
+        "signup automatic sign in": ("signInWithPassword", signup_client),
+        "signup direct Premium continuation": ("thanh-toan/?plan=premium", signup_client),
         "terms link": ("dieu-khoan/", signup),
         "privacy link": ("quyen-rieng-tu/", signup),
         "email delivery fail-closed gate": ("emailDeliveryReady", email_gate),
@@ -139,9 +133,22 @@ def main() -> None:
     if missing:
         raise SystemExit("auth release checks failed: " + ", ".join(missing))
 
-    for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+    for forbidden in (
+        'data-auth-signup-otp-form',
+        'data-signup-email-sent',
+        'autocomplete="one-time-code"',
+        'Nhập mã OTP 6 số',
+        'Kiểm tra email để xác minh tài khoản',
+        'Đã xác minh? Đăng nhập',
+        'xac-minh-email/',
+        'gửi email xác minh',
+    ):
         if forbidden in signup:
-            raise SystemExit(f"manual signup OTP leaked into production artifact: {forbidden}")
+            raise SystemExit(f"signup verification UI leaked into production artifact: {forbidden}")
+
+    for forbidden in ('showEmailSent', 'data-signup-email-sent', 'sr_pending_signup_email'):
+        if forbidden in signup_client:
+            raise SystemExit(f"legacy signup verification client leaked: {forbidden}")
 
     for label, source in (
         ("signup", signup),
@@ -151,8 +158,6 @@ def main() -> None:
     ):
         require_all(source, FULL_AUTH_ASSETS, label)
         require_all(source, (SUPABASE_CDN, "assets/auth.css", "assets/auth-extra.css"), label)
-
-    require_all(email_confirm, (SUPABASE_CDN, "assets/auth-config.js", "assets/email-confirm-v1.js"), "email confirmation")
 
     require_all(stock, (SUPABASE_CDN, "assets/auth-config.js", "assets/stock-api-client.js"), "stock analysis")
     reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
@@ -183,7 +188,7 @@ def main() -> None:
     state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
     print(
         "StockRadar production auth verification: PASS "
-        f"(email delivery {state}; signup uses one-click email verification; auth bundles route-scoped)"
+        f"(email delivery {state}; signup creates and signs in accounts directly; auth bundles route-scoped)"
     )
 
 
