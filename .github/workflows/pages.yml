@@ -81,7 +81,11 @@ jobs:
           python scripts/apply_conversion_v3.py .pages-site
           python scripts/link_premium_sample.py .pages-site
           python scripts/patch_conversion_funnel_v4.py .pages-site
-          python scripts/redesign_home_paid_intent_v1.py .pages-site
+          if grep -q 'data-stockradar-ai-center' .pages-site/index.html; then
+            echo 'Skip legacy paid-intent homepage redesign: AI-first homepage detected.'
+          else
+            python scripts/redesign_home_paid_intent_v1.py .pages-site
+          fi
           python scripts/apply_premium_email_product_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
           python scripts/inject_ai_assistant.py .pages-site
