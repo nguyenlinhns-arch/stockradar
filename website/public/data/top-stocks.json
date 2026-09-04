@@ -1,0 +1,23 @@
+{
+  "schema_version": "3.0",
+  "ranking_valid": false,
+  "method_version": "STOCKRADAR_SCORE_V1",
+  "data_status": "BLOCKED_DATA_GATE",
+  "snapshot": {
+    "snapshot_id": "hose-universe-2026-09-02-065632-vn",
+    "as_of": "2026-09-02T06:56:32+07:00",
+    "exchange": "HOSE",
+    "data_grade": "REFERENCE_ONLY"
+  },
+  "gate": {
+    "passed": false,
+    "failures": [
+      "market_data_not_decision_grade",
+      "full_universe_scoring_not_available"
+    ]
+  },
+  "market_regime": "UNKNOWN",
+  "strongest": [],
+  "by_sector": [],
+  "eligible_count": 0
+}
