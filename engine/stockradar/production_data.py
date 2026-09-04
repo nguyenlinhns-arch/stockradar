@@ -61,6 +61,7 @@ class ProductionDataGateResult:
             "required_datasets": list(self.required_datasets),
             "contract_version": CONTRACT_VERSION,
             "calculation_origin": CALCULATION_ORIGIN,
+            "compliance_required": True,
         }
 
 
@@ -182,6 +183,17 @@ def validate_production_manifest(
                 failures.append(f"rights_{key}_false")
         if not str(rights.get("evidence_ref", "")).strip():
             failures.append("rights_evidence_ref_missing")
+
+    compliance = payload.get("compliance")
+    if not isinstance(compliance, Mapping):
+        failures.append("compliance_evidence_missing")
+    else:
+        if compliance.get("review_completed") is not True:
+            failures.append("compliance_review_completed_false")
+        if compliance.get("public_recommendation_approved") is not True:
+            failures.append("compliance_public_recommendation_approved_false")
+        if not str(compliance.get("evidence_ref", "")).strip():
+            failures.append("compliance_evidence_ref_missing")
 
     active_status = payload.get("active_status")
     if not isinstance(active_status, Mapping):
