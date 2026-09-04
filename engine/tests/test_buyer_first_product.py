@@ -53,6 +53,26 @@ class BuyerFirstProductTests(unittest.TestCase):
             self.assertIn(field, page)
         self.assertIn("0 tín hiệu là một kết quả hợp lệ", page)
 
+    def test_performance_page_proves_value_without_win_rate_cherry_pick(self) -> None:
+        page = self.read("website/hieu-qua/index.html")
+        self.assertIn("BẰNG CHỨNG TRƯỚC KHI TRẢ PHÍ", page)
+        self.assertIn("Đừng chỉ nhìn tỷ lệ thắng", page)
+        for marker in (
+            "Số mẫu & trạng thái", "Lợi nhuận trung bình & trung vị", "Khoản lỗ & rủi ro",
+            "So với VN-Index", "Dấu thời gian & nhật ký", "Không chạm Buy Zone → không tính như đã mua",
+        ):
+            self.assertIn(marker, page)
+
+    def test_premium_email_contract_is_decision_first_and_suppresses_noise(self) -> None:
+        architecture = self.read("email/ARCHITECTURE.md")
+        for marker in (
+            "What changed?", "New position?", "Existing holding?", "Action map", "Why now?",
+            "What would invalidate this?", "No material state change = no action alert",
+            "Buy Zone/current reference", "Stop/invalidation", "Risk/Reward",
+        ):
+            self.assertIn(marker, architecture)
+        self.assertIn("Methods such as 4M, CANSLIM, SEPA/VCP, VPA/RVOL", architecture)
+
     def test_buyer_first_css_is_responsive(self) -> None:
         css = self.read("website/assets/buyer-first-v1.css")
         self.assertIn(".buyer-first-grid", css)
