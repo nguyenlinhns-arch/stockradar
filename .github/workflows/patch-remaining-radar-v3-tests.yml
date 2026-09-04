@@ -1,0 +1,35 @@
+name: Patch remaining Radar V3 tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-remaining-radar-v3-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Patch reference/public boundary assertions
+        run: python scripts/patch_remaining_radar_v3_tests.py
+      - name: Commit patched tests
+        run: |
+          if git diff --quiet -- engine/tests/test_email_subscription_funnel.py; then
+            echo 'No test changes.'
+            exit 0
+          fi
+          git config user.name 'stockradar-automation'
+          git config user.email 'stockradar-automation@users.noreply.github.com'
+          git add engine/tests/test_email_subscription_funnel.py
+          git commit -m 'Align remaining Radar V3 reference/public tests'
+          git push origin HEAD:main
