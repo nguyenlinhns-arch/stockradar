@@ -24,12 +24,22 @@ def main() -> None:
         valid = payload.get("ranking_valid") is True
         strongest = payload.get("strongest") or []
         by_sector = payload.get("by_sector") or []
+        computation = payload.get("computation") or {}
         if valid and not strongest:
             errors.append("valid Top HOSE ranking cannot be empty")
         if not valid and (strongest or by_sector):
             errors.append("invalid Top HOSE ranking must publish zero ranked rows")
         if valid and payload.get("gate", {}).get("passed") is not True:
             errors.append("ranking_valid requires passed gate")
+        if computation.get("calculation_origin") != "STOCKRADAR_ENGINE":
+            errors.append("Top HOSE calculation origin must be STOCKRADAR_ENGINE")
+        if computation.get("external_input_role") != "RAW_INPUT_ONLY":
+            errors.append("Top HOSE external input role must be RAW_INPUT_ONLY")
+        if computation.get("external_scores_accepted") is not False:
+            errors.append("Top HOSE must reject all external scores/rankings/signals")
+        for item in strongest:
+            if item.get("calculated_by") != "STOCKRADAR_ENGINE":
+                errors.append(f"ranked item not StockRadar-computed: {item.get('ticker')}")
 
     home = output / "index.html"
     if not home.is_file():
