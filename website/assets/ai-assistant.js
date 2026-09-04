@@ -189,6 +189,31 @@
     return ['Danh mục hôm nay', 'Watchlist có gì mới?', 'Mã đang giữ cần chú ý?', '3–6 tháng mã nào tốt?'];
   }
 
+  function mountContextShortcut(setOpen, input) {
+    const actions = document.querySelector('.page-heading-actions');
+    if (!actions || actions.querySelector('[data-stockradar-ai-shortcut]')) return;
+    let label = '';
+    let prompt = '';
+    if (isPortfolioPage()) {
+      label = 'Hỏi StockRadar AI';
+      prompt = 'Danh mục hôm nay cần làm gì?';
+    } else if (state.ticker) {
+      label = `Hỏi AI về ${state.ticker}`;
+      prompt = `${state.ticker} mua mới hay chờ?`;
+    } else {
+      return;
+    }
+    const button = node('button', 'button button-primary button-small', label);
+    button.type = 'button';
+    button.dataset.stockradarAiShortcut = '';
+    button.addEventListener('click', () => {
+      setOpen(true);
+      input.value = prompt;
+      input.focus();
+    });
+    actions.prepend(button);
+  }
+
   function mount() {
     if (document.querySelector('[data-stockradar-ai]')) return;
 
@@ -257,6 +282,7 @@
       root.classList.toggle('is-open', open);
       if (open) setTimeout(() => input.focus(), 0);
     };
+    mountContextShortcut(setOpen, input);
     launcher.addEventListener('click', () => setOpen(panel.hidden));
     close.addEventListener('click', () => setOpen(false));
     document.addEventListener('keydown', event => { if (event.key === 'Escape' && !panel.hidden) setOpen(false); });
