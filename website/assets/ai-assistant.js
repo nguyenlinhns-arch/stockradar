@@ -103,7 +103,7 @@
     wrap.append(node('div', 'sr-ai-bubble', 'Tạo tài khoản Free để dùng StockRadar AI 10 lượt mỗi ngày, hoặc đăng nhập nếu bạn đã có tài khoản.'));
     const actions = node('div', 'sr-ai-login-actions');
     const signup = node('a', 'sr-ai-login sr-ai-signup', 'Tạo Free · 10 lượt/ngày');
-    const signupUrl = new URL('signup/?plan=free', document.baseURI);
+    const signupUrl = new URL('dang-ky/?plan=free', document.baseURI);
     signupUrl.searchParams.set('next', location.href);
     signup.href = signupUrl.toString();
     const login = node('a', 'sr-ai-login sr-ai-login-secondary', 'Đăng nhập');
