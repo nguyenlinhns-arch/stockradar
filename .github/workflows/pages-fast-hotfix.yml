@@ -12,6 +12,7 @@ on:
       - 'scripts/verify_ai_first_product.py'
       - 'scripts/apply_ai_first_premium_email.py'
       - 'scripts/redesign_home_value_block.py'
+      - 'scripts/enforce_registration_plan_ctas.py'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
@@ -96,6 +97,7 @@ jobs:
           fi
           python scripts/strip_public_methods.py .pages-site
           python scripts/inject_ai_assistant.py .pages-site
+          python scripts/enforce_registration_plan_ctas.py .pages-site
 
       - name: Verify stock lookup, Premium and AI contracts
         run: |
