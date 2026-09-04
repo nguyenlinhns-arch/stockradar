@@ -1,12 +1,20 @@
 (() => {
   'use strict';
 
+  function validTicker(value) {
+    const ticker = String(value || '').trim().toUpperCase();
+    return ticker.length === 3
+      && /^[A-Z0-9]{3}$/.test(ticker)
+      && /[A-Z]/.test(ticker)
+      ? ticker
+      : '';
+  }
+
   function tickerFromLocation() {
     const parts = location.pathname.split('/').filter(Boolean);
     const routeTicker = parts[parts.length - 1] !== 'co-phieu' ? parts[parts.length - 1] : '';
     const raw = new URLSearchParams(location.search).get('ticker') || routeTicker;
-    const ticker = String(raw || '').trim().toUpperCase();
-    return /^[A-Z]{3}$/.test(ticker) ? ticker : '';
+    return validTicker(raw);
   }
 
   function mount() {
