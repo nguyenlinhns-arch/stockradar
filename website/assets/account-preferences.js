@@ -36,7 +36,7 @@
   }
 
   function normalizeTicker(value) {
-    return String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   }
 
   function selectedValues(form, name) {
@@ -66,7 +66,7 @@
   function renderWatchlist(target, items, profile) {
     if (!target) return;
     if (!items.length) {
-      target.innerHTML = '<div class="account-empty-state">Chưa có mã theo dõi. Thêm mã để StockRadar ưu tiên phân tích và cảnh báo đúng thứ bạn quan tâm.</div>';
+      target.innerHTML = '<div class="account-empty-state">Chưa có mã theo dõi. Thêm mã để StockRadar ưu tiên đúng thứ bạn quan tâm.</div>';
       return;
     }
     const premium = isPremium(profile);
@@ -218,7 +218,7 @@
       const horizon = String(watchlistForm.elements.horizon?.value || 'SHORT_TERM');
       const owns_stock = Boolean(watchlistForm.elements.owns_stock?.checked);
       const button = watchlistForm.querySelector('button[type="submit"]');
-      if (!/^[A-Z]{3}$/.test(ticker)) return setMessage(watchlistMessage, 'Nhập mã gồm đúng 3 chữ cái.', 'error');
+      if (!/^[A-Z0-9]{3}$/.test(ticker)) return setMessage(watchlistMessage, 'Nhập mã gồm đúng 3 ký tự A-Z hoặc 0-9.', 'error');
       if (profile.account_status !== 'ACTIVE') return setMessage(watchlistMessage, 'Cần xác minh email trước khi thêm mã.', 'error');
       if (button) button.disabled = true;
       setMessage(watchlistMessage, 'Đang lưu…');
