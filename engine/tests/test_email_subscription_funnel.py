@@ -25,7 +25,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("PREMIUM", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
-    def test_signup_auth_metadata_carries_legal_and_product_email_consent(self):
+    def test_signup_auth_metadata_carries_legal_product_email_and_prefilled_lead(self):
         client = self.read("website/assets/signup-email-intent.js")
         for key in (
             "terms_accepted", "terms_version", "privacy_accepted", "privacy_version",
@@ -33,6 +33,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
             "product_email_daily_brief", "product_email_event_alerts",
         ):
             self.assertIn(key, client)
+        self.assertIn("params.get('email')", client)
+        self.assertIn("form.elements.email.value = presetEmail", client)
 
     def test_account_exposes_free_daily_and_premium_alert_controls(self):
         account = self.read("website/tai-khoan/index.html")
@@ -81,13 +83,18 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("Preference data is not delivery entitlement", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
-    def test_homepage_is_feature_first_and_free_premium_comparison_is_concrete(self):
+    def test_homepage_is_email_first_with_clear_paid_conversion(self):
         home = self.read("website/index.html")
         self.assertIn("data-email-conversion", home)
-        self.assertIn('href="signup/"', home)
+        self.assertIn("data-home-email-form", home)
+        self.assertIn('id="nhan-ban-tin"', home)
+        self.assertIn('href="thanh-toan/?plan=premium"', home)
         self.assertIn("home-radar-sector-list", home)
         self.assertIn("home-tier-grid", home)
-        self.assertIn("Free và Premium có gì?", home)
+        self.assertIn("Bắt đầu miễn phí. Trả phí khi cần hành động.", home)
+        self.assertIn("Nhận bản rà soát thị trường mỗi sáng", home)
+        self.assertIn("FREE 09:00", home)
+        self.assertIn("199.000đ", home)
         for ticker in ("ACB", "VNM", "NKG", "CMG", "PVD", "FRT", "VHM", "POW", "GMD", "HAH"):
             self.assertIn(f"ticker={ticker}", home)
         for feature in (
@@ -101,11 +108,12 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("4 mốc quét/ngày", home)
         self.assertIn("10:30 · 11:15 · 13:30 · 14:15", home)
         self.assertIn("assets/home-focus-v1.css", home)
+        self.assertIn("assets/home-conversion-v2.css", home)
+        self.assertNotIn("assets/email-interest.js", home)
         self.assertNotIn("home-status-band", home)
         self.assertNotIn("home-status-grid", home)
         self.assertNotIn("assets/premium-preview-v7.css", home)
         self.assertNotIn("assets/home-dashboard.js", home)
-        self.assertNotIn("assets/email-interest.js", home)
         self.assertNotIn("home-watchlist-grid", home)
         self.assertNotIn("home-ticker-grid", home)
         self.assertNotIn("MẪU BÁO CÁO CHUYÊN SÂU", home)
@@ -118,6 +126,20 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("Danh sách cổ phiếu đang theo dõi", home)
         self.assertNotIn("Chưa phát hành", home)
         self.assertNotIn("Chưa sẵn sàng", home)
+
+    def test_email_lead_landing_captures_interest_then_routes_to_free_signup(self):
+        page = self.read("website/nhan-ban-tin/index.html")
+        client = self.read("website/assets/email-interest.js")
+        self.assertIn('data-proposition="email-lead"', page)
+        self.assertIn("Nhận bản rà soát 09:00 miễn phí", page)
+        self.assertIn("data-email-interest-form", page)
+        self.assertIn('name="daily_brief" type="checkbox"', page)
+        self.assertIn('name="privacy" type="checkbox"', page)
+        self.assertNotIn('name="daily_brief" type="checkbox" checked', page)
+        self.assertIn('data-next-href="signup/?plan=free"', page)
+        self.assertIn('href="thanh-toan/?plan=premium"', page)
+        self.assertIn("renderNextStep", client)
+        self.assertIn("data-email-interest-next", client)
 
     def test_radar_review_payload_is_30_tickers_10_sectors_3_each(self):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
@@ -136,6 +158,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("data-plan-comparison", register)
         self.assertIn('href="signup/?plan=free"', register)
         self.assertIn('href="signup/?plan=premium"', register)
+        self.assertIn('href="thanh-toan/?plan=premium"', register)
         self.assertIn("StockRadar Free", register)
         self.assertIn("StockRadar Premium", register)
         self.assertIn("Có · bản cơ bản", register)
