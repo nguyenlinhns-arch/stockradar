@@ -21,7 +21,7 @@ jobs:
         with:
           python-version: '3.13'
       - name: Patch obsolete Radar 30 assertions
-        run: python scripts/migrate_radar_v3_regressions.py
+        run: python scripts/run_radar_v3_regression_migration.py
       - name: Commit updated regression contracts
         run: |
           if git diff --quiet -- engine/tests/test_email_subscription_funnel.py engine/tests/test_static_assets.py; then
