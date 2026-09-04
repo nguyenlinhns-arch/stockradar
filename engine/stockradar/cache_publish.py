@@ -12,6 +12,7 @@ from urllib.request import Request, urlopen
 
 from .production_data import require_publishable_manifest
 from .report_contract import validate_report_payload
+from .ticker_symbol import is_valid_hose_ticker
 
 
 HORIZONS = frozenset({"SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"})
@@ -70,7 +71,7 @@ def _parse_timestamp(value: object, field_name: str) -> datetime:
 
 def _normalize_ticker(value: object) -> str:
     ticker = str(value or "").strip().upper()
-    if len(ticker) != 3 or not ticker.isascii() or not ticker.isalpha():
+    if not is_valid_hose_ticker(ticker):
         raise CachePublishError(f"invalid ticker: {ticker!r}")
     return ticker
 
