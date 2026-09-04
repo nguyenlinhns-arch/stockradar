@@ -25,6 +25,7 @@ def main() -> None:
 
     home = (output / "index.html").read_text(encoding="utf-8")
     signup = (output / "signup" / "index.html").read_text(encoding="utf-8")
+    account = (output / "tai-khoan" / "index.html").read_text(encoding="utf-8")
     ai = (output / "assets" / "ai-center.js").read_text(encoding="utf-8")
 
     require(home, (
@@ -36,6 +37,7 @@ def main() -> None:
         "Action Alert",
         "data-stock-search-form",
         "data-live-radar-home",
+        "premium-email-product-v1.css",
     ), "AI-first homepage", errors)
 
     ai_pos = home.find("data-stockradar-ai-center")
@@ -61,7 +63,19 @@ def main() -> None:
         "AI không giới hạn",
         "Action Alert",
         "data-premium-email-onboarding",
+        "premium-email-product-v1.css",
     ), "signup tiers", errors)
+
+    require(account, (
+        "data-premium-email-health",
+        "data-email-health-system",
+        "data-email-health-watchlist",
+        "data-email-health-tickers",
+        "data-email-health-last",
+        'name="post_session_digest"',
+        'name="weekly_report"',
+        "premium-email-product-v1.css",
+    ), "Premium email account health", errors)
 
     for private_example in ("MBB", "HPG", "ACB"):
         if private_example in ai:
