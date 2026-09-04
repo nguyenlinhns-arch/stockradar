@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Lock final StockRadar plan cards and email-link signup flow after Pages transforms.
+"""Lock final StockRadar plan cards and direct signup flow after Pages transforms.
 
 Commercial rule:
-- Free: create account -> confirm by clicking the email link -> open Free account.
-- Premium: create account -> confirm by clicking the email link -> pay 199,000 VND.
-- Signup never asks the customer to copy a six-digit OTP into the website.
+- Free: create account -> open Free account.
+- Premium: create account -> pay 199,000 VND.
+- Signup does not ask for OTP or email verification.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ def _replace_hero(source: str) -> str:
       <div class="plans-hero-inner">
         <span class="panel-label">GÓI DỊCH VỤ</span>
         <h1>Chọn Free hoặc đăng ký Premium</h1>
-        <p>Premium: tạo tài khoản → bấm xác minh trong email → thanh toán 199.000đ/30 ngày. Không cần tạo Free rồi mới nâng cấp.</p>
+        <p>Premium: tạo tài khoản → thanh toán 199.000đ/30 ngày. Không cần tạo Free rồi mới nâng cấp.</p>
       </div>
     </section>'''
     updated, count = re.subn(
@@ -64,7 +64,7 @@ def premium_card() -> str:
     ribbon = 'ĐẦY ĐỦ TÍNH NĂNG' if ready else 'TẠM DỪNG KÍCH HOẠT MỚI'
     kicker = '199K / 30 NGÀY' if ready else 'PREMIUM · CHỜ PRODUCTION GATE'
     note = (
-        'Tạo tài khoản, bấm xác minh trong email rồi chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không cần nhập OTP và không tự gia hạn.'
+        'Tạo tài khoản xong chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không có bước OTP hoặc xác minh email và không tự gia hạn.'
         if ready else
         'StockRadar đang tạm dừng nhận thanh toán Premium mới. Bạn vẫn có thể tạo tài khoản để ghi nhận nhu cầu Premium.'
     )
@@ -105,7 +105,7 @@ def enforce_plan_page(output: Path) -> Path:
               <li>Tra cứu cổ phiếu HOSE và xem dữ liệu công khai</li>
               <li>Radar và góc nhìn theo ngành</li>
               <li>Danh sách theo dõi cá nhân cơ bản</li>
-              <li>Email hệ thống cần thiết cho xác minh và bảo mật tài khoản</li>
+              <li>Email hệ thống cần thiết cho bảo mật tài khoản</li>
             </ul>
             <div class="plan-info-box">Free không nhận Daily 09:00 hoặc cảnh báo điểm mua/bán trong phiên.</div>
             <a class="button button-secondary" href="signup/?plan=free" data-registration-plan="free">Đăng ký Free</a>
@@ -140,26 +140,30 @@ def enforce_plan_page(output: Path) -> Path:
     return page
 
 
-def enforce_signup_email_link_flow(output: Path) -> Path:
+def enforce_signup_direct_flow(output: Path) -> Path:
     page = output / "signup" / "index.html"
-    confirm = output / "xac-minh-email" / "index.html"
     signup_client = output / "assets" / "signup-link-v1.js"
-    confirm_client = output / "assets" / "email-confirm-v1.js"
-    for path in (page, confirm, signup_client, confirm_client):
+    for path in (page, signup_client):
         if not path.exists():
             raise FileNotFoundError(path)
 
     source = page.read_text(encoding="utf-8")
-    # Final transforms must never revive the removed manual OTP panel.
     source = re.sub(
         r'\s*<form class="auth-form auth-otp-panel"[^>]*data-auth-signup-otp-form.*?</form>\s*',
         "\n", source, flags=re.DOTALL,
     )
+    source = re.sub(
+        r'\s*<div class="auth-form auth-otp-panel"[^>]*data-signup-email-sent.*?</div>\s*',
+        "\n", source, flags=re.DOTALL,
+    )
     source = source.replace('EMAIL + PASSWORD + OTP', 'EMAIL + PASSWORD')
-    source = source.replace('Tạo tài khoản Premium & gửi mã xác minh', 'Tạo tài khoản Premium & gửi email xác minh')
-    source = source.replace('Tạo tài khoản Free & gửi mã xác minh', 'Tạo tài khoản Free & gửi email xác minh')
+    source = source.replace('Tạo tài khoản Premium & gửi mã xác minh', 'Tạo tài khoản Premium & thanh toán')
+    source = source.replace('Tạo tài khoản Free & gửi mã xác minh', 'Tạo tài khoản Free')
+    source = source.replace('Tạo tài khoản Premium & gửi email xác minh', 'Tạo tài khoản Premium & thanh toán')
+    source = source.replace('Tạo tài khoản Free & gửi email xác minh', 'Tạo tài khoản Free')
+    source = source.replace('Bấm xác minh trong email', 'Tạo tài khoản')
+    source = source.replace('bấm xác minh trong email', 'tạo tài khoản')
 
-    # Keep the existing-account path plan-aware without adding an upgrade detour.
     source = source.replace(
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>',
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/" data-signup-existing-login>Đăng nhập</a></p>',
@@ -168,30 +172,47 @@ def enforce_signup_email_link_flow(output: Path) -> Path:
 
     required = (
         'assets/signup-link-v1.js',
-        'data-signup-email-sent',
-        'gửi email xác minh',
-        'Không cần nhập mã OTP',
+        'data-auth-signup-form',
         'data-signup-existing-login',
+        'Tạo tài khoản Free',
+        'Premium',
     )
     for marker in required:
         if marker not in source:
-            raise RuntimeError(f"Email-link signup contract missing: {marker}")
+            raise RuntimeError(f"Direct signup contract missing: {marker}")
 
-    for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+    for forbidden in (
+        'data-auth-signup-otp-form',
+        'data-signup-email-sent',
+        'autocomplete="one-time-code"',
+        'Nhập mã OTP 6 số',
+        'Kiểm tra email để xác minh tài khoản',
+        'Đã xác minh? Đăng nhập',
+        'xac-minh-email/',
+        'gửi email xác minh',
+    ):
         if forbidden in source:
-            raise RuntimeError(f"Manual signup OTP leaked into final artifact: {forbidden}")
+            raise RuntimeError(f"Verification UI leaked into final signup artifact: {forbidden}")
 
-    confirm_source = confirm.read_text(encoding="utf-8")
-    for marker in ('assets/email-confirm-v1.js', 'Không cần nhập mã OTP', 'data-email-confirm-status'):
-        if marker not in confirm_source:
-            raise RuntimeError(f"Email confirmation route missing: {marker}")
+    client = signup_client.read_text(encoding="utf-8")
+    for marker in (
+        '/functions/v1/signup-link',
+        'signInWithPassword',
+        'window.location.replace(destinationFor(plan))',
+        "'thanh-toan/?plan=premium'",
+    ):
+        if marker not in client:
+            raise RuntimeError(f"Direct signup client missing: {marker}")
+    for forbidden in ('showEmailSent', 'data-signup-email-sent', 'sr_pending_signup_email'):
+        if forbidden in client:
+            raise RuntimeError(f"Legacy verification client leaked: {forbidden}")
 
     page.write_text(source, encoding="utf-8")
     return page
 
 
 def enforce(output: Path) -> tuple[Path, Path]:
-    return enforce_plan_page(output), enforce_signup_email_link_flow(output)
+    return enforce_plan_page(output), enforce_signup_direct_flow(output)
 
 
 def main() -> int:
@@ -200,7 +221,7 @@ def main() -> int:
     args = parser.parse_args()
     plans, signup = enforce(args.output)
     print(f"Locked registration plans (checkout_ready={checkout_ready()}): {plans}")
-    print(f"Locked no-OTP email-link signup flow: {signup}")
+    print(f"Locked direct signup without verification: {signup}")
     return 0
 
 
