@@ -1,0 +1,61 @@
+name: StockRadar HOSE Data Bootstrap
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/bootstrap_kbs_hose_data.py'
+      - '.github/workflows/hose-data-bootstrap.yml'
+  schedule:
+    # Vietnam: 10:30, 11:15, 13:30, 14:15 and 15:25 on trading weekdays.
+    - cron: '30 3 * * 1-5'
+    - cron: '15 4 * * 1-5'
+    - cron: '30 6 * * 1-5'
+    - cron: '15 7 * * 1-5'
+    - cron: '25 8 * * 1-5'
+
+permissions:
+  contents: read
+
+jobs:
+  market:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install collector dependencies
+        run: pip install --disable-pip-version-check pandas requests
+      - name: Acquire HOSE market data and technical feature store
+        run: python scripts/bootstrap_kbs_hose_data.py --mode market --output-dir artifacts/market
+      - name: Upload internal market artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-hose-market-bootstrap
+          path: artifacts/market/
+          retention-days: 7
+          if-no-files-found: error
+
+  fundamentals:
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'push' || github.event.schedule == '25 8 * * 1-5'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install collector dependencies
+        run: pip install --disable-pip-version-check pandas requests
+      - name: Acquire HOSE company profiles, financial statements and events
+        run: python scripts/bootstrap_kbs_hose_data.py --mode fundamentals --output-dir artifacts/fundamentals
+      - name: Upload internal fundamentals artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-hose-fundamentals-bootstrap
+          path: artifacts/fundamentals/
+          retention-days: 7
+          if-no-files-found: error
