@@ -60,6 +60,7 @@ jobs:
           python scripts/apply_conversion_v3.py .pages-site
           python scripts/link_premium_sample.py .pages-site
           python scripts/patch_conversion_funnel_v4.py .pages-site
+          python scripts/redesign_home_paid_intent_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
 
       - name: Verify production auth artifact
