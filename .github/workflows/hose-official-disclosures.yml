@@ -96,3 +96,5 @@ jobs:
           path: artifacts/hose-official/
           retention-days: 90
           if-no-files-found: error
+
+# Initial poll trigger after workflow installation.
