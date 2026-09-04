@@ -3,6 +3,15 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Iterable, Mapping, Sequence
 
+from .auto_assessment import (
+    BusinessModel,
+    assessment_provenance,
+    classify_business_model,
+    compute_financial_fundamental_features,
+    compute_financial_valuation_features,
+    derive_research_assessment,
+    derive_valuation_assumptions,
+)
 from .input_policy import computation_provenance
 from .internal_features import (
     FundamentalFeatures,
@@ -23,17 +32,20 @@ from .scoring import calculate_score
 from .state_machine import SetupFacts, derive_state
 
 
-INTERNAL_ENGINE_VERSION = "STOCKRADAR_INTERNAL_V2"
+INTERNAL_ENGINE_VERSION = "STOCKRADAR_INTERNAL_V2.1"
 
 
 @dataclass(frozen=True)
 class InternalStockComputation:
     ticker: str
     sector: str
+    business_model: str
     candidate: Candidate
     technical: TechnicalFeatures
     fundamental: FundamentalFeatures
     valuation: ValuationFeatures
+    research: StockRadarResearchAssessment
+    valuation_assumptions: InternalValuationAssumptions
     bucket_scores: Mapping[str, float]
     computation: Mapping[str, object]
 
@@ -41,10 +53,13 @@ class InternalStockComputation:
         return {
             "ticker": self.ticker,
             "sector": self.sector,
+            "business_model": self.business_model,
             "candidate": self.candidate.to_dict(),
             "technical": self.technical.to_dict(),
             "fundamental": self.fundamental.to_dict(),
             "valuation": self.valuation.to_dict(),
+            "research": asdict(self.research),
+            "valuation_assumptions": asdict(self.valuation_assumptions),
             "bucket_scores": dict(self.bucket_scores),
             "computation": dict(self.computation),
             "engine_version": INTERNAL_ENGINE_VERSION,
@@ -116,7 +131,6 @@ def _sepa_canslim_score(technical: TechnicalFeatures, fundamental: FundamentalFe
 
 
 def _rs_component(excess_return_pct: float) -> float:
-    # Full 5 points at +10% excess return; zero at -5% or worse.
     return _clamp((excess_return_pct + 5.0) / 15.0 * 5.0, 0.0, 5.0)
 
 
@@ -130,30 +144,54 @@ def _relative_strength_score(features: TechnicalFeatures) -> float:
     )
 
 
-def _fundamental_score(features: FundamentalFeatures, research: StockRadarResearchAssessment) -> float:
-    # Meaning/Moat/Management are StockRadar research inputs, each max 3 points.
-    score = (
+def _research_points(research: StockRadarResearchAssessment) -> float:
+    return (
         research.meaning_score * 0.6
         + research.moat_score * 0.6
         + research.management_score * 0.6
     )
+
+
+def _fundamental_score(
+    features: FundamentalFeatures,
+    research: StockRadarResearchAssessment,
+    business_model: BusinessModel,
+) -> float:
+    score = _research_points(research)
     if features.roe_pct >= 15:
         score += 2.0
     elif features.roe_pct >= 10:
         score += 1.0
-    if features.cfo_to_net_income is not None:
-        if features.cfo_to_net_income >= 1.0:
-            score += 2.0
-        elif features.cfo_to_net_income >= 0.7:
+
+    if business_model.is_financial:
+        if features.annual_net_income_growth_pct >= 10:
+            score += 1.5
+        elif features.annual_net_income_growth_pct >= 0:
+            score += 0.75
+        if features.quarterly_net_income_growth_yoy_pct >= 10:
+            score += 1.5
+        elif features.quarterly_net_income_growth_yoy_pct >= 0:
+            score += 0.75
+        if features.net_margin_pct > 0:
             score += 1.0
-    if features.debt_to_equity <= 1.0:
-        score += 2.0
-    elif features.debt_to_equity <= 2.0:
-        score += 1.0
+    else:
+        if features.cfo_to_net_income is not None:
+            if features.cfo_to_net_income >= 1.0:
+                score += 2.0
+            elif features.cfo_to_net_income >= 0.7:
+                score += 1.0
+        if features.debt_to_equity <= 1.0:
+            score += 2.0
+        elif features.debt_to_equity <= 2.0:
+            score += 1.0
     return round(_clamp(score, 0, 15), 4)
 
 
-def _valuation_score(fundamental: FundamentalFeatures, valuation: ValuationFeatures) -> float:
+def _valuation_score(
+    fundamental: FundamentalFeatures,
+    valuation: ValuationFeatures,
+    business_model: BusinessModel,
+) -> float:
     score = 0.0
     if valuation.margin_of_safety_pct >= 20:
         score += 4.0
@@ -172,10 +210,17 @@ def _valuation_score(fundamental: FundamentalFeatures, valuation: ValuationFeatu
         score += 1.0
     if fundamental.pe is not None and 0 < fundamental.pe <= 30:
         score += 1.0
-    if fundamental.ev_to_ebitda is not None and 0 < fundamental.ev_to_ebitda <= 15:
-        score += 1.0
-    if fundamental.fcf_yield_pct > 0:
-        score += 1.0
+
+    if business_model.is_financial:
+        if 0 < fundamental.pb <= 1.5:
+            score += 2.0
+        elif 0 < fundamental.pb <= 2.5:
+            score += 1.0
+    else:
+        if fundamental.ev_to_ebitda is not None and 0 < fundamental.ev_to_ebitda <= 15:
+            score += 1.0
+        if fundamental.fcf_yield_pct > 0:
+            score += 1.0
     return round(_clamp(score, 0, 10), 4)
 
 
@@ -197,14 +242,16 @@ def score_buckets(
     fundamental: FundamentalFeatures,
     valuation: ValuationFeatures,
     research: StockRadarResearchAssessment,
+    business_model: BusinessModel | str = BusinessModel.CORPORATE,
 ) -> dict[str, float]:
+    model = business_model if isinstance(business_model, BusinessModel) else BusinessModel(str(business_model))
     return {
         "trend": _trend_score(technical),
         "vpa": _vpa_score(technical),
         "sepa_canslim": _sepa_canslim_score(technical, fundamental),
         "relative_strength": _relative_strength_score(technical),
-        "fundamental": _fundamental_score(fundamental, research),
-        "valuation": _valuation_score(fundamental, valuation),
+        "fundamental": _fundamental_score(fundamental, research, model),
+        "valuation": _valuation_score(fundamental, valuation, model),
         "catalyst": round(float(research.catalyst_score), 4),
         "risk_liquidity": _risk_liquidity_score(technical, research),
     }
@@ -231,8 +278,11 @@ def compute_stock(
     bars: Sequence[RawBar],
     benchmark_bars: Sequence[RawBar],
     financial_periods: Iterable[RawFinancialPeriod],
-    research: StockRadarResearchAssessment,
-    valuation_assumptions: InternalValuationAssumptions,
+    research: StockRadarResearchAssessment | None = None,
+    valuation_assumptions: InternalValuationAssumptions | None = None,
+    business_model: BusinessModel | str | None = None,
+    company_name: str = "",
+    event_risk_pass: bool = True,
     previous_state: SetupState | None = None,
 ) -> InternalStockComputation:
     normalized_ticker = ticker.strip().upper()
@@ -241,12 +291,41 @@ def compute_stock(
     if not sector.strip():
         raise ValueError("sector is required")
 
+    model = (
+        business_model
+        if isinstance(business_model, BusinessModel)
+        else BusinessModel(str(business_model)) if business_model is not None
+        else classify_business_model(sector, company_name)
+    )
     periods = tuple(financial_periods)
     technical = compute_technical_features(bars, benchmark_bars=benchmark_bars)
-    fundamental = compute_fundamental_features(periods, current_price=technical.close)
-    valuation = compute_valuation_features(periods, current_price=technical.close, assumptions=valuation_assumptions)
+    if model.is_financial:
+        fundamental = compute_financial_fundamental_features(periods, current_price=technical.close)
+    else:
+        fundamental = compute_fundamental_features(periods, current_price=technical.close)
+
+    resolved_research = research or derive_research_assessment(
+        periods,
+        business_model=model,
+        technical=technical,
+        event_risk_pass=event_risk_pass,
+    )
+    resolved_assumptions = valuation_assumptions or derive_valuation_assumptions(periods, business_model=model)
+    if model.is_financial:
+        valuation = compute_financial_valuation_features(
+            periods,
+            current_price=technical.close,
+            assumptions=resolved_assumptions,
+        )
+    else:
+        valuation = compute_valuation_features(
+            periods,
+            current_price=technical.close,
+            assumptions=resolved_assumptions,
+        )
+
     market_regime = compute_market_regime(benchmark_bars)
-    buckets = score_buckets(technical, fundamental, valuation, research)
+    buckets = score_buckets(technical, fundamental, valuation, resolved_research, model)
     score = calculate_score(buckets)
     if score.score is None or score.coverage_pct != 100:
         raise ValueError("StockRadar internal score must have 100% coverage before ranking")
@@ -261,6 +340,7 @@ def compute_stock(
     evidence = (
         f"engine={INTERNAL_ENGINE_VERSION}",
         "calculation_origin=STOCKRADAR_ENGINE",
+        f"business_model={model.value}",
         f"stage={technical.stage}",
         f"trend_template={str(technical.trend_template_pass).lower()}",
         f"volume_ratio20={technical.volume_ratio20}",
@@ -280,20 +360,28 @@ def compute_stock(
         distance_to_pivot_pct=technical.distance_to_pivot_pct,
         extension_pct=technical.extension_pct,
         liquidity_pass=technical.avg_volume20 >= 500_000,
-        event_risk_pass=research.event_risk_pass,
+        event_risk_pass=resolved_research.event_risk_pass,
         reason=f"StockRadar internal score {score.score:.2f}/100 · {setup}",
         evidence=evidence,
         is_mock=False,
     )
+    provenance = {
+        **computation_provenance(),
+        **assessment_provenance(model),
+        "engine_version": INTERNAL_ENGINE_VERSION,
+    }
     return InternalStockComputation(
         ticker=normalized_ticker,
         sector=sector.strip(),
+        business_model=model.value,
         candidate=candidate,
         technical=technical,
         fundamental=fundamental,
         valuation=valuation,
+        research=resolved_research,
+        valuation_assumptions=resolved_assumptions,
         bucket_scores=buckets,
-        computation={**computation_provenance(), "engine_version": INTERNAL_ENGINE_VERSION},
+        computation=provenance,
     )
 
 
@@ -310,6 +398,10 @@ def build_top_hose_from_internal(
             raise ValueError("Top HOSE accepts StockRadar internal computations only")
         if row.computation.get("external_scores_accepted") is not False:
             raise ValueError("Top HOSE cannot accept external scores")
+        if row.computation.get("research_origin") != "STOCKRADAR_ENGINE":
+            raise ValueError("Top HOSE research assessment must be StockRadar-computed")
+        if row.computation.get("valuation_assumption_origin") != "STOCKRADAR_ENGINE":
+            raise ValueError("Top HOSE valuation assumptions must be StockRadar-computed")
     return build_top_hose(
         snapshot,
         [row.candidate for row in rows],
