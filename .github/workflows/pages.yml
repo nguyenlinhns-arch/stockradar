@@ -56,6 +56,7 @@ jobs:
           python scripts/upgrade_home_radar_operational.py .pages-site
           python scripts/apply_buyer_readiness.py .pages-site
           python scripts/redesign_home_value_block.py .pages-site
+          python scripts/apply_conversion_v3.py .pages-site
           python scripts/strip_public_methods.py .pages-site
 
       - name: Verify production auth artifact
@@ -66,6 +67,9 @@ jobs:
 
       - name: Verify buyer-ready product surface
         run: python scripts/verify_buyer_readiness.py .pages-site
+
+      - name: Verify conversion-first buyer journey
+        run: python scripts/verify_conversion_v3.py .pages-site
 
       - name: Install Chromium visual QA
         run: |
