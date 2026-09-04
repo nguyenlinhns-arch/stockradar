@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from collections import defaultdict
 from dataclasses import dataclass
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from .models import Candidate, DataGrade, SetupState, UniverseSnapshot
 from .state_machine import validate_transition
@@ -69,6 +70,7 @@ def _is_eligible(candidate: Candidate) -> bool:
         and candidate.liquidity_pass
         and candidate.event_risk_pass
         and candidate.score_coverage_pct == 100
+        and not candidate.is_mock
     )
 
 
@@ -84,6 +86,97 @@ def rank_candidates(candidates: Iterable[Candidate]) -> list[Candidate]:
         key=lambda item: (item.score, STATE_PRIORITY[item.state], item.ticker),
         reverse=True,
     )
+
+
+def build_top_hose(
+    snapshot: UniverseSnapshot,
+    candidates: Iterable[Candidate],
+    sector_by_ticker: Mapping[str, str],
+    *,
+    strongest_limit: int = 30,
+    per_sector_limit: int = 3,
+) -> dict[str, Any]:
+    """Build the buyer-facing HOSE ranking only from a complete decision-grade snapshot.
+
+    The function is deliberately fail-closed. Reference/watch universes, partial score
+    coverage and mock data can never become a public "Top mạnh nhất" ranking.
+    """
+
+    if strongest_limit <= 0 or per_sector_limit <= 0:
+        raise ValueError("ranking limits must be positive")
+
+    candidate_list = list(candidates)
+    ranked = rank_candidates(candidate_list)
+    gate = full_universe_gate(snapshot)
+    failures = list(gate.failures)
+
+    eligible_with_sector: list[Candidate] = []
+    missing_sector: list[str] = []
+    for candidate in ranked:
+        sector = str(sector_by_ticker.get(candidate.ticker, "")).strip()
+        if not sector:
+            missing_sector.append(candidate.ticker)
+            continue
+        eligible_with_sector.append(candidate)
+    if missing_sector:
+        failures.append("eligible_candidate_sector_missing")
+
+    ranking_valid = gate.passed and not missing_sector and bool(eligible_with_sector)
+    if not ranking_valid:
+        return {
+            "schema_version": "3.0",
+            "ranking_valid": False,
+            "method_version": "STOCKRADAR_SCORE_V1",
+            "snapshot": snapshot.to_dict(),
+            "gate": {"passed": False, "failures": failures},
+            "market_regime": "UNKNOWN",
+            "strongest": [],
+            "by_sector": [],
+            "eligible_count": 0,
+        }
+
+    global_rank = {candidate.ticker: index for index, candidate in enumerate(eligible_with_sector, start=1)}
+
+    def public_item(candidate: Candidate, *, sector_rank: int | None = None) -> dict[str, Any]:
+        return {
+            "ticker": candidate.ticker,
+            "score": candidate.score,
+            "rank": global_rank[candidate.ticker],
+            "sector": str(sector_by_ticker[candidate.ticker]),
+            "sector_rank": sector_rank,
+            "state": candidate.state.value,
+            "setup": candidate.setup,
+            "current_price": candidate.current_price,
+            "pivot": candidate.pivot,
+            "distance_to_pivot_pct": candidate.distance_to_pivot_pct,
+            "extension_pct": candidate.extension_pct,
+            "reason": candidate.reason,
+        }
+
+    grouped: dict[str, list[Candidate]] = defaultdict(list)
+    for candidate in eligible_with_sector:
+        grouped[str(sector_by_ticker[candidate.ticker])].append(candidate)
+
+    by_sector: list[dict[str, Any]] = []
+    for sector in sorted(grouped):
+        sector_items = grouped[sector][:per_sector_limit]
+        by_sector.append({
+            "sector": sector,
+            "items": [public_item(candidate, sector_rank=index) for index, candidate in enumerate(sector_items, start=1)],
+        })
+
+    strongest = [public_item(candidate) for candidate in eligible_with_sector[:strongest_limit]]
+    return {
+        "schema_version": "3.0",
+        "ranking_valid": True,
+        "method_version": "STOCKRADAR_SCORE_V1",
+        "snapshot": snapshot.to_dict(),
+        "gate": {"passed": True, "failures": []},
+        "market_regime": eligible_with_sector[0].market_regime.value,
+        "strongest": strongest,
+        "by_sector": by_sector,
+        "eligible_count": len(eligible_with_sector),
+    }
 
 
 def build_radar(
@@ -123,4 +216,3 @@ def build_radar(
         "excluded_candidate_count": len(candidate_list) - len(ranked),
         "legal_label": "Sàng lọc và theo dõi setup; không phải cam kết lợi nhuận.",
     }
-
