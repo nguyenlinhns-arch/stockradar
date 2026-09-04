@@ -18,6 +18,9 @@ const { chromium } = loadPlaywright();
   const browser = await chromium.launch({ headless: true });
   const errors = [];
   const checks = [];
+  // Keep this list limited to routes that are actually published in the
+  // fail-closed GitHub Pages artifact. Checkout, /pro/ and the knowledge
+  // index are intentionally withheld while their production gates are closed.
   const pages = [
     { name: 'home', route: '/' },
     { name: 'radar', route: '/radar5/' },
@@ -29,11 +32,8 @@ const { chromium } = loadPlaywright();
     { name: 'newsletter', route: '/nhan-ban-tin/' },
     { name: 'plans', route: '/dang-ky/' },
     { name: 'login', route: '/dang-nhap/' },
-    { name: 'checkout', route: '/thanh-toan/?plan=premium' },
-    { name: 'premium', route: '/pro/' },
     { name: 'account', route: '/tai-khoan/' },
     { name: 'stock', route: '/co-phieu/?ticker=FPT' },
-    { name: 'knowledge', route: '/kien-thuc/' },
   ];
   const viewports = [
     { name: 'desktop', width: 1440, height: 1000 },
