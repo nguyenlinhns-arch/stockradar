@@ -24,17 +24,19 @@
     const form = document.querySelector('[data-auth-signup-form]');
     if (!form) return null;
 
-    const dailyBrief = Boolean(form.elements.email_daily_brief?.checked);
-    const eventAlerts = Boolean(form.elements.email_event_alerts?.checked);
+    const plan = selectedPlan(form);
+    const premiumIntent = plan === 'premium';
+    const dailyBrief = Boolean(premiumIntent && form.elements.email_daily_brief?.checked);
+    const eventAlerts = Boolean(premiumIntent && form.elements.email_event_alerts?.checked);
     const termsAccepted = Boolean(form.elements.terms?.checked);
 
     return {
-      selected_plan_interest: selectedPlan(form),
+      selected_plan_interest: plan,
       terms_accepted: termsAccepted,
       terms_version: TERMS_VERSION,
       privacy_accepted: termsAccepted,
       privacy_version: PRIVACY_VERSION,
-      product_email_consent: dailyBrief || eventAlerts,
+      product_email_consent: premiumIntent && (dailyBrief || eventAlerts),
       product_email_consent_version: PRODUCT_EMAIL_CONSENT_VERSION,
       product_email_daily_brief: dailyBrief,
       product_email_event_alerts: eventAlerts,
@@ -71,13 +73,20 @@
       const name = document.querySelector('[data-signup-plan-name]');
       const note = document.querySelector('[data-signup-plan-note]');
       const submit = document.querySelector('[data-signup-submit-label]');
+      const daily = form.elements.email_daily_brief;
+      const alerts = form.elements.email_event_alerts;
 
       if (name) name.textContent = premium ? 'Premium' : 'Free';
       if (note) {
         note.textContent = premium
-          ? 'Premium kế thừa bản rà soát 09:00 của Free và bổ sung cảnh báo điểm mua/bán trong phiên tại 10:30, 11:15, 13:30 và 14:15 khi tín hiệu đủ chuẩn. Giá sáng lập dự kiến 199.000đ/30 ngày; tạo tài khoản chưa phát sinh thanh toán.'
-          : 'Free có phí 0đ và đủ quyền nhận bản rà soát thị trường cơ bản lúc 09:00 hằng ngày sau khi email được xác minh và bạn chọn đồng ý nhận.';
+          ? 'Premium mở Daily 09:00, kế hoạch giao dịch và Action Alert trong phiên khi dữ liệu đủ chuẩn. Giá sáng lập dự kiến 199.000đ/30 ngày; tạo tài khoản chưa phát sinh thanh toán.'
+          : 'Free có phí 0đ, dùng các chức năng công khai và email hệ thống cần thiết cho tài khoản. Báo cáo hằng ngày và Action Alert thuộc Trial/Premium.';
       }
+      [daily, alerts].forEach(input => {
+        if (!input) return;
+        input.disabled = !premium;
+        if (!premium) input.checked = false;
+      });
       if (submit) submit.textContent = premium
         ? 'Tạo tài khoản Premium & gửi mã xác minh'
         : 'Tạo tài khoản Free & gửi mã xác minh';
