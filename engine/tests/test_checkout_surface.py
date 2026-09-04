@@ -6,11 +6,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class CheckoutSurfaceTests(unittest.TestCase):
-    def test_checkout_is_stockradar_branded_authenticated_and_live_ready(self):
+    def test_checkout_source_remains_stockradar_branded_and_authenticated(self):
         page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
         client = (ROOT / "website" / "assets" / "checkout-v1.js").read_text(encoding="utf-8")
         styles = (ROOT / "website" / "assets" / "checkout-v1.css").read_text(encoding="utf-8")
-        fixed_qr = ROOT / "website" / "assets" / "vpbank-qr-static.svg"
 
         for marker in (
             'data-proposition="checkout"',
@@ -26,8 +25,6 @@ class CheckoutSurfaceTests(unittest.TestCase):
             "assets/auth-config.js",
             "assets/checkout-v1.css",
             "assets/checkout-v1.js",
-            "VPBank",
-            "0934389822",
         ):
             self.assertIn(marker, page)
 
@@ -43,20 +40,19 @@ class CheckoutSurfaceTests(unittest.TestCase):
             "EXPIRED",
         ):
             self.assertIn(marker, client)
-        self.assertTrue(fixed_qr.is_file())
-        self.assertIn("VPBank VietQR", fixed_qr.read_text(encoding="utf-8"))
         self.assertNotIn("service_role", client.lower())
         self.assertNotIn("sb_secret_", client.lower())
         self.assertIn("@media (max-width: 620px)", styles)
         self.assertIn("checkout-mobile-bar", styles)
         self.assertIn(".checkout-qr img", styles)
 
-    def test_commercial_checkout_is_opened_by_final_pages_guard(self):
+    def test_commercial_checkout_is_fail_closed_by_final_pages_guard(self):
         page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
         guard = (ROOT / "scripts" / "enforce_checkout_public_bank_info.py").read_text(encoding="utf-8")
         workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
         fast_workflow = (ROOT / ".github" / "workflows" / "pages-fast-hotfix.yml").read_text(encoding="utf-8")
 
+        # Source runtime is preserved so Premium can be reopened later without rebuilding the payment flow.
         for marker in (
             "data-checkout-disabled-fallback",
             "data-checkout-confirm",
@@ -65,21 +61,17 @@ class CheckoutSurfaceTests(unittest.TestCase):
         ):
             self.assertIn(marker, page)
 
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', workflow)
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', fast_workflow)
+        # Public Pages is the commercial gate while Decision Feed + email E2E remain incomplete.
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', fast_workflow)
         for marker in (
-            "Premium checkout opened with owner VPBank QR",
-            "vpbank-qr-static.svg",
-            "VPBank",
-            "0934389822",
-        ):
-            self.assertIn(marker, guard)
-        for stale in (
             "Premium checkout fail-closed",
             'data-checkout-ready="false"',
             "Premium tạm dừng kích hoạt mới",
+            "bản public khóa QR, thông tin chuyển khoản, mã giao dịch và nút xác nhận thanh toán",
+            "Không chuyển khoản thủ công ngoài luồng website",
         ):
-            self.assertNotIn(stale, guard)
+            self.assertIn(marker, guard)
         self.assertNotIn("service_role", guard.lower())
         self.assertNotIn("sb_secret_", guard.lower())
 
