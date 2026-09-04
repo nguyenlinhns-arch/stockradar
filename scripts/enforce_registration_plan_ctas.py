@@ -163,6 +163,14 @@ def enforce_signup_direct_flow(output: Path) -> Path:
     source = source.replace('Tạo tài khoản Free & gửi email xác minh', 'Tạo tài khoản Free')
     source = source.replace('Bấm xác minh trong email', 'Tạo tài khoản')
     source = source.replace('bấm xác minh trong email', 'tạo tài khoản')
+    source = source.replace(
+        'Bước này chỉ tạo và xác minh tài khoản. Không tự thu phí, không tự gia hạn.',
+        'Tạo tài khoản xong sẽ chuyển thẳng sang thanh toán Premium. Không tự gia hạn.',
+    )
+    source = source.replace(
+        'Thanh toán chỉ ở bước riêng sau khi tài khoản được xác minh.',
+        'Thanh toán chỉ ở bước riêng sau khi tạo tài khoản.',
+    )
 
     source = source.replace(
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>',
@@ -190,6 +198,8 @@ def enforce_signup_direct_flow(output: Path) -> Path:
         'Đã xác minh? Đăng nhập',
         'xac-minh-email/',
         'gửi email xác minh',
+        'Bước này chỉ tạo và xác minh tài khoản',
+        'tài khoản được xác minh',
     ):
         if forbidden in source:
             raise RuntimeError(f"Verification UI leaked into final signup artifact: {forbidden}")
