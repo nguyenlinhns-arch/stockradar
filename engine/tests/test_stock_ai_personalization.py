@@ -14,6 +14,8 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('.from("watchlist_items")', source)
         self.assertIn("owns_stock", source)
         self.assertIn("alert_enabled", source)
+        self.assertIn("cost_basis", source)
+        self.assertIn("portfolio_weight_pct", source)
         self.assertIn('REQUEST_SCOPE: scope', source)
         self.assertIn('USER_CONTEXT: userContext', source)
         self.assertIn('scope === "portfolio"', source)
@@ -26,7 +28,23 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('requested_ticker: requestedWatchItem ?', source)
         self.assertIn('requested_ticker_configured', source)
         self.assertIn('Khi REQUEST_SCOPE=ticker, USER_CONTEXT chỉ chứa cấu hình liên quan đúng mã đang hỏi', source)
+        self.assertIn('cost_basis: requestedWatchItem.cost_basis', source)
+        self.assertIn('portfolio_weight_pct: requestedWatchItem.portfolio_weight_pct', source)
         self.assertNotIn("user.email", source)
+
+    def test_position_context_is_optional_self_declared_and_cannot_infer_nav(self):
+        source = EDGE.read_text(encoding="utf-8")
+        for marker in (
+            "cost_basis và portfolio_weight_pct, nếu có, là số người dùng tự khai báo",
+            "Chỉ khi owns_stock=true và cost_basis có giá trị",
+            "lãi/lỗ tương đối ước tính",
+            "không suy đoán số lượng cổ phiếu, NAV, tiền lãi tuyệt đối",
+            "portfolio_weight_pct có thể dùng để nhận diện mức tập trung danh mục",
+            "position_context_count",
+        ):
+            self.assertIn(marker, source)
+        self.assertNotIn("broker_account", source)
+        self.assertNotIn("position_quantity", source)
 
     def test_free_and_premium_share_decision_context_while_data_gate_remains_fail_closed(self):
         source = EDGE.read_text(encoding="utf-8")
