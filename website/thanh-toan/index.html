@@ -7,11 +7,13 @@
   <meta name="description" content="Thanh toán StockRadar Premium: tóm tắt gói 30 ngày, phương thức VietQR/chuyển khoản và trạng thái xác nhận giao dịch.">
   <title>Thanh toán Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260904-checkout1">
-  <link rel="stylesheet" href="assets/checkout-v1.css?v=20260904-checkout1">
+  <link rel="stylesheet" href="assets/styles.css?v=20260904-checkout2">
+  <link rel="stylesheet" href="assets/checkout-v1.css?v=20260904-checkout2">
+  <link rel="stylesheet" href="assets/lead-v1.css?v=20260904-checkout2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-  <script src="assets/app.js?v=20260904-checkout1" defer></script>
-  <script src="assets/checkout-v1.js?v=20260904-checkout1" defer></script>
+  <script src="assets/app.js?v=20260904-checkout2" defer></script>
+  <script src="assets/email-interest.js?v=20260904-checkout2" defer></script>
+  <script src="assets/checkout-v1.js?v=20260904-checkout2" defer></script>
 </head>
 <body data-proposition="checkout">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -82,6 +84,22 @@
               <a class="checkout-secondary-link" href="dang-nhap/" data-checkout-login>Đăng nhập để thanh toán</a>
             </section>
           </div>
+
+          <section class="checkout-confirm" aria-labelledby="premium-waitlist-title">
+            <span class="checkout-section-label">CỔNG THANH TOÁN CHƯA MỞ</span>
+            <h3 id="premium-waitlist-title">Đăng ký ưu tiên Premium thay vì chờ</h3>
+            <p>Để lại email để StockRadar ghi nhận nhu cầu nhận cảnh báo điểm mua/bán Premium. Đây chỉ là đăng ký quan tâm: không thu phí, không tạo giao dịch và không tự kích hoạt Premium.</p>
+            <form class="lead-form email-interest-form" data-email-interest-form data-next-href="signup/?plan=premium" data-next-label="Tạo tài khoản để sẵn sàng nâng Premium" novalidate>
+              <div class="lead-field"><label for="checkout-interest-email">Email</label><input id="checkout-interest-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
+              <input name="daily_brief" type="checkbox" hidden aria-hidden="true" tabindex="-1">
+              <input name="event_alerts" type="checkbox" checked hidden aria-hidden="true" tabindex="-1">
+              <label class="lead-check"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và nhu cầu Premium theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
+              <div class="lead-honeypot" aria-hidden="true"><label for="checkout-interest-company">Công ty</label><input id="checkout-interest-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
+              <button class="lead-submit" type="submit">Báo tôi khi Premium mở thanh toán</button>
+              <p class="email-interest-message" data-email-interest-message aria-live="polite">StockRadar chỉ ghi nhận nhu cầu cảnh báo Premium; không yêu cầu OTP, không tự thu phí.</p>
+              <div class="lead-trust"><span>Không bán dữ liệu</span><span>Không yêu cầu OTP chứng khoán</span><span>Không tự thu phí</span></div>
+            </form>
+          </section>
         </article>
 
         <aside class="checkout-card checkout-summary" aria-labelledby="checkout-summary-title">
