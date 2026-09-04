@@ -68,6 +68,8 @@ def inject_css(source: str) -> str:
 
 
 def transform_home(source: str) -> str:
+    if "data-stockradar-ai-center" in source:
+        return inject_css(source)
     marker = '          </div>\n          <aside class="home-premium-buybox">'
     if HOME_EMAIL_BLOCK not in source:
         if marker not in source:
