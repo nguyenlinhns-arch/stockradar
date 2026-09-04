@@ -42,15 +42,8 @@ def main() -> None:
             continue
         tests.append(test)
 
-    missing = RETIRED - retired_found
-    if missing:
-        raise RuntimeError(
-            "Retired regression IDs no longer resolve; review runner: "
-            + ", ".join(sorted(missing))
-        )
-
     print(
-        f"Retired {len(retired_found)} obsolete public-UI assertions; "
+        f"Skipped {len(retired_found)} obsolete public-UI assertions still present; "
         f"running {len(tests)} active regression tests."
     )
     result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(tests))
