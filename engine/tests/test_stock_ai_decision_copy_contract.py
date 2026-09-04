@@ -4,12 +4,14 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
 CORE = ROOT / "supabase" / "functions" / "_shared" / "stockradar-core.ts"
+AUTH_AI = ROOT / "supabase" / "functions" / "stock-ai" / "index.ts"
 
 
 class StockAiDecisionCopyContractTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.source = CORE.read_text(encoding="utf-8")
+        cls.auth_ai = AUTH_AI.read_text(encoding="utf-8")
 
     def test_model_prompt_requires_decision_first_plain_text(self):
         source = self.source
@@ -36,6 +38,14 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn('.replace(/\\bWATCH\\b/gi, "THEO DÕI")', source)
         self.assertIn('.replace(/\\bTHEO DOI\\b/gi, "THEO DÕI")', source)
         self.assertIn('.replace(/\\bKHONG HANH DONG\\b/gi, "CHƯA HÀNH ĐỘNG")', source)
+
+    def test_signed_in_research_uses_model_when_data_exists(self):
+        source = self.auth_ai.replace(" ", "")
+        self.assertIn('if(mode==="METHOD_ONLY")', source)
+        self.assertNotIn('if(mode!=="ACTION_READY")', source)
+        self.assertIn('RESEARCH_CONTEXT:researchContexts', source)
+        self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
+        self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
 
 
 if __name__ == "__main__":
