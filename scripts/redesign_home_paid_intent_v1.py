@@ -141,6 +141,17 @@ def main() -> None:
         1,
     )
 
+    source = source.replace(
+        '<link rel="stylesheet" href="assets/home-decision-v2.css?v=20260904-decision2">\n',
+        "",
+        1,
+    )
+    mobile_start = source.find('<div class="mobile-newsletter-bar"')
+    if mobile_start >= 0:
+        mobile_end = source.find("</div>", mobile_start)
+        if mobile_end >= 0:
+            source = source[:mobile_start] + source[mobile_end + len("</div>"):]
+
     css_tag = '<link rel="stylesheet" href="assets/home-paid-intent-v1.css?v=20260904-paid1" data-home-paid-intent-v1>\n'
     js_tag = '<script src="assets/home-paid-intent-v1.js?v=20260904-paid1" defer></script>\n'
     if "home-paid-intent-v1.css" not in source:
