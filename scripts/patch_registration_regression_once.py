@@ -2,20 +2,14 @@ from pathlib import Path
 
 path = Path("engine/tests/test_email_subscription_funnel.py")
 text = path.read_text(encoding="utf-8")
-old = '''        self.assertIn("Có · bản cơ bản", register)
-        self.assertIn("cảnh báo điểm mua/bán trong phiên", register.lower())
-        self.assertIn("10:30 · 11:15 · 13:30 · 14:15", register)
-        self.assertIn("data-email-interest-form", register)
-        self.assertIn("assets/email-interest.js", register)
-'''
-new = '''        self.assertIn("Báo cáo email 09:00 hằng ngày", register)
-        self.assertIn("Có khi hệ thống gửi đủ điều kiện", register)
-        self.assertIn("cảnh báo điểm mua/bán trong phiên", register.lower())
-        self.assertIn("Có khi tín hiệu đạt chuẩn", register)
-        self.assertIn("10:30 · 11:15 · 13:30 · 14:15", register)
-        self.assertIn("data-email-interest-form", register)
-        self.assertIn("assets/email-interest.js", register)
-'''
-if old not in text:
-    raise SystemExit("Expected stale registration assertions not found")
-path.write_text(text.replace(old, new, 1), encoding="utf-8")
+stale = '        self.assertIn("Có · bản cơ bản", register)\n'
+replacement = (
+    '        self.assertIn("Báo cáo email 09:00 hằng ngày", register)\n'
+    '        self.assertIn("Có khi hệ thống gửi đủ điều kiện", register)\n'
+    '        self.assertIn("Có khi tín hiệu đạt chuẩn", register)\n'
+)
+if stale in text:
+    text = text.replace(stale, replacement, 1)
+elif "Có khi hệ thống gửi đủ điều kiện" not in text:
+    raise SystemExit("Neither stale nor updated registration assertion found")
+path.write_text(text, encoding="utf-8")
