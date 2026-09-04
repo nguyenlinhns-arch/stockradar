@@ -40,7 +40,7 @@ def snapshot():
         "same_snapshot": True,
         "adjusted_basis_consistent": True,
         "corporate_action_checked": True,
-        "source": "LICENSED_PROVIDER",
+        "source": "LICENSED_PROVIDER_RAW_INPUT",
         "exclusion_log": [],
     }
 
@@ -83,13 +83,19 @@ class ProductionBundleTests(unittest.TestCase):
         )
         write_csv(
             root / "ohlcv.csv",
-            ["ticker", "date", "close"],
-            [{"ticker": ticker, "date": "2026-09-03", "close": "1"} for ticker in tickers],
+            ["ticker", "date", "open", "high", "low", "close", "volume"],
+            [
+                {"ticker": ticker, "date": "2026-09-03", "open": "1", "high": "1", "low": "1", "close": "1", "volume": "1000000"}
+                for ticker in tickers
+            ],
         )
         write_csv(
             root / "fundamentals.csv",
-            ["ticker", "roe"],
-            [{"ticker": ticker, "roe": "0.1"} for ticker in tickers],
+            ["ticker", "period", "revenue", "net_income", "total_assets", "equity", "operating_cash_flow", "capex", "shares_outstanding"],
+            [
+                {"ticker": ticker, "period": "2026Q2", "revenue": "100", "net_income": "10", "total_assets": "500", "equity": "200", "operating_cash_flow": "15", "capex": "5", "shares_outstanding": "100"}
+                for ticker in tickers
+            ],
         )
         write_csv(root / "corporate_actions.csv", ["event_id"], [])
         write_csv(root / "events.csv", ["event_id"], [])
@@ -104,6 +110,9 @@ class ProductionBundleTests(unittest.TestCase):
             self.assertEqual(manifest["datasets"]["security_master"]["covered_tickers"], 3)
             self.assertEqual(manifest["datasets"]["ohlcv"]["row_count"], 3)
             self.assertEqual(len(manifest["datasets"]["ohlcv"]["sha256"]), 64)
+            self.assertEqual(manifest["datasets"]["ohlcv"]["input_role"], "RAW_INPUT_ONLY")
+            self.assertEqual(manifest["computation"]["calculation_origin"], "STOCKRADAR_ENGINE")
+            self.assertFalse(manifest["computation"]["external_scores_accepted"])
 
     def test_blocked_rights_remain_blocked_after_assembly(self):
         with TemporaryDirectory() as directory:
@@ -192,14 +201,45 @@ class ProductionBundleTests(unittest.TestCase):
             self.populate(root)
             write_csv(
                 root / "fundamentals.csv",
-                ["ticker", "roe"],
+                ["ticker", "revenue", "net_income"],
                 [
-                    {"ticker": "MBB", "roe": "0.1"},
-                    {"ticker": "HPG", "roe": "0.1"},
-                    {"ticker": "XYZ", "roe": "0.1"},
+                    {"ticker": "MBB", "revenue": "100", "net_income": "10"},
+                    {"ticker": "HPG", "revenue": "100", "net_income": "10"},
+                    {"ticker": "XYZ", "revenue": "100", "net_income": "10"},
                 ],
             )
             with self.assertRaisesRegex(ProductionBundleError, "outside HOSE security_master"):
+                build_manifest_from_descriptor(root, descriptor())
+
+    def test_external_derived_metrics_are_rejected_before_manifest(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            write_csv(
+                root / "fundamentals.csv",
+                ["ticker", "revenue", "net_income", "roe", "pe", "fair_value"],
+                [
+                    {"ticker": "MBB", "revenue": "100", "net_income": "10", "roe": "0.2", "pe": "8", "fair_value": "30"},
+                    {"ticker": "HPG", "revenue": "100", "net_income": "10", "roe": "0.2", "pe": "8", "fair_value": "30"},
+                    {"ticker": "ACB", "revenue": "100", "net_income": "10", "roe": "0.2", "pe": "8", "fair_value": "30"},
+                ],
+            )
+            with self.assertRaisesRegex(ProductionBundleError, "external providers may supply raw inputs only"):
+                build_manifest_from_descriptor(root, descriptor())
+
+    def test_external_technical_indicators_are_rejected(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            write_csv(
+                root / "ohlcv.csv",
+                ["ticker", "date", "open", "high", "low", "close", "volume", "ma50", "rvol", "signal"],
+                [
+                    {"ticker": ticker, "date": "2026-09-03", "open": "1", "high": "1", "low": "1", "close": "1", "volume": "100", "ma50": "1", "rvol": "2", "signal": "BUY"}
+                    for ticker in ["MBB", "HPG", "ACB"]
+                ],
+            )
+            with self.assertRaisesRegex(ProductionBundleError, "external providers may supply raw inputs only"):
                 build_manifest_from_descriptor(root, descriptor())
 
     def test_invalid_ticker_is_rejected(self):
