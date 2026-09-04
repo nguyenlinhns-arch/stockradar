@@ -1,0 +1,185 @@
+name: StockRadar Publish Internal Research Bundle
+
+on:
+  workflow_run:
+    workflows: ["StockRadar Research Decision V7"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_internal_research_bundle_v1.py'
+      - 'scripts/sync_internal_research_cache.py'
+      - '.github/workflows/publish-internal-research-bundle.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: stockradar-publish-internal-research-bundle
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install bundle and Drive dependencies
+        run: pip install --disable-pip-version-check pandas numpy google-api-python-client google-auth
+
+      - name: Resolve successful Research V7 run
+        id: research
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ] && [ -n "${EVENT_RUN_ID:-}" ]; then
+            run_id="$EVENT_RUN_ID"
+          else
+            run_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/research-decision-v7.yml/runs?status=success&per_page=20" --jq '.workflow_runs | map(select(.conclusion == "success")) | .[0].id // empty')"
+          fi
+          if [ -z "$run_id" ]; then
+            echo 'No successful Research V7 run found.' >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using Research V7 run $run_id"
+
+      - name: Download Research V7 artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ steps.research.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/research-v7
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${RUN_ID}/artifacts?per_page=100" --jq '.artifacts | map(select(.name == "stockradar-research-decision-v7" and .expired == false)) | .[0].id // empty')"
+          if [ -z "$id" ]; then
+            echo "Research V7 artifact missing in run ${RUN_ID}" >&2
+            exit 1
+          fi
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/research-v7.zip
+          unzip -q -o /tmp/research-v7.zip -d artifacts/research-v7
+
+      - name: Build canonical 405-ticker internal bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          unified="$(find artifacts/research-v7 -name 'unified_v7.csv' -print -quit)"
+          manifest="$(find artifacts/research-v7 -name 'unified_v7_manifest.json' -print -quit)"
+          test -n "$unified"
+          test -n "$manifest"
+          python scripts/build_internal_research_bundle_v1.py \
+            --unified-v7 "$unified" \
+            --manifest "$manifest" \
+            --output-dir artifacts/internal-research-bundle
+
+      - name: Validate bundle using production cache contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          bundle="$(find artifacts/internal-research-bundle -name 'stockradar_ticker_lookup_internal_405_*.json' ! -name '*_manifest.json' -print -quit)"
+          test -n "$bundle"
+          python scripts/sync_internal_research_cache.py "$bundle" --dry-run | tee /tmp/bundle-validation.json
+          python - "$bundle" <<'PY'
+          import json, sys
+          p=sys.argv[1]
+          d=json.load(open(p, encoding='utf-8'))
+          failures=[]
+          if d.get('exchange')!='HOSE': failures.append('EXCHANGE_NOT_HOSE')
+          if int(d.get('universe_count') or 0)!=405: failures.append('UNIVERSE_NOT_405')
+          if len(d.get('tickers') or {})!=405: failures.append('TICKERS_NOT_405')
+          for t in ('MBB','HPG','ACB'):
+              if t not in (d.get('tickers') or {}): failures.append(f'MISSING_{t}')
+          if d.get('public_release_allowed') is not False: failures.append('PUBLIC_RELEASE_NOT_CLOSED')
+          if d.get('public_action_allowed') is not False: failures.append('PUBLIC_ACTION_NOT_CLOSED')
+          if d.get('catalyst_alpha_weight_allowed') is not False: failures.append('CATALYST_ALPHA_NOT_ZERO')
+          if d.get('institutional_alpha_weight_allowed') is not False: failures.append('INSTITUTIONAL_ALPHA_NOT_ZERO')
+          if failures: raise SystemExit(';'.join(failures))
+          print(json.dumps({
+              'canonical_hose':405,
+              'internal_research_ready_count':d.get('internal_research_ready_count'),
+              'decision_candidate_count':d.get('decision_candidate_count'),
+              'execution_ready_internal_count':d.get('execution_ready_internal_count'),
+              'public_release_allowed':False,
+          }, ensure_ascii=False))
+          PY
+
+      - name: Upload GitHub bundle artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-ticker-lookup-internal-v1
+          path: artifacts/internal-research-bundle/
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Publish bundle and manifest to production Drive feed
+        env:
+          STOCKRADAR_GDRIVE_JSON: ${{ secrets.STOCKRADAR_GDRIVE_JSON }}
+          STOCKRADAR_DRIVE_FEED_FOLDER: '1MhOr5yBaM7ZUonQmTg-XLtgoA9l-wgs8'
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaFileUpload
+
+          raw=os.environ.get('STOCKRADAR_GDRIVE_JSON','').strip()
+          if not raw:
+              raise SystemExit('STOCKRADAR_GDRIVE_JSON is missing')
+          info=json.loads(raw)
+          creds=service_account.Credentials.from_service_account_info(
+              info, scopes=['https://www.googleapis.com/auth/drive']
+          )
+          drive=build('drive','v3',credentials=creds,cache_discovery=False)
+          folder=os.environ['STOCKRADAR_DRIVE_FEED_FOLDER']
+          paths=sorted(Path('artifacts/internal-research-bundle').glob('stockradar_ticker_lookup_internal_405_*.json'))
+          if len(paths)!=2:
+              raise SystemExit(f'Expected bundle + manifest, found {len(paths)} files')
+
+          uploaded=[]
+          for path in paths:
+              name=path.name
+              q=f"'{folder}' in parents and trashed = false and name = '{name.replace(chr(39), chr(92)+chr(39))}'"
+              result=drive.files().list(
+                  q=q,
+                  pageSize=10,
+                  fields='files(id,name,modifiedTime)',
+                  supportsAllDrives=True,
+                  includeItemsFromAllDrives=True,
+              ).execute()
+              media=MediaFileUpload(str(path), mimetype='application/json', resumable=False)
+              existing=(result.get('files') or [])
+              if existing:
+                  file_id=existing[0]['id']
+                  saved=drive.files().update(
+                      fileId=file_id,
+                      media_body=media,
+                      fields='id,name,modifiedTime',
+                      supportsAllDrives=True,
+                  ).execute()
+                  action='updated'
+              else:
+                  saved=drive.files().create(
+                      body={'name':name,'parents':[folder],'mimeType':'application/json'},
+                      media_body=media,
+                      fields='id,name,modifiedTime',
+                      supportsAllDrives=True,
+                  ).execute()
+                  action='created'
+              uploaded.append({'action':action, **saved})
+          print(json.dumps({'drive_folder':folder,'files':uploaded},ensure_ascii=False))
+          PY
