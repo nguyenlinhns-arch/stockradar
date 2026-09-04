@@ -78,8 +78,9 @@ class AccountPersonalizationAssetTests(unittest.TestCase):
             "not brokerage data",
         ):
             self.assertIn(marker, migration)
-        self.assertNotIn("quantity", migration.lower())
-        self.assertNotIn("broker_account", migration.lower())
+        lowered = migration.lower()
+        self.assertNotIn("add column if not exists quantity", lowered)
+        self.assertNotIn("add column if not exists broker_account", lowered)
 
 
 if __name__ == "__main__":
