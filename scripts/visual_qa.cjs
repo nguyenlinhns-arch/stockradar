@@ -19,8 +19,8 @@ const { chromium } = loadPlaywright();
   const errors = [];
   const checks = [];
   // Keep this list limited to routes that are actually published in the
-  // fail-closed GitHub Pages artifact. Checkout, /pro/ and the knowledge
-  // index are intentionally withheld while their production gates are closed.
+  // fail-closed GitHub Pages artifact. Checkout, /pro/, /phan-tich/ and the
+  // knowledge index are intentionally withheld from the production artifact.
   const pages = [
     { name: 'home', route: '/' },
     { name: 'radar', route: '/radar5/' },
@@ -42,6 +42,13 @@ const { chromium } = loadPlaywright();
     { name: 'desktop', width: 1440, height: 1000 },
     { name: 'tablet', width: 768, height: 1024 },
     { name: 'mobile', width: 390, height: 844 },
+  ];
+  const bannedVisibleTerms = [
+    'phân tích', 'phương pháp', 'setup',
+    'canslim', 'sepa', 'vcp', 'vpa', 'rvol',
+    'pocket pivot', 'early breakout', 'confirmed breakout', 'payback',
+    'wyckoff', 'minervini', 'o’neil', "o'neil", 'phil town',
+    'bear/base/bull', 'bear · base · bull', 'bear / base / bull',
   ];
 
   for (const viewport of viewports) {
@@ -70,6 +77,7 @@ const { chromium } = loadPlaywright();
           const h1 = document.querySelector('h1');
           const overflow = document.documentElement.scrollWidth > document.documentElement.clientWidth + 2;
           const title = document.title.trim();
+          const visibleText = (document.body.innerText || '').replace(/\s+/g, ' ').trim();
           const primaryControls = [...document.querySelectorAll(
             'button, .button, .lead-submit, .checkout-primary, .checkout-mobile-bar a, .nav-toggle, input[type="submit"]'
           )].filter(node => {
@@ -89,6 +97,7 @@ const { chromium } = loadPlaywright();
             hasH1: Boolean(h1 && h1.textContent.trim()),
             title,
             overflow,
+            visibleText,
             primaryControls,
           };
         });
@@ -97,6 +106,13 @@ const { chromium } = loadPlaywright();
         if (!structural.hasH1) routeErrors.push('missing non-empty <h1>');
         if (!structural.title) routeErrors.push('empty document title');
         if (structural.overflow) routeErrors.push('horizontal overflow');
+
+        const visibleTextLower = structural.visibleText.toLocaleLowerCase('vi');
+        for (const term of bannedVisibleTerms) {
+          if (visibleTextLower.includes(term.toLocaleLowerCase('vi'))) {
+            routeErrors.push(`visible analysis jargon: ${term}`);
+          }
+        }
 
         if (viewport.name !== 'desktop') {
           for (const control of structural.primaryControls) {
