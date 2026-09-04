@@ -4,14 +4,14 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/patch_research_v7_official_depth_once.py'
+      - 'scripts/render_research_v7_official_depth.py'
       - '.github/workflows/patch-research-v7-official-depth.yml'
 
 permissions:
   contents: write
 
 jobs:
-  patch:
+  render:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,18 +20,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Apply narrow V7 official-depth patch
-        run: python scripts/patch_research_v7_official_depth_once.py
-      - name: Commit and rebase patched research workflow
+      - name: Render patched V7 workflow to normal repository file
+        run: python scripts/render_research_v7_official_depth.py
+      - name: Commit rendered workflow copy
         run: |
           set -euo pipefail
           git config user.name stockradar-bot
           git config user.email stockradar-bot@users.noreply.github.com
-          git add .github/workflows/research-decision-v7.yml
+          git add docs/research-decision-v7-official-depth-rendered.yml
           if git diff --cached --quiet; then
-            echo 'Research V7 workflow already patched.'
+            echo 'Rendered workflow copy already current.'
           else
-            git commit -m 'Integrate deep official HOSE disclosures into Research V7'
+            git commit -m 'Render Research V7 official-depth integration'
             git pull --rebase origin main
             git push origin HEAD:main
           fi
