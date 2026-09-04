@@ -57,7 +57,8 @@ def post_json(session: requests.Session, path: str, payload: dict[str, Any], ret
 
 def clean_symbol(value: Any) -> str:
     s = str(value or "").strip().upper()
-    return s if len(s) == 3 and s.isascii() and s.isalpha() else ""
+    # HOSE has valid 3-character alphanumeric equity tickers such as C32, HT1, NT2 and PC1.
+    return s if len(s) == 3 and s.isascii() and s.isalnum() and any(ch.isalpha() for ch in s) else ""
 
 
 def fetch_universe() -> tuple[list[dict[str, Any]], dict[str, str]]:
@@ -162,7 +163,7 @@ def normalize_board(raw: list[dict[str, Any]]) -> pd.DataFrame:
     mapping = {
         "SB":"ticker","t":"source_time_ms","EX":"exchange","RE":"reference_price","CL":"ceiling_price","FL":"floor_price",
         "CP":"price","CV":"match_volume","OP":"open","HI":"high","LO":"low","AP":"average_price","TV":"total_value",
-        "CH":"change","CHP":"pct_change","FB":"foreign_buy_volume","FR":"foreign_sell_volume","TT":"total_trades",
+        "CH":"change","CHP":"pct_change","FB":"foreign_buy_volume","FR":"foreign_sell_volume","TT":"total_volume",
         "LS":"outstanding_shares","TLQ":"listed_shares","FS":"foreign_room","FO":"foreign_ownership","ST":"status","MS":"match_status"
     }
     rows=[]
@@ -200,7 +201,7 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
         b=board_map.get(ticker,{})
         current_price=pd.to_numeric(pd.Series([b.get("price")]),errors="coerce").iloc[0]
         current_price=float(current_price) if pd.notna(current_price) and current_price>0 else last
-        current_vol=pd.to_numeric(pd.Series([b.get("match_volume")]),errors="coerce").iloc[0]
+        current_vol=pd.to_numeric(pd.Series([b.get("total_volume")]),errors="coerce").iloc[0]
         ig=intraday[intraday["ticker"]==ticker].copy() if not intraday.empty else pd.DataFrame()
         same_time_ratio=None; current_cum=None; projected_vol=None
         if not ig.empty:
@@ -216,15 +217,25 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
                 current_cum=float(curg["cumvol"].iloc[-1]) if not curg.empty else None
                 cur_time=curg["timestamp"].iloc[-1].time() if not curg.empty else None
                 pri=[]
+                progress=[]
+                daily_by_date={ts.date(): float(v) for ts,v in zip(g["timestamp"],g["volume"]) if pd.notna(ts) and pd.notna(v)}
                 for d in sessions[-21:-1]:
                     dg=ig[ig["session"]==d].copy()
                     if cur_time is not None:
                         dg=dg[dg["timestamp"].dt.time<=cur_time]
-                    if not dg.empty: pri.append(float(dg["volume"].sum()))
+                    if not dg.empty:
+                        cum=float(dg["volume"].sum())
+                        pri.append(cum)
+                        full=daily_by_date.get(d)
+                        if full and full>0:
+                            frac=cum/full
+                            if 0 < frac <= 1.25:
+                                progress.append(frac)
                 if current_cum is not None and pri and statistics.fmean(pri)>0:
                     same_time_ratio=current_cum/statistics.fmean(pri)
-                if current_cum is not None and curg.shape[0]>0:
-                    projected_vol=current_cum*52/max(1,curg.shape[0])
+                if current_cum is not None and progress:
+                    frac=float(statistics.median(progress))
+                    projected_vol=current_cum/frac if frac>0 else None
         if current_cum is None and pd.notna(current_vol): current_cum=float(current_vol)
         rvol=(current_cum/vol20) if current_cum is not None and vol20 and vol20>0 else None
         down=g[g["close"].diff()<0].tail(10)
@@ -282,8 +293,8 @@ def write_json(path: Path, obj: Any) -> None:
 def run_market(out: Path) -> None:
     universe, _ = fetch_universe()
     tickers=[r["ticker"] for r in universe]
-    if len(tickers)<350:
-        raise RuntimeError(f"HOSE universe unexpectedly small: {len(tickers)}")
+    if len(tickers)<405:
+        raise RuntimeError(f"HOSE universe unexpectedly small: {len(tickers)}; expected at least 405")
     sm=pd.DataFrame([{"ticker":r["ticker"],"name":r.get("name") or r.get("nameEn") or r["ticker"],"exchange":"HOSE","sector":r.get("sector") or "UNCLASSIFIED","source":SOURCE_ID} for r in universe])
     sm.to_csv(out/"security_master.csv",index=False,encoding="utf-8-sig")
     write_json(out/"kbs_listing_raw.json",universe)
@@ -324,9 +335,16 @@ def fetch_reference_finance(ticker: str) -> tuple[str, dict[str, Any], str | Non
     try:
         with requests.Session() as s:
             profile=get_json(s,f"/stockinfo/profile/{ticker}",{"l":1})
-            events=get_json(s,f"/stockinfo/event/{ticker}",{"l":1,"p":1,"s":50})
+            events=get_json(s,f"/stockinfo/event/{ticker}",{"l":1,"p":1,"s":20})
             reports={}
-            specs=[("KQKD",2,1),("KQKD",2,2),("KQKD",1,1),("CDKT",1,1),("LCTT",1,1),("CSTC",2,1),("CSTC",1,1)]
+            specs=[
+                ("KQKD",2,1),("KQKD",2,2),
+                ("KQKD",1,1),("KQKD",1,2),
+                ("CDKT",1,1),("CDKT",1,2),
+                ("LCTT",1,1),("LCTT",1,2),
+                ("CSTC",2,1),("CSTC",2,2),
+                ("CSTC",1,1),("CSTC",1,2),
+            ]
             for typ,term,page in specs:
                 params={"type":typ,"termtype":term,"termType":term,"code":ticker,"page":page,"pageSize":4,"unit":1,"languageid":1}
                 reports[f"{typ}_{'Q' if term==2 else 'Y'}_P{page}"]=get_json(s,f"/stock/finance-info/{ticker}",params)
@@ -356,6 +374,8 @@ def flatten_finance_payload(ticker: str, key: str, payload: dict[str, Any]) -> l
 
 def run_fundamentals(out: Path) -> None:
     universe,_=fetch_universe(); tickers=[r["ticker"] for r in universe]
+    if len(tickers)<405:
+        raise RuntimeError(f"HOSE universe unexpectedly small: {len(tickers)}; expected at least 405")
     profiles=[]; events=[]; fin_rows=[]; errors=[]
     with cf.ThreadPoolExecutor(max_workers=8) as ex:
         futures=[ex.submit(fetch_reference_finance,t) for t in tickers]

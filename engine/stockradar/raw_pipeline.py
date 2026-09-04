@@ -97,7 +97,12 @@ def _number(value: object, *, dataset: str, field: str, allow_blank: bool = Fals
 
 def _ticker(value: object, dataset: str) -> str:
     ticker = str(value or "").strip().upper()
-    if len(ticker) != 3 or not ticker.isalpha() or not ticker.isascii():
+    if (
+        len(ticker) != 3
+        or not ticker.isascii()
+        or not ticker.isalnum()
+        or not any(ch.isalpha() for ch in ticker)
+    ):
         raise RawPipelineError(f"invalid ticker in {dataset}: {ticker!r}")
     return ticker
 
