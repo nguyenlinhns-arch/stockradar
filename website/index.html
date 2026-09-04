@@ -108,26 +108,16 @@
       <div class="container home-focus-grid">
         <article class="home-focus-panel">
           <header class="home-focus-head">
-            <div><span class="panel-label">RADAR 30 · HOSE</span><h2>TOP CỔ PHIẾU KHUYẾN NGHỊ CỦA STOCKRADAR</h2><p>Bấm vào từng mã để mở trực tiếp trang phân tích Free/Premium.</p></div>
+            <div><span class="panel-label">RADAR HOSE · QUÉT TOÀN THỊ TRƯỜNG</span><h2>TOP CỔ PHIẾU KHUYẾN NGHỊ CỦA STOCKRADAR</h2><p>Danh sách chỉ được sinh từ snapshot hiện tại sau khi mã đi qua dữ liệu, thanh khoản, market/sector, rủi ro và Action Gate.</p></div>
             <a class="button button-secondary" href="radar5/">Mở Radar</a>
           </header>
           <div class="home-signal-summary">
-            <div><span>Phương pháp quét</span><strong>Quét đa lớp HOSE</strong><small>4M · CANSLIM · Định giá · SEPA/VCP · VPA · Pocket Pivot.</small></div>
-            <div><span>Quét trong phiên</span><strong>4 mốc/ngày</strong><small>10:30 · 11:15 · 13:30 · 14:15 · chỉ cảnh báo khi đạt chuẩn.</small></div>
+            <div><span>Hệ thống quét</span><strong>Full HOSE → Full-Scan Gate → Ranking</strong><small>Dữ liệu · 4M/Payback · CANSLIM · Định giá · Market/Sector · SEPA/VCP · VPA/RVOL · Catalyst · Risk.</small></div>
+            <div><span>Quét trong phiên</span><strong>4 mốc/ngày</strong><small>10:30 · 11:15 · 13:30 · 14:15 · RVOL/same-time volume · không đạt Action Gate thì không cảnh báo.</small></div>
           </div>
-          <div class="home-radar-sector-list" aria-label="30 mã Radar theo 10 ngành">
-            <div class="home-radar-sector-row"><strong>Ngân hàng</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=ACB">ACB</a><a href="co-phieu/?ticker=MBB">MBB</a><a href="co-phieu/?ticker=TCB">TCB</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Chứng khoán</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=HCM">HCM</a><a href="co-phieu/?ticker=SSI">SSI</a><a href="co-phieu/?ticker=VCI">VCI</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Thép</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=HPG">HPG</a><a href="co-phieu/?ticker=HSG">HSG</a><a href="co-phieu/?ticker=NKG">NKG</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Công nghệ</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=FPT">FPT</a><a href="co-phieu/?ticker=CMG">CMG</a><a href="co-phieu/?ticker=ELC">ELC</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Dầu khí</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=GAS">GAS</a><a href="co-phieu/?ticker=PLX">PLX</a><a href="co-phieu/?ticker=PVD">PVD</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Bán lẻ & phân phối</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=MWG">MWG</a><a href="co-phieu/?ticker=FRT">FRT</a><a href="co-phieu/?ticker=DGW">DGW</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Bất động sản</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=VIC">VIC</a><a href="co-phieu/?ticker=VHM">VHM</a><a href="co-phieu/?ticker=KDH">KDH</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Hàng tiêu dùng</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=VNM">VNM</a><a href="co-phieu/?ticker=MSN">MSN</a><a href="co-phieu/?ticker=SAB">SAB</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Điện & tiện ích</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=POW">POW</a><a href="co-phieu/?ticker=REE">REE</a><a href="co-phieu/?ticker=GEG">GEG</a></span><em>3 mã</em></div>
-            <div class="home-radar-sector-row"><strong>Logistics & cảng</strong><span class="home-radar-tickers"><a href="co-phieu/?ticker=GMD">GMD</a><a href="co-phieu/?ticker=VSC">VSC</a><a href="co-phieu/?ticker=HAH">HAH</a></span><em>3 mã</em></div>
+          <div class="home-radar-sector-list" data-live-radar-home aria-label="Radar HOSE theo snapshot">
+            <div class="home-radar-note"><strong>Radar động theo snapshot.</strong> Không có danh sách mã cố định. Dữ liệu public chỉ hiển thị sau khi production manifest, quyền dữ liệu và các quality gate đều đạt; nếu chưa đạt, hệ thống fail-closed thay vì dùng mã mẫu.</div>
           </div>
-          <div class="home-radar-note">Danh sách Radar gồm 30 mã HOSE được chia cân bằng 10 nhóm ngành. Bấm mã để mở phân tích; ô tìm kiếm phía trên dùng cho các mã HOSE khác.</div>
         </article>
 
         <aside class="home-focus-panel home-quick-panel">
@@ -139,7 +129,7 @@
               <a href="khuyen-nghi/"><span><strong>Điểm mua / bán</strong><span>Buy Zone · Stop · Target · R/R khi đủ chuẩn</span></span><b>→</b></a>
               <a href="hieu-qua/"><span><strong>Hiệu quả khuyến nghị</strong><span>Theo dõi giá mua, mục tiêu, cắt lỗ và kết quả</span></span><b>→</b></a>
               <a href="#nhan-ban-tin"><span><strong>Nhận bản tin 09:00 miễn phí</strong><span>Biết bối cảnh thị trường trước phiên</span></span><b>→</b></a>
-              <a href="radar5/"><span><strong>Radar 30</strong><span>30 mã · 10 ngành · 3 mã mỗi ngành</span></span><b>→</b></a>
+              <a href="radar5/"><span><strong>Radar HOSE</strong><span>Quét toàn sàn · xếp hạng theo snapshot · không đủ gate thì không vào danh sách</span></span><b>→</b></a>
             </div>
           </div>
         </aside>
@@ -155,7 +145,7 @@
             <div class="home-tier-feature-list">
               <div class="home-tier-feature"><strong>Bản rà soát 09:00</strong><span>Market state, Radar, nhóm ngành nổi bật và rủi ro đáng chú ý.</span></div>
               <div class="home-tier-feature"><strong>Tra cứu mã HOSE</strong><span>Nhập mã 3 ký tự và mở trang phân tích cổ phiếu.</span></div>
-              <div class="home-tier-feature"><strong>Radar 30</strong><span>30 mã được chia cân bằng 10 ngành, 3 mã mỗi ngành.</span></div>
+              <div class="home-tier-feature"><strong>Radar HOSE</strong><span>Quét toàn bộ HOSE và chỉ đưa các mã đủ dữ liệu, thanh khoản, bối cảnh và chất lượng setup vào danh sách.</span></div>
               <div class="home-tier-feature"><strong>4 khung đầu tư</strong><span>Ngắn hạn, trung hạn, dài hạn và tích sản.</span></div>
               <div class="home-tier-feature"><strong>So sánh theo ngành</strong><span>Xem nhóm ngân hàng, chứng khoán, thép, công nghệ và các ngành lớn.</span></div>
               <div class="home-tier-feature"><strong>Hiệu quả khuyến nghị</strong><span>Đối chiếu lịch sử giá mua, mục tiêu, cắt lỗ và kết quả.</span></div>
