@@ -35,6 +35,8 @@ def main() -> None:
         "199.000đ",
         "Theo dõi mã của tôi",
         "data-premium-conversion-cta",
+        "Xem email Premium 09:00",
+        "Free chỉ nhận email hệ thống",
         "home-paid-intent-v1.css",
         "home-paid-intent-v1.js",
     )
@@ -74,6 +76,19 @@ def main() -> None:
         if marker.lower() in source.lower():
             errors.append(f"obsolete/technical homepage block remains: {marker}")
 
+    forbidden_free_email = (
+        "FREE · EMAIL 09:00",
+        "FREE 09:00",
+        "Nhận bản rà soát 09:00 miễn phí",
+        "Nhận bản tin 09:00 miễn phí",
+        "Xem bản rà soát Free",
+        "tạo tài khoản Free và xác minh để kích hoạt bản tin 09:00",
+        "nhận bản rà soát 09:00 miễn phí",
+    )
+    for marker in forbidden_free_email:
+        if marker.casefold() in source.casefold():
+            errors.append(f"Free product-email promise remains on homepage: {marker}")
+
     price_pos = source.find("199.000đ")
     proof_pos = source.find("KIỂM CHỨNG TRƯỚC KHI TRẢ TIỀN")
     if price_pos >= 0 and proof_pos >= 0 and price_pos < proof_pos:
@@ -81,7 +96,7 @@ def main() -> None:
 
     if errors:
         raise RuntimeError("Homepage paid-intent verification failed:\n- " + "\n- ".join(errors))
-    print("Homepage paid-intent verification: PASS (lookup → personal need → proof → 199K CTA)")
+    print("Homepage paid-intent verification: PASS (lookup → personal need → proof → 199K CTA; Free email is transactional-only)")
 
 
 if __name__ == "__main__":
