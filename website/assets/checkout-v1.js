@@ -17,6 +17,7 @@
     client: null,
     pollTimer: null,
     countdownTimer: null,
+    paymentMetaObserver: null,
   };
 
   function config() {
@@ -30,10 +31,12 @@
   function formatDateTime(value) {
     if (!value) return '—';
     try {
+      const date = new Date(value);
+      if (!Number.isFinite(date.getTime())) return '—';
       return new Intl.DateTimeFormat('vi-VN', {
         day: '2-digit', month: '2-digit', year: 'numeric',
         hour: '2-digit', minute: '2-digit', hour12: false,
-      }).format(new Date(value));
+      }).format(date);
     } catch (_) {
       return '—';
     }
@@ -124,15 +127,73 @@
     });
   }
 
+  function firstText(object, keys) {
+    for (const key of keys) {
+      const value = object?.[key];
+      if (value === null || value === undefined) continue;
+      const text = String(value).trim();
+      if (text) return text;
+    }
+    return '';
+  }
+
+  function referenceFromQr() {
+    const image = document.querySelector('[data-checkout-qr-image]');
+    if (!image) return '';
+    const candidates = [image.currentSrc, image.src, image.getAttribute('src'), image.alt];
+    for (const candidate of candidates) {
+      const raw = String(candidate || '').trim();
+      if (!raw) continue;
+      try {
+        const parsed = new URL(raw, document.baseURI);
+        const fromQuery = parsed.searchParams.get('addInfo')
+          || parsed.searchParams.get('addinfo')
+          || parsed.searchParams.get('content')
+          || parsed.searchParams.get('description');
+        if (fromQuery && /^SR[-0-9A-Z]{6,32}$/i.test(fromQuery.trim())) return fromQuery.trim().toUpperCase();
+      } catch (_) {}
+      const match = raw.toUpperCase().match(/\bSR[-0-9A-Z]{6,32}\b/);
+      if (match) return match[0];
+    }
+    return '';
+  }
+
+  function referenceFromState() {
+    const raw = String(document.querySelector('[data-checkout-state]')?.textContent || '').toUpperCase();
+    const match = raw.match(/\bSR[-0-9A-Z]{6,32}\b/);
+    return match ? match[0] : '';
+  }
+
+  function checkoutReference(request) {
+    return firstText(request, [
+      'payment_reference', 'paymentReference', 'transfer_content', 'transferContent',
+      'transfer_reference', 'transferReference', 'reference', 'payment_code', 'paymentCode', 'code',
+    ]).toUpperCase() || referenceFromQr() || referenceFromState();
+  }
+
+  function checkoutExpiry(request) {
+    const direct = firstText(request, [
+      'expires_at', 'expiresAt', 'valid_until', 'validUntil', 'expiry_at', 'expiryAt', 'expiry', 'expires',
+    ]);
+    if (direct && Number.isFinite(new Date(direct).getTime())) return direct;
+    const created = firstText(request, ['created_at', 'createdAt', 'issued_at', 'issuedAt']);
+    if (created) {
+      const createdAt = new Date(created).getTime();
+      if (Number.isFinite(createdAt)) return new Date(createdAt + 30 * 60 * 1000).toISOString();
+    }
+    return '';
+  }
+
   function qrUrl(request) {
-    if (!request?.payment_reference) return '';
-    const bankBin = request.bank_bin || PUBLIC_BANK.bin;
-    const accountNumber = request.account_number || PUBLIC_BANK.accountNumber;
-    const accountName = request.account_name || PUBLIC_BANK.accountName;
+    const reference = checkoutReference(request);
+    if (!reference) return '';
+    const bankBin = request?.bank_bin || request?.bankBin || PUBLIC_BANK.bin;
+    const accountNumber = request?.account_number || request?.accountNumber || PUBLIC_BANK.accountNumber;
+    const accountName = request?.account_name || request?.accountName || PUBLIC_BANK.accountName;
     const base = `https://img.vietqr.io/image/${encodeURIComponent(bankBin)}-${encodeURIComponent(accountNumber)}-compact2.png`;
     const params = new URLSearchParams({
-      amount: String(request.amount_vnd || runtime.amount),
-      addInfo: request.payment_reference,
+      amount: String(request?.amount_vnd || request?.amount || runtime.amount),
+      addInfo: reference,
       accountName,
     });
     return `${base}?${params.toString()}`;
@@ -142,10 +203,11 @@
     const image = document.querySelector('[data-checkout-qr-image]');
     const placeholder = document.querySelector('[data-checkout-qr-placeholder]');
     const url = qrUrl(request);
+    const reference = checkoutReference(request);
     if (image) {
       image.hidden = !url;
       image.src = url || '';
-      image.alt = url ? `VietQR thanh toán ${request.payment_reference}` : '';
+      image.alt = url ? `VietQR thanh toán ${reference}` : '';
     }
     if (placeholder) placeholder.hidden = Boolean(url);
   }
@@ -161,6 +223,7 @@
     if (!target || !expiresAt) return;
     const render = () => {
       const remaining = new Date(expiresAt).getTime() - Date.now();
+      if (!Number.isFinite(remaining)) return;
       if (remaining <= 0) {
         target.textContent = 'Đã hết hạn';
         stopCountdown();
@@ -178,44 +241,100 @@
     document.querySelectorAll('[data-checkout-disabled-fallback]').forEach(node => { node.hidden = !show; });
   }
 
+  function recoverVisiblePaymentMeta() {
+    const referenceTarget = document.querySelector('[data-checkout-reference]');
+    const expiryTarget = document.querySelector('[data-checkout-expiry]');
+    const expiryAtTarget = document.querySelector('[data-checkout-expiry-at]');
+    const currentReference = String(referenceTarget?.textContent || '').trim();
+    const recoveredReference = currentReference && currentReference !== '—'
+      ? currentReference
+      : checkoutReference(runtime.request || {});
+
+    if (referenceTarget && recoveredReference && currentReference !== recoveredReference) {
+      referenceTarget.textContent = recoveredReference;
+      setCopyValue('[data-copy-reference]', recoveredReference);
+    }
+
+    if (!recoveredReference || !expiryTarget) return;
+    const expiryAt = checkoutExpiry(runtime.request || {});
+    const currentExpiry = String(expiryTarget.textContent || '').trim();
+    if (expiryAt) {
+      if (expiryAtTarget && (!expiryAtTarget.textContent.trim() || expiryAtTarget.textContent.trim() === '—')) {
+        expiryAtTarget.textContent = formatDateTime(expiryAt);
+      }
+      if (!currentExpiry || currentExpiry === '—') startCountdown(expiryAt);
+    } else if (!currentExpiry || currentExpiry === '—') {
+      expiryTarget.textContent = 'Tối đa 30 phút từ lúc tạo mã';
+    }
+  }
+
+  function watchPaymentMeta() {
+    if (runtime.paymentMetaObserver) runtime.paymentMetaObserver.disconnect();
+    const root = document.querySelector('#payment') || document.body;
+    runtime.paymentMetaObserver = new MutationObserver(() => recoverVisiblePaymentMeta());
+    runtime.paymentMetaObserver.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['src', 'data-copy-value'] });
+    [0, 100, 300, 750, 1500, 3000].forEach(delay => setTimeout(recoverVisiblePaymentMeta, delay));
+  }
+
   function renderRequest(request) {
-    runtime.request = request || null;
-    const enabled = Boolean(request?.checkout_enabled && request?.request_id);
-    const amount = Number(request?.amount_vnd || runtime.amount);
+    const reference = checkoutReference(request || {});
+    const expiresAt = checkoutExpiry(request || {});
+    const requestId = firstText(request, ['request_id', 'requestId', 'checkout_id', 'checkoutId']);
+    const checkoutFlag = request?.checkout_enabled ?? request?.checkoutEnabled;
+    const enabled = Boolean(requestId && checkoutFlag !== false);
+    const amount = Number(request?.amount_vnd || request?.amount || runtime.amount);
+    const status = firstText(request, ['status']).toUpperCase();
+    const normalized = request ? {
+      ...request,
+      request_id: requestId || request.request_id,
+      payment_reference: reference || request.payment_reference,
+      expires_at: expiresAt || request.expires_at,
+      status: status || request.status,
+      checkout_enabled: enabled,
+    } : null;
+
+    runtime.request = normalized;
     runtime.amount = amount;
-    runtime.durationDays = Number(request?.duration_days || 30);
+    runtime.durationDays = Number(request?.duration_days || request?.durationDays || 30);
 
     setText('[data-checkout-amount]', formatVnd(amount));
-    setText('[data-checkout-bank]', request?.bank_name || PUBLIC_BANK.name);
-    setText('[data-checkout-account-number]', request?.account_number || PUBLIC_BANK.accountNumber);
-    setText('[data-checkout-account-name]', request?.account_name || PUBLIC_BANK.accountName);
-    setText('[data-checkout-reference]', enabled ? (request.payment_reference || '—') : '—');
-    setText('[data-checkout-expiry-at]', enabled ? formatDateTime(request.expires_at) : '—');
-    setCopyValue('[data-copy-account]', request?.account_number || PUBLIC_BANK.accountNumber);
-    setCopyValue('[data-copy-reference]', enabled ? request.payment_reference : '');
-    renderQr(enabled ? request : null);
-    startCountdown(enabled ? request.expires_at : null);
+    setText('[data-checkout-bank]', request?.bank_name || request?.bankName || PUBLIC_BANK.name);
+    setText('[data-checkout-account-number]', request?.account_number || request?.accountNumber || PUBLIC_BANK.accountNumber);
+    setText('[data-checkout-account-name]', request?.account_name || request?.accountName || PUBLIC_BANK.accountName);
+    setText('[data-checkout-reference]', reference || '—');
+    setText('[data-checkout-expiry-at]', expiresAt ? formatDateTime(expiresAt) : (reference ? 'Mã có thời hạn tối đa 30 phút' : '—'));
+    setCopyValue('[data-copy-account]', request?.account_number || request?.accountNumber || PUBLIC_BANK.accountNumber);
+    setCopyValue('[data-copy-reference]', reference);
+    renderQr(enabled ? normalized : null);
+    if (expiresAt) startCountdown(expiresAt);
+    else {
+      stopCountdown();
+      setText('[data-checkout-expiry]', reference ? 'Tối đa 30 phút từ lúc tạo mã' : '—');
+    }
 
     const confirm = document.querySelector('[data-checkout-confirm]');
     if (confirm) {
-      const confirmable = enabled && request.status === 'PENDING';
+      const confirmable = enabled && status === 'PENDING';
       confirm.disabled = !confirmable;
-      confirm.textContent = request?.status === 'USER_CONFIRMED'
+      confirm.textContent = status === 'USER_CONFIRMED'
         ? 'Đã gửi · Chờ xác nhận qua email'
-        : request?.status === 'PAID'
+        : status === 'PAID'
           ? 'Premium đã được kích hoạt'
           : 'Tôi đã chuyển khoản · Gửi xác nhận';
     }
 
     showPaymentFallback(!enabled && Boolean(runtime.user));
 
-    if (!enabled) return;
-    if (request.status === 'PENDING') {
-      setState(`Mã thanh toán ${request.payment_reference} đã được cấp riêng cho tài khoản này. Sau khi chuyển khoản, bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị.`, 'ok');
-    } else if (request.status === 'USER_CONFIRMED') {
+    if (!enabled) {
+      recoverVisiblePaymentMeta();
+      return;
+    }
+    if (status === 'PENDING') {
+      setState(`Mã thanh toán ${reference} đã được cấp riêng cho tài khoản này. Sau khi chuyển khoản, bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị.`, 'ok');
+    } else if (status === 'USER_CONFIRMED') {
       setState('Yêu cầu xác nhận đã được gửi tới email quản trị StockRadar. Premium chỉ được kích hoạt sau khi thanh toán được kiểm tra và xác nhận.', 'warn');
-    } else if (request.status === 'PAID') {
-      setState(`Thanh toán đã được xác minh. Premium đang hoạt động${request.paid_until ? ` đến ${formatDateTime(request.paid_until)}` : ''}. Email xác nhận kích hoạt cũng được gửi tới tài khoản của bạn.`, 'ok');
+    } else if (status === 'PAID') {
+      setState(`Thanh toán đã được xác minh. Premium đang hoạt động${request?.paid_until ? ` đến ${formatDateTime(request.paid_until)}` : ''}. Email xác nhận kích hoạt cũng được gửi tới tài khoản của bạn.`, 'ok');
       stopPolling();
       stopCountdown();
       const mobile = document.querySelector('[data-checkout-mobile-action]');
@@ -223,11 +342,12 @@
         mobile.textContent = 'Mở tài khoản Premium';
         mobile.href = 'tai-khoan/?premium=active';
       }
-    } else if (request.status === 'EXPIRED') {
+    } else if (status === 'EXPIRED') {
       setState('Mã thanh toán đã hết hạn. Tải lại trang để tạo yêu cầu mới.', 'warn');
       stopPolling();
       stopCountdown();
     }
+    recoverVisiblePaymentMeta();
   }
 
   async function loadRequest() {
@@ -301,6 +421,7 @@
       }
       setState('VPBank 0934389822 · NGUYỄN TỬ LINH là tài khoản nhận tiền chính thức. Đăng nhập để tạo nội dung chuyển khoản riêng và VietQR.', 'warn');
       showPaymentFallback(false);
+      recoverVisiblePaymentMeta();
       return;
     }
 
@@ -319,6 +440,7 @@
     } catch (error) {
       renderRequest(null);
       setState(checkoutError(error), 'warn');
+      recoverVisiblePaymentMeta();
     }
   }
 
@@ -327,12 +449,14 @@
     renderPublicBank();
     wireCopyButtons();
     wireConfirm();
+    watchPaymentMeta();
     await renderAccount();
   }
 
   window.addEventListener('pagehide', () => {
     stopPolling();
     stopCountdown();
+    if (runtime.paymentMetaObserver) runtime.paymentMetaObserver.disconnect();
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
