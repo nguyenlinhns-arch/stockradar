@@ -21,14 +21,20 @@ class PrivacyPolicyVersioningTests(unittest.TestCase):
     def test_public_email_interest_uses_current_privacy_version(self):
         source = self.read("website/assets/email-interest.js")
         self.assertIn("const CONSENT_VERSION = '2026-09-04'", source)
+        # Only surfaces that actually collect pre-auth email interest must carry
+        # the current explicit privacy-consent copy. Checkout is fail-closed and
+        # does not collect an email while Premium activation is paused.
         for page in (
             "website/nhan-ban-tin/index.html",
             "website/dang-ky/index.html",
-            "website/thanh-toan/index.html",
         ):
             html = self.read(page)
             self.assertIn("Chính sách quyền riêng tư", html)
             self.assertIn("2026-09-04", html)
+
+        checkout_guard = self.read("scripts/enforce_checkout_public_bank_info.py")
+        self.assertIn('href="quyen-rieng-tu/"', checkout_guard)
+        self.assertIn('data-checkout-ready="false"', checkout_guard)
 
     def test_account_center_uses_current_email_consent_and_per_ticker_alert_controls(self):
         email_source = self.read("website/assets/email-preferences.js")

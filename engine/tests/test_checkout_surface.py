@@ -47,27 +47,34 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertIn("checkout-mobile-bar", styles)
         self.assertIn(".checkout-qr img", styles)
 
-    def test_checkout_keeps_non_payment_fallback_until_bank_runtime_is_enabled(self):
+    def test_commercial_checkout_is_fail_closed_by_final_pages_guard(self):
         page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
-        email_client = (ROOT / "website" / "assets" / "email-interest.js").read_text(encoding="utf-8")
+        guard = (ROOT / "scripts" / "enforce_checkout_public_bank_info.py").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
+        fast_workflow = (ROOT / ".github" / "workflows" / "pages-fast-hotfix.yml").read_text(encoding="utf-8")
 
+        # Source checkout retains the authenticated runtime so it can be reopened without a rewrite.
         for marker in (
             "data-checkout-disabled-fallback",
-            "THANH TOÁN CHƯA ĐƯỢC KÍCH HOẠT",
-            'data-email-interest-form',
-            'name="event_alerts" type="checkbox" checked hidden',
-            'name="privacy" type="checkbox" required',
-            "assets/email-interest.js",
-            "assets/lead-v1.css",
-            'data-next-href="signup/?plan=premium"',
+            "data-checkout-confirm",
+            "assets/checkout-v1.js",
+            "assets/auth-config.js",
         ):
             self.assertIn(marker, page)
 
-        self.assertIn("/functions/v1/email-interest", email_client)
-        self.assertIn("privacy_accepted: true", email_client)
-        self.assertIn("credentials: 'omit'", email_client)
-        self.assertNotIn("service_role", page.lower())
-        self.assertNotIn("service_role", email_client.lower())
+        # The final Pages artifact is the commercial gate: it must not expose payment while P0 is closed.
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', fast_workflow)
+        for marker in (
+            "Premium checkout fail-closed",
+            'data-checkout-ready="false"',
+            "Premium tạm dừng kích hoạt mới",
+            "khóa toàn bộ QR, số tài khoản, nội dung chuyển khoản và nút xác nhận thanh toán",
+            "Không chuyển khoản thủ công ngoài luồng website",
+        ):
+            self.assertIn(marker, guard)
+        self.assertNotIn("service_role", guard.lower())
+        self.assertNotIn("sb_secret_", guard.lower())
 
     def test_plan_page_has_separate_registration_ctas(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")

@@ -9,11 +9,15 @@ class ConversionFunnelAssetTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_global_conversion_rail_is_email_first_and_state_aware(self):
+    def test_global_conversion_rail_is_ai_free_first_and_state_aware(self):
         injector = self.read("scripts/inject_public_ux.py")
         state = self.read("website/assets/conversion-state-v1.js")
-        for route in ("radar5", "kiem-tra-co-phieu", "phan-tich", "khuyen-nghi", "hieu-qua", "nganh", "co-phieu"):
+        for route in ("radar5", "kiem-tra-co-phieu", "khuyen-nghi", "hieu-qua", "nganh", "co-phieu"):
             self.assertIn(f'"{route}"', injector)
+        self.assertNotIn('"phan-tich",', injector)
+        self.assertIn("Bắt đầu với StockRadar AI Free 10 câu/ngày", injector)
+        self.assertIn("Premium đang tạm dừng kích hoạt mới", injector)
+        self.assertIn("checkout_ready()", injector)
         self.assertIn("data-conversion-free-lead", injector)
         self.assertIn("data-conversion-mobile-lead", injector)
         self.assertIn("conversion-state-v1.js", injector)
