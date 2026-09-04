@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Remove internal analysis-method jargon from the final StockRadar Pages artifact."""
+"""Remove internal method jargon and analysis-language from the final StockRadar Pages artifact."""
 
 from __future__ import annotations
 
 import argparse
 import re
+import shutil
 from pathlib import Path
 
 
 BANNED_PUBLIC_TERMS = (
+    "phân tích",
     "4M",
     "CANSLIM",
     "SEPA",
@@ -66,6 +68,32 @@ def rewrite(source: str) -> str:
         ('Đạt vùng mua · Chờ mua · Theo dõi · Bỏ qua.', 'Mua · chờ · theo dõi · bỏ qua.'),
         ('SEPA · VCP · VPA · RVOL', 'TRẠNG THÁI HÀNH ĐỘNG'),
         ('4M · SEPA · VPA', 'TRẠNG THÁI · DÒNG TIỀN · RỦI RO'),
+        ('phân tích chuyên sâu', 'chi tiết quyết định'),
+        ('Phân tích chuyên sâu', 'Chi tiết quyết định'),
+        ('phân tích sâu hơn', 'quyết định chi tiết hơn'),
+        ('Phân tích sâu hơn', 'Quyết định chi tiết hơn'),
+        ('phân tích sâu', 'quyết định chi tiết'),
+        ('Phân tích sâu', 'Quyết định chi tiết'),
+        ('phân tích công khai', 'dữ liệu công khai'),
+        ('Phân tích công khai', 'Dữ liệu công khai'),
+        ('phân tích cơ bản', 'bối cảnh'),
+        ('Phân tích cơ bản', 'Bối cảnh'),
+        ('phân tích kỹ thuật', 'trạng thái giá'),
+        ('Phân tích kỹ thuật', 'Trạng thái giá'),
+        ('phân tích doanh nghiệp', 'dữ liệu doanh nghiệp'),
+        ('Phân tích doanh nghiệp', 'Dữ liệu doanh nghiệp'),
+        ('nhu cầu phân tích', 'nhu cầu sử dụng'),
+        ('Nhu cầu phân tích', 'Nhu cầu sử dụng'),
+        ('trang phân tích', 'trang trạng thái'),
+        ('Trang phân tích', 'Trang trạng thái'),
+        ('phân tích Free/Premium', 'trạng thái Free/Premium'),
+        ('Phân tích Free/Premium', 'Trạng thái Free/Premium'),
+        ('phân tích Free & Premium', 'trạng thái Free & Premium'),
+        ('Phân tích Free & Premium', 'Trạng thái Free & Premium'),
+        ('phân tích đa khung', 'trạng thái đa khung'),
+        ('Phân tích đa khung', 'Trạng thái đa khung'),
+        ('phân tích cổ phiếu', 'tra cứu cổ phiếu'),
+        ('Phân tích cổ phiếu', 'Tra cứu cổ phiếu'),
     )
     for before, after in replacements:
         source = source.replace(before, after)
@@ -82,6 +110,14 @@ def rewrite(source: str) -> str:
         source,
     )
 
+    # Retire the old analysis route and point any lingering links to the live stock lookup.
+    source = re.sub(
+        r'href=["\'](?:\.\./)*phan-tich/(?:[^"\']*)?["\']',
+        'href="kiem-tra-co-phieu/"',
+        source,
+        flags=re.IGNORECASE,
+    )
+
     # Old knowledge links are not published in production; route users to the live lookup instead.
     source = re.sub(
         r'href=["\'][^"\']*kien-thuc/(?:canslim-sepa|vpa|4m|pocket-pivot)/["\']',
@@ -89,6 +125,11 @@ def rewrite(source: str) -> str:
         source,
         flags=re.IGNORECASE,
     )
+
+    # Final safety net: public HTML must not use the word "phân tích" at all.
+    source = source.replace("PHÂN TÍCH", "TRẠNG THÁI")
+    source = source.replace("Phân tích", "Tra cứu")
+    source = source.replace("phân tích", "tra cứu")
     return source
 
 
@@ -96,6 +137,10 @@ def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
         raise RuntimeError(f"Pages output does not exist: {output}")
+
+    legacy_analysis = output / "phan-tich"
+    if legacy_analysis.exists():
+        shutil.rmtree(legacy_analysis)
 
     pages = sorted(output.rglob("*.html"))
     for page in pages:
@@ -110,9 +155,12 @@ def main() -> None:
                 leaks.append(f"{page.relative_to(output)}: {term}")
 
     if leaks:
-        raise RuntimeError("Public method jargon remains:\n- " + "\n- ".join(leaks))
+        raise RuntimeError("Public decision-first surface still contains banned analysis language:\n- " + "\n- ".join(leaks))
 
-    print(f"Public method-jargon scrub: PASS ({len(pages)} HTML pages)")
+    if legacy_analysis.exists():
+        raise RuntimeError("Legacy /phan-tich/ route remains in production artifact")
+
+    print(f"Public decision-first scrub: PASS ({len(pages)} HTML pages; /phan-tich/ retired)")
 
 
 if __name__ == "__main__":
