@@ -33,11 +33,13 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
     def test_worker_requires_internal_service_auth_and_provider_is_fail_closed(self) -> None:
         source = self.read("supabase/functions/email-worker/index.ts")
         for marker in (
-            'req.headers.get("authorization") === `Bearer ${service}`',
+            'admin.legacy && req.headers.get("authorization") === `Bearer ${admin.key}`',
             'req.headers.get("x-stockradar-scheduler")',
             "verify_stockradar_email_scheduler_token_v1",
             "sha256Hex(schedulerToken)",
             'return valid === true',
+            "SUPABASE_SECRET_KEYS",
+            "sb_secret_",
             "PROVIDER_NOT_CONFIGURED",
             "RESEND_API_KEY",
             "STOCKRADAR_EMAIL_FROM",
@@ -64,6 +66,13 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             source.index("preflight_stockradar_email_outbox_v1"),
             source.index("fetch(RESEND_ENDPOINT"),
         )
+
+    def test_new_secret_key_is_sent_on_apikey_header_not_bearer(self) -> None:
+        source = self.read("supabase/functions/email-worker/index.ts")
+        self.assertIn("apikey: admin.key", source)
+        self.assertIn("if (admin.legacy) headers.authorization = `Bearer ${admin.key}`", source)
+        self.assertIn("return { key: current, legacy: false }", source)
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", source)
 
     def test_final_preflight_rechecks_ttl_consent_suppression_and_delivery_gate(self) -> None:
         sql = self.read("supabase/migrations/20260904103000_add_email_send_preflight.sql")
@@ -101,6 +110,7 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             '"email.bounced"',
             '"email.complained"',
             "RESEND_WEBHOOK_SECRET",
+            "SUPABASE_SECRET_KEYS",
         ):
             self.assertIn(marker, source)
         self.assertLess(source.index("verifySvix(rawBody"), source.index("JSON.parse(rawBody)"))
@@ -114,6 +124,7 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             "Ngừng toàn bộ email nội dung",
             "Referrer-Policy",
             "no-store",
+            "SUPABASE_SECRET_KEYS",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("delete-account", source)
