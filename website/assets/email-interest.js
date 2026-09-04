@@ -20,6 +20,25 @@
     return /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(value);
   }
 
+  function removeNextStep(form) {
+    form.querySelector('[data-email-interest-next]')?.remove();
+  }
+
+  function renderNextStep(form, email) {
+    removeNextStep(form);
+    const rawHref = String(form.dataset.nextHref || '').trim();
+    if (!rawHref) return;
+    const url = new URL(rawHref, document.baseURI);
+    if (email) url.searchParams.set('email', email);
+    const link = document.createElement('a');
+    link.className = 'email-interest-next';
+    link.dataset.emailInterestNext = '';
+    link.href = url.toString();
+    link.textContent = String(form.dataset.nextLabel || 'Tiếp tục');
+    const message = form.querySelector('[data-email-interest-message]');
+    message?.insertAdjacentElement('afterend', link);
+  }
+
   async function submitInterest(form) {
     const email = String(form.elements.email?.value || '').trim().toLowerCase();
     const dailyBrief = Boolean(form.elements.daily_brief?.checked);
@@ -29,6 +48,7 @@
     const message = form.querySelector('[data-email-interest-message]');
     const button = form.querySelector('button[type="submit"]');
 
+    removeNextStep(form);
     if (!validEmail(email)) {
       setMessage(message, 'Nhập email hợp lệ để ghi nhận nhu cầu nhận bản tin/cảnh báo StockRadar.', 'error');
       form.elements.email?.focus();
@@ -46,7 +66,7 @@
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     if (button) button.disabled = true;
-    setMessage(message, 'Đang ghi nhận nhu cầu…');
+    setMessage(message, 'Đang ghi nhận email…');
 
     try {
       const response = await fetch(endpoint(), {
@@ -71,12 +91,13 @@
         throw new Error(payload.message || 'Chưa thể ghi nhận nhu cầu email lúc này.');
       }
 
-      form.reset();
       setMessage(
         message,
         payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bản tin 09:00 cần quyền Free trở lên; cảnh báo mua/bán cần quyền Premium.',
         'success'
       );
+      renderNextStep(form, email);
+      form.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
     } catch (error) {
       const text = error?.name === 'AbortError'
         ? 'Kết nối ghi nhận email quá thời gian. Vui lòng thử lại.'
