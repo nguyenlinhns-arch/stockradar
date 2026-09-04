@@ -42,10 +42,11 @@ class ConversionV3Tests(unittest.TestCase):
             self.assertIn(marker, transformed)
         self.assertNotIn("299.000", transformed)
 
-    def test_signup_keeps_consent_optional_and_supports_premium_fast_path(self) -> None:
+    def test_signup_keeps_paid_email_consent_optional_and_supports_premium_fast_path(self) -> None:
         transformed = MODULE.transform_signup(self.read("website/signup/index.html"))
         self.assertIn("data-premium-flow-summary", transformed)
-        self.assertIn("Tùy chọn nhận email", transformed)
+        self.assertIn("Tùy chọn email Premium", transformed)
+        self.assertIn("Free chỉ nhận email hệ thống", transformed)
         js = self.read("website/assets/conversion-v3.js")
         self.assertIn("params.get('plan') === 'premium'", js)
         self.assertIn("premium.checked = true", js)
