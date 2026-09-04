@@ -147,9 +147,7 @@ Deno.serve(async (req: Request) => {
   const quotaResponse = { limit: 3, remaining, reset_at: quota.reset_at || null, reset_timezone: quota.daily_reset_timezone || "Asia/Ho_Chi_Minh" };
   const rateHeaders = { "X-RateLimit-Limit": "3", ...(remaining !== null ? { "X-RateLimit-Remaining": String(remaining) } : {}) };
 
-  // Research answers must remain available even when an external language model is
-  // unavailable. The deterministic StockRadar core is the primary fail-safe layer.
-  if (mode !== "ACTION_READY") {
+  if (mode === "METHOD_ONLY") {
     return jsonResponse({ status: "READY", scope: "ticker", tier: "GUEST", mode, answer_engine: "STOCKRADAR_CORE", ticker, horizon, answer: fallbackAnswer, quota_consumed: true, source, quota: quotaResponse }, 200, origin, rateHeaders);
   }
 
