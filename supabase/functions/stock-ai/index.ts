@@ -174,7 +174,8 @@ NGUYÊN TẮC BẮT BUỘC:
 - Nếu dữ liệu thiếu hoặc một horizon không READY, phải nói rõ CHƯA ĐỦ DỮ LIỆU cho phần đó.
 - Ranking không đồng nghĩa khuyến nghị. Không biến điểm cao thành lệnh mua khi Action Gate chưa xác nhận.
 - Tách riêng: người chưa có cổ phiếu (mua mới/chờ) và người đang nắm giữ (giữ/giảm/thoát/chưa đủ dữ liệu).
-- USER_CONTEXT.owns_stock chỉ có nghĩa người dùng đã đánh dấu đang sở hữu; không được suy đoán số lượng, giá vốn, NAV hay lãi/lỗ cá nhân nếu không có dữ liệu đó.
+- USER_CONTEXT.requested_ticker.owns_stock hoặc USER_CONTEXT.watchlist[].owns_stock chỉ có nghĩa người dùng đã đánh dấu đang sở hữu; không được suy đoán số lượng, giá vốn, NAV hay lãi/lỗ cá nhân nếu không có dữ liệu đó.
+- Khi REQUEST_SCOPE=ticker, USER_CONTEXT chỉ chứa cấu hình liên quan đúng mã đang hỏi; không được suy đoán các mã khác trong tài khoản.
 - Khi REQUEST_SCOPE=portfolio: ưu tiên mã đang sở hữu trước, sau đó watchlist. Chỉ nhắc đến mã nằm trong USER_CONTEXT. Không xếp hạng các score của các horizon khác nhau như thể cùng thang so sánh; nếu horizon lẫn nhau thì trình bày theo từng mã.
 - Nếu người dùng nêu rõ một khung thời gian, chỉ so sánh report của đúng khung đó khi DATA_CONTEXT đã cung cấp.
 - Không hứa chắc lợi nhuận, không gọi score là xác suất nếu context không có calibration.
@@ -281,6 +282,14 @@ Deno.serve(async (req: Request) => {
   });
   const ownedCount = watchlist.filter((item) => item.owns_stock).length;
   const alertCount = watchlist.filter((item) => item.alert_enabled).length;
+  const requestedWatchItem = scope === "ticker" ? (watchlist.find((item) => item.ticker === ticker) || null) : null;
+  const personalizationSummary = scope === "portfolio"
+    ? { watchlist_count: watchlist.length, owned_count: ownedCount, alert_count: alertCount }
+    : {
+        requested_ticker_configured: requestedWatchItem !== null,
+        owns_stock: requestedWatchItem?.owns_stock ?? null,
+        alert_enabled: requestedWatchItem?.alert_enabled ?? null,
+      };
 
   if (scope === "portfolio" && !watchlist.length) {
     await audit(serviceClient, user.id, "", horizon, "NO_WATCHLIST", "EMPTY_WATCHLIST", 200, startedAt);
@@ -290,7 +299,7 @@ Deno.serve(async (req: Request) => {
       horizon,
       tier,
       answer: blockedPortfolioAnswer(0, 0),
-      personalization: { watchlist_count: 0, owned_count: 0, alert_count: 0 },
+      personalization: personalizationSummary,
       quota_consumed: false,
     }, 200, origin);
   }
@@ -328,7 +337,7 @@ Deno.serve(async (req: Request) => {
       tier,
       answer: scope === "ticker" ? blockedTickerAnswer(ticker) : blockedPortfolioAnswer(watchlist.length, ownedCount),
       reports: reasons,
-      personalization: { watchlist_count: watchlist.length, owned_count: ownedCount, alert_count: alertCount },
+      personalization: personalizationSummary,
       quota_consumed: false,
     }, 200, origin);
   }
@@ -345,7 +354,7 @@ Deno.serve(async (req: Request) => {
       answer: scope === "ticker"
         ? `Dữ liệu StockRadar cho ${ticker} đã có phần đạt chuẩn, nhưng lớp diễn giải AI trên máy chủ chưa được kích hoạt. Tôi không tự thay thế bằng dữ liệu bên ngoài.`
         : `Tôi đã đọc cấu hình tài khoản và có ${readyRows.length} report StockRadar đạt chuẩn để dùng, nhưng lớp diễn giải AI trên máy chủ chưa được kích hoạt. Tôi không tự tạo kết luận thay thế.`,
-      personalization: { watchlist_count: watchlist.length, owned_count: ownedCount, alert_count: alertCount },
+      personalization: personalizationSummary,
       quota_consumed: false,
     }, 200, origin);
   }
@@ -382,19 +391,30 @@ Deno.serve(async (req: Request) => {
     return tier === "FREE" ? redactForFree(normalized) : normalized;
   });
 
-  const userContext = {
-    preferred_horizons: preferences.preferred_horizons,
-    preferred_sectors: preferences.preferred_sectors,
-    watchlist: watchlist.map((item) => ({
-      ticker: item.ticker,
-      horizon: item.horizon,
-      owns_stock: item.owns_stock,
-      alert_enabled: item.alert_enabled,
-    })),
-    watchlist_count: watchlist.length,
-    owned_count: ownedCount,
-    alert_count: alertCount,
-  };
+  const userContext = scope === "portfolio"
+    ? {
+        preferred_horizons: preferences.preferred_horizons,
+        preferred_sectors: preferences.preferred_sectors,
+        watchlist: watchlist.map((item) => ({
+          ticker: item.ticker,
+          horizon: item.horizon,
+          owns_stock: item.owns_stock,
+          alert_enabled: item.alert_enabled,
+        })),
+        watchlist_count: watchlist.length,
+        owned_count: ownedCount,
+        alert_count: alertCount,
+      }
+    : {
+        preferred_horizons: preferences.preferred_horizons,
+        preferred_sectors: preferences.preferred_sectors,
+        requested_ticker: requestedWatchItem ? {
+          ticker: requestedWatchItem.ticker,
+          horizon: requestedWatchItem.horizon,
+          owns_stock: requestedWatchItem.owns_stock,
+          alert_enabled: requestedWatchItem.alert_enabled,
+        } : null,
+      };
 
   const context = {
     ACCESS_TIER: tier,
@@ -460,11 +480,7 @@ Deno.serve(async (req: Request) => {
     horizon,
     tier,
     answer,
-    personalization: {
-      watchlist_count: watchlist.length,
-      owned_count: ownedCount,
-      alert_count: alertCount,
-    },
+    personalization: personalizationSummary,
     source: {
       snapshot_id: snapshotIds.length === 1 ? snapshotIds[0] : (selected.snapshot_id || null),
       snapshot_count: snapshotIds.length,
