@@ -187,7 +187,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json", workflow)
         self.assertLess(workflow.index("Run regression suite"), workflow.index("Fail-close public ticker seed before Pages build"))
 
-    def test_registration_page_compares_free_daily_and_premium_intraday(self):
+    def test_registration_page_compares_free_public_and_premium_daily_intraday(self):
         register = self.read("website/dang-ky/index.html")
         self.assertIn('data-proposition="plans"', register)
         self.assertIn("data-plan-free", register)
@@ -198,7 +198,10 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('href="thanh-toan/?plan=premium"', register)
         self.assertIn("StockRadar Free", register)
         self.assertIn("StockRadar Premium", register)
-        self.assertIn("Có · bản cơ bản", register)
+        self.assertIn("Free không nhận báo cáo 09:00", register)
+        self.assertIn("Báo cáo email 09:00 hằng ngày</td><td class=\"plan-no\">Không", register)
+        self.assertIn("báo cáo Premium 09:00 hằng ngày", register)
+        self.assertNotIn("Có · bản cơ bản", register)
         self.assertIn("cảnh báo điểm mua/bán trong phiên", register.lower())
         self.assertIn("10:30 · 11:15 · 13:30 · 14:15", register)
         self.assertIn("data-email-interest-form", register)
