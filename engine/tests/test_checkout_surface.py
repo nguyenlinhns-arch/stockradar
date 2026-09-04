@@ -80,13 +80,23 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertNotIn("service_role", guard.lower())
         self.assertNotIn("sb_secret_", guard.lower())
 
-    def test_plan_page_has_separate_registration_ctas(self):
+    def test_premium_registration_routes_directly_to_payment(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
+        registration_guard = (ROOT / "scripts" / "enforce_registration_plan_ctas.py").read_text(encoding="utf-8")
+        auth = (ROOT / "website" / "assets" / "auth.js").read_text(encoding="utf-8")
+
         self.assertIn('data-plan-free', plans)
         self.assertIn('data-plan-premium', plans)
-        self.assertIn('href="signup/?plan=free">Đăng ký</a>', plans)
-        self.assertIn('href="signup/?plan=premium">Đăng ký</a>', plans)
-        self.assertNotIn("Thanh toán / Nâng Premium", plans)
+        self.assertIn('signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium', registration_guard)
+        self.assertIn('Đăng ký & thanh toán', registration_guard)
+        self.assertIn('data-premium-signup-payment-flow-v1', registration_guard)
+        self.assertIn('dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium', registration_guard)
+        self.assertIn('Xác minh & sang thanh toán', registration_guard)
+        self.assertIn('Không cần tạo Free rồi nâng cấp', registration_guard)
+        self.assertIn("plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/'", auth)
+        self.assertIn("options: { emailRedirectTo: destination }", auth)
+        self.assertIn("location.href = destination", auth)
+        self.assertNotIn("Thanh toán / Nâng Premium", registration_guard)
 
 
 if __name__ == "__main__":
