@@ -6,15 +6,19 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class RegistrationReadinessFallbackTests(unittest.TestCase):
-    def test_pending_email_state_routes_signup_to_plan_selection_instead_of_hiding(self):
+    def test_transactional_auth_remains_open_when_product_email_is_pending(self):
         gate = (ROOT / "website" / "assets" / "auth-production-gate.js").read_text(encoding="utf-8")
-        self.assertIn("routeSignupLinksToInterest", gate)
-        self.assertIn("interestHref", gate)
-        self.assertIn("dang-ky/", gate)
-        self.assertNotIn("removeSignupLinks", gate)
-        self.assertNotIn("link.hidden = true", gate)
+        self.assertIn("transactionalAuthReady", gate)
+        self.assertIn("config.configured === true", gate)
+        self.assertIn("config.provider === 'supabase'", gate)
+        self.assertIn("config.supabaseUrl", gate)
+        self.assertIn("config.supabasePublishableKey", gate)
+        self.assertIn("if (transactionalAuthReady)", gate)
+        self.assertIn("return;", gate)
+        self.assertNotIn("Đăng ký tài khoản mới sử dụng email xác minh", gate)
+        self.assertNotIn("routeSignupLinksToInterest", gate)
 
-    def test_public_copy_switches_registration_route_by_email_readiness(self):
+    def test_public_copy_can_still_route_top_level_registration_through_plan_selection(self):
         source = (ROOT / "website" / "assets" / "public-copy-v7.js").read_text(encoding="utf-8")
         self.assertIn("emailDeliveryReady()", source)
         self.assertIn("emailDeliveryReady() ? 'signup/' : 'dang-ky/'", source)
