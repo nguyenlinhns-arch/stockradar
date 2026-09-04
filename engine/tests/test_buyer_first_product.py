@@ -13,7 +13,7 @@ class BuyerFirstProductTests(unittest.TestCase):
     def test_homepage_sells_decisions_before_methods(self) -> None:
         home = self.read("website/index.html")
         self.assertIn("buyer-first-section", home)
-        self.assertIn("Bạn trả tiền để nhận gì?", home)
+        self.assertIn("BẠN TRẢ TIỀN ĐỂ NHẬN GÌ?", home)
         self.assertIn("Mua mới hay chờ?", home)
         self.assertIn("Đang cầm thì làm gì?", home)
         self.assertIn("Hành động ở giá nào?", home)
