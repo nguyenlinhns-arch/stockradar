@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from typing import Any, Mapping
+from .ticker_symbol import is_valid_hose_ticker
 
 
 HORIZONS = frozenset({"SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"})
@@ -12,7 +13,7 @@ class ReportContractError(ValueError):
 
 def _ticker(value: object) -> str:
     ticker = str(value or "").strip().upper()
-    if len(ticker) != 3 or not ticker.isascii() or not ticker.isalpha():
+    if not is_valid_hose_ticker(ticker):
         raise ReportContractError(f"invalid report ticker: {ticker!r}")
     return ticker
 
