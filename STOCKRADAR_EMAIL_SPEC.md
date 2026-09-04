@@ -1,4 +1,4 @@
-# StockRadar Email Specification V2.1.4
+# StockRadar Email Specification V2.1.5
 
 Email is the primary retention channel for registered users and the premium delivery channel for Trial/Paid users.
 
@@ -25,6 +25,25 @@ Public copy may say: “MIỄN PHÍ: nhận bản rà soát thị trường cơ 
 - Event alert: activated, invalidated, target/stop/expiry, market-regime or watchlist change.
 - Post-session digest: new/closed records and lifecycle summary.
 - Weekly transparency report: open/closed/unactivated counts and upcoming watch items.
+
+## Immediate first-email contract — mandatory
+
+A newly registered user must receive useful StockRadar content immediately after the system has verified email ownership, resolved the account tier and confirmed valid product-email consent. The user must not have to wait until the next 09:00 scheduled report.
+
+Rules:
+
+1. `FREE`: immediately send a welcome + current Free market brief. It should include the latest verified market state, limited objective watchlist/sector highlights when supported, what StockRadar will monitor next, and a clear explanation of what remains Premium-only.
+2. `TRIAL` / `PAID`: immediately send a welcome + highest currently available Premium report for that recipient, including deeper market analysis, objective watchlist/recommendation state, lifecycle changes and actionable fields only where the evidence gate supports them.
+3. Selecting or expressing interest in Premium does not grant Premium email. Until payment/entitlement is verified, the account follows its actual resolved tier.
+4. Immediate first-email delivery is separate from the recurring 09:00 report and must use an idempotency key so signup/verification retries do not create duplicates.
+5. If the user verifies after 09:00, send the immediate first email using the latest verified data available at that time; do not defer until the next day.
+6. If data quality prevents a formal recommendation, the immediate email must still provide useful market analysis and a clearly labelled watchlist where evidence exists. It must not be an empty or near-empty “chưa phát hành” notice.
+7. If there is genuinely insufficient verified evidence to name any stock, explain the data limitation concisely and provide market/sector/process value instead; never fabricate names, prices or signals.
+
+Suggested subjects:
+
+- Free: `[StockRadar] Chào mừng — Bản rà soát thị trường của bạn`
+- Trial/Paid: `[StockRadar Pro] Chào mừng — Báo cáo & radar hành động của bạn`
 
 ## Daily report date contract — mandatory
 
@@ -77,6 +96,24 @@ Daily reports should follow one stable reading order so recipients can compare o
 
 If no new recommendation passes the gate, say so clearly. Never create a recommendation merely to fill the email.
 
+## Daily content value floor — mandatory
+
+The 09:00 email must be useful enough to read even on a day with no new formal recommendation. A Premium daily email must never consist mainly of repeated statements such as “Data Gate chưa đạt”, “chưa phát hành Top 5” or “không có tín hiệu”.
+
+When the formal full-universe Top 5 gate is not satisfied:
+
+- Keep the official `Top 5 HOSE` / `Top theo ngành` status as `NOT_PUBLISHED` or equivalent; do not mislabel a partial list as an official Top 5.
+- Still provide a clearly labelled `WATCHLIST / MÃ CẦN THEO DÕI`, targeting 5 objectively supported HOSE names when the latest verified evidence is sufficient. These are monitoring candidates, not formal recommendations.
+- For each watchlist name, include the reason it is being monitored, the relevant setup/industry context, what confirmation is still missing, and the next condition/checkpoint that could change its status.
+- Do not publish Buy Zone, Stop-loss, Target or Risk/Reward from insufficient or stale evidence. Those fields require the normal recommendation/action gate.
+- If fewer than 5 names have adequate verified evidence, publish only the supported names and say why the list is shorter. Never invent names merely to reach five.
+- Include useful market state, sector focus, risk factors and the plan for the 10:30 · 11:15 · 13:30 · 14:15 scans.
+
+This distinction is mandatory:
+
+- `TOP / KHUYẾN NGHỊ`: requires the formal production/full-universe gate.
+- `WATCHLIST / THEO DÕI`: may be shown from the strongest available verified evidence, but must be explicitly labelled non-recommendation until confirmation.
+
 ## Premium feature copy
 
 Premium may include:
@@ -93,7 +130,7 @@ Verified consent, confirmed sender/domain, unsubscribe and preference center, su
 
 The standard daily report delivery target is 09:00 Vietnam time. Official in-session scan checkpoints are 10:30, 11:15, 13:30 and 14:15 Vietnam time. Worker cadence may be higher, but alerts require confirmation and must not claim tick-level realtime.
 
-If no new recommendation passes the gate, the paid email says so and may summarize existing market-wide records, followed tickers selected by that recipient, market state, Top changes and risk alerts. It never creates a recommendation merely to fill an email.
+If no new recommendation passes the gate, the paid email says so and must still satisfy the `Daily content value floor`: summarize supported watchlist candidates, existing market-wide records, followed tickers selected by that recipient, market state, Top changes and risk alerts as available. It never creates a recommendation merely to fill an email.
 
 ## Event-alert date contract
 
@@ -138,6 +175,7 @@ The production website has one account-based funnel for the two primary email go
 - legal acceptance and product-email intent are passed into Supabase Auth user metadata at signup;
 - `handle_new_user` stores Terms/Privacy receipts and, when at least one product-email option is selected, creates fail-closed email preferences plus an append-only `SIGNUP` consent event;
 - after email verification, a Free account that explicitly selected the daily brief may have that preference enabled automatically; actual provider delivery still remains subject to the delivery gate;
+- after email verification and tier resolution, an idempotent immediate first-email job must be created so the user receives useful content without waiting for 09:00;
 - Free may retain Premium-alert interest in preferences, but the private eligibility view masks Premium-only products unless the account tier is Trial/Paid;
 - the account center lets an authenticated user change daily-report and buy/sell-alert preferences and withdraw consent;
 - each watchlist row stores `alert_enabled` so later event delivery can respect ticker-level alert preferences;
@@ -154,5 +192,7 @@ Track `email_open` and `email_click` only where lawful and consented. Do not inc
 Consent/outbox/suppression/delivery-gate foundation: **PASS**.
 
 Signup/account preference funnel and tier-aware entitlement boundary: **PASS**.
+
+Immediate first-email contract and daily content value floor: **SPECIFIED — implementation must conform before production email is considered complete**.
 
 Actual product-email sending remains governed by the fail-closed delivery gate and must not be bypassed.
