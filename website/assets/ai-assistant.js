@@ -10,19 +10,37 @@
 
   function siteUrl(path = '') { return new URL(String(path).replace(/^\/+/, ''), document.baseURI).toString(); }
 
+  function validTicker(value) {
+    return /^[A-Z0-9]{3}$/.test(String(value || '')) && /[A-Z]/.test(String(value || ''));
+  }
+
   function tickerFromPage() {
     const params = new URLSearchParams(location.search);
     const queryTicker = String(params.get('ticker') || '').trim().toUpperCase();
-    if (/^[A-Z]{3}$/.test(queryTicker)) return queryTicker;
+    if (validTicker(queryTicker)) return queryTicker;
     const parts = location.pathname.split('/').filter(Boolean);
     const coPhieuIndex = parts.findIndex(part => part.toLowerCase() === 'co-phieu');
     const routeTicker = coPhieuIndex >= 0 ? String(parts[coPhieuIndex + 1] || '').toUpperCase() : '';
-    return /^[A-Z]{3}$/.test(routeTicker) ? routeTicker : '';
+    return validTicker(routeTicker) ? routeTicker : '';
   }
 
   function extractTicker(text) {
-    const tokens = String(text || '').toUpperCase().match(/\b[A-Z]{3}\b/g) || [];
-    return tokens.find(token => !STOPWORDS.has(token)) || state.ticker || '';
+    const tokens = String(text || '').toUpperCase().match(/\b[A-Z0-9]{3}\b/g) || [];
+    return tokens.find(token => validTicker(token) && !STOPWORDS.has(token)) || state.ticker || '';
+  }
+
+  function isPortfolioPage() {
+    return location.pathname.split('/').filter(Boolean).some(part => part.toLowerCase() === 'hom-nay');
+  }
+
+  function portfolioIntent(text) {
+    const value = String(text || '').toLowerCase();
+    return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|các mã đang giữ|cac ma dang giu|tài khoản|tai khoan|hôm nay.*(làm gì|lam gi|chú ý|chu y)|mã nào.*(gần|gan|tốt|tot|rủi ro|rui ro))/.test(value);
+  }
+
+  function requestScope(message, ticker) {
+    if (ticker) return 'ticker';
+    return portfolioIntent(message) || isPortfolioPage() ? 'portfolio' : '';
   }
 
   function horizonFromText(text) {
@@ -77,7 +95,7 @@
 
   function appendLogin(log) {
     const wrap = node('div', 'sr-ai-message sr-ai-assistant');
-    wrap.append(node('div', 'sr-ai-bubble', 'Hãy đăng nhập để StockRadar AI đọc báo cáo theo quyền tài khoản của bạn.'));
+    wrap.append(node('div', 'sr-ai-bubble', 'Hãy đăng nhập để StockRadar AI đọc dữ liệu theo quyền tài khoản của bạn.'));
     const link = node('a', 'sr-ai-login', 'Đăng nhập để hỏi AI');
     const login = new URL('dang-nhap/', document.baseURI);
     login.searchParams.set('next', location.href);
@@ -89,11 +107,15 @@
 
   function sourceMeta(data) {
     const source = data?.source || {};
+    const personalization = data?.personalization || {};
     const bits = [];
+    if (data?.scope === 'portfolio') bits.push('Danh mục cá nhân');
     if (source.generated_at) {
       try { bits.push(`Dữ liệu ${new Date(source.generated_at).toLocaleString('vi-VN')}`); } catch (_) {}
     }
     if (source.snapshot_id) bits.push(`Snapshot ${String(source.snapshot_id).slice(0, 18)}`);
+    if (personalization.watchlist_count != null) bits.push(`${personalization.watchlist_count} mã theo dõi`);
+    if (personalization.owned_count != null) bits.push(`${personalization.owned_count} mã đang sở hữu`);
     if (data?.quota?.remaining != null) bits.push(`Còn ${data.quota.remaining} lượt`);
     return bits.join(' · ');
   }
@@ -101,16 +123,17 @@
   async function askAI(message, log, input, sendButton) {
     if (state.sending) return;
     const ticker = extractTicker(message);
-    if (!ticker) {
-      appendMessage(log, 'assistant', 'Hãy nhập mã HOSE gồm 3 chữ cái, ví dụ: “FPT mua được chưa?”.');
+    const scope = requestScope(message, ticker);
+    if (!scope) {
+      appendMessage(log, 'assistant', 'Hãy nhập một mã HOSE, hoặc hỏi về danh mục/watchlist, ví dụ: “FPT mua được chưa?” hay “Danh mục hôm nay cần chú ý gì?”.');
       return;
     }
-    state.ticker = ticker;
+    if (ticker) state.ticker = ticker;
     const horizon = horizonFromText(message);
     state.sending = true;
     input.disabled = true;
     sendButton.disabled = true;
-    sendButton.textContent = 'Đang đọc dữ liệu…';
+    sendButton.textContent = scope === 'portfolio' ? 'Đang đọc danh mục…' : 'Đang đọc dữ liệu…';
 
     try {
       const session = await authSession();
@@ -127,7 +150,8 @@
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          ticker,
+          scope,
+          ticker: ticker || '',
           horizon,
           message: String(message).slice(0, 700),
           history: state.history.slice(-MAX_HISTORY)
@@ -157,12 +181,20 @@
     }
   }
 
+  function chipLabels() {
+    if (isPortfolioPage()) {
+      return ['Danh mục hôm nay cần làm gì?', 'Watchlist có mã nào đáng chú ý?', 'Mã đang giữ cần chú ý gì?', 'Rủi ro danh mục'];
+    }
+    if (state.ticker) return ['Mua được chưa?', '3–6 tháng thế nào?', 'Rủi ro chính', 'Đang nắm giữ thì sao?'];
+    return ['Danh mục hôm nay', 'Watchlist có gì mới?', 'Mã đang giữ cần chú ý?', '3–6 tháng mã nào tốt?'];
+  }
+
   function mount() {
     if (document.querySelector('[data-stockradar-ai]')) return;
 
     const root = node('div', 'sr-ai-root');
     root.dataset.stockradarAi = '';
-    const launcher = node('button', 'sr-ai-launcher', '✦ AI Phân tích');
+    const launcher = node('button', 'sr-ai-launcher', '✦ StockRadar AI');
     launcher.type = 'button';
     launcher.setAttribute('aria-expanded', 'false');
     launcher.setAttribute('aria-controls', 'stockradar-ai-panel');
@@ -175,7 +207,7 @@
     const header = node('header', 'sr-ai-header');
     const heading = node('div', 'sr-ai-heading');
     heading.append(node('strong', '', 'StockRadar AI'));
-    heading.append(node('span', '', 'Phân tích mã HOSE trên dữ liệu StockRadar'));
+    heading.append(node('span', '', 'Hỏi về mã HOSE, watchlist và danh mục của bạn'));
     const close = node('button', 'sr-ai-close', '×');
     close.type = 'button';
     close.setAttribute('aria-label', 'Đóng StockRadar AI');
@@ -183,17 +215,20 @@
 
     const log = node('div', 'sr-ai-log');
     log.setAttribute('aria-live', 'polite');
-    appendMessage(log, 'assistant', state.ticker
-      ? `Bạn đang xem ${state.ticker}. Hỏi tôi “mua được chưa?”, “3–6 tháng thế nào?” hoặc “rủi ro chính là gì?”.`
-      : 'Nhập một mã HOSE và câu hỏi, ví dụ: “FPT mua được chưa?”. Tôi chỉ diễn giải dữ liệu StockRadar đã vượt Data Gate.');
+    const greeting = isPortfolioPage()
+      ? 'Tôi có thể đọc watchlist và các mã bạn đánh dấu đang sở hữu. Hỏi “Danh mục hôm nay cần làm gì?” hoặc “Watchlist có mã nào đáng chú ý?”.'
+      : state.ticker
+        ? `Bạn đang xem ${state.ticker}. Hỏi “mua được chưa?”, “3–6 tháng thế nào?” hoặc “đang nắm giữ thì sao?”.`
+        : 'Bạn có thể hỏi một mã HOSE hoặc hỏi toàn danh mục/watchlist. Tôi chỉ dùng dữ liệu StockRadar đã vượt điều kiện phát hành.';
+    appendMessage(log, 'assistant', greeting);
 
     const chips = node('div', 'sr-ai-chips');
-    ['Mua được chưa?', 'Phân tích 3–6 tháng', 'Rủi ro chính', 'Đang nắm giữ thì sao?'].forEach(label => {
+    chipLabels().forEach(label => {
       const button = node('button', '', label);
       button.type = 'button';
       button.addEventListener('click', () => {
-        if (state.ticker) input.value = `${state.ticker} ${label}`;
-        else input.value = label;
+        const isPortfolioLabel = portfolioIntent(label) || isPortfolioPage();
+        input.value = state.ticker && !isPortfolioLabel ? `${state.ticker} ${label}` : label;
         input.focus();
       });
       chips.append(button);
@@ -203,13 +238,15 @@
     const input = document.createElement('textarea');
     input.rows = 2;
     input.maxLength = 700;
-    input.placeholder = state.ticker ? `Hỏi về ${state.ticker}…` : 'VD: FPT mua được chưa?';
+    input.placeholder = isPortfolioPage()
+      ? 'VD: Danh mục hôm nay cần làm gì?'
+      : state.ticker ? `Hỏi về ${state.ticker}…` : 'VD: FPT mua được chưa?';
     input.setAttribute('aria-label', 'Câu hỏi cho StockRadar AI');
     const send = node('button', 'sr-ai-send', 'Gửi');
     send.type = 'submit';
     form.append(input, send);
 
-    const disclaimer = node('p', 'sr-ai-disclaimer', 'AI chỉ diễn giải dữ liệu StockRadar. Không tự tạo giá hoặc tín hiệu khi Data Gate chưa đạt.');
+    const disclaimer = node('p', 'sr-ai-disclaimer', 'AI chỉ diễn giải dữ liệu StockRadar và dữ liệu tài khoản đã đăng nhập. Không tự tạo giá hoặc tín hiệu khi dữ liệu chưa đạt chuẩn.');
     panel.append(header, log, chips, form, disclaimer);
     root.append(panel, launcher);
     document.body.append(root);
