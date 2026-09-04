@@ -155,10 +155,7 @@
     const form = document.querySelector('[data-auth-signup-form]');
     if (!form) return;
 
-    document.querySelector('[data-auth-signup-otp-form]')?.remove();
-    document.querySelector('[data-signup-email-sent]')?.remove();
     syncExistingLogin(form);
-
     form.addEventListener('submit', event => submitSignup(event, form), true);
 
     form.querySelectorAll('input[name="selected_plan"]').forEach(input => {
