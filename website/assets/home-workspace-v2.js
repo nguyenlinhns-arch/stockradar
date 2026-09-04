@@ -60,6 +60,15 @@
     return text(value);
   }
 
+  function normalizeHeaderActions() {
+    const href = new URL('dang-ky/?plan=free', document.baseURI).toString();
+    document.querySelectorAll('.header-register-cta').forEach(link => {
+      link.href = href;
+      link.textContent = 'Đăng ký Free';
+      link.setAttribute('aria-label', 'Mở trang đăng ký StockRadar Free');
+    });
+  }
+
   function renderRecommendations(payload) {
     const body = qs('[data-home-reco-body]');
     const empty = qs('[data-home-reco-empty]');
@@ -122,7 +131,7 @@
     setText('[data-today-published]', number(published, '0'));
     setText('[data-today-data]', ready ? 'ĐÃ CÓ' : 'CHỜ');
     setText('[data-today-note]', ready && actionCount > 0
-      ? `${actionCount} thay đổi đáng chú ý trong feed hiện tại.`
+      ? `${actionCount} thay đổi đáng chú ý trong dữ liệu hiện tại.`
       : 'Chưa có tín hiệu hành động mới được phát hành.');
     setText('[data-today-asof]', fmtTime(today?.as_of || recommendations?.snapshot?.as_of));
   }
@@ -150,6 +159,10 @@
   }
 
   async function mount() {
+    setTimeout(normalizeHeaderActions, 0);
+    setTimeout(normalizeHeaderActions, 300);
+    setTimeout(normalizeHeaderActions, 1200);
+
     const results = await Promise.allSettled([
       getJson(DATA.radar), getJson(DATA.recommendations), getJson(DATA.today),
     ]);
