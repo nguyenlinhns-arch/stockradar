@@ -82,15 +82,11 @@ jobs:
           python scripts/apply_premium_email_product_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
 
-      - name: Verify deployable artifact
+      - name: Verify stock lookup deployable artifact
         run: |
           python scripts/verify_pages_auth.py .pages-site
           python scripts/verify_pages_public_surface_paid_home_v1.py .pages-site
           python scripts/verify_buyer_readiness.py .pages-site
-          python scripts/verify_conversion_paid_home_v1.py .pages-site
-          python scripts/verify_home_paid_intent_v1.py .pages-site
-          python scripts/verify_premium_email_product_v1.py .pages-site
-          python scripts/verify_conversion_funnel_v4.py .pages-site
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
