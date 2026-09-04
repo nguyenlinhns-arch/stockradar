@@ -31,6 +31,19 @@ class BuyerFirstProductTests(unittest.TestCase):
         for field in ("Buy Zone", "Stop", "Target", "Risk/Reward", "Không tự gia hạn"):
             self.assertIn(field, plans)
 
+    def test_plan_page_invites_proof_before_payment_and_states_limits(self) -> None:
+        plans = self.read("website/dang-ky/index.html")
+        self.assertIn("TRƯỚC KHI TRẢ TIỀN", plans)
+        self.assertIn("Hãy tự kiểm chứng StockRadar trước khi nâng Premium", plans)
+        for marker in (
+            "Tra thử một mã", "Xem hiệu quả", "Xem tiêu chuẩn khuyến nghị",
+            "không hứa real-time từng giây", "Không tự đặt lệnh", "không tự gia hạn",
+        ):
+            self.assertIn(marker, plans)
+        self.assertIn('href="kiem-tra-co-phieu/"', plans)
+        self.assertIn('href="hieu-qua/"', plans)
+        self.assertIn('href="khuyen-nghi/"', plans)
+
     def test_stock_page_separates_new_position_and_holding_decisions(self) -> None:
         page = self.read("website/co-phieu/index.html")
         self.assertIn("Nếu chưa có hàng: MUA hay CHỜ?", page)
