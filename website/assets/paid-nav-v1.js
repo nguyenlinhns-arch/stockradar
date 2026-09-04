@@ -24,9 +24,6 @@
     }
   }
 
-  // ai-assistant.js historically used Supabase's default storage key while the
-  // rest of StockRadar uses `stockradar-auth`. Keep both stores synchronized so
-  // one browser session is seen consistently by the header and StockRadar AI.
   function syncAiAuthStorageFromPrimary() {
     const secondary = aiStorageKey();
     if (!secondary || secondary === STORAGE_KEY) return;
@@ -73,8 +70,6 @@
 
   function premiumTier(value) {
     const tier = String(value || '').trim().toUpperCase();
-    // TRIAL is accepted only as a legacy backend value. User-facing StockRadar
-    // has exactly three states: Guest -> Free -> Premium.
     return tier === 'PAID' || tier === 'TRIAL';
   }
 
@@ -94,7 +89,8 @@
     ];
 
     const currentPath = location.pathname.replace(/\/+$/, '') + '/';
-    nav.replaceChildren(...links.map(([path, label]) => {
+    const fragment = document.createDocumentFragment();
+    links.forEach(([path, label]) => {
       const a = document.createElement('a');
       a.href = siteUrl(path);
       a.textContent = label;
@@ -103,20 +99,19 @@
         const targetPath = new URL(a.href).pathname.replace(/\/+$/, '') + '/';
         if (targetPath === currentPath) a.setAttribute('aria-current', 'page');
       } catch (_) {}
-      return a;
-    }));
+      fragment.append(a);
+    });
+    nav.replaceChildren(fragment);
   }
 
-  function guestHeader(group) {
-    group.dataset.accountState = 'guest';
-    group.innerHTML = `<a class="header-login-cta" href="${siteUrl('dang-nhap/')}">Đăng nhập</a><a class="header-register-cta" href="${siteUrl('dang-ky/?plan=free')}">Đăng ký miễn phí</a>`;
-  }
-
-  function signedInHeader(group, user, premium) {
-    const email = escapeHtml(user?.email || 'Tài khoản');
-    const initial = escapeHtml((user?.email || 'S').slice(0, 1).toUpperCase());
-    group.dataset.accountState = premium ? 'premium' : 'free';
-    group.innerHTML = `<a class="auth-account-link" href="${siteUrl('tai-khoan/')}" title="${email}"><span class="auth-avatar">${initial}</span><span class="auth-account-email">${email}</span></a>${premium ? '<span class="header-account-tier">Premium</span>' : `<a class="button button-primary button-small header-account-upgrade" href="${siteUrl('thanh-toan/?plan=premium')}">Nâng Premium</a>`}<button class="auth-logout" type="button" data-global-auth-logout>Đăng xuất</button>`;
+  function desiredHeaderHtml() {
+    if (!runtime.user) {
+      return `<a class="header-login-cta" href="${siteUrl('dang-nhap/')}">Đăng nhập</a><a class="header-register-cta" href="${siteUrl('dang-ky/?plan=free')}">Đăng ký miễn phí</a>`;
+    }
+    const email = escapeHtml(runtime.user.email || 'Tài khoản');
+    const initial = escapeHtml((runtime.user.email || 'S').slice(0, 1).toUpperCase());
+    const premium = premiumTier(runtime.tier);
+    return `<a class="auth-account-link" href="${siteUrl('tai-khoan/')}" title="${email}"><span class="auth-avatar">${initial}</span><span class="auth-account-email">${email}</span></a>${premium ? '<span class="header-account-tier">Premium</span>' : `<a class="button button-primary button-small header-account-upgrade" href="${siteUrl('thanh-toan/?plan=premium')}">Nâng Premium</a>`}<button class="auth-logout" type="button" data-global-auth-logout>Đăng xuất</button>`;
   }
 
   function canonicalizeHeader() {
@@ -125,13 +120,13 @@
     const group = header.querySelector('[data-header-auth-actions]');
     if (!group) return;
 
-    // Remove the older auth.js header block when both runtimes are present.
     header.querySelectorAll('[data-auth-nav]').forEach(node => node.remove());
     group.hidden = false;
     group.removeAttribute('aria-hidden');
+    group.dataset.accountState = runtime.user ? (premiumTier(runtime.tier) ? 'premium' : 'free') : 'guest';
 
-    if (runtime.user) signedInHeader(group, runtime.user, premiumTier(runtime.tier));
-    else guestHeader(group);
+    const html = desiredHeaderHtml();
+    if (group.innerHTML !== html) group.innerHTML = html;
   }
 
   async function resolveAccount() {
@@ -198,7 +193,7 @@
         canonicalizeHeader();
       });
     });
-    runtime.observer.observe(header, { childList: true, subtree: true });
+    runtime.observer.observe(header, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'href', 'class'] });
   }
 
   async function mount() {
