@@ -77,6 +77,10 @@ def rewrite_capability_copy(source: str, *, email_ready: bool, checkout_ready: b
     if not email_ready:
         source = rewrite_home_lead(source)
         for before, after in (
+            ("StockRadar — tra cứu cổ phiếu HOSE, nhận bản rà soát 09:00 miễn phí và nâng Premium để nhận cảnh báo điểm mua/bán trong phiên.", "StockRadar — Top cổ phiếu HOSE, Radar theo ngành, phân tích đa khung và quản trị giao dịch."),
+            ("StockRadar — Radar cổ phiếu HOSE & bản rà soát 09:00", "StockRadar — Top HOSE, Radar & phân tích cổ phiếu"),
+            ("Tra cứu HOSE, Radar 30 cổ phiếu theo 10 ngành, nhận email Free lúc 09:00 và cảnh báo hành động Premium trong phiên.", "Tra cứu HOSE, Top cổ phiếu theo tiêu chí StockRadar, Radar 30 theo ngành và phân tích đa khung."),
+            ("StockRadar — Radar HOSE & bản rà soát 09:00", "StockRadar — Top HOSE & phân tích cổ phiếu"),
             ("Nhận email 09:00", "Đăng ký"),
             ("Nhận bản tin 09:00 miễn phí", "Đăng ký Free"),
             ("FREE · EMAIL 09:00", "FREE · STOCKRADAR"),
@@ -88,9 +92,11 @@ def rewrite_capability_copy(source: str, *, email_ready: bool, checkout_ready: b
             ("Tra cứu, Radar, phân tích công khai và email tổng hợp để tự đánh giá cổ phiếu HOSE.", "Tra cứu, Radar và phân tích công khai để tự đánh giá cổ phiếu HOSE."),
             ("Toàn bộ quyền Free, bao gồm bản tin 09:00.", "Toàn bộ quyền Free và báo cáo phân tích chuyên sâu."),
             ("Điểm khác biệt chính: Free có bản rà soát 09:00; Premium thêm chiều sâu phân tích và cảnh báo mua/bán trong phiên.", "Điểm khác biệt chính: Free giúp tra cứu và theo dõi; Premium mở chiều sâu phân tích, kế hoạch giao dịch và cảnh báo theo quyền gói."),
+            ("Ưu tiên Free email và Premium ở đúng thời điểm.", "Tra cứu, Radar và Premium theo đúng nhu cầu."),
         ):
             source = source.replace(before, after)
 
+        source = re.sub(r"Nhận\s+email\s+09:00", "Đăng ký", source, flags=re.IGNORECASE)
         source = re.sub(
             r'<li><strong>Bản rà soát thị trường cơ bản qua email lúc 09:00 hằng ngày</strong>.*?</li>',
             '<li><strong>Top HOSE và Radar theo ngành</strong> khi dữ liệu xếp hạng đạt chuẩn.</li>',
