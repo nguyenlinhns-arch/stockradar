@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 import unittest
 
-from email.premium_product_v1 import build_premium_action_alert, build_premium_daily
+from engine.stockradar.premium_email import build_premium_action_alert, build_premium_daily
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -83,7 +83,7 @@ class PremiumEmailProductV1Tests(unittest.TestCase):
         self.assertEqual(stable["watchlist_changes"], [])
 
     def test_renderer_does_not_sell_named_methods(self) -> None:
-        source = (ROOT / "email" / "premium_product_v1.py").read_text(encoding="utf-8").upper()
+        source = (ROOT / "engine" / "stockradar" / "premium_email.py").read_text(encoding="utf-8").upper()
         for term in ("CANSLIM", "SEPA", "VPA", "RVOL", "WYCKOFF", "MINERVINI"):
             self.assertNotIn(term, source)
 
