@@ -8,8 +8,6 @@
   ]);
   const state = { ticker: tickerFromPage(), history: [], client: null, sending: false };
 
-  function siteUrl(path = '') { return new URL(String(path).replace(/^\/+/, ''), document.baseURI).toString(); }
-
   function validTicker(value) {
     return /^[A-Z0-9]{3}$/.test(String(value || '')) && /[A-Z]/.test(String(value || ''));
   }
@@ -102,12 +100,18 @@
 
   function appendLogin(log) {
     const wrap = node('div', 'sr-ai-message sr-ai-assistant');
-    wrap.append(node('div', 'sr-ai-bubble', 'Hãy đăng nhập để StockRadar AI đọc dữ liệu theo quyền tài khoản của bạn.'));
-    const link = node('a', 'sr-ai-login', 'Đăng nhập để hỏi AI');
-    const login = new URL('dang-nhap/', document.baseURI);
-    login.searchParams.set('next', location.href);
-    link.href = login.toString();
-    wrap.append(link);
+    wrap.append(node('div', 'sr-ai-bubble', 'Tạo tài khoản Free để dùng StockRadar AI 10 lượt mỗi ngày, hoặc đăng nhập nếu bạn đã có tài khoản.'));
+    const actions = node('div', 'sr-ai-login-actions');
+    const signup = node('a', 'sr-ai-login sr-ai-signup', 'Tạo Free · 10 lượt/ngày');
+    const signupUrl = new URL('signup/?plan=free', document.baseURI);
+    signupUrl.searchParams.set('next', location.href);
+    signup.href = signupUrl.toString();
+    const login = node('a', 'sr-ai-login sr-ai-login-secondary', 'Đăng nhập');
+    const loginUrl = new URL('dang-nhap/', document.baseURI);
+    loginUrl.searchParams.set('next', location.href);
+    login.href = loginUrl.toString();
+    actions.append(signup, login);
+    wrap.append(actions);
     log.append(wrap);
     log.scrollTop = log.scrollHeight;
   }
@@ -123,7 +127,11 @@
     if (source.snapshot_id) bits.push(`Snapshot ${String(source.snapshot_id).slice(0, 18)}`);
     if (personalization.watchlist_count != null) bits.push(`${personalization.watchlist_count} mã theo dõi`);
     if (personalization.owned_count != null) bits.push(`${personalization.owned_count} mã đang sở hữu`);
-    if (data?.quota?.remaining != null) bits.push(`Còn ${data.quota.remaining} lượt`);
+    if (data?.quota?.remaining != null) {
+      const limit = Number(data?.quota?.limit);
+      if (data?.tier === 'FREE' && limit === 10) bits.push(`Free · còn ${data.quota.remaining}/10 lượt hôm nay`);
+      else bits.push(`Còn ${data.quota.remaining} lượt`);
+    }
     return bits.join(' · ');
   }
 
@@ -140,7 +148,8 @@
     state.sending = true;
     input.disabled = true;
     sendButton.disabled = true;
-    sendButton.textContent = scope === 'portfolio' ? 'Đang đọc danh mục…' : 'Đang đọc dữ liệu…';
+    const originalLabel = sendButton.textContent || 'Gửi';
+    sendButton.textContent = scope === 'portfolio' ? 'Đang đọc danh mục…' : 'Đang phân tích…';
 
     try {
       const session = await authSession();
@@ -183,7 +192,7 @@
       state.sending = false;
       input.disabled = false;
       sendButton.disabled = false;
-      sendButton.textContent = 'Gửi';
+      sendButton.textContent = originalLabel;
       input.focus();
     }
   }
@@ -193,7 +202,21 @@
       return ['Danh mục hôm nay cần làm gì?', 'Watchlist có mã nào đáng chú ý?', 'Mã đang giữ cần chú ý gì?', 'Rủi ro danh mục'];
     }
     if (state.ticker) return ['Mua được chưa?', '3–6 tháng thế nào?', 'Rủi ro chính', 'Đang nắm giữ thì sao?'];
-    return ['Danh mục hôm nay', 'Watchlist có gì mới?', 'Mã đang giữ cần chú ý?', '3–6 tháng mã nào tốt?'];
+    return ['FPT mua được chưa?', 'Danh mục hôm nay cần làm gì?', 'Mã đang giữ cần chú ý gì?', '3–6 tháng mã nào đáng chú ý?'];
+  }
+
+  function wireQuestionChips(container, input, onChoose) {
+    chipLabels().forEach(label => {
+      const button = node('button', '', label);
+      button.type = 'button';
+      button.addEventListener('click', () => {
+        const isPortfolioLabel = portfolioIntent(label) || isPortfolioPage();
+        input.value = state.ticker && !isPortfolioLabel && !explicitTicker(label) ? `${state.ticker} ${label}` : label;
+        input.focus();
+        if (onChoose) onChoose();
+      });
+      container.append(button);
+    });
   }
 
   function mountContextShortcut(setOpen, input) {
@@ -221,7 +244,53 @@
     actions.prepend(button);
   }
 
-  function mount() {
+  function mountInlineSurface() {
+    const host = document.querySelector('[data-stockradar-ai-inline]');
+    if (!host || host.dataset.stockradarAiMounted === 'true') return;
+    host.dataset.stockradarAiMounted = 'true';
+    host.textContent = '';
+
+    const status = node('div', 'sr-ai-inline-status');
+    const free = node('span', 'sr-ai-inline-plan', 'FREE · 10 LƯỢT HỎI / NGÀY');
+    const premium = node('span', 'sr-ai-inline-plan is-premium', 'PREMIUM · AI + EMAIL ACTION ALERT');
+    status.append(free, premium);
+
+    const log = node('div', 'sr-ai-inline-log');
+    log.setAttribute('aria-live', 'polite');
+    appendMessage(log, 'assistant', 'Hỏi tôi về một mã HOSE hoặc danh mục của bạn. Free dùng cùng lõi phân tích, tối đa 10 lượt mỗi ngày.');
+
+    const chips = node('div', 'sr-ai-inline-chips');
+    const form = node('form', 'sr-ai-inline-form');
+    const input = document.createElement('textarea');
+    input.rows = 2;
+    input.maxLength = 700;
+    input.placeholder = 'VD: FPT mua được chưa? · Danh mục hôm nay cần làm gì?';
+    input.setAttribute('aria-label', 'Hỏi StockRadar AI');
+    const send = node('button', 'sr-ai-inline-send', 'Hỏi StockRadar AI');
+    send.type = 'submit';
+    form.append(input, send);
+    wireQuestionChips(chips, input);
+
+    const note = node('p', 'sr-ai-inline-note', 'AI chỉ dùng dữ liệu StockRadar đã vượt điều kiện phát hành. Premium thêm email chủ động ngay sau khi hệ thống xác nhận thay đổi hành động; không đổi trạng thái thì không gửi Action Alert.');
+    host.append(status, log, chips, form, note);
+
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const message = input.value.trim();
+      if (!message) return;
+      appendMessage(log, 'user', message);
+      input.value = '';
+      askAI(message, log, input, send);
+    });
+    input.addEventListener('keydown', event => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
+  }
+
+  function mountFloatingSurface() {
     if (document.querySelector('[data-stockradar-ai]')) return;
 
     const root = node('div', 'sr-ai-root');
@@ -239,7 +308,7 @@
     const header = node('header', 'sr-ai-header');
     const heading = node('div', 'sr-ai-heading');
     heading.append(node('strong', '', 'StockRadar AI'));
-    heading.append(node('span', '', 'Hỏi về mã HOSE, watchlist và danh mục của bạn'));
+    heading.append(node('span', '', 'Trung tâm hỏi đáp về mã HOSE và danh mục'));
     const close = node('button', 'sr-ai-close', '×');
     close.type = 'button';
     close.setAttribute('aria-label', 'Đóng StockRadar AI');
@@ -251,21 +320,10 @@
       ? 'Tôi có thể đọc watchlist và các mã bạn đánh dấu đang sở hữu. Hỏi “Danh mục hôm nay cần làm gì?” hoặc “Watchlist có mã nào đáng chú ý?”.'
       : state.ticker
         ? `Bạn đang xem ${state.ticker}. Hỏi “mua được chưa?”, “3–6 tháng thế nào?” hoặc “đang nắm giữ thì sao?”.`
-        : 'Bạn có thể hỏi một mã HOSE hoặc hỏi toàn danh mục/watchlist. Tôi chỉ dùng dữ liệu StockRadar đã vượt điều kiện phát hành.';
+        : 'Hỏi một mã HOSE hoặc danh mục/watchlist. Tài khoản Free có 10 lượt hỏi mỗi ngày.';
     appendMessage(log, 'assistant', greeting);
 
     const chips = node('div', 'sr-ai-chips');
-    chipLabels().forEach(label => {
-      const button = node('button', '', label);
-      button.type = 'button';
-      button.addEventListener('click', () => {
-        const isPortfolioLabel = portfolioIntent(label) || isPortfolioPage();
-        input.value = state.ticker && !isPortfolioLabel ? `${state.ticker} ${label}` : label;
-        input.focus();
-      });
-      chips.append(button);
-    });
-
     const form = node('form', 'sr-ai-form');
     const input = document.createElement('textarea');
     input.rows = 2;
@@ -277,8 +335,9 @@
     const send = node('button', 'sr-ai-send', 'Gửi');
     send.type = 'submit';
     form.append(input, send);
+    wireQuestionChips(chips, input);
 
-    const disclaimer = node('p', 'sr-ai-disclaimer', 'AI chỉ diễn giải dữ liệu StockRadar và dữ liệu tài khoản đã đăng nhập. Không tự tạo giá hoặc tín hiệu khi dữ liệu chưa đạt chuẩn.');
+    const disclaimer = node('p', 'sr-ai-disclaimer', 'Free: 10 lượt/ngày. Premium: AI + email Action Alert chủ động. AI không tự tạo giá hoặc tín hiệu khi dữ liệu chưa đạt chuẩn.');
     panel.append(header, log, chips, form, disclaimer);
     root.append(panel, launcher);
     document.body.append(root);
@@ -307,6 +366,11 @@
         form.requestSubmit();
       }
     });
+  }
+
+  function mount() {
+    mountInlineSurface();
+    mountFloatingSurface();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount);
