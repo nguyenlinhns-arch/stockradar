@@ -6,6 +6,7 @@ const EXPECTED_AUDIENCE = "stockradar-supabase-sync";
 const EXPECTED_REPOSITORY = "nguyenlinhns-arch/stockradar";
 const EXPECTED_REF = "refs/heads/main";
 const EXPECTED_WORKFLOW = "nguyenlinhns-arch/stockradar/.github/workflows/sync-stockradar-research-cache.yml@refs/heads/main";
+const EXPECTED_HOSE_UNIVERSE = 405;
 const ACCEPTED_DATA_ROLES = new Set([
   "INTERNAL_BACKEND_RESEARCH",
   "INTERNAL_BACKEND_RESEARCH_POSTCLOSE",
@@ -119,12 +120,20 @@ Deno.serve(async (req: Request) => {
 
   if (String(bundle.exchange || "").toUpperCase() !== "HOSE") return jsonResponse({ status: "INVALID_REQUEST", reason: "EXCHANGE_NOT_HOSE" }, 400);
   if (!ACCEPTED_DATA_ROLES.has(String(bundle.data_role || "").toUpperCase())) return jsonResponse({ status: "INVALID_REQUEST", reason: "INVALID_DATA_ROLE" }, 400);
-  if (bundle.public_release_allowed === true) return jsonResponse({ status: "INVALID_REQUEST", reason: "PUBLIC_RELEASE_NOT_ALLOWED" }, 400);
+  if (bundle.public_release_allowed !== false || bundle.public_action_allowed !== false) {
+    return jsonResponse({ status: "INVALID_REQUEST", reason: "PUBLIC_RELEASE_NOT_CLOSED" }, 400);
+  }
+  if (bundle.catalyst_alpha_weight_allowed !== false || bundle.institutional_alpha_weight_allowed !== false) {
+    return jsonResponse({ status: "INVALID_REQUEST", reason: "ALPHA_GATE_NOT_CLOSED" }, 400);
+  }
+
   const tickers = bundle.tickers;
   if (!tickers || typeof tickers !== "object" || Array.isArray(tickers)) return jsonResponse({ status: "INVALID_REQUEST", reason: "TICKERS_MISSING" }, 400);
   const tickerRows = tickers as Record<string, unknown>;
   const expectedCount = Number(bundle.universe_count || 0);
-  if (!expectedCount || expectedCount !== Object.keys(tickerRows).length) return jsonResponse({ status: "INVALID_REQUEST", reason: "UNIVERSE_COUNT_MISMATCH" }, 400);
+  if (expectedCount !== EXPECTED_HOSE_UNIVERSE || Object.keys(tickerRows).length !== EXPECTED_HOSE_UNIVERSE) {
+    return jsonResponse({ status: "INVALID_REQUEST", reason: "CANONICAL_HOSE_UNIVERSE_MISMATCH" }, 400);
+  }
 
   const generatedAt = String(bundle.generated_at_vn || bundle.generated_at || "").trim();
   const asOfDate = String(bundle.as_of_date || "").trim();
@@ -140,15 +149,14 @@ Deno.serve(async (req: Request) => {
     if (release.internal_research_ready !== true || release.public_action_allowed !== false) continue;
     eligible.push({ ticker, payload: row });
   }
-  if (!eligible.length) return jsonResponse({ status: "INVALID_REQUEST", reason: "NO_RESEARCH_READY_ROWS" }, 400);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
   if (!supabaseUrl || !serviceRoleKey) return jsonResponse({ status: "SERVICE_UNAVAILABLE", reason: "SUPABASE_ADMIN_CONFIG" }, 503);
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } });
   const digest = await sha256Hex(raw);
-  const snapshotId = `drive-stockradar-${asOfDate.replaceAll("-", "")}-${digest.slice(0, 16)}`;
-  const sourceRef = `internal-bundle:google-drive:sha256:${digest}`;
+  const snapshotId = `github-stockradar-${asOfDate.replaceAll("-", "")}-${digest.slice(0, 16)}`;
+  const sourceRef = `internal-bundle:github-actions:sha256:${digest}`;
 
   let synced = 0;
   const failures: Array<{ ticker: string; code: string }> = [];
@@ -183,6 +191,24 @@ Deno.serve(async (req: Request) => {
       synced_rows: synced,
       failed_rows: failures.length,
       failed_tickers: failures.slice(0, 20),
+      prune_performed: false,
+    }, 500);
+  }
+
+  const allowedTickers = eligible.map(({ ticker }) => ticker);
+  const { data: prunedRows, error: pruneError } = await serviceClient.rpc("prune_stockradar_internal_research_context", {
+    p_allowed_tickers: allowedTickers,
+  });
+  if (pruneError) {
+    console.error("stock-research-sync prune failure", pruneError.code || "RPC_FAILED");
+    return jsonResponse({
+      status: "PRUNE_FAILED",
+      snapshot_id: snapshotId,
+      universe_count: expectedCount,
+      eligible_rows: eligible.length,
+      synced_rows: synced,
+      prune_performed: false,
+      reason: String(pruneError.code || "RPC_FAILED"),
     }, 500);
   }
 
@@ -195,5 +221,7 @@ Deno.serve(async (req: Request) => {
     universe_count: expectedCount,
     eligible_rows: eligible.length,
     synced_rows: synced,
+    pruned_rows: Number(prunedRows || 0),
+    cache_replace_complete: true,
   });
 });
