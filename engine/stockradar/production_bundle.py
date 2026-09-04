@@ -14,6 +14,7 @@ from .input_policy import (
     validate_external_raw_columns,
 )
 from .production_data import CONTRACT_VERSION, COVERAGE_DATASETS, REQUIRED_DATASETS
+from .ticker_symbol import is_valid_hose_ticker
 
 
 class ProductionBundleError(ValueError):
@@ -71,7 +72,7 @@ def _normalized_ticker(value: object) -> str | None:
     ticker = str(value or "").strip().upper()
     if not ticker:
         return None
-    if len(ticker) != 3 or not ticker.isalpha() or not ticker.isascii():
+    if not is_valid_hose_ticker(ticker):
         raise ProductionBundleError(f"invalid ticker in bundle: {ticker!r}")
     return ticker
 
