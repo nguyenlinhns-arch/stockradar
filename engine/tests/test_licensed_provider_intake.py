@@ -65,6 +65,11 @@ def package():
             "source": "LICENSED_PROVIDER_RAW_INPUT",
             "exclusion_log": [],
         },
+        "compliance": {
+            "review_completed": True,
+            "public_recommendation_approved": True,
+            "evidence_ref": "COMPLIANCE-TEST-001",
+        },
         "active_status": {
             "semantics_resolved": True,
             "market_status_checked": True,
@@ -119,6 +124,7 @@ class LicensedProviderIntakeTests(unittest.TestCase):
             self.assertTrue(result.publication_ready, result.failures)
             self.assertTrue(descriptor["rights"]["redistribution_allowed"])
             self.assertTrue(descriptor["rights"]["derived_outputs_allowed"])
+            self.assertTrue(descriptor["compliance"]["public_recommendation_approved"])
             self.assertEqual(report["dataset_rows"]["ohlcv"], 3)
             self.assertEqual(len(report["dataset_checksums"]["ohlcv"]), 64)
             self.assertFalse(report["gate_mutation_performed"])
@@ -198,6 +204,15 @@ class LicensedProviderIntakeTests(unittest.TestCase):
             self.assertFalse(result.publication_ready)
             self.assertIn("snapshot_stale", result.failures)
             self.assertFalse(report["production_gate"]["publication_allowed"])
+
+    def test_missing_compliance_is_rejected_before_manifest(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            payload = package()
+            del payload["compliance"]
+            with self.assertRaisesRegex(LicensedIntakeError, "package.compliance object is required"):
+                prepare_licensed_intake(root, payload, rights(), now=NOW)
 
     def test_public_web_staging_and_outputs_are_rejected(self):
         repo_root = Path(__file__).resolve().parents[2]
