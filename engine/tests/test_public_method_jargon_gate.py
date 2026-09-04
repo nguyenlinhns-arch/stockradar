@@ -102,7 +102,8 @@ class PublicMethodJargonGateTests(unittest.TestCase):
     def test_public_transform_removes_setup_language(self):
         recommendations = self.transform("website/khuyen-nghi/index.html")
         self.assertNotIn("setup", recommendations.casefold())
-        self.assertIn("điều kiện hành động đạt chuẩn", recommendations)
+        self.assertIn("Không đủ chuẩn → không công bố", recommendations)
+        self.assertIn("tín hiệu hành động", recommendations.casefold())
 
     def test_final_scrub_retires_analysis_route_and_rewrites_links(self):
         with tempfile.TemporaryDirectory() as tmp:
