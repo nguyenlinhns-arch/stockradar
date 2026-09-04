@@ -4,72 +4,43 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Tín hiệu hành động StockRadar: mua mới, đang nắm giữ, Buy Zone, Stop, Target, R/R và nhật ký thay đổi; cùng danh sách 30 cổ phiếu theo Radar rà soát cân bằng ngành.">
+  <meta name="description" content="Khuyến nghị StockRadar chỉ xuất hiện khi cổ phiếu HOSE vượt qua toàn bộ Data Gate, Action Gate và có đủ Buy Zone, Stop, Target, Risk/Reward cùng dấu thời gian snapshot.">
   <title>Khuyến nghị — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
+  <link rel="stylesheet" href="assets/styles.css?v=20260904-operational3">
   <link rel="stylesheet" href="assets/home-density.css?v=20260903-home2">
   <link rel="stylesheet" href="assets/home-dense-v3.css?v=20260903-dense3">
   <link rel="stylesheet" href="assets/buyer-first-v1.css?v=20260904-buyer1">
-  <script src="assets/app.js?v=20260902-data1" defer></script>
+  <script src="assets/app.js?v=20260904-operational3" defer></script>
 </head>
 <body data-proposition="active-recommendations">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/" aria-current="page">Khuyến nghị</a><a href="nganh/">Theo ngành</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
 
   <main id="content">
-    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Khuyến nghị</span></nav><h1>Khuyến nghị StockRadar</h1><p>Không ép đủ số lượng. Chỉ khi setup đạt chuẩn, tín hiệu mới được phép trả lời mua mới, đang nắm giữ, vùng hành động và rủi ro.</p></div><div class="page-heading-actions"><span class="data-pill">RADAR RÀ SOÁT</span></div></div></section>
+    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Khuyến nghị</span></nav><h1>Khuyến nghị StockRadar</h1><p>StockRadar quét toàn HOSE nhưng không ép đủ số lượng. Chỉ mã vượt qua dữ liệu, thanh khoản, bối cảnh, chất lượng điểm vào và quản trị rủi ro mới được chuyển từ Radar sang tín hiệu hành động.</p></div><div class="page-heading-actions"><span class="data-pill">FULL HOSE · ACTION GATED</span><a class="button button-secondary button-small" href="radar5/">Mở Radar</a></div></div></section>
 
     <section class="recommendations-workspace"><div class="container">
       <div class="home-recommendation-status">
-        <article><span>Tín hiệu hành động hiện tại</span><strong>0 mã</strong><small>Không có setup đạt chuẩn tại snapshot công khai hiện tại.</small></article>
-        <article><span>Danh sách cổ phiếu theo Radar rà soát</span><strong>30 mã</strong><small>10 ngành · 3 mã mỗi ngành; danh sách rà soát không phải khuyến nghị mua.</small></article>
+        <article><span>Tín hiệu hành động hiện tại</span><strong data-current-action-count>0 mã</strong><small>0 tín hiệu là kết quả hợp lệ khi chưa có mã vượt toàn bộ gate ở snapshot công khai.</small></article>
+        <article><span>Phạm vi quét</span><strong>Toàn HOSE</strong><small>Không dùng danh sách 30 mã cố định; shortlist phải được sinh lại theo từng snapshot.</small></article>
       </div>
 
       <section class="buyer-recommendation-contract" aria-labelledby="buyer-recommendation-title">
         <span class="panel-label">TIÊU CHUẨN MỘT TÍN HIỆU TRẢ PHÍ</span>
         <h2 id="buyer-recommendation-title">Người mua phải nhìn một dòng là biết mình cần làm gì.</h2>
-        <p>Khi có tín hiệu hành động, StockRadar không chỉ hiện tên mã. Một khuyến nghị đủ chuẩn phải gắn quyết định, vùng giá, rủi ro, lý do và dấu thời gian để có thể kiểm chứng về sau.</p>
+        <p>Khi có tín hiệu hành động, StockRadar không chỉ hiện tên mã. Một khuyến nghị đủ chuẩn phải gắn quyết định, vùng giá, rủi ro, lý do, bối cảnh và dấu thời gian để có thể kiểm chứng về sau.</p>
         <div class="buyer-recommendation-fields" aria-label="Các trường của tín hiệu hành động"><span>Mã + snapshot</span><span>Khung đầu tư</span><span>Mua mới?</span><span>Đang nắm giữ?</span><span>Buy Zone</span><span>Stop / vô hiệu</span><span>Target</span><span>Risk/Reward</span><span>Lý do</span><span>Trạng thái vòng đời</span></div>
-        <div class="buyer-no-signal">Không đủ chuẩn → 0 tín hiệu là một kết quả hợp lệ, không phải lỗi sản phẩm.</div>
+        <div class="buyer-no-signal">Không đủ chuẩn → không công bố. Không có mã cố định để lấp chỗ trống.</div>
       </section>
 
       <section class="recommendation-reference-list" aria-labelledby="reference-watch-title">
-        <header><div><span class="panel-label">RADAR RÀ SOÁT</span><h2 id="reference-watch-title">Danh sách cổ phiếu theo Radar rà soát · 30 mã</h2></div><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu từng mã</a></header>
-        <div class="reference-watch-table">
+        <header><div><span class="panel-label">RADAR → ACTION GATE</span><h2 id="reference-watch-title">Shortlist theo snapshot</h2></div><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu từng mã</a></header>
+        <div class="reference-watch-table" data-radar-review-list>
           <div class="reference-watch-head"><span>Mã</span><span>Ngành</span><span>Trạng thái</span><span>Đánh giá hiện tại</span></div>
-          <div class="reference-watch-row"><b>ACB</b><span>Ngân hàng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>MBB</b><span>Ngân hàng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>TCB</b><span>Ngân hàng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>HCM</b><span>Chứng khoán</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>SSI</b><span>Chứng khoán</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>VCI</b><span>Chứng khoán</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>HPG</b><span>Thép</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>HSG</b><span>Thép</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>NKG</b><span>Thép</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>FPT</b><span>Công nghệ</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>CMG</b><span>Công nghệ</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>ELC</b><span>Công nghệ</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>GAS</b><span>Dầu khí</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>PLX</b><span>Dầu khí</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>PVD</b><span>Dầu khí</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>MWG</b><span>Bán lẻ &amp; phân phối</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>FRT</b><span>Bán lẻ &amp; phân phối</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>DGW</b><span>Bán lẻ &amp; phân phối</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>VIC</b><span>Bất động sản</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>VHM</b><span>Bất động sản</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>KDH</b><span>Bất động sản</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>VNM</b><span>Hàng tiêu dùng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>MSN</b><span>Hàng tiêu dùng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>SAB</b><span>Hàng tiêu dùng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>POW</b><span>Điện &amp; tiện ích</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>REE</b><span>Điện &amp; tiện ích</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>GEG</b><span>Điện &amp; tiện ích</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>GMD</b><span>Logistics &amp; cảng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>VSC</b><span>Logistics &amp; cảng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
-          <div class="reference-watch-row"><b>HAH</b><span>Logistics &amp; cảng</span><em>RÀ SOÁT</em><small>Đang rà soát</small></div>
+          <div class="empty" data-radar-review-empty>Shortlist chỉ hiển thị khi feed hiện tại vượt Data Gate và publication gate. Không dùng mã mẫu hoặc danh sách lựa chọn thủ công.</div>
         </div>
-        <p class="recommendation-reference-note">Danh sách cổ phiếu theo Radar rà soát là phạm vi rà soát cân bằng ngành của StockRadar, không phải khuyến nghị mua. Khi một setup đạt chuẩn hành động, StockRadar mới hiển thị Buy Zone, Stop-loss, Target, Upside/Downside và Risk/Reward.</p>
+        <p class="recommendation-reference-note">Radar và Khuyến nghị là hai lớp khác nhau: Radar xếp hạng các mã đủ điều kiện rà soát; Khuyến nghị chỉ xuất hiện khi Action Gate xác nhận đầy đủ Buy Zone, Stop-loss, Target, Upside/Downside, Risk/Reward và điều kiện vô hiệu.</p>
       </section>
 
       <section class="published-recommendations-panel">
@@ -82,5 +53,5 @@
     </div></section>
   </main>
 
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="dang-ky/">Đăng ký</a></div></div><p class="disclaimer">Danh sách cổ phiếu theo Radar rà soát không đồng nghĩa khuyến nghị mua.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="dang-ky/">Đăng ký</a></div></div><p class="disclaimer">Radar quét toàn HOSE; chỉ mã vượt Action Gate mới trở thành khuyến nghị.</p></div></footer>
 </body></html>
