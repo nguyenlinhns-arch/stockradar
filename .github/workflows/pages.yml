@@ -74,6 +74,9 @@ jobs:
       - name: Verify conversion-first buyer journey
         run: python scripts/verify_conversion_v3.py .pages-site
 
+      - name: Verify measurable Premium funnel
+        run: python scripts/verify_conversion_funnel_v4.py .pages-site
+
       - name: Install Chromium visual QA
         run: |
           npm install --ignore-scripts --no-audit --no-fund --package-lock=false
