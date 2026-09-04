@@ -170,7 +170,7 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
         '<strong>Nhận bản rà soát 09:00 miễn phí. Nâng Premium khi cần cảnh báo trong phiên.</strong>'
         '<p>Free giúp theo dõi thị trường mỗi ngày; Premium bổ sung Buy Zone · Stop · Target · R/R và cảnh báo hành động tại 10:30 · 11:15 · 13:30 · 14:15 khi tín hiệu đủ chuẩn.</p></div>'
         '<div class="conversion-rail-actions">'
-        f'<a class="conversion-free" href="{lead_href}">Nhận email 09:00</a>'
+        f'<a class="conversion-free" data-conversion-free-lead href="{lead_href}">Nhận email 09:00</a>'
         f'<a class="conversion-free" href="{plans_href}">So sánh gói</a>'
         f'<a class="conversion-premium" href="{premium_href}">Premium · 199.000đ</a>'
         '</div></div></section>'
@@ -181,7 +181,7 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
         mobile = (
             '<div class="conversion-mobile-cta">'
             '<span><strong>FREE 09:00</strong>Bắt đầu bằng email miễn phí</span>'
-            f'<a href="{lead_href}">Nhận email</a>'
+            f'<a data-conversion-mobile-lead href="{lead_href}">Nhận email</a>'
             '</div>'
         )
         source = source.replace("</body>", mobile + "</body>", 1)
@@ -220,7 +220,7 @@ def inject_page(page: Path, output: Path) -> None:
         head = (
             route_specific_head(source, page, output)
             + f'<link rel="stylesheet" href="{mobile_css}?v=20260903-touch1" {HEAD_MARKER}>\n'
-            + f'<script src="{home_core_js}?v=20260904-homecore5" defer></script>\n'
+            + f'<script src="{home_core_js}?v=20260904-homecore6" defer></script>\n'
         )
     else:
         public_css = asset_href(source, page, output, "public-ux.css")
@@ -231,6 +231,7 @@ def inject_page(page: Path, output: Path) -> None:
         auth_dedupe_js = asset_href(source, page, output, "header-auth-dedupe-v6.js")
         copy_v7_js = asset_href(source, page, output, "public-copy-v7.js")
         direct_ticker_js = asset_href(source, page, output, "direct-ticker-nav-v1.js")
+        conversion_state_js = asset_href(source, page, output, "conversion-state-v1.js")
         head = (
             route_specific_head(source, page, output)
             + f'<link rel="stylesheet" href="{public_css}?v=20260903-public2" {HEAD_MARKER}>\n'
@@ -242,6 +243,7 @@ def inject_page(page: Path, output: Path) -> None:
             + f'<script src="{auth_gate_js}?v=20260903-public2" defer></script>\n'
             + f'<script src="{auth_dedupe_js}?v=20260903-site6" defer></script>\n'
             + f'<script src="{copy_v7_js}?v=20260903-site7" defer></script>\n'
+            + f'<script src="{conversion_state_js}?v=20260904-funnel1" defer></script>\n'
         )
 
     page.write_text(source.replace("</head>", head + "</head>", 1), encoding="utf-8")
@@ -260,6 +262,7 @@ def main() -> None:
         output / "assets" / "site-v4.css",
         output / "assets" / "professional-v5.css",
         output / "assets" / "conversion-v1.css",
+        output / "assets" / "conversion-state-v1.js",
         output / "assets" / "mobile-touch-v1.css",
         output / "assets" / "public-fallbacks-v4.js",
         output / "assets" / "header-auth-dedupe-v6.js",
