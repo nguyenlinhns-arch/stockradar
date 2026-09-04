@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import shutil
 from pathlib import Path
@@ -28,10 +29,15 @@ BANNED_PUBLIC_TERMS = (
     "O’Neil",
     "O'Neil",
     "Phil Town",
+    "Ichimoku",
+    "Bollinger",
+    "Trendline",
     "Bear/Base/Bull",
     "Bear · Base · Bull",
     "Bear / Base / Bull",
 )
+RUNTIME_GUARD = "decision-copy-guard-v1.js"
+RUNTIME_MARKER = "data-decision-copy-guard-v1"
 
 
 def parse_args() -> argparse.Namespace:
@@ -101,7 +107,6 @@ def rewrite(source: str) -> str:
     for before, after in replacements:
         source = source.replace(before, after)
 
-    # Generated ticker pages are created before the final production UX pass.
     source = re.sub(
         r'<title>([A-Z0-9]{3}) — Phân tích Free &amp; Premium \| StockRadar</title>',
         r'<title>\1 — Tra cứu &amp; quyết định | StockRadar</title>',
@@ -113,15 +118,12 @@ def rewrite(source: str) -> str:
         source,
     )
 
-    # Retire the old analysis route and point any lingering links to the live stock lookup.
     source = re.sub(
         r'href=["\'](?:\.\./)*phan-tich/(?:[^"\']*)?["\']',
         'href="kiem-tra-co-phieu/"',
         source,
         flags=re.IGNORECASE,
     )
-
-    # Old knowledge links are not published in production; route users to the live lookup instead.
     source = re.sub(
         r'href=["\'][^"\']*kien-thuc/(?:canslim-sepa|vpa|4m|pocket-pivot)/["\']',
         'href="kiem-tra-co-phieu/"',
@@ -129,7 +131,6 @@ def rewrite(source: str) -> str:
         flags=re.IGNORECASE,
     )
 
-    # Final safety net: public HTML must not expose analysis/method/setup language at all.
     source = source.replace("PHÂN TÍCH", "TRẠNG THÁI")
     source = source.replace("Phân tích", "Tra cứu")
     source = source.replace("phân tích", "tra cứu")
@@ -142,10 +143,31 @@ def rewrite(source: str) -> str:
     return source
 
 
+def guard_src(source: str, page: Path, output: Path) -> str:
+    if re.search(r'<base\s+[^>]*href=["\'][^"\']+["\']', source, flags=re.IGNORECASE):
+        return f"assets/{RUNTIME_GUARD}"
+    target = output / "assets" / RUNTIME_GUARD
+    return os.path.relpath(target, page.parent).replace(os.sep, "/")
+
+
+def inject_runtime_guard(source: str, page: Path, output: Path) -> str:
+    if RUNTIME_MARKER in source:
+        return source
+    if "</head>" not in source:
+        raise RuntimeError(f"Cannot inject decision copy guard: {page.relative_to(output)} has no </head>")
+    src = guard_src(source, page, output)
+    tag = f'<script src="{src}?v=20260904-decision1" defer {RUNTIME_MARKER}></script>\n'
+    return source.replace("</head>", tag + "</head>", 1)
+
+
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
         raise RuntimeError(f"Pages output does not exist: {output}")
+
+    guard_asset = output / "assets" / RUNTIME_GUARD
+    if not guard_asset.is_file():
+        raise RuntimeError(f"Missing decision-first runtime guard: {RUNTIME_GUARD}")
 
     legacy_analysis = output / "phan-tich"
     if legacy_analysis.exists():
@@ -154,6 +176,7 @@ def main() -> None:
     pages = sorted(output.rglob("*.html"))
     for page in pages:
         source = rewrite(page.read_text(encoding="utf-8"))
+        source = inject_runtime_guard(source, page, output)
         page.write_text(source, encoding="utf-8")
 
     leaks: list[str] = []
@@ -162,6 +185,8 @@ def main() -> None:
         for term in BANNED_PUBLIC_TERMS:
             if term.casefold() in source.casefold():
                 leaks.append(f"{page.relative_to(output)}: {term}")
+        if RUNTIME_MARKER not in source:
+            leaks.append(f"{page.relative_to(output)}: missing runtime decision-copy guard")
 
     if leaks:
         raise RuntimeError("Public decision-first surface still contains banned analysis language:\n- " + "\n- ".join(leaks))
@@ -169,7 +194,7 @@ def main() -> None:
     if legacy_analysis.exists():
         raise RuntimeError("Legacy /phan-tich/ route remains in production artifact")
 
-    print(f"Public decision-first scrub: PASS ({len(pages)} HTML pages; /phan-tich/ retired)")
+    print(f"Public decision-first scrub: PASS ({len(pages)} HTML pages; /phan-tich/ retired; runtime guard injected)")
 
 
 if __name__ == "__main__":
