@@ -91,10 +91,10 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('href="thanh-toan/?plan=premium"', home)
         self.assertIn("home-radar-sector-list", home)
         self.assertIn("home-tier-grid", home)
-        self.assertIn("Bắt đầu miễn phí. Trả phí khi cần hành động.", home)
+        self.assertIn("Free và Premium có gì?", home)
         self.assertIn("Nhận bản rà soát thị trường mỗi sáng", home)
         self.assertIn("FREE 09:00", home)
-        self.assertIn("199.000đ", home)
+        self.assertIn("199K", home)
         for ticker in ("ACB", "VNM", "NKG", "CMG", "PVD", "FRT", "VHM", "POW", "GMD", "HAH"):
             self.assertIn(f"ticker={ticker}", home)
         for feature in (
