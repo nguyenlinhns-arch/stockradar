@@ -23,6 +23,23 @@
     return validTicker(raw);
   }
 
+  function loadMarketReferenceAssets() {
+    if (!document.querySelector('link[data-market-reference-style]')) {
+      const link = document.createElement('link');
+      link.rel = 'stylesheet';
+      link.dataset.marketReferenceStyle = '';
+      link.href = new URL('assets/public-market-reference-v1.css?v=20260904-market1', document.baseURI).toString();
+      document.head.appendChild(link);
+    }
+    if (!document.querySelector('script[data-market-reference-script]')) {
+      const script = document.createElement('script');
+      script.src = new URL('assets/public-market-reference-v1.js?v=20260904-market2', document.baseURI).toString();
+      script.async = true;
+      script.dataset.marketReferenceScript = '';
+      document.head.appendChild(script);
+    }
+  }
+
   let universePromise;
   function loadUniverse() {
     if (!universePromise) {
@@ -46,28 +63,28 @@
     const verified = Boolean(security);
     const company = verified
       ? security.company_name || 'Doanh nghiệp đã được xác minh trong universe công khai'
-      : 'StockRadar đã nhận mã; feed phát hành công khai hiện chưa có manifest xác minh cho mã này';
+      : 'Mã đã được nhận; dữ liệu giá/biểu đồ tham chiếu hiển thị trực tiếp phía dưới';
     const sector = verified
       ? security.sector || 'Chưa có phân loại ngành trong feed công khai'
-      : 'Không tự suy luận doanh nghiệp/ngành khi publication gate chưa mở';
-    const releaseState = verified ? 'ĐÃ XÁC MINH CÔNG KHAI' : 'CHỜ GATE PHÁT HÀNH';
+      : 'Kết luận riêng của StockRadar vẫn chờ feed production được cấp quyền';
+    const releaseState = verified ? 'ĐÃ XÁC MINH CÔNG KHAI' : 'DECISION FEED ĐANG CHỜ';
     return `
       <section class="free-context-card" data-free-stock-context>
         <header class="free-context-head">
-          <div><span class="panel-label">BẢN FREE · BỐI CẢNH CÓ THỂ PHÁT HÀNH</span><h3>${escapeHtml(ticker)}</h3><p>${escapeHtml(company)} · ${escapeHtml(sector)}</p></div>
+          <div><span class="panel-label">FREE · BỐI CẢNH STOCKRADAR</span><h3>${escapeHtml(ticker)}</h3><p>${escapeHtml(company)} · ${escapeHtml(sector)}</p></div>
           <span class="free-context-status ${verified ? 'is-verified' : ''}">${releaseState}</span>
         </header>
         <div class="free-context-horizons" aria-label="Bốn khung đầu tư">
-          <div><span>5–20 phiên</span><strong>Ngắn hạn</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
-          <div><span>1–6 tháng</span><strong>Trung hạn</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
-          <div><span>6–18 tháng</span><strong>Dài hạn</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
-          <div><span>2–5 năm+</span><strong>Tích sản</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
+          <div><span>5–20 phiên</span><strong>Ngắn hạn</strong><small>Xem giá/biểu đồ tham chiếu bên dưới; quyết định StockRadar chưa phát hành.</small></div>
+          <div><span>1–6 tháng</span><strong>Trung hạn</strong><small>Xem giá/biểu đồ tham chiếu bên dưới; quyết định StockRadar chưa phát hành.</small></div>
+          <div><span>6–18 tháng</span><strong>Dài hạn</strong><small>Xem hồ sơ/tài chính tham chiếu bên dưới; Fair Value StockRadar chưa phát hành.</small></div>
+          <div><span>2–5 năm+</span><strong>Tích sản</strong><small>Xem hồ sơ/tài chính tham chiếu bên dưới; luận điểm StockRadar chưa phát hành.</small></div>
         </div>
         <div class="free-context-grid">
-          <article><strong>Free hiển thị</strong><ul><li>Thông tin doanh nghiệp/ngành khi đã qua publication gate.</li><li>Bốn khung đầu tư tách biệt và trạng thái Radar theo snapshot.</li><li>Lịch sử khuyến nghị đã được phát hành công khai.</li></ul></article>
-          <article><strong>Free không tự dựng</strong><ul><li>Không bịa giá, Fair Value, Buy Zone, Stop hay Target khi feed được cấp quyền chưa sẵn sàng.</li><li>Không biến thứ hạng Radar thành khuyến nghị mua.</li><li>Không coi dữ liệu nội bộ là dữ liệu được phép phát hành chỉ vì scanner đã tính xong.</li></ul></article>
+          <article><strong>Free có ngay</strong><ul><li>Giá và biểu đồ mã HOSE qua widget hiển thị trực tiếp.</li><li>Hồ sơ doanh nghiệp và dữ liệu tài chính tham chiếu khi TradingView hỗ trợ mã.</li><li>Bốn khung đầu tư và lịch sử khuyến nghị StockRadar khi feed được phát hành.</li></ul></article>
+          <article><strong>StockRadar không tự dựng</strong><ul><li>Không bịa Fair Value, Buy Zone, Stop hay Target khi feed production chưa đạt gate.</li><li>Không dùng tín hiệu/điểm của bên hiển thị tham chiếu làm tín hiệu StockRadar.</li><li>Không biến dữ liệu nghiên cứu nội bộ thành dữ liệu khách hàng khi chưa có quyền phát hành.</li></ul></article>
         </div>
-        <div class="free-context-conclusion"><span>Trạng thái phát hành hiện tại</span><strong>CHƯA PHÁT HÀNH TÍN HIỆU MUA/BÁN CHO SNAPSHOT CÔNG KHAI NÀY</strong><p>Radar nội bộ và feed công khai là hai gate độc lập. Khi manifest dữ liệu hợp lệ và Decision Gate đạt chuẩn, trang sẽ tự động thay phần này bằng kết luận thực tế.</p></div>
+        <div class="free-context-conclusion"><span>Trạng thái quyết định StockRadar</span><strong>CHƯA PHÁT HÀNH MUA/BÁN — DỮ LIỆU THỊ TRƯỜNG THAM CHIẾU VẪN XEM ĐƯỢC BÊN DƯỚI</strong><p>Khi production manifest hợp lệ và Decision Gate đạt chuẩn, phần này tự thay bằng điểm, xếp hạng, trạng thái 4 khung và kết luận thực tế của StockRadar.</p></div>
       </section>`;
   }
 
@@ -93,6 +110,7 @@
   }
 
   function mount() {
+    loadMarketReferenceAssets();
     const target = document.querySelector('[data-dynamic-stock-report]');
     if (!target) return;
     const run = () => enhance(target);
