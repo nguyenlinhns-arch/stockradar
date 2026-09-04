@@ -51,11 +51,11 @@ class EmailWorkerSchedulerTests(unittest.TestCase):
         ):
             self.assertIn(marker, sql)
 
-    def test_worker_accepts_only_service_role_or_verified_scheduler_token(self) -> None:
+    def test_worker_accepts_only_legacy_service_role_or_verified_scheduler_token(self) -> None:
         source = (ROOT / "supabase" / "functions" / "email-worker" / "index.ts").read_text(encoding="utf-8")
         for marker in (
             "authorizedServiceRequest",
-            'req.headers.get("authorization") === `Bearer ${service}`',
+            'admin.legacy && req.headers.get("authorization") === `Bearer ${admin.key}`',
             'req.headers.get("x-stockradar-scheduler")',
             "/^[a-f0-9]{64}$/",
             "verify_stockradar_email_scheduler_token_v1",
@@ -64,6 +64,21 @@ class EmailWorkerSchedulerTests(unittest.TestCase):
         ):
             self.assertIn(marker, source)
         self.assertNotIn("stockradar_email_worker_scheduler_token", source)
+
+    def test_email_functions_prefer_new_secret_api_keys_and_persist_no_jwt_gateway(self) -> None:
+        for relative in (
+            "supabase/functions/email-worker/index.ts",
+            "supabase/functions/email-unsubscribe/index.ts",
+            "supabase/functions/email-webhook/index.ts",
+        ):
+            source = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("SUPABASE_SECRET_KEYS", source)
+            self.assertIn("sb_secret_", source)
+            self.assertIn("SUPABASE_SERVICE_ROLE_KEY", source)
+        config = (ROOT / "supabase" / "config.toml").read_text(encoding="utf-8")
+        for function_name in ("email-worker", "email-unsubscribe", "email-webhook"):
+            self.assertIn(f"[functions.{function_name}]", config)
+        self.assertEqual(config.count("verify_jwt = false"), 3)
 
 
 if __name__ == "__main__":
