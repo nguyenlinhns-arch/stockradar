@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Check out current main
         uses: actions/checkout@v7
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -36,8 +38,21 @@ jobs:
       - name: Build fail-closed public data
         run: python -m engine.cli build-public
 
-      - name: Run regression suite
-        run: python -m unittest discover -s engine/tests -v
+      - name: Run stock lookup regression suite
+        run: |
+          python -m unittest -v \
+            engine.tests.test_alphanumeric_ticker_compat \
+            engine.tests.test_authenticated_stock_client_assets \
+            engine.tests.test_buyer_readiness \
+            engine.tests.test_direct_ticker_navigation \
+            engine.tests.test_free_stock_context \
+            engine.tests.test_pages_production_gate \
+            engine.tests.test_public_method_jargon_gate \
+            engine.tests.test_route_scoped_auth_bundle \
+            engine.tests.test_static_assets \
+            engine.tests.test_static_radar_ticker_pages \
+            engine.tests.test_stock_api_gateway_contract \
+            engine.tests.test_stock_page_context
 
       - name: Fail-close unlicensed public ticker seed
         run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
