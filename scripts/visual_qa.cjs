@@ -36,7 +36,9 @@ function isBenignThirdPartyConsoleError(message) {
     { name: 'today-changes', route: '/thay-doi-hom-nay/' },
     { name: 'newsletter', route: '/nhan-ban-tin/' },
     { name: 'plans', route: '/dang-ky/' },
+    { name: 'signup', route: '/signup/?plan=free' },
     { name: 'login', route: '/dang-nhap/' },
+    { name: 'checkout', route: '/thanh-toan/?plan=premium' },
     { name: 'account', route: '/tai-khoan/' },
     { name: 'stock', route: '/co-phieu/?ticker=FPT' },
     { name: 'breakout', route: '/breakout/' },
@@ -143,6 +145,34 @@ function isBenignThirdPartyConsoleError(message) {
           } else {
             routeErrors.push('mobile nav toggle missing');
           }
+        }
+
+        if (target.name === 'plans') {
+          if (!(await page.locator('[data-plan-free]').count())) routeErrors.push('Free plan card missing');
+          if (!(await page.locator('[data-plan-premium]').count())) routeErrors.push('Premium plan card missing');
+        }
+
+        if (target.name === 'signup') {
+          if (!(await page.locator('[data-auth-signup-form]').count())) routeErrors.push('signup form missing');
+          if ((await page.locator('input[name="selected_plan"]').count()) < 2) routeErrors.push('signup plan selector incomplete');
+          if (!(await page.locator('[data-signup-submit-label]').count())) routeErrors.push('signup submit missing');
+        }
+
+        if (target.name === 'login') {
+          if (!(await page.locator('[data-auth-login-form]').count())) routeErrors.push('login form missing');
+        }
+
+        if (target.name === 'checkout') {
+          if (!(await page.locator('[data-checkout-qr-image]').count())) routeErrors.push('checkout QR missing');
+          if (!(await page.locator('[data-checkout-confirm]').count())) routeErrors.push('checkout confirmation missing');
+          const account = String(await page.locator('[data-checkout-account-number]').first().textContent().catch(() => '') || '').trim();
+          if (account !== '0934389822') routeErrors.push(`checkout account mismatch: ${account || 'missing'}`);
+        }
+
+        if (target.name === 'stock') {
+          if (!(await page.locator('[data-dynamic-stock-report]').count())) routeErrors.push('Free stock report target missing');
+          if (!(await page.locator('[data-premium-stock-report]').count())) routeErrors.push('Premium stock report target missing');
+          if (!(await page.locator('[data-premium-gate-copy]').count())) routeErrors.push('Premium gate copy missing');
         }
 
         checks.push({ route: target.route, viewport: viewport.name, status: routeErrors.length ? 'FAIL' : 'PASS' });
