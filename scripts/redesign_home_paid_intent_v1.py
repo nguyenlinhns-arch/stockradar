@@ -3,7 +3,7 @@
 
 The public homepage should create the desire to pay by moving through:
 lookup -> personal use case -> proof -> Premium price/CTA.
-No fake ticker result, performance number, or payment capability is introduced here.
+No fake ticker result, performance number, email entitlement, or payment capability is introduced here.
 """
 
 from __future__ import annotations
@@ -105,16 +105,56 @@ SECTIONS = '''<section class="home-paid-intent-v1" data-home-paid-intent-v1 aria
 
     <section class="home-free-exit-v1" aria-label="Lựa chọn miễn phí">
       <div class="container home-free-exit-inner">
-        <div><strong>Chưa cần Premium?</strong><span>Bắt đầu bằng một mã bạn đang quan tâm và tự đánh giá StockRadar trước.</span></div>
-        <div class="home-free-exit-actions"><a class="button button-secondary" href="#ticker-hero">Tra mã miễn phí</a><a class="button button-secondary" href="nhan-ban-tin/">Xem bản rà soát Free</a></div>
+        <div><strong>Chưa cần Premium?</strong><span>Bắt đầu bằng một mã bạn đang quan tâm và tự đánh giá StockRadar trước. Free chỉ nhận email hệ thống cần thiết cho tài khoản.</span></div>
+        <div class="home-free-exit-actions"><a class="button button-secondary" href="#ticker-hero">Tra mã miễn phí</a><a class="button button-secondary" href="nhan-ban-tin/">Xem email Premium 09:00</a></div>
       </div>
     </section>'''
+
+
+PAID_ONLY_EMAIL_REPLACEMENTS = (
+    (
+        "StockRadar — tra cứu cổ phiếu HOSE, nhận bản rà soát 09:00 miễn phí và dùng Premium để biết mua mới hay chờ, đang nắm giữ nên làm gì, vùng mua, stop, target và cảnh báo khi trạng thái thay đổi.",
+        "StockRadar — tra cứu cổ phiếu HOSE miễn phí; Premium bổ sung báo cáo 09:00 theo watchlist, vùng mua, Stop, Target và cảnh báo khi trạng thái thay đổi.",
+    ),
+    ("FREE · EMAIL 09:00", "PREMIUM · EMAIL 09:00"),
+    ("FREE 09:00", "PREMIUM 09:00"),
+    ("Nhận bản rà soát thị trường mỗi sáng", "Email Premium 09:00 theo watchlist"),
+    ("Nhận bản rà soát 09:00 miễn phí", "Email Premium 09:00 theo watchlist"),
+    ("Nhận bản tin 09:00 miễn phí", "Xem email Premium 09:00"),
+    ("Xem bản rà soát Free", "Xem email Premium 09:00"),
+    (
+        "Để lại email, sau đó tạo tài khoản Free và xác minh để kích hoạt bản tin 09:00.",
+        "Để lại email để ghi nhận nhu cầu Premium; quyền gửi chỉ có sau khi tài khoản Trial/Paid đã xác minh, đồng ý nhận email và delivery gate được kích hoạt.",
+    ),
+    (
+        "Tôi muốn nhận <strong>bản rà soát 09:00 hằng ngày</strong>.",
+        "Tôi quan tâm <strong>email Premium 09:00 theo watchlist</strong>.",
+    ),
+)
+
+BANNED_FREE_EMAIL_PROMISES = (
+    "FREE · EMAIL 09:00",
+    "FREE 09:00",
+    "Nhận bản rà soát 09:00 miễn phí",
+    "Nhận bản tin 09:00 miễn phí",
+    "Xem bản rà soát Free",
+    "tạo tài khoản Free và xác minh để kích hoạt bản tin 09:00",
+)
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     return parser.parse_args()
+
+
+def enforce_paid_only_email_copy(source: str) -> str:
+    for before, after in PAID_ONLY_EMAIL_REPLACEMENTS:
+        source = source.replace(before, after)
+    leaks = [term for term in BANNED_FREE_EMAIL_PROMISES if term.casefold() in source.casefold()]
+    if leaks:
+        raise RuntimeError("Homepage still contains Free product-email promise: " + ", ".join(leaks))
+    return source
 
 
 def main() -> None:
@@ -152,13 +192,15 @@ def main() -> None:
         if mobile_end >= 0:
             source = source[:mobile_start] + source[mobile_end + len("</div>"):]
 
-    css_tag = '<link rel="stylesheet" href="assets/home-paid-intent-v1.css?v=20260904-paid1" data-home-paid-intent-v1>\n'
-    js_tag = '<script src="assets/home-paid-intent-v1.js?v=20260904-paid1" defer></script>\n'
+    source = enforce_paid_only_email_copy(source)
+
+    css_tag = '<link rel="stylesheet" href="assets/home-paid-intent-v1.css?v=20260904-paid2" data-home-paid-intent-v1>\n'
+    js_tag = '<script src="assets/home-paid-intent-v1.js?v=20260904-paid2" defer></script>\n'
     if "home-paid-intent-v1.css" not in source:
         source = source.replace("</head>", css_tag + js_tag + "</head>", 1)
 
     home.write_text(source, encoding="utf-8")
-    print("Homepage paid-intent v1: PASS (lookup → personal value → proof → Premium)")
+    print("Homepage paid-intent v1: PASS (lookup → personal value → proof → Premium; paid-only email copy)")
 
 
 if __name__ == "__main__":
