@@ -137,15 +137,15 @@ def verify(output: Path) -> None:
             if term.lower() in low:
                 raise RuntimeError(f"Residual explanatory copy survived on {route}: {term}")
 
-    # Preserve conversion/auth/billing functionality.
+    # Preserve conversion/auth/billing functionality using actual final-artifact hooks.
     required = {
-        "signup": ("data-auth-form", "data-signup-plan", "data-auth-submit"),
+        "signup": ("data-auth-signup-form", "data-signup-plan-name", "data-signup-submit-label"),
         "dang-ky": ("data-plan-free", "data-plan-premium", "data-plan-comparison"),
-        "thanh-toan": ("data-checkout-confirm", "vpbank-qr-static.svg", "0934389822"),
+        "thanh-toan": ("data-checkout-confirm", "vpbank-qr-static.svg", "0934389822", "data-checkout-reference"),
         "hieu-qua": ("data-performance-summary",),
-        "tai-khoan": ("data-product-email-preferences", "data-account-personalization"),
+        "tai-khoan": ("data-product-email-preferences", "data-account-personalization", "data-account-watchlist-form"),
         "hom-nay": ("data-paid-dashboard",),
-        "khuyen-nghi": ("data-recommendation",),
+        "khuyen-nghi": ("data-recommendations", "data-recommendation-journal"),
     }
     for route, markers in required.items():
         source = pages[route]
