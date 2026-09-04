@@ -140,6 +140,6 @@ Deno.serve(async (req: Request) => {
     accepted: true,
     status: "PENDING_VERIFICATION",
     intent_kind: INTENT_KIND,
-    message: "Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền nhận email và chưa phải quyền gửi email. Product email chỉ được gửi khi tài khoản Trial/Paid đã xác minh, có đồng ý nhận hiện hành, không bị suppression và delivery gate production đã được kích hoạt.",
+    message: "Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền nhận email, chưa tạo quyền gửi email và chưa phải quyền gửi email. Product email chỉ được gửi khi tài khoản Trial/Paid đã xác minh, có đồng ý nhận hiện hành, không bị suppression và delivery gate production đã được kích hoạt.",
   });
 });

@@ -242,7 +242,7 @@
           throw new Error(payload.message || 'Chưa thể ghi nhận email lúc này.');
         }
         rememberLead(email);
-        setLeadMessage(form, 'Đã ghi nhận nhu cầu Premium. Việc này chưa kích hoạt gửi email hoặc thanh toán; hãy tạo tài khoản để tiếp tục.', 'success');
+        setLeadMessage(form, 'Đã ghi nhận nhu cầu Premium. Việc này không kích hoạt gửi email hoặc thanh toán; hãy tạo tài khoản để tiếp tục.', 'success');
         renderLeadNext(form);
         applyLeadState();
         form.elements.daily_brief.checked = false;

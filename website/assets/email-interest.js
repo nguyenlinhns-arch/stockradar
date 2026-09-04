@@ -45,7 +45,7 @@
 
   function renderNextStep(form) {
     removeNextStep(form);
-    const rawHref = String(form.dataset.nextHref || '').trim();
+    const rawHref = String(form.dataset.nextHref || 'signup/?plan=premium').trim();
     if (!rawHref) return;
     const link = document.createElement('a');
     link.className = 'email-interest-next';
@@ -112,7 +112,7 @@
       rememberLead(email);
       setMessage(
         message,
-        payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bản tin 09:00 cần quyền Free trở lên; cảnh báo mua/bán cần quyền Premium.',
+        payload.message || 'Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền nhận email và chưa phải quyền gửi email. Product email chỉ có hiệu lực với tài khoản Trial/Paid đã xác minh và đủ điều kiện gửi.',
         'success'
       );
       renderNextStep(form);
