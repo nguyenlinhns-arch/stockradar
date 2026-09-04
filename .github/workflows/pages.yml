@@ -34,6 +34,7 @@ on:
       - 'scripts/apply_commercial_support_v1.py'
       - 'scripts/optimize_home_asset_budget_v1.py'
       - 'scripts/optimize_conversion_asset_budget_v1.py'
+      - 'scripts/optimize_dashboard_asset_budget_v1.py'
       - 'scripts/apply_commercial_cleanup_v3.py'
       - 'scripts/apply_public_seo_v1.py'
       - 'scripts/verify_commercial_density_v1.py'
@@ -46,7 +47,7 @@ on:
 
 permissions:
   actions: read
-  contents: read
+n  contents: read
   pages: write
   id-token: write
 
@@ -140,6 +141,7 @@ jobs:
           python scripts/optimize_home_asset_budget_v1.py .pages-site
           python scripts/optimize_conversion_asset_budget_v1.py .pages-site
           python scripts/apply_commercial_cleanup_v3.py .pages-site
+          python scripts/optimize_dashboard_asset_budget_v1.py .pages-site
           python scripts/apply_public_seo_v1.py .pages-site
           python scripts/verify_commercial_density_v1.py .pages-site
       - name: Install Chromium visual QA
