@@ -3,6 +3,8 @@ import unittest
 
 
 ROOT = Path(__file__).resolve().parents[2]
+SCHEDULER_MIGRATION = "supabase/migrations/20260904104000_add_email_worker_scheduler.sql"
+GATE_BIND_MIGRATION = "supabase/migrations/20260904104200_bind_email_scheduler_to_delivery_gate.sql"
 
 
 class EmailWorkerSchedulerTests(unittest.TestCase):
@@ -10,15 +12,14 @@ class EmailWorkerSchedulerTests(unittest.TestCase):
         return (ROOT / relative).read_text(encoding="utf-8")
 
     def test_scheduler_uses_cron_pgnet_and_vault_without_source_secret(self) -> None:
-        migration = self.read("supabase/migrations/20260903103000_schedule_email_worker.sql")
+        migration = self.read(SCHEDULER_MIGRATION)
         for marker in (
             "pg_cron",
             "pg_net",
             "vault.decrypted_secrets",
-            "stockradar_email_worker_url",
             "stockradar_email_worker_scheduler_token",
             "net.http_post",
-            "perform public.run_stockradar_email_worker_v1()",
+            "private.dispatch_stockradar_email_worker_v1",
             "cron.schedule",
         ):
             self.assertIn(marker, migration)
@@ -26,42 +27,46 @@ class EmailWorkerSchedulerTests(unittest.TestCase):
         self.assertNotIn("RESEND_API_KEY", migration)
 
     def test_delivery_gate_controls_scheduler_enable_and_disable(self) -> None:
-        migration = self.read("supabase/migrations/20260903103000_schedule_email_worker.sql")
+        migration = self.read(GATE_BIND_MIGRATION)
         for marker in (
-            "create or replace function public.set_stockradar_email_delivery_enabled",
-            "alter table private.email_delivery_gate disable trigger",
-            "alter table private.email_delivery_gate enable trigger",
-            "enabled = true",
-            "enabled = false",
-            "service_role",
-            "run_stockradar_email_worker_v1",
+            "private.sync_email_scheduler_with_delivery_gate_v1",
+            "new.sending_enabled is true",
+            "scheduler_enabled=true",
+            "new.sending_enabled is false",
+            "scheduler_enabled=false",
+            "email_delivery_gate_sync_scheduler_v1",
+            "vault.decrypted_secrets",
         ):
             self.assertIn(marker, migration)
 
     def test_cron_does_not_make_http_call_without_gate_and_due_email(self) -> None:
-        migration = self.read("supabase/migrations/20260903103000_schedule_email_worker.sql")
+        migration = self.read(SCHEDULER_MIGRATION)
         source = migration.lower()
-        gate_pos = source.index("if not coalesce(v_gate_enabled, false)")
-        due_pos = source.index("if not exists (")
+        scheduler_gate_pos = source.index("if v_sched.scheduler_enabled is not true")
+        delivery_gate_pos = source.index("if v_sending is not true")
+        due_pos = source.index("if v_due is not true")
         http_pos = source.index("net.http_post")
-        self.assertLess(gate_pos, http_pos)
+        self.assertLess(scheduler_gate_pos, http_pos)
+        self.assertLess(delivery_gate_pos, http_pos)
         self.assertLess(due_pos, http_pos)
-        self.assertIn("status = 'pending'", source)
-        self.assertIn("expires_at > now()", source)
+        self.assertIn("o.status in ('pending','failed')", source)
+        self.assertIn("o.expires_at > now()", source)
+        self.assertIn("o.scheduled_at <= now()", source)
 
     def test_worker_accepts_only_legacy_service_role_or_verified_scheduler_token(self) -> None:
         source = self.read("supabase/functions/email-worker/index.ts")
+        lower = source.lower()
         for marker in (
-            "SUPABASE_SECRET_KEYS",
-            "SUPABASE_SERVICE_ROLE_KEY",
-            "X-StockRadar-Scheduler",
+            "supabase_secret_keys",
+            "supabase_service_role_key",
+            "x-stockradar-scheduler",
             "/^[a-f0-9]{64}$/",
             "verify_stockradar_email_scheduler_token_v1",
-            "sha256Hex(schedulerToken)",
-            'reason:"UNAUTHORIZED"',
+            "sha256hex(schedulertoken)",
+            'reason:"unauthorized"',
         ):
-            self.assertIn(marker, source)
-        self.assertNotIn("stockradar_email_worker_scheduler_token", source)
+            self.assertIn(marker, lower)
+        self.assertNotIn("stockradar_email_worker_scheduler_token", lower)
 
     def test_email_functions_prefer_new_secret_api_keys_and_persist_no_jwt_gateway(self) -> None:
         for relative in (
