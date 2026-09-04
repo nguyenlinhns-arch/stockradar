@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 import time
 from typing import Any, Callable, Iterable, Mapping, Protocol, Sequence
+from .ticker_symbol import is_valid_hose_ticker
 
 
 SSI_RAW_ADAPTER_VERSION = "STOCKRADAR_SSI_RAW_ADAPTER_V1"
@@ -130,7 +131,7 @@ def _text(value: object) -> str:
 
 def _ticker(value: object) -> str:
     ticker = _text(value).upper()
-    if len(ticker) != 3 or not ticker.isalpha() or not ticker.isascii():
+    if not is_valid_hose_ticker(ticker):
         raise SSIRawAdapterError(f"invalid HOSE stock ticker returned by SSI: {ticker!r}")
     return ticker
 
@@ -186,7 +187,7 @@ def _timestamp(value: object) -> str:
 
 def _is_common_stock(info: object) -> bool:
     symbol = _text(_get(info, "symbol", "Symbol")).upper()
-    if len(symbol) != 3 or not symbol.isalpha() or not symbol.isascii():
+    if not is_valid_hose_ticker(symbol):
         return False
     # Covered warrants expose an underlying symbol; ETFs/funds on HOSE generally use
     # longer symbols. Maturity date is also a useful defensive exclusion for warrants.
