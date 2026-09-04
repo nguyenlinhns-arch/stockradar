@@ -19,6 +19,7 @@ on:
       - 'scripts/enforce_registration_plan_ctas.py'
       - 'scripts/enforce_checkout_public_bank_info.py'
       - 'scripts/enforce_ai_registration_ctas.py'
+      - 'scripts/apply_commercial_surface_v1.py'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
@@ -40,21 +41,16 @@ jobs:
         uses: actions/checkout@v7
         with:
           ref: main
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
-
       - name: Install runtime dependency
         run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5
-
       - name: Build public data
         run: python -m engine.cli build-public
-
       - name: Fail-close unlicensed public ticker seed
         run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
-
       - name: Run stock lookup, checkout and AI regression suite
         run: |
           python -m unittest -v \
@@ -75,7 +71,6 @@ jobs:
             engine.tests.test_stock_ai_product_center \
             engine.tests.test_stock_api_gateway_contract \
             engine.tests.test_stock_page_context
-
       - name: Build Pages artifact
         env:
           STOCKRADAR_ENABLE_AUTH: "1"
@@ -83,11 +78,9 @@ jobs:
           STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
           STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
         run: python scripts/build_pages.py --output .pages-site
-
       - name: Apply production UX transforms
         env:
           STOCKRADAR_PRODUCT_EMAIL_READY: "0"
-          # Owner explicitly approved production Manual VietQR. The private Supabase billing gate stays authoritative.
           STOCKRADAR_CHECKOUT_READY: "1"
         run: |
           python scripts/inject_public_ux.py .pages-site
@@ -99,7 +92,6 @@ jobs:
           python scripts/link_premium_sample.py .pages-site
           python scripts/patch_conversion_funnel_v4.py .pages-site
           if grep -q 'data-stockradar-ai-center' .pages-site/index.html; then
-            echo 'AI-first homepage detected: preserve AI center and adapt Premium email surfaces.'
             python scripts/apply_ai_first_premium_email.py .pages-site
           else
             python scripts/redesign_home_paid_intent_v1.py .pages-site
@@ -110,7 +102,6 @@ jobs:
           python scripts/enforce_registration_plan_ctas.py .pages-site
           python scripts/enforce_checkout_public_bank_info.py .pages-site
           python scripts/enforce_ai_registration_ctas.py .pages-site
-
       - name: Verify stock lookup, Premium and AI contracts
         run: |
           python scripts/verify_pages_auth.py .pages-site
@@ -127,7 +118,6 @@ jobs:
             python scripts/verify_paid_only_home_email_v1.py .pages-site
             python scripts/verify_ai_assistant.py .pages-site
           fi
-
       - name: Assert live checkout survives final transforms
         run: |
           grep -q 'VPBank' .pages-site/thanh-toan/index.html
@@ -136,17 +126,16 @@ jobs:
           grep -q 'data-checkout-confirm' .pages-site/thanh-toan/index.html
           ! grep -q 'BẢO VỆ NGƯỜI DÙNG TRẢ PHÍ' .pages-site/thanh-toan/index.html
           ! grep -q 'Premium tạm dừng kích hoạt mới' .pages-site/thanh-toan/index.html
-
+      - name: Apply final commercial surface
+        run: python scripts/apply_commercial_surface_v1.py .pages-site
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:
           enablement: true
-
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
           path: .pages-site
-
   deploy:
     environment:
       name: github-pages
