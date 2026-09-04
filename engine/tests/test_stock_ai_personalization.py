@@ -19,6 +19,15 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('scope === "portfolio"', source)
         self.assertIn("MAX_PORTFOLIO_TICKERS = 20", source)
 
+    def test_single_ticker_context_is_minimized(self):
+        source = EDGE.read_text(encoding="utf-8")
+        self.assertIn('const requestedWatchItem = scope === "ticker"', source)
+        self.assertIn('const userContext = scope === "portfolio"', source)
+        self.assertIn('requested_ticker: requestedWatchItem ?', source)
+        self.assertIn('requested_ticker_configured', source)
+        self.assertIn('Khi REQUEST_SCOPE=ticker, USER_CONTEXT chỉ chứa cấu hình liên quan đúng mã đang hỏi', source)
+        self.assertNotIn("user.email", source)
+
     def test_portfolio_mode_remains_fail_closed_and_free_redacted(self):
         source = EDGE.read_text(encoding="utf-8")
         self.assertIn("redactForFree", source)
