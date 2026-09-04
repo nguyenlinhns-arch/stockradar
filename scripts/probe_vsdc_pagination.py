@@ -26,6 +26,14 @@ def snippets(text: str, needle: str, radius: int = 900) -> list[str]:
     return out[:20]
 
 
+def function_window(text: str, name: str, before: int = 200, after: int = 8000) -> str:
+    needles = [f"function {name}", f"{name} = function", name]
+    idx = next((text.find(n) for n in needles if text.find(n) >= 0), -1)
+    if idx < 0:
+        return ""
+    return text[max(0, idx - before): min(len(text), idx + after)]
+
+
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument("--date", default="27/07/2026")
@@ -54,17 +62,17 @@ def main() -> None:
         name = tag.get("name") or ""
         ident = tag.get("id") or ""
         value = tag.get("value") or ""
-        if re.search(r"page|tab|date|limit|size|record", f"{name} {ident} {value}", re.I):
+        if re.search(r"page|tab|date|limit|size|record|searchlichthq", f"{name} {ident} {value}", re.I):
             inputs.append({"tag": tag.name, "name": name, "id": ident, "value": value})
 
-    html_hits = snippets(html, TARGET)
+    inline_scripts = "\n\n".join((tag.string or tag.get_text(" ") or "") for tag in soup.find_all("script") if not tag.get("src"))
+    inline_tabl = function_window(inline_scripts, "tablLichTHQ")
+    inline_change = function_window(inline_scripts, "changePage_LichTHQ", after=2500)
+
     script_srcs = []
-    script_hits = []
+    external_hits = []
     for tag in soup.find_all("script"):
         src = tag.get("src")
-        inline = tag.string or tag.get_text(" ") or ""
-        if TARGET in inline:
-            script_hits.append({"source": "inline", "snippets": snippets(inline, TARGET)})
         if not src:
             continue
         full = urljoin(ORIGIN, src)
@@ -73,32 +81,25 @@ def main() -> None:
             js = session.get(full, headers=HEADERS, timeout=20)
             js.raise_for_status()
             if TARGET in js.text or "LichTHQ" in js.text or "LICH_THQ" in js.text:
-                script_hits.append({
+                external_hits.append({
                     "source": full,
                     "bytes": len(js.text),
-                    "target_snippets": snippets(js.text, TARGET),
-                    "lichthq_snippets": snippets(js.text, "LichTHQ")[:10],
+                    "tablLichTHQ_window": function_window(js.text, "tablLichTHQ"),
+                    "changePage_window": function_window(js.text, "changePage_LichTHQ", after=2500),
+                    "ajax_windows": snippets(js.text, "ajax", 1800)[:10],
                 })
         except Exception as exc:
-            script_hits.append({"source": full, "fetch_error": str(exc)})
-
-    forms = []
-    for form in soup.find_all("form"):
-        forms.append({
-            "action": form.get("action") or "",
-            "method": form.get("method") or "",
-            "id": form.get("id") or "",
-            "class": form.get("class") or [],
-        })
+            if "vsdc.vn" in full:
+                external_hits.append({"source": full, "fetch_error": str(exc)})
 
     print(json.dumps({
         "summary": summary,
         "pagination_candidates": candidates[:100],
         "inputs": inputs[:100],
-        "forms": forms[:30],
-        "html_target_snippets": html_hits,
+        "inline_changePage_window": inline_change,
+        "inline_tablLichTHQ_window": inline_tabl,
         "script_srcs": script_srcs,
-        "script_hits": script_hits,
+        "external_hits": external_hits,
     }, ensure_ascii=False, indent=2))
 
 
