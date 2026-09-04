@@ -100,11 +100,20 @@ class BuyerReadinessTests(unittest.TestCase):
             self.assertIn(marker, client)
         self.assertIn("payload?.ranking_valid === true", client)
 
-    def test_email_stays_inactive_while_checkout_is_enabled(self):
+    def test_paid_sales_and_product_email_fail_closed_until_e2e_ready(self):
         script = (ROOT / "scripts/apply_buyer_readiness.py").read_text(encoding="utf-8")
+        checkout_guard = (ROOT / "scripts/enforce_checkout_public_bank_info.py").read_text(encoding="utf-8")
+        registration_guard = (ROOT / "scripts/enforce_registration_plan_ctas.py").read_text(encoding="utf-8")
         workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
+        fast_workflow = (ROOT / ".github/workflows/pages-fast-hotfix.yml").read_text(encoding="utf-8")
+
         self.assertIn('STOCKRADAR_PRODUCT_EMAIL_READY: "0"', workflow)
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', fast_workflow)
+        self.assertIn("Premium checkout fail-closed", checkout_guard)
+        self.assertIn('data-checkout-ready="false"', checkout_guard)
+        self.assertIn("TẠM DỪNG KÍCH HOẠT MỚI", registration_guard)
+        self.assertIn("Đăng ký nhận thông báo", registration_guard)
         self.assertIn("shutil.rmtree(checkout)", script)
         self.assertIn("buyer-readiness-v1.js", script)
         self.assertIn("verify_buyer_readiness.py", workflow)
