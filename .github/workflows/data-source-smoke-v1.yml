@@ -16,55 +16,62 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Install current community data client
+      - name: Install raw market client
         run: |
           python -m pip install --upgrade pip
-          python -m pip install 'vnstock==4.0.7' 'pandas<3'
-      - name: Fetch raw listing OHLCV and statement line-items
+          python -m pip install 'vnstock==4.0.7' 'pandas<3' requests
+      - name: Fetch raw listing OHLCV and VNDirect statement rows
         run: |
           python - <<'PY'
-          import json
+          import json, requests
           import pandas as pd
-          from vnstock import Reference, Fundamental
+          from vnstock import Reference
           from vnstock.ui import Market
 
-          def shape(df): return list(getattr(df, 'shape', (0, 0)))
-          def cols(df): return [str(c) for c in getattr(df, 'columns', [])]
-
+          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36'
           ref = Reference()
           exchanges = ref.equity.list_by_exchange()
           if not isinstance(exchanges, pd.DataFrame) or exchanges.empty:
               raise RuntimeError('Reference exchange list is empty')
 
-          mkt = Market()
-          px = mkt.equity('HPG').ohlcv(start='2025-01-01', end='2026-09-04', interval='1D', count=500)
-          required_px = {'time','open','high','low','close','volume'}
-          if not required_px.issubset(set(map(str, px.columns))):
-              raise RuntimeError(f'OHLCV schema missing columns: {cols(px)}')
-          if len(px) < 250:
-              raise RuntimeError(f'OHLCV history too short: {len(px)}')
+          px = Market().equity('HPG').ohlcv(start='2025-01-01', end='2026-09-04', interval='1D', count=500)
+          required_px={'time','open','high','low','close','volume'}
+          if not required_px.issubset(set(map(str, px.columns))) or len(px) < 250:
+              raise RuntimeError(f'OHLCV invalid: rows={len(px)} columns={list(px.columns)}')
 
-          fun = Fundamental()
-          income = fun.equity('HPG').income_statement(period='quarter', orient='time_series')
-          balance = fun.equity('HPG').balance_sheet(period='quarter', orient='time_series')
-          cash = fun.equity('HPG').cash_flow(period='quarter', orient='time_series')
-          if min(len(income), len(balance), len(cash)) == 0:
-              raise RuntimeError('One or more raw statement tables are empty')
+          base='https://api-finfo.vndirect.com.vn/v4/financial_statements'
+          results={}
+          for report_type in ('QUARTER','ANNUAL'):
+              params={
+                  'q':f'code:HPG~reportType:{report_type}~modelType:1',
+                  'sort':'fiscalDate:desc',
+                  'size':'500',
+                  'page':'1',
+              }
+              r=requests.get(base,params=params,headers={'User-Agent':UA,'Accept':'application/json'},timeout=30)
+              r.raise_for_status()
+              payload=r.json()
+              rows=payload.get('data') or []
+              if not rows:
+                  raise RuntimeError(f'VNDirect {report_type} rows empty: {payload}')
+              forbidden={'score','rank','rating','recommendation','signal','pe','pb','roe','rvol','target_price','fair_value'}
+              keys={str(k).lower() for row in rows[:20] for k in row.keys()}
+              if keys & forbidden:
+                  raise RuntimeError(f'Derived provider fields present: {sorted(keys & forbidden)}')
+              periods=sorted({str(row.get('fiscalDate')) for row in rows if row.get('fiscalDate')}, reverse=True)
+              results[report_type]={
+                  'row_count':len(rows),
+                  'period_count':len(periods),
+                  'periods':periods[:8],
+                  'keys':sorted(keys),
+                  'sample_item_codes':sorted({str(row.get('itemCode')) for row in rows[:100] if row.get('itemCode') is not None})[:30],
+              }
 
-          info = ref.company('HPG').info()
           print(json.dumps({
-              'provider_role': 'RAW_INPUT_ONLY',
-              'exchange_shape': shape(exchanges),
-              'exchange_columns': cols(exchanges),
-              'ohlcv_shape': shape(px),
-              'ohlcv_columns': cols(px),
-              'income_shape': shape(income),
-              'income_columns': cols(income)[:50],
-              'balance_shape': shape(balance),
-              'balance_columns': cols(balance)[:50],
-              'cashflow_shape': shape(cash),
-              'cashflow_columns': cols(cash)[:50],
-              'company_shape': shape(info),
-              'company_columns': cols(info)[:50],
-          }, ensure_ascii=False, indent=2))
+              'provider_role':'RAW_INPUT_ONLY_TECHNICAL_SMOKE_NOT_PRODUCTION_RIGHTS_APPROVAL',
+              'reference_rows':len(exchanges),
+              'ohlcv_rows':len(px),
+              'ohlcv_columns':list(map(str,px.columns)),
+              'statements':results,
+          },ensure_ascii=False,indent=2))
           PY
