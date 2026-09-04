@@ -198,6 +198,13 @@ def route_specific_head(source: str, page: Path, output: Path) -> str:
     if page.parent.name == "khuyen-nghi":
         css = asset_href(source, page, output, "recommendation-dense-v3.css")
         head += f'<link rel="stylesheet" href="{css}?v=20260903-reco3">\n'
+    if top_route(page, output) == "tai-khoan":
+        account_css = asset_href(source, page, output, "account-upgrade-v1.css")
+        account_js = asset_href(source, page, output, "account-upgrade-v1.js")
+        head += (
+            f'<link rel="stylesheet" href="{account_css}?v=20260904-upgrade1">\n'
+            f'<script src="{account_js}?v=20260904-upgrade1" defer></script>\n'
+        )
     return head
 
 
@@ -263,6 +270,8 @@ def main() -> None:
         output / "assets" / "professional-v5.css",
         output / "assets" / "conversion-v1.css",
         output / "assets" / "conversion-state-v1.js",
+        output / "assets" / "account-upgrade-v1.css",
+        output / "assets" / "account-upgrade-v1.js",
         output / "assets" / "mobile-touch-v1.css",
         output / "assets" / "public-fallbacks-v4.js",
         output / "assets" / "header-auth-dedupe-v6.js",
