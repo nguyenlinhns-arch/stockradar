@@ -4,52 +4,56 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Radar 30 cổ phiếu HOSE theo 10 ngành, bốn khung đầu tư và bốn nền tảng 4M, CANSLIM, SEPA/VCP, VPA của StockRadar.">
-  <title>Radar 30 HOSE — StockRadar</title>
+  <meta name="description" content="StockRadar quét toàn bộ cổ phiếu HOSE qua dữ liệu doanh nghiệp, định giá, thị trường/ngành, xu hướng, dòng tiền, catalyst và quản trị rủi ro; chỉ đưa mã qua các gate vào Radar.">
+  <title>Radar HOSE — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
-  <script src="assets/app.js?v=20260902-data1" defer></script>
+  <link rel="stylesheet" href="assets/styles.css?v=20260904-radar3">
+  <script src="assets/app.js?v=20260904-radar3" defer></script>
 </head>
 <body data-proposition="radar5">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/" aria-current="page">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="thay-doi-hom-nay/">Thay đổi</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
 
   <main id="content">
-    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Radar</span></nav><h1>Radar 30 cổ phiếu HOSE</h1><p>30 mã · 10 ngành · 3 mã mỗi ngành · 4 khung đầu tư.</p></div><div class="page-heading-actions"><span class="data-pill">RADAR 30 · HOSE</span><a class="button button-secondary button-small" href="#phuong-phap">Phương pháp</a><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu mã</a></div></div></section>
+    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Radar</span></nav><h1>Radar toàn bộ cổ phiếu HOSE</h1><p>Quét full-universe → kiểm tra dữ liệu/thanh khoản → chấm điểm đa lớp → xếp hạng → Action Gate. Không đủ chuẩn thì không đưa vào danh sách hành động.</p></div><div class="page-heading-actions"><span class="data-pill">FULL HOSE · GATED RADAR</span><a class="button button-secondary button-small" href="#phuong-phap">Phương pháp</a><a class="button button-secondary button-small" href="kiem-tra-co-phieu/">Tra cứu mã</a></div></div></section>
 
     <section class="radar-workspace">
       <div class="container radar-workspace-grid">
         <section class="workspace-panel">
-          <header class="radar-toolbar"><div><span class="panel-label">NGẮN HẠN · 5–20 PHIÊN</span><h2>Bộ lọc trạng thái Radar</h2></div><div class="toolbar-meta"><span>Khung đầu tư <strong>4 chiến lược</strong></span><span>Nền tảng <strong>4M · CANSLIM · SEPA/VCP · VPA</strong></span></div></header>
+          <header class="radar-toolbar"><div><span class="panel-label">NGẮN HẠN · 5–20 PHIÊN</span><h2>Radar theo trạng thái hành động</h2></div><div class="toolbar-meta"><span>Universe <strong>Toàn HOSE</strong></span><span>Gate <strong>Dữ liệu · thanh khoản · bối cảnh · rủi ro</strong></span></div></header>
           <div class="recommendation-filters radar-filter-bar" aria-label="Lọc Radar"><button class="is-active" type="button" data-radar-filter="ALL">Tất cả</button><button type="button" data-radar-filter="READY">Đạt vùng mua</button><button type="button" data-radar-filter="NEAR_TRIGGER">Chờ mua</button><button type="button" data-radar-filter="WATCH">Theo dõi</button><button type="button" data-radar-filter="EXTENDED">Tăng quá vùng mua</button></div>
           <div class="radar-table" data-radar-table></div>
-          <footer class="panel-foot"><span>Radar <strong>30 mã</strong></span><span>Ngành <strong>10 × 3</strong></span><span>Sàn <strong>HOSE</strong></span></footer>
+          <footer class="panel-foot"><span>Universe <strong>HOSE</strong></span><span>Xếp hạng <strong>Theo snapshot</strong></span><span>Nguyên tắc <strong>Không đủ gate → không hành động</strong></span></footer>
         </section>
 
         <aside class="dashboard-sidebar radar-sidebar">
-          <section class="side-panel market-regime-panel"><div class="side-panel-head"><span>QUÉT TRONG PHIÊN</span><i class="status-light"></i></div><strong class="regime-value">10:30 · 11:15 · 13:30 · 14:15</strong></section>
-          <section class="side-panel operations-shortcuts"><div class="side-panel-head"><span>TRUY CẬP NHANH</span></div><a href="#phuong-phap"><strong>Phương pháp StockRadar</strong><span>4M · CANSLIM · SEPA/VCP · VPA</span></a><a href="breakout/"><strong>Điểm mua</strong><span>Pocket Pivot · Breakout · Retest</span></a><a href="risk/"><strong>Quản trị rủi ro</strong><span>Stop · hạ tỷ trọng · cắt lỗ</span></a><a href="khuyen-nghi/"><strong>Khuyến nghị</strong><span>Buy Zone · Target · R:R</span></a><a href="track-record/"><strong>Lịch sử</strong><span>Vòng đời và kết quả khuyến nghị</span></a></section>
+          <section class="side-panel market-regime-panel"><div class="side-panel-head"><span>QUÉT TRONG PHIÊN</span><i class="status-light"></i></div><strong class="regime-value">10:30 · 11:15 · 13:30 · 14:15</strong><span>RVOL và volume được so cùng tiến độ phiên, không dùng volume cả ngày máy móc.</span></section>
+          <section class="side-panel operations-shortcuts"><div class="side-panel-head"><span>TRUY CẬP NHANH</span></div><a href="#phuong-phap"><strong>Hệ thống chấm điểm</strong><span>Doanh nghiệp → định giá → thị trường/ngành → kỹ thuật → dòng tiền → rủi ro</span></a><a href="breakout/"><strong>Điểm mua</strong><span>Pocket Pivot · Early Breakout · Confirmed Breakout · Retest</span></a><a href="risk/"><strong>Quản trị rủi ro</strong><span>Stop · tỷ trọng · hạ tỷ trọng · cắt lỗ</span></a><a href="khuyen-nghi/"><strong>Khuyến nghị</strong><span>Buy Zone · Target · R:R · điều kiện vô hiệu</span></a><a href="track-record/"><strong>Lịch sử</strong><span>Vòng đời và kết quả khuyến nghị</span></a></section>
         </aside>
       </div>
     </section>
 
-    <section class="radar-methodology" id="phuong-phap" data-method-stack="4M · SEPA · VPA" aria-labelledby="radar-method-title">
+    <section class="radar-methodology" id="phuong-phap" data-method-stack="FUNDAMENTAL · VALUATION · MARKET · SEPA · VPA · RISK" aria-labelledby="radar-method-title">
       <div class="container">
         <section class="v4-fallback radar-method-card">
-          <header class="v4-fallback-head radar-method-head"><div><span class="panel-label">PHƯƠNG PHÁP STOCKRADAR</span><h2 id="radar-method-title">4 phương pháp cốt lõi</h2></div></header>
+          <header class="v4-fallback-head radar-method-head"><div><span class="panel-label">HỆ THỐNG STOCKRADAR</span><h2 id="radar-method-title">Radar không lọc bằng một chỉ báo — mỗi mã phải đi qua 8 lớp</h2><p>Mục tiêu là tìm doanh nghiệp đủ tốt, giá còn hợp lý, bối cảnh thị trường/ngành ủng hộ và dòng tiền xác nhận đúng lúc; sau đó mới quyết định có hành động hay không.</p></div></header>
           <div class="v4-method-grid radar-method-grid">
-            <article><strong>1. 4M &amp; Payback — Phil Town</strong><span>Doanh nghiệp · Fair Value · MOS · Payback · Việt Nam: lợi nhuận bất thường · CAPEX · nợ · chu kỳ.</span></article>
-            <article><strong>2. CANSLIM — William J. O’Neil</strong><span>Tăng trưởng · Catalyst · Leader · Supply/Demand · Market · Việt Nam: ROE · free float · thanh khoản · tổ chức · VN-Index/VN30.</span></article>
-            <article><strong>3. SEPA / VCP — Mark Minervini</strong><span>Stage · RS · VCP · Pivot · Breakout · Việt Nam: MA10/50/150/200 · nền giá · không mua extended.</span></article>
-            <article><strong>4. VPA / Wyckoff — Anna Coulling &amp; Richard D. Wyckoff</strong><span>Price × Volume · Supply/Demand · Accumulation · Việt Nam: RVOL/same-time volume · 10:30 · 11:15 · 13:30 · 14:15.</span></article>
+            <article><strong>1. Dữ liệu &amp; khả năng giao dịch</strong><span>HOSE universe · lịch sử giá · thanh khoản Vol20 · intraday 5 phút · freshness · corporate-action integrity. Thiếu dữ liệu quan trọng thì hạ cấp hoặc loại khỏi Action Gate.</span></article>
+            <article><strong>2. 4M &amp; Payback</strong><span>Meaning · Moat · Management · Owner Earnings/FCF · Payback · chất lượng lợi nhuận · nợ/CAPEX. Loại lợi nhuận bất thường trước khi định giá.</span></article>
+            <article><strong>3. CANSLIM &amp; tăng trưởng</strong><span>Doanh thu/EPS/LNST quý · tăng trưởng năm · ROE · catalyst · leader · supply/demand · tổ chức. Không dùng điểm tăng trưởng nếu dữ liệu không đủ chiều sâu.</span></article>
+            <article><strong>4. Định giá đa kịch bản</strong><span>P/E · Forward P/E · P/B · PEG · EV/EBITDA · DCF/Owner Earnings · lịch sử định giá · Bear/Base/Bull · Fair Value · MOS · Upside/Downside.</span></article>
+            <article><strong>5. Market &amp; Sector Regime</strong><span>VN-Index/VN30 · breadth · tỷ lệ trên MA50/MA200 · Stage 2 breadth · Relative Strength ngành · dòng tiền luân chuyển. Index tăng nhưng breadth yếu vẫn bị coi là phân hóa/thận trọng.</span></article>
+            <article><strong>6. SEPA / VCP / Stage</strong><span>MA10/50/150/200 · Trend Template · RS · Stage 1→2 · nền giá · VCP · Pivot · Breakout · Pullback/Retest. Không mua đuổi khi extended.</span></article>
+            <article><strong>7. VPA · RVOL · dòng tiền lớn</strong><span>Volume Dry-up · No Supply · Demand/Supply Bar · Absorption · Shakeout · Pocket Pivot · same-time volume · projected volume. Xác nhận Whale Move bằng giá × khối lượng.</span></article>
+            <article><strong>8. Risk &amp; Action Gate</strong><span>ATR/biến động · drawdown · thanh khoản · Buy Zone · Stop · Target · Risk/Reward · tỷ trọng. Pocket Pivot 15–20%, Early Breakout 20–30%, Confirmed Breakout mới nâng tỷ trọng khi luận điểm còn đúng.</span></article>
           </div>
-          <div class="radar-vietnam-note"><strong>Áp dụng Việt Nam</strong><span>HOSE · thanh khoản · free float · chu kỳ ngành · BCTC · dòng tiền · biên độ/phiên.</span></div>
-          <div class="radar-support-tools"><strong>Điểm mua sớm</strong><span>Pocket Pivot — Gil Morales &amp; Chris Kacher · Ichimoku · Bollinger · Trendline · Stage.</span></div>
+          <div class="radar-vietnam-note"><strong>Nguyên tắc vận hành</strong><span>Quét toàn HOSE trước, chỉ xếp hạng các mã qua Full-Scan Gate. Catalyst/corporate actions chỉ được cộng điểm khi nguồn đủ mới và đủ tin cậy; nếu chưa đủ thì để trọng số 0 thay vì đoán.</span></div>
+          <div class="radar-support-tools"><strong>Đầu ra bắt buộc khi có tín hiệu</strong><span>Snapshot · Setup · giá · RVOL/same-time volume · Buy Zone · tỷ trọng · Stop-loss · Target gần · Target 3–6 tháng · Upside/Downside · Risk/Reward · điều kiện vô hiệu.</span></div>
         </section>
       </div>
     </section>
   </main>
 
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">StockRadar kết hợp phân tích doanh nghiệp, định giá, kỹ thuật, dòng tiền và quản trị rủi ro.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></div></div><p class="disclaimer">StockRadar kết hợp dữ liệu doanh nghiệp, định giá, thị trường/ngành, kỹ thuật, dòng tiền, catalyst và quản trị rủi ro; không đủ dữ kiện thì không phát tín hiệu hành động.</p></div></footer>
 </body>
 </html>
