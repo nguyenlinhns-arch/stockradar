@@ -17,8 +17,38 @@ def main() -> None:
     if not home.is_file():
         raise RuntimeError("Homepage missing")
     source = home.read_text(encoding="utf-8")
-    errors: list[str] = []
 
+    if "data-stockradar-ai-center" in source:
+        errors: list[str] = []
+        required = (
+            "Hỏi một mã cổ phiếu",
+            "mua được chưa",
+            "đang nắm giữ nên làm gì",
+            "rủi ro ở đâu",
+            "3 câu/ngày",
+            "10 câu/ngày",
+            "Hỏi không giới hạn",
+            "signup/?plan=free",
+            "dang-ky/?plan=premium",
+        )
+        for marker in required:
+            if marker not in source:
+                errors.append(f"missing AI-first buyer marker: {marker}")
+        for marker in (
+            "FREE · EMAIL 09:00",
+            "FREE 09:00",
+            "Nhận bản rà soát 09:00 miễn phí",
+            "Nhận bản tin 09:00 miễn phí",
+            "Xem bản rà soát Free",
+        ):
+            if marker.casefold() in source.casefold():
+                errors.append(f"Free product-email promise remains on homepage: {marker}")
+        if errors:
+            raise RuntimeError("AI-first paid-intent verification failed:\n- " + "\n- ".join(errors))
+        print("Homepage paid-intent verification: PASS (AI-first buyer journey)")
+        return
+
+    errors: list[str] = []
     required = (
         "Bạn đang quan tâm mã nào?",
         "Tra mã miễn phí",
