@@ -161,10 +161,13 @@ class InternalEngineTests(unittest.TestCase):
         tampered = InternalStockComputation(
             ticker=result.ticker,
             sector=result.sector,
+            business_model=result.business_model,
             candidate=result.candidate,
             technical=result.technical,
             fundamental=result.fundamental,
             valuation=result.valuation,
+            research=result.research,
+            valuation_assumptions=result.valuation_assumptions,
             bucket_scores=result.bucket_scores,
             computation={**result.computation, "calculation_origin": "EXTERNAL_PROVIDER"},
         )
