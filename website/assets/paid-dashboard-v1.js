@@ -30,7 +30,7 @@
   }
 
   function normalizeTicker(value) {
-    return String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   }
 
   function formatSnapshot(value) {
@@ -115,15 +115,15 @@
     setText(root, '[data-paid-watchlist-count]', `${watchlist.length}`);
     setText(root, '[data-paid-owned-count]', `${watchlist.filter(item => item.owns_stock).length}`);
     setText(root, '[data-paid-alert-count]', `${alertCount}`);
-    setText(root, '[data-paid-email-state]', health?.delivery_system_ready ? 'Sẵn sàng' : health ? 'Đang kiểm tra' : 'Chưa xác định');
+    setText(root, '[data-paid-email-state]', health?.delivery_system_ready ? 'Sẵn sàng' : health ? 'Chưa kích hoạt' : 'Chưa xác định');
 
-    const badge = root.querySelector('[data-paid-tier-badge]');
+    const badge = document.querySelector('[data-paid-tier-badge]');
     if (badge) badge.textContent = `${tier}${active ? ' · ACTIVE' : ''}`;
 
     const banner = root.querySelector('[data-paid-plan-banner]');
     if (!banner) return;
     if (premium && active) {
-      banner.innerHTML = `<strong>Premium đang hoạt động.</strong><span>Ưu tiên mã đang sở hữu, mã theo dõi và Action Alert đã bật. Hệ thống chỉ phát hành hành động khi dữ liệu vượt đủ gate.</span><a class="button button-secondary button-small" href="${siteUrl('tai-khoan/')}">Cài đặt cảnh báo</a>`;
+      banner.innerHTML = `<strong>Premium đang hoạt động.</strong><span>Ưu tiên mã đang sở hữu, mã theo dõi và Action Alert đã bật. Chỉ hiển thị hành động khi dữ liệu đủ điều kiện phát hành.</span><a class="button button-secondary button-small" href="${siteUrl('tai-khoan/')}">Cài đặt cảnh báo</a>`;
     } else if (!active) {
       banner.innerHTML = `<strong>Tài khoản chưa ACTIVE.</strong><span>Xác minh email để các tùy chọn cá nhân hóa và quyền gửi email có hiệu lực.</span><a class="button button-primary button-small" href="${siteUrl('tai-khoan/')}">Kiểm tra tài khoản</a>`;
     } else {
@@ -138,7 +138,7 @@
       <span class="paid-stock-ticker">${escapeHtml(ticker)}</span>
       <span>${escapeHtml(horizon)}</span>
       <span>${item.alert_enabled ? 'Action Alert bật' : 'Chưa bật Alert'}</span>
-      <b>Xem phân tích →</b>
+      <b>Xem hồ sơ →</b>
     </a>`;
   }
 
@@ -180,12 +180,12 @@
     return `<article class="paid-action-card">
       <header><div><span class="panel-label">${ownsStock ? 'ĐANG SỞ HỮU' : 'CƠ HỘI'}</span><h3>${escapeHtml(ticker || '—')}</h3></div><strong>${escapeHtml(recommendationAction(item))}</strong></header>
       <div class="paid-action-metrics">
-        <span>Buy Zone<b>${escapeHtml(buyZone || '—')}</b></span>
+        <span>Vùng mua<b>${escapeHtml(buyZone || '—')}</b></span>
         <span>Stop<b>${escapeHtml(stop ?? '—')}</b></span>
         <span>Target<b>${escapeHtml(target ?? '—')}</b></span>
         <span>R/R<b>${escapeHtml(rr ?? '—')}</b></span>
       </div>
-      <a class="text-link" href="${siteUrl(`co-phieu/${ticker}/`)}">Mở phân tích ${escapeHtml(ticker)} →</a>
+      <a class="text-link" href="${siteUrl(`co-phieu/${ticker}/`)}">Mở hồ sơ ${escapeHtml(ticker)} →</a>
     </article>`;
   }
 
@@ -197,15 +197,15 @@
     setText(root, '[data-paid-snapshot]', formatSnapshot(asOf));
 
     if (!recommendations || isBlocked(recommendations)) {
-      if (status) status.textContent = 'DATA GATE · CHƯA PHÁT HÀNH';
+      if (status) status.textContent = 'CHƯA PHÁT HÀNH HÀNH ĐỘNG';
       target.innerHTML = `<div class="paid-gated">
-        <strong>Chưa có dữ liệu quyết định đủ chuẩn để phát hành.</strong>
-        <p>StockRadar không biến trạng thái thiếu dữ liệu thành “không có cơ hội”. Khi feed vượt Data Gate, hành động mua/giữ/gia tăng/hạ tỷ trọng sẽ xuất hiện tại đây theo đúng snapshot.</p>
+        <strong>Chưa đủ dữ liệu để phát hành hành động.</strong>
+        <p>StockRadar không suy diễn trạng thái thiếu dữ liệu thành “không có cơ hội”. Khi nguồn quyết định đạt chuẩn, hành động mua/giữ/gia tăng/hạ tỷ trọng sẽ xuất hiện tại đây theo đúng snapshot.</p>
       </div>`;
       return;
     }
 
-    if (status) status.textContent = 'DECISION DATA · SẴN SÀNG';
+    if (status) status.textContent = 'DỮ LIỆU QUYẾT ĐỊNH · SẴN SÀNG';
     const items = Array.isArray(recommendations.items) ? recommendations.items : [];
     const watched = new Set(watchlist.map(item => normalizeTicker(item.ticker)));
     const owned = new Set(watchlist.filter(item => item.owns_stock).map(item => normalizeTicker(item.ticker)));
@@ -220,7 +220,7 @@
     const target = root.querySelector('[data-paid-changes]');
     if (!target) return;
     if (!changes || isBlocked(changes)) {
-      target.innerHTML = '<div class="paid-empty">Feed thay đổi đang chờ Data Gate. Chưa phát hành thay đổi setup/dòng tiền cho quyết định giao dịch.</div>';
+      target.innerHTML = '<div class="paid-empty">Nguồn thay đổi chưa đủ điều kiện phát hành. Chưa hiển thị thay đổi trạng thái cho quyết định giao dịch.</div>';
       return;
     }
     const watched = new Set(watchlist.map(item => normalizeTicker(item.ticker)));
@@ -249,7 +249,7 @@
     const client = getClient();
 
     if (!client) {
-      if (loading) loading.textContent = 'Dịch vụ tài khoản chưa sẵn sàng.';
+      if (loading) loading.textContent = 'Chưa thể mở dữ liệu tài khoản.';
       return;
     }
 
@@ -280,7 +280,7 @@
       if (loading) loading.hidden = true;
       if (content) content.hidden = false;
     } catch (error) {
-      if (loading) loading.textContent = 'Chưa thể tải bảng Hôm nay. Hãy mở lại trang hoặc kiểm tra phiên đăng nhập.';
+      if (loading) loading.textContent = 'Chưa thể mở bảng Hôm nay. Hãy tải lại trang hoặc kiểm tra phiên đăng nhập.';
     }
   }
 
