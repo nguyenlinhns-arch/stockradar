@@ -109,7 +109,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
             self.assertIn(feature, home)
         self.assertIn("30 mã", home)
         self.assertIn("10 ngành · 3 mã mỗi ngành", home)
-        self.assertIn("4 mốc quét/ngày", home)
+        self.assertIn("4 mốc/ngày", home)
         self.assertIn("10:30 · 11:15 · 13:30 · 14:15", home)
         self.assertIn("assets/home-focus-v1.css", home)
         self.assertIn("assets/home-conversion-v2.css", home)
