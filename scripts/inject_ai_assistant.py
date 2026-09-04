@@ -74,9 +74,18 @@ def inject_nav(source: str) -> str:
 
 def transform_home(source: str) -> str:
     if 'data-stockradar-ai-center' in source:
+        # Native AI-first homepage: preserve its layout/client and only guarantee
+        # the shared navigation anchor used by StockRadar AI links on every page.
+        if 'id="stockradar-ai"' not in source:
+            source = source.replace(
+                'data-stockradar-ai-center',
+                'id="stockradar-ai" data-stockradar-ai-center',
+                1,
+            )
         return source
 
-    # The AI center owns the only primary H1. Existing lookup hero becomes supporting UI.
+    # Legacy homepage fallback: inject the original inline AI center and make it
+    # own the single H1.
     source = re.sub(
         r'<h1>(.*?)</h1>',
         r'<h2 class="sr-ai-support-title">\1</h2>',
