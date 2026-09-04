@@ -1,3 +1,4 @@
+# One-time narrow repair for the VSDC AJAX VPToken contract.
 from __future__ import annotations
 
 from pathlib import Path
