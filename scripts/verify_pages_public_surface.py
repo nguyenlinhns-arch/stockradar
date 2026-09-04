@@ -159,7 +159,7 @@ def main() -> None:
             'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
             'Radar 30', '30 mã', '10 ngành · 3 mã mỗi ngành', 'Free và Premium có gì?',
             '4M · CANSLIM · Payback', 'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot',
-            'VPA · RVOL · dòng tiền lớn', 'Email & cảnh báo trong phiên', '4 mốc quét/ngày',
+            'VPA · RVOL · dòng tiền lớn', 'Email & cảnh báo trong phiên', '4 mốc/ngày',
         ), errors,
     )
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
