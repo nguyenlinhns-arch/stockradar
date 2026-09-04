@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROUTES = ("breakout", "risk", "track-record", "thay-doi-hom-nay", "nhan-ban-tin")
 STYLE = "commercial-v1.css"
+SUPPORT_STYLE = "commercial-support-v1.css"
 RUNTIME = "commercial-v1.js"
 MARKER = "data-commercial-support-v1"
 
@@ -25,7 +26,8 @@ def inject_assets(source: str) -> str:
     if "</head>" not in source:
         raise RuntimeError("Support route has no closing head")
     tags = (
-        f'<link rel="stylesheet" href="assets/{STYLE}?v=20260904-commercial3" {MARKER}>\n'
+        f'<link rel="stylesheet" href="assets/{STYLE}?v=20260904-commercial3">\n'
+        f'<link rel="stylesheet" href="assets/{SUPPORT_STYLE}?v=20260904-commercial3" {MARKER}>\n'
         f'<script src="assets/{RUNTIME}?v=20260904-commercial3" defer></script>'
     )
     return source.replace("</head>", tags + "\n</head>", 1)
@@ -132,7 +134,7 @@ def main() -> None:
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     output = args.output.resolve()
-    for asset in (STYLE, RUNTIME):
+    for asset in (STYLE, SUPPORT_STYLE, RUNTIME):
         if not (output / "assets" / asset).is_file():
             raise RuntimeError(f"Missing support asset: {asset}")
     for route in ROUTES:
