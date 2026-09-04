@@ -60,6 +60,48 @@ def _capital_action_context(path: str, tickers: list[str], as_of: pd.Timestamp) 
     return pd.DataFrame(rows)
 
 
+def _corporate_action_gate(path: str | None, tickers: list[str]) -> pd.DataFrame:
+    defaults = pd.DataFrame({
+        "ticker": tickers,
+        "corporate_action_source_ready_v2": False,
+        "corporate_action_pagination_complete_v2": False,
+        "corporate_action_gate_v2": "BLOCK_SOURCE_COVERAGE",
+        "corporate_action_action_allowed_v2": False,
+        "corporate_action_review_required_v2": False,
+        "price_adjustment_reconciliation_required_v2": False,
+    })
+    if not path:
+        return defaults
+    p = Path(path)
+    if not p.exists():
+        return defaults
+    gate = pd.read_csv(p)
+    if "ticker" not in gate.columns:
+        raise ValueError("Corporate-action gate missing ticker")
+    gate["ticker"] = gate["ticker"].astype(str).str.strip().str.upper()
+    if len(gate) != EXPECTED_HOSE or gate["ticker"].nunique() != EXPECTED_HOSE or set(gate["ticker"]) != set(tickers):
+        raise ValueError("Corporate-action gate must contain exactly the canonical 405 HOSE tickers")
+    keep = [
+        "ticker",
+        "corporate_action_source_ready_v2",
+        "corporate_action_source_coverage_ratio_v2",
+        "corporate_action_pagination_complete_v2",
+        "corporate_action_event_count_window_v2",
+        "sensitive_event_count_window_v2",
+        "near_sensitive_event_count_v2",
+        "upcoming_sensitive_event_count_30d_v2",
+        "next_sensitive_record_date_v2",
+        "next_sensitive_event_type_v2",
+        "next_sensitive_event_title_v2",
+        "days_to_next_sensitive_event_v2",
+        "corporate_action_gate_v2",
+        "corporate_action_action_allowed_v2",
+        "corporate_action_review_required_v2",
+        "price_adjustment_reconciliation_required_v2",
+    ]
+    return gate[[c for c in keep if c in gate.columns]].copy()
+
+
 def build(args) -> None:
     unified = pd.read_csv(args.unified_v6)
     catalyst = pd.read_csv(args.catalyst_v2)
@@ -78,6 +120,7 @@ def build(args) -> None:
 
     tickers = unified["ticker"].tolist()
     ca_context = _capital_action_context(args.news_ca_candidates, tickers, as_of)
+    ca_gate = _corporate_action_gate(args.corporate_action_gate, tickers)
     catalyst_keep = [
         "ticker",
         "items_90d",
@@ -91,7 +134,11 @@ def build(args) -> None:
         "catalyst_alpha_weight_allowed_v2",
     ]
     catalyst_keep = [c for c in catalyst_keep if c in catalyst.columns]
-    out = unified.merge(catalyst[catalyst_keep], on="ticker", how="left").merge(ca_context, on="ticker", how="left")
+    out = (
+        unified.merge(catalyst[catalyst_keep], on="ticker", how="left")
+        .merge(ca_context, on="ticker", how="left")
+        .merge(ca_gate, on="ticker", how="left")
+    )
 
     sla_ready = bool(sla.get("internal_scan_ready") is True)
     authority_ratio = authority.get("source_coverage_ratio", authority.get("coverage_ratio", 0))
@@ -99,7 +146,8 @@ def build(args) -> None:
         authority_ratio = float(authority_ratio or 0)
     except Exception:
         authority_ratio = 0.0
-    authoritative_ready = bool(authority.get("source_ready") is True and authority_ratio >= 0.98)
+    authority_pagination_complete = bool(authority.get("pagination_complete") is True and int(authority.get("days_pagination_incomplete") or 0) == 0)
+    authoritative_ready = bool(authority.get("source_ready") is True and authority_ratio >= 0.98 and authority_pagination_complete)
 
     out["radar_score_v7"] = pd.to_numeric(out["radar_score_v6"], errors="coerce")
     out["catalyst_alpha_weight_v7"] = 0.0
@@ -107,17 +155,29 @@ def build(args) -> None:
     out["scan_sla_ready_v7"] = sla_ready
     out["authoritative_corporate_action_source_ready_v7"] = authoritative_ready
     out["authoritative_corporate_action_source_coverage_v7"] = authority_ratio
+    out["authoritative_corporate_action_pagination_complete_v7"] = authority_pagination_complete
     out["decision_candidate_v7"] = _bool_series(out["private_action_candidate_v6"])
     out["operational_research_ready_v7"] = _bool_series(out["operational_research_ready_v6"])
     out["news_derived_capital_action_review_required_v7"] = _bool_series(out["news_derived_capital_action_review_required_v7"])
+    out["corporate_action_source_ready_v2"] = _bool_series(out.get("corporate_action_source_ready_v2", pd.Series(False, index=out.index)))
+    out["corporate_action_pagination_complete_v2"] = _bool_series(out.get("corporate_action_pagination_complete_v2", pd.Series(False, index=out.index)))
+    out["corporate_action_action_allowed_v2"] = _bool_series(out.get("corporate_action_action_allowed_v2", pd.Series(False, index=out.index)))
+    out["corporate_action_gate_v2"] = out.get("corporate_action_gate_v2", pd.Series("BLOCK_SOURCE_COVERAGE", index=out.index)).fillna("BLOCK_SOURCE_COVERAGE").astype(str)
+    out["corporate_action_execution_clear_v7"] = (
+        out["authoritative_corporate_action_source_ready_v7"]
+        & out["corporate_action_source_ready_v2"]
+        & out["corporate_action_pagination_complete_v2"]
+        & out["corporate_action_action_allowed_v2"]
+        & out["corporate_action_gate_v2"].eq("PASS_NO_NEAR_SENSITIVE_EVENT")
+    )
 
-    # An execution-ready action requires authoritative current corporate-action coverage.
+    # Execution readiness is stricter than ranking: the current ticker-level corporate-action gate must PASS.
     # News-derived candidates can only add a review blocker; they can never unlock action.
     out["execution_ready_internal_v7"] = (
         out["decision_candidate_v7"]
         & out["operational_research_ready_v7"]
         & out["scan_sla_ready_v7"]
-        & out["authoritative_corporate_action_source_ready_v7"]
+        & out["corporate_action_execution_clear_v7"]
         & ~out["news_derived_capital_action_review_required_v7"]
     )
     out["public_action_allowed_v7"] = False
@@ -127,12 +187,15 @@ def build(args) -> None:
     for _, row in out.iterrows():
         reasons: list[str] = []
         decision_candidate = bool(row["decision_candidate_v7"])
+        ca_gate_state = str(row.get("corporate_action_gate_v2") or "BLOCK_SOURCE_COVERAGE")
         if not bool(row["operational_research_ready_v7"]):
             reasons.append("RESEARCH_OR_DATA_GATE_NOT_READY")
         if decision_candidate and not sla_ready:
             reasons.append("SCAN_SLA_NOT_READY")
         if decision_candidate and not authoritative_ready:
             reasons.append("AUTHORITATIVE_CORPORATE_ACTION_SOURCE_UNAVAILABLE")
+        if decision_candidate and authoritative_ready and not bool(row["corporate_action_execution_clear_v7"]):
+            reasons.append(f"CORPORATE_ACTION_GATE_{ca_gate_state}")
         if decision_candidate and bool(row["news_derived_capital_action_review_required_v7"]):
             reasons.append("RECENT_NEWS_DERIVED_CAPITAL_ACTION_REQUIRES_VERIFICATION")
         if not decision_candidate:
@@ -144,6 +207,8 @@ def build(args) -> None:
             status = "PRIVATE_EXECUTION_READY_PENDING_PUBLICATION_GATE"
         elif decision_candidate and not authoritative_ready:
             status = "DECISION_CANDIDATE_PENDING_AUTHORITATIVE_EVENT_VERIFICATION"
+        elif decision_candidate and not bool(row["corporate_action_execution_clear_v7"]):
+            status = "DECISION_CANDIDATE_BLOCKED_CORPORATE_ACTION_GATE"
         elif decision_candidate and bool(row["news_derived_capital_action_review_required_v7"]):
             status = "DECISION_CANDIDATE_PENDING_EVENT_REVIEW"
         elif decision_candidate and not sla_ready:
@@ -164,6 +229,10 @@ def build(args) -> None:
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     out.to_csv(args.output, index=False, encoding="utf-8-sig")
 
+    publication_blockers = ["DATA_RIGHTS", "COMPLIANCE", "ACTIVE_PRODUCTION_MANIFEST"]
+    if not authoritative_ready:
+        publication_blockers.append("AUTHORITATIVE_CURRENT_CORPORATE_ACTIONS")
+
     manifest = {
         "schema_version": "STOCKRADAR_UNIFIED_V7",
         "as_of": args.as_of,
@@ -171,6 +240,9 @@ def build(args) -> None:
         "scan_sla_ready": sla_ready,
         "authoritative_corporate_action_source_ready": authoritative_ready,
         "authoritative_corporate_action_source_coverage": authority_ratio,
+        "authoritative_corporate_action_pagination_complete": authority_pagination_complete,
+        "corporate_action_gate_counts": out["corporate_action_gate_v2"].value_counts().to_dict(),
+        "corporate_action_execution_clear": int(out["corporate_action_execution_clear_v7"].sum()),
         "operational_research_ready": int(out["operational_research_ready_v7"].sum()),
         "decision_candidates": int(out["decision_candidate_v7"].sum()),
         "execution_ready_internal": int(out["execution_ready_internal_v7"].sum()),
@@ -179,15 +251,10 @@ def build(args) -> None:
         "radar_status_counts": out["radar_status_v7"].value_counts().to_dict(),
         "catalyst_alpha_weight": 0,
         "institutional_alpha_weight": 0,
-        "corporate_action_policy": "AUTHORITATIVE_GATE_NOT_ALPHA; NEWS_DERIVED_EVENTS_ONLY_ADD_REVIEW_BLOCKERS",
+        "corporate_action_policy": "AUTHORITATIVE_TICKER_GATE_NOT_ALPHA; TICKER_GATE_MUST_PASS; NEWS_DERIVED_EVENTS_ONLY_ADD_REVIEW_BLOCKERS",
         "public_action_allowed": False,
-        "publication_blockers": [
-            "DATA_RIGHTS",
-            "COMPLIANCE",
-            "ACTIVE_PRODUCTION_MANIFEST",
-            "AUTHORITATIVE_CURRENT_CORPORATE_ACTIONS",
-        ],
-        "note": "V7 separates research ranking, private decision candidates, execution readiness, and public publication. Missing authoritative events can never be interpreted as no event.",
+        "publication_blockers": publication_blockers,
+        "note": "V7 separates research ranking, private decision candidates, ticker-level corporate-action execution readiness, and public publication. Missing/incomplete authoritative events can never be interpreted as no event.",
     }
     Path(args.manifest).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest, ensure_ascii=False))
@@ -200,6 +267,7 @@ def main() -> None:
     parser.add_argument("--news-ca-candidates", required=True)
     parser.add_argument("--sla", required=True)
     parser.add_argument("--authoritative-ca-coverage")
+    parser.add_argument("--corporate-action-gate")
     parser.add_argument("--as-of", required=True)
     parser.add_argument("--output", required=True)
     parser.add_argument("--manifest", required=True)
