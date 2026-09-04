@@ -39,8 +39,11 @@ jobs:
       - name: Install runtime dependency
         run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5
 
-      - name: Build fail-closed public data
+      - name: Build public data
         run: python -m engine.cli build-public
+
+      - name: Fail-close unlicensed public ticker seed
+        run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
 
       - name: Run stock lookup and AI regression suite
         run: |
@@ -59,9 +62,6 @@ jobs:
             engine.tests.test_stock_ai_product_center \
             engine.tests.test_stock_api_gateway_contract \
             engine.tests.test_stock_page_context
-
-      - name: Fail-close unlicensed public ticker seed
-        run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
 
       - name: Build Pages artifact
         env:
