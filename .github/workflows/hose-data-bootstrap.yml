@@ -1,6 +1,7 @@
 name: StockRadar HOSE Data Bootstrap
 
 # Full-universe invariant: the collector must resolve at least 405 HOSE tickers before a run can pass.
+# Contract refresh: technical producer now exports the scanner-required intraday/history fields.
 on:
   workflow_dispatch:
   push:
