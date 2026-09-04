@@ -34,10 +34,15 @@
     const form = document.querySelector('[data-auth-signup-form]');
     if (!form) return;
 
-    const requested = new URLSearchParams(window.location.search).get('plan');
+    const params = new URLSearchParams(window.location.search);
+    const requested = params.get('plan');
+    const presetEmail = String(params.get('email') || '').trim().toLowerCase();
     if (requested && VALID_PLANS.has(requested.toLowerCase())) {
       const radio = form.querySelector(`input[name="selected_plan"][value="${requested.toLowerCase()}"]`);
       if (radio) radio.checked = true;
+    }
+    if (presetEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(presetEmail) && form.elements.email && !form.elements.email.value) {
+      form.elements.email.value = presetEmail;
     }
 
     const render = () => {
