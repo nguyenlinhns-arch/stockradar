@@ -94,6 +94,9 @@
     const bits = [];
     const source = data?.source || {};
     const quota = data?.quota || {};
+    if (data?.mode === 'ACTION_READY') bits.push('Action đã xác nhận');
+    else if (data?.mode === 'RESEARCH_ONLY') bits.push('Góc nhìn nghiên cứu');
+    else if (data?.mode === 'METHOD_ONLY') bits.push('Chưa đủ dữ liệu hiện tại');
     if (source.generated_at) {
       try { bits.push(`Dữ liệu ${new Date(source.generated_at).toLocaleString('vi-VN')}`); } catch (_) {}
     }
@@ -221,7 +224,7 @@
 
     const log = node('div', 'sr-center-log');
     log.setAttribute('aria-live', 'polite');
-    addMessage(log, 'assistant', 'Tôi là StockRadar AI. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết, ví dụ: “FPT mua được chưa?” hoặc “MWG 3–6 tháng thế nào?”.');
+    addMessage(log, 'assistant', 'Tôi là StockRadar AI, dùng cùng lõi 4M/Payback · CANSLIM · định giá · SEPA/VCP · VPA · Pocket Pivot của StockRadar. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết.');
 
     const chips = node('div', 'sr-center-chips');
     ['FPT mua được chưa?', 'MWG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
