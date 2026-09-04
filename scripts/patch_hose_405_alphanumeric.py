@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# One-time migration trigger: 2026-09-04.
+# One-time migration trigger: 2026-09-04 rev2.
 from pathlib import Path
 
 
@@ -50,7 +50,6 @@ replace_once(
                 if current_cum is not None and pri and statistics.fmean(pri)>0:
                     same_time_ratio=current_cum/statistics.fmean(pri)
                 if current_cum is not None and curg.shape[0]>0:
-                    # ~52 five-minute bars in continuous trading; projection is diagnostic only.
                     projected_vol=current_cum*52/max(1,curg.shape[0])
 ''',
     '''                pri=[]
@@ -71,7 +70,6 @@ replace_once(
                 if current_cum is not None and pri and statistics.fmean(pri)>0:
                     same_time_ratio=current_cum/statistics.fmean(pri)
                 if current_cum is not None and progress:
-                    # Progress-adjusted projection derived from the historical same-time fraction.
                     frac=float(statistics.median(progress))
                     projected_vol=current_cum/frac if frac>0 else None
 ''',
