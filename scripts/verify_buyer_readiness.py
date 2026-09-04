@@ -60,7 +60,7 @@ def main() -> None:
 
     checkout = output / "thanh-toan" / "index.html"
     if not checkout.is_file():
-        errors.append("checkout route missing while checkoutReady=true")
+        errors.append("checkout route missing from buyer journey")
     else:
         checkout_source = checkout.read_text(encoding="utf-8")
         for marker in (
@@ -75,15 +75,23 @@ def main() -> None:
             if marker not in checkout_source:
                 errors.append(f"checkout marker missing: {marker}")
 
-    checkout_links = 0
+    signup = output / "signup" / "index.html"
+    auth_js = output / "assets" / "auth.js"
+    if not signup.is_file() or not auth_js.is_file():
+        errors.append("signup continuation artifacts missing")
+    else:
+        signup_source = signup.read_text(encoding="utf-8")
+        auth_source = auth_js.read_text(encoding="utf-8")
+        if 'value="premium"' not in signup_source:
+            errors.append("Premium signup option missing")
+        for marker in ("PENDING_SIGNUP_PLAN_KEY", "thanh-toan/?plan=premium", "pendingSignupDestination"):
+            if marker not in auth_source:
+                errors.append(f"Premium signup continuation missing: {marker}")
+
     for page in output.rglob("*.html"):
         source = page.read_text(encoding="utf-8")
         if "buyer-readiness-v1.js" not in source:
             errors.append(f"buyer runtime missing: {page.relative_to(output)}")
-        checkout_links += source.count("thanh-toan/?plan=premium")
-
-    if checkout_links == 0:
-        errors.append("no Premium CTA routes to checkout while checkoutReady=true")
 
     buyer_js = output / "assets" / "buyer-readiness-v1.js"
     if not buyer_js.is_file():
@@ -107,7 +115,7 @@ def main() -> None:
 
     if errors:
         raise RuntimeError("Buyer-readiness verification failed:\n- " + "\n- ".join(errors))
-    print("StockRadar buyer-readiness verification: PASS (checkout route published; product email remains gated)")
+    print("StockRadar buyer-readiness verification: PASS (signup-first Premium checkout published; product email remains gated)")
 
 
 if __name__ == "__main__":
