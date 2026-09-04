@@ -36,6 +36,31 @@ BANNED_PUBLIC_TERMS = (
     "Bear · Base · Bull",
     "Bear / Base / Bull",
 )
+
+PUBLIC_TERM_REPLACEMENTS = (
+    ("4M", "doanh nghiệp"),
+    ("CANSLIM", "tăng trưởng"),
+    ("SEPA", "xu hướng"),
+    ("VCP", "nền giá"),
+    ("VPA", "dòng tiền"),
+    ("RVOL", "khối lượng tương đối"),
+    ("Pocket Pivot", "điểm mua sớm"),
+    ("Early Breakout", "phá nền sớm"),
+    ("Confirmed Breakout", "phá nền xác nhận"),
+    ("Payback", "hoàn vốn"),
+    ("Wyckoff", "cung cầu"),
+    ("Minervini", "xu hướng"),
+    ("O’Neil", "tăng trưởng"),
+    ("O'Neil", "tăng trưởng"),
+    ("Phil Town", "doanh nghiệp"),
+    ("Ichimoku", "xu hướng"),
+    ("Bollinger", "biến động"),
+    ("Trendline", "đường xu hướng"),
+    ("Bear/Base/Bull", "các kịch bản"),
+    ("Bear · Base · Bull", "các kịch bản"),
+    ("Bear / Base / Bull", "các kịch bản"),
+)
+
 RUNTIME_GUARD = "decision-copy-guard-v1.js"
 RUNTIME_MARKER = "data-decision-copy-guard-v1"
 
@@ -77,6 +102,12 @@ def rewrite(source: str) -> str:
         ('Đạt vùng mua · Chờ mua · Theo dõi · Bỏ qua.', 'Mua · chờ · theo dõi · bỏ qua.'),
         ('SEPA · VCP · VPA · RVOL', 'TRẠNG THÁI HÀNH ĐỘNG'),
         ('4M · SEPA · VPA', 'TRẠNG THÁI · DÒNG TIỀN · RỦI RO'),
+        ('Dữ liệu · 4M/Payback · CANSLIM · Định giá · Market/Sector · SEPA/VCP · VPA/RVOL · Catalyst · Risk.', 'Dữ liệu · doanh nghiệp · định giá · thị trường/ngành · xu hướng · dòng tiền · sự kiện · rủi ro.'),
+        ('4M · CANSLIM · Payback', 'Doanh nghiệp & tăng trưởng'),
+        ('Định giá Bear / Base / Bull', 'Định giá theo kịch bản'),
+        ('SEPA/VCP · Stage · Pivot', 'Xu hướng · nền giá · vùng kích hoạt'),
+        ('VPA · RVOL · dòng tiền lớn', 'Dòng tiền & khối lượng'),
+        ('Bối cảnh thị trường, ngành, doanh nghiệp, định giá, xu hướng, VPA/RVOL và dòng tiền.', 'Bối cảnh thị trường, ngành, doanh nghiệp, định giá, xu hướng, khối lượng và dòng tiền.'),
         ('phân tích chuyên sâu', 'chi tiết quyết định'),
         ('Phân tích chuyên sâu', 'Chi tiết quyết định'),
         ('phân tích sâu hơn', 'quyết định chi tiết hơn'),
@@ -140,6 +171,11 @@ def rewrite(source: str) -> str:
     source = source.replace("SETUP", "TRẠNG THÁI")
     source = source.replace("Setup", "Trạng thái")
     source = source.replace("setup", "trạng thái")
+
+    # Last-resort deterministic scrub: source pages may evolve faster than the phrase map.
+    # Preserve the concepts in plain Vietnamese while guaranteeing banned internal jargon never reaches Pages.
+    for term, replacement in PUBLIC_TERM_REPLACEMENTS:
+        source = re.sub(re.escape(term), replacement, source, flags=re.IGNORECASE)
     return source
 
 
