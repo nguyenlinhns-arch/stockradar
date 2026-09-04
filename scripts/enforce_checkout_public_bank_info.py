@@ -36,28 +36,28 @@ def enforce(output: Path) -> Path:
     )
     source = re.sub(
         r'(<strong\s+data-checkout-bank[^>]*>).*?(</strong>)',
-        rf'\1{BANK_NAME}\2',
+        rf'\g<1>{BANK_NAME}\g<2>',
         source,
         count=1,
         flags=re.DOTALL,
     )
     source = re.sub(
         r'(<strong\s+data-checkout-account-number[^>]*>).*?(</strong>)',
-        rf'\1{ACCOUNT_NUMBER}\2',
+        rf'\g<1>{ACCOUNT_NUMBER}\g<2>',
         source,
         count=1,
         flags=re.DOTALL,
     )
     source = re.sub(
         r'(<strong\s+data-checkout-account-name[^>]*>).*?(</strong>)',
-        rf'\1{ACCOUNT_NAME}\2',
+        rf'\g<1>{ACCOUNT_NAME}\g<2>',
         source,
         count=1,
         flags=re.DOTALL,
     )
     source = re.sub(
         r'(<button\s+class="checkout-copy"\s+type="button"\s+data-copy-account)\s+data-copy-value="[^"]*"(?:\s+disabled)?',
-        rf'\1 data-copy-value="{ACCOUNT_NUMBER}"',
+        rf'\g<1> data-copy-value="{ACCOUNT_NUMBER}"',
         source,
         count=1,
     )
