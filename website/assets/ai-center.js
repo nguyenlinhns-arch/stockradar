@@ -154,7 +154,7 @@
       const authenticated = Boolean(session?.access_token);
 
       if (!authenticated && !ticker) {
-        addAction(log, 'Khách chưa đăng nhập có thể hỏi trực tiếp một mã HOSE. Để hỏi về danh mục/watchlist hoặc nhận 10 câu/ngày, hãy tạo tài khoản Free.', 'signup/?plan=free', 'Tạo tài khoản Free');
+        addAction(log, 'Khách chưa đăng nhập có thể hỏi trực tiếp một mã HOSE. Để hỏi về danh mục/watchlist hoặc nhận 10 câu/ngày, hãy tạo tài khoản Free.', 'dang-ky/?plan=free', 'Tạo tài khoản Free');
         updatePlan(status, null, false);
         return;
       }
@@ -191,8 +191,8 @@
       updatePlan(status, data, authenticated);
 
       if (response.status === 429) {
-        if (data?.tier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục ngay bằng tài khoản Free với 10 câu/ngày.', 'signup/?plan=free', 'Đăng ký Free');
-        if (data?.tier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert qua email, hãy mở Premium.', 'signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium', 'Mở Premium · 199K/30 ngày');
+        if (data?.tier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục ngay bằng tài khoản Free với 10 câu/ngày.', 'dang-ky/?plan=free', 'Đăng ký Free');
+        if (data?.tier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert qua email, hãy mở Premium.', 'dang-ky/?plan=premium', 'Xem gói Paid');
         return;
       }
 
