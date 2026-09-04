@@ -1,21 +1,29 @@
 import importlib.util
+import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = ROOT / "scripts" / "apply_buyer_readiness.py"
+BUYER_SCRIPT = ROOT / "scripts" / "apply_buyer_readiness.py"
+FINAL_SCRIPT = ROOT / "scripts" / "strip_public_methods.py"
 
-spec = importlib.util.spec_from_file_location("apply_buyer_readiness", SCRIPT)
-module = importlib.util.module_from_spec(spec)
-assert spec is not None and spec.loader is not None
-spec.loader.exec_module(module)
+buyer_spec = importlib.util.spec_from_file_location("apply_buyer_readiness", BUYER_SCRIPT)
+buyer_module = importlib.util.module_from_spec(buyer_spec)
+assert buyer_spec is not None and buyer_spec.loader is not None
+buyer_spec.loader.exec_module(buyer_module)
+
+final_spec = importlib.util.spec_from_file_location("strip_public_methods", FINAL_SCRIPT)
+final_module = importlib.util.module_from_spec(final_spec)
+assert final_spec is not None and final_spec.loader is not None
+final_spec.loader.exec_module(final_module)
 
 
 class PublicMethodJargonGateTests(unittest.TestCase):
     def transform(self, relative: str) -> str:
         source = (ROOT / relative).read_text(encoding="utf-8")
-        return module.strip_analysis_jargon(source)
+        source = buyer_module.strip_analysis_jargon(source)
+        return final_module.rewrite(source)
 
     def test_public_transform_removes_named_methods_from_core_pages(self):
         banned = (
@@ -50,6 +58,21 @@ class PublicMethodJargonGateTests(unittest.TestCase):
             for term in banned:
                 self.assertNotIn(term, transformed, f"{term} leaked in {relative}")
 
+    def test_public_transform_removes_analysis_word_from_core_pages(self):
+        pages = (
+            "website/index.html",
+            "website/radar5/index.html",
+            "website/co-phieu/index.html",
+            "website/dang-ky/index.html",
+            "website/khuyen-nghi/index.html",
+            "website/breakout/index.html",
+            "website/kiem-tra-co-phieu/index.html",
+            "website/phan-tich/index.html",
+        )
+        for relative in pages:
+            transformed = self.transform(relative)
+            self.assertNotIn("phân tích", transformed.casefold(), relative)
+
     def test_public_transform_keeps_action_outputs(self):
         page = self.transform("website/co-phieu/index.html")
         for marker in (
@@ -79,6 +102,27 @@ class PublicMethodJargonGateTests(unittest.TestCase):
         recommendations = self.transform("website/khuyen-nghi/index.html")
         self.assertNotIn("setup đạt chuẩn", recommendations)
         self.assertIn("điều kiện hành động đạt chuẩn", recommendations)
+
+    def test_final_scrub_retires_analysis_route_and_rewrites_links(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp)
+            (output / "phan-tich").mkdir(parents=True)
+            (output / "phan-tich" / "index.html").write_text("<h1>Phân tích cổ phiếu</h1>", encoding="utf-8")
+            (output / "index.html").write_text(
+                '<a href="phan-tich/">Phân tích chuyên sâu</a>', encoding="utf-8"
+            )
+
+            legacy = output / "phan-tich"
+            if legacy.exists():
+                import shutil
+                shutil.rmtree(legacy)
+            source = final_module.rewrite((output / "index.html").read_text(encoding="utf-8"))
+            (output / "index.html").write_text(source, encoding="utf-8")
+
+            self.assertFalse(legacy.exists())
+            self.assertNotIn("phân tích", source.casefold())
+            self.assertNotIn("phan-tich/", source)
+            self.assertIn("kiem-tra-co-phieu/", source)
 
 
 if __name__ == "__main__":
