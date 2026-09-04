@@ -7,6 +7,12 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
+from .input_policy import (
+    EXTERNAL_INPUT_ROLE,
+    ExternalDerivedDataError,
+    computation_provenance,
+    validate_external_raw_columns,
+)
 from .production_data import CONTRACT_VERSION, COVERAGE_DATASETS, REQUIRED_DATASETS
 
 
@@ -20,6 +26,7 @@ class DatasetInspection:
     sha256: str
     row_count: int
     covered_tickers: int | None
+    columns: tuple[str, ...]
     tickers: frozenset[str] | None = None
 
     def to_manifest_entry(self, *, snapshot_id: str, as_of: str) -> dict[str, Any]:
@@ -29,6 +36,8 @@ class DatasetInspection:
             "as_of": as_of,
             "sha256": self.sha256,
             "row_count": self.row_count,
+            "input_role": EXTERNAL_INPUT_ROLE,
+            "columns": list(self.columns),
         }
         if self.covered_tickers is not None:
             payload["covered_tickers"] = self.covered_tickers
@@ -70,6 +79,7 @@ def _normalized_ticker(value: object) -> str | None:
 def inspect_csv_dataset(
     path: Path,
     *,
+    dataset_name: str | None = None,
     ticker_column: str | None = None,
     exchange_column: str | None = None,
     expected_exchange: str | None = None,
@@ -86,6 +96,10 @@ def inspect_csv_dataset(
         reader = csv.DictReader(handle)
         if reader.fieldnames is None:
             raise ProductionBundleError(f"CSV header is missing: {path.name}")
+        try:
+            columns = validate_external_raw_columns(dataset_name or path.stem, reader.fieldnames)
+        except ExternalDerivedDataError as error:
+            raise ProductionBundleError(str(error)) from error
         if ticker_column and ticker_column not in reader.fieldnames:
             raise ProductionBundleError(
                 f"ticker column {ticker_column!r} is missing from {path.name}"
@@ -117,6 +131,7 @@ def inspect_csv_dataset(
         sha256=_sha256(path),
         row_count=row_count,
         covered_tickers=len(frozen_tickers) if frozen_tickers is not None else None,
+        columns=columns,
         tickers=frozen_tickers,
     )
 
@@ -193,6 +208,7 @@ def build_manifest_from_descriptor(
 
         inspection = inspect_csv_dataset(
             path,
+            dataset_name=name,
             ticker_column=ticker_column,
             exchange_column=exchange_column,
             expected_exchange=expected_exchange,
@@ -218,6 +234,7 @@ def build_manifest_from_descriptor(
         "snapshot": snapshot,
         "rights": dict(rights_raw),
         "active_status": dict(active_status_raw),
+        "computation": computation_provenance(),
         "datasets": datasets,
     }
 
