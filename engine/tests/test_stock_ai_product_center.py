@@ -7,6 +7,8 @@ MIGRATION = ROOT / "supabase" / "migrations" / "20260904130000_make_free_stock_a
 EDGE = ROOT / "supabase" / "functions" / "stock-ai" / "index.ts"
 INJECTOR = ROOT / "scripts" / "inject_ai_assistant.py"
 VERIFIER = ROOT / "scripts" / "verify_ai_assistant.py"
+AUTH_STATE = ROOT / "website" / "assets" / "auth-state-v2.js"
+PAID_NAV = ROOT / "website" / "assets" / "paid-nav-v1.js"
 PAGES = ROOT / ".github" / "workflows" / "pages.yml"
 FAST = ROOT / ".github" / "workflows" / "pages-fast-hotfix.yml"
 
@@ -46,10 +48,32 @@ class StockAiProductCenterTests(unittest.TestCase):
             "Khuyến nghị",
             "Hiệu quả",
             "sr-ai-nav-link",
+            "auth-state-v2.js",
         ):
             self.assertIn(marker, source)
         self.assertIn("main_match.end()", source)
         self.assertIn("sr-ai-support-title", source)
+        self.assertIn('output / "assets" / "auth-state-v2.js"', source)
+
+    def test_browser_auth_state_is_shared_by_header_and_ai(self):
+        auth_state = AUTH_STATE.read_text(encoding="utf-8")
+        paid_nav = PAID_NAV.read_text(encoding="utf-8")
+
+        for source in (auth_state, paid_nav):
+            self.assertIn("const STORAGE_KEY = 'stockradar-auth'", source)
+            self.assertIn("sb-${", source)
+            self.assertIn("auth-token", source)
+            self.assertIn("data-header-auth-actions", source)
+            self.assertIn("Nâng Premium", source)
+            self.assertIn("Đăng xuất", source)
+
+        self.assertIn("Guest -> Free -> Premium", auth_state)
+        self.assertIn("Guest -> Free -> Premium", paid_nav)
+        self.assertIn("header.querySelectorAll('[data-auth-nav]').forEach(node => node.remove())", auth_state)
+        self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", auth_state)
+        self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", paid_nav)
+        self.assertIn("replace(/\\bTRIAL\\b/g, 'Premium')", auth_state)
+        self.assertIn("replace(/\\bPAID\\b/g, 'Premium')", auth_state)
 
     def test_ai_verifier_locks_primary_surface_and_single_h1(self):
         source = VERIFIER.read_text(encoding="utf-8")
