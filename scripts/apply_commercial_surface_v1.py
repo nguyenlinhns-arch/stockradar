@@ -18,7 +18,17 @@ from pathlib import Path
 
 STYLE_NAME = "commercial-v1.css"
 STYLE_MARKER = "data-commercial-v1"
-CORE_ROUTES = ("", "radar5", "khuyen-nghi", "hieu-qua", "dang-ky")
+CORE_ROUTES = (
+    "",
+    "hom-nay",
+    "radar5",
+    "kiem-tra-co-phieu",
+    "khuyen-nghi",
+    "nganh",
+    "hieu-qua",
+    "dang-ky",
+    "tai-khoan",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -54,6 +64,17 @@ def remove_section(source: str, class_name: str, *, required: bool = True) -> st
     source, count = pattern.subn("\n", source, count=1)
     if required and count != 1:
         raise RuntimeError(f"Commercial surface expected section .{class_name}, found {count}")
+    return source
+
+
+def remove_section_by_aria(source: str, aria_id: str, *, required: bool = False) -> str:
+    pattern = re.compile(
+        rf'\s*<section\b[^>]*aria-labelledby=["\']{re.escape(aria_id)}["\'][^>]*>.*?</section>\s*',
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    source, count = pattern.subn("\n", source, count=1)
+    if required and count != 1:
+        raise RuntimeError(f"Commercial surface expected aria section {aria_id}, found {count}")
     return source
 
 
@@ -160,6 +181,15 @@ def commercial_home(source: str) -> str:
     return source
 
 
+def commercial_today(source: str) -> str:
+    source = remove_section_by_aria(source, "paid-shortcuts-title", required=False)
+    source = source.replace(
+        "Việc cần làm trước · mã đang sở hữu · mã theo dõi · thay đổi mới · trạng thái cảnh báo.",
+        "Hành động · vị thế · watchlist · thay đổi mới.",
+    )
+    return source
+
+
 def commercial_radar(source: str) -> str:
     source = remove_section(source, "radar-methodology")
     source = remove_section(source, "operations-shortcuts", required=False)
@@ -183,6 +213,16 @@ def commercial_radar(source: str) -> str:
         "khối lượng tương đối và volume được so cùng tiến độ phiên, không dùng volume cả ngày máy móc.",
         "4 mốc rà soát trong phiên.",
     )
+    return source
+
+
+def commercial_lookup(source: str) -> str:
+    source = remove_conversion_rail(source)
+    source = source.replace(
+        "Nhập mã để xem dữ liệu thị trường tham chiếu ngay và trạng thái StockRadar theo bốn khung đầu tư khi Decision Feed đạt gate.",
+        "Nhập mã HOSE để xem trạng thái StockRadar.",
+    )
+    source = source.replace("TOÀN HOSE · 4 KHUNG ĐẦU TƯ", "TRA CỨU HOSE")
     return source
 
 
@@ -210,6 +250,13 @@ def commercial_recommendations(source: str) -> str:
     source = source.replace("FULL HOSE · ACTION GATED", "TÍN HIỆU ĐÃ PHÁT HÀNH")
     source = source.replace("RADAR → ACTION GATE", "RADAR")
     source = source.replace("Shortlist theo snapshot", "Danh sách theo dõi")
+    return source
+
+
+def commercial_sectors(source: str) -> str:
+    source = remove_conversion_rail(source)
+    source = source.replace("10 nhóm ngành · 3 mã mỗi ngành · 30 cổ phiếu HOSE.", "So sánh sức mạnh cổ phiếu theo ngành trên HOSE.")
+    source = source.replace("SO SÁNH CÙNG NGÀNH", "THEO NGÀNH")
     return source
 
 
@@ -258,6 +305,27 @@ def commercial_plans(source: str) -> str:
     return source
 
 
+def commercial_account(source: str) -> str:
+    source = remove_section(source, "my-stockradar-hero", required=False)
+    source = source.replace(
+        "Quản lý watchlist, mã đang sở hữu, email Premium, cảnh báo và bảo mật.",
+        "Watchlist · vị thế · cảnh báo · bảo mật.",
+    )
+    source = source.replace(
+        "Kiểm tra nhanh cấu hình theo dõi và lần giao email gần nhất của chính tài khoản này.",
+        "Trạng thái email Premium của tài khoản.",
+    )
+    source = source.replace(
+        "Chọn chính xác loại thông tin bạn muốn StockRadar chủ động gửi. Không có email mua/bán nếu không có tín hiệu hành động đủ điều kiện.",
+        "Chọn loại email Premium bạn muốn nhận.",
+    )
+    source = source.replace(
+        "StockRadar không yêu cầu tài khoản chứng khoán, OTP, số lượng cổ phiếu, NAV hay quyền giao dịch. Nếu muốn AI cá nhân hóa sâu hơn, bạn có thể tự nguyện nhập giá vốn và tỷ trọng ước tính cho mã đang sở hữu.",
+        "Có thể nhập giá vốn và tỷ trọng ước tính nếu muốn cá nhân hóa sâu hơn.",
+    )
+    return source
+
+
 def process_page(output: Path, route: str) -> None:
     page = output / "index.html" if route == "" else output / route / "index.html"
     source = read(page)
@@ -268,14 +336,22 @@ def process_page(output: Path, route: str) -> None:
 
     if route == "":
         source = commercial_home(source)
+    elif route == "hom-nay":
+        source = commercial_today(source)
     elif route == "radar5":
         source = commercial_radar(source)
+    elif route == "kiem-tra-co-phieu":
+        source = commercial_lookup(source)
     elif route == "khuyen-nghi":
         source = commercial_recommendations(source)
+    elif route == "nganh":
+        source = commercial_sectors(source)
     elif route == "hieu-qua":
         source = commercial_performance(source)
     elif route == "dang-ky":
         source = commercial_plans(source)
+    elif route == "tai-khoan":
+        source = commercial_account(source)
 
     write(page, source)
 
@@ -283,9 +359,12 @@ def process_page(output: Path, route: str) -> None:
 def verify(output: Path) -> None:
     home = read(output / "index.html")
     radar = read(output / "radar5" / "index.html")
+    lookup = read(output / "kiem-tra-co-phieu" / "index.html")
     recommendations = read(output / "khuyen-nghi" / "index.html")
+    sectors = read(output / "nganh" / "index.html")
     performance = read(output / "hieu-qua" / "index.html")
     plans = read(output / "dang-ky" / "index.html")
+    account = read(output / "tai-khoan" / "index.html")
 
     required_home = (
         "data-stockradar-ai-center",
@@ -300,9 +379,12 @@ def verify(output: Path) -> None:
     forbidden = {
         "homepage": (home, ("buyer-first-section", "email-mini home-email-form")),
         "radar": (radar, ("radar-methodology", "operations-shortcuts")),
+        "lookup": (lookup, ("conversion-rail", "Decision Feed đạt gate")),
         "recommendations": (recommendations, ("buyer-recommendation-contract", "recommendation-reference-note", "conversion-rail")),
+        "sectors": (sectors, ("conversion-rail", "30 cổ phiếu HOSE", "3 mã mỗi ngành")),
         "performance": (performance, ("buyer-first-section", "conversion-rail")),
         "plans": (plans, ("conversion-plan-value", "buyer-plan-value", "premium-notify-title", "199K/tháng")),
+        "account": (account, ("my-stockradar-hero",)),
     }
     for label, (source, markers) in forbidden.items():
         for marker in markers:
