@@ -109,14 +109,14 @@ def build(args) -> None:
     authority = _read_optional_json(args.authoritative_ca_coverage)
     as_of = pd.Timestamp(args.as_of)
 
-    for frame_name, frame in {"unified_v6": unified, "catalyst_v2": catalyst}.items():
+    for frame_name, frame in {"unified_v6": unified, "catalyst": catalyst}.items():
         if "ticker" not in frame.columns:
             raise ValueError(f"{frame_name} missing ticker")
         frame["ticker"] = frame["ticker"].astype(str).str.strip().str.upper()
     if len(unified) != EXPECTED_HOSE or unified["ticker"].nunique() != EXPECTED_HOSE:
         raise ValueError("Unified V6 must contain exactly 405 unique HOSE tickers")
-    if catalyst["ticker"].nunique() != EXPECTED_HOSE:
-        raise ValueError("Catalyst V2 must cover exactly 405 HOSE tickers")
+    if len(catalyst) != EXPECTED_HOSE or catalyst["ticker"].nunique() != EXPECTED_HOSE:
+        raise ValueError("Catalyst layer must cover exactly 405 unique HOSE tickers")
 
     tickers = unified["ticker"].tolist()
     ca_context = _capital_action_context(args.news_ca_candidates, tickers, as_of)
@@ -132,6 +132,16 @@ def build(args) -> None:
         "latest_catalyst_time_v2",
         "latest_catalyst_title_v2",
         "catalyst_alpha_weight_allowed_v2",
+        "official_items_90d_v3",
+        "official_items_30d_v3",
+        "recall_only_items_90d_v3",
+        "latest_official_catalyst_time_v3",
+        "latest_official_catalyst_title_v3",
+        "catalyst_confidence_v3",
+        "catalyst_official_verified_v3",
+        "catalyst_verification_state_v3",
+        "official_hose_source_ready_v3",
+        "catalyst_alpha_weight_allowed_v3",
     ]
     catalyst_keep = [c for c in catalyst_keep if c in catalyst.columns]
     out = (
@@ -146,7 +156,10 @@ def build(args) -> None:
         authority_ratio = float(authority_ratio or 0)
     except Exception:
         authority_ratio = 0.0
-    authority_pagination_complete = bool(authority.get("pagination_complete") is True and int(authority.get("days_pagination_incomplete") or 0) == 0)
+    authority_pagination_complete = bool(
+        authority.get("pagination_complete") is True
+        and int(authority.get("days_pagination_incomplete") or 0) == 0
+    )
     authoritative_ready = bool(authority.get("source_ready") is True and authority_ratio >= 0.98 and authority_pagination_complete)
 
     out["radar_score_v7"] = pd.to_numeric(out["radar_score_v6"], errors="coerce")
@@ -163,6 +176,9 @@ def build(args) -> None:
     out["corporate_action_pagination_complete_v2"] = _bool_series(out.get("corporate_action_pagination_complete_v2", pd.Series(False, index=out.index)))
     out["corporate_action_action_allowed_v2"] = _bool_series(out.get("corporate_action_action_allowed_v2", pd.Series(False, index=out.index)))
     out["corporate_action_gate_v2"] = out.get("corporate_action_gate_v2", pd.Series("BLOCK_SOURCE_COVERAGE", index=out.index)).fillna("BLOCK_SOURCE_COVERAGE").astype(str)
+    out["catalyst_official_verified_v3"] = _bool_series(out.get("catalyst_official_verified_v3", pd.Series(False, index=out.index)))
+    out["official_hose_source_ready_v3"] = _bool_series(out.get("official_hose_source_ready_v3", pd.Series(False, index=out.index)))
+    out["catalyst_alpha_weight_allowed_v3"] = _bool_series(out.get("catalyst_alpha_weight_allowed_v3", pd.Series(False, index=out.index)))
     out["corporate_action_execution_clear_v7"] = (
         out["authoritative_corporate_action_source_ready_v7"]
         & out["corporate_action_source_ready_v2"]
@@ -171,8 +187,8 @@ def build(args) -> None:
         & out["corporate_action_gate_v2"].eq("PASS_NO_NEAR_SENSITIVE_EVENT")
     )
 
-    # Execution readiness is stricter than ranking: the current ticker-level corporate-action gate must PASS.
-    # News-derived candidates can only add a review blocker; they can never unlock action.
+    # Official HOSE catalyst metadata improves provenance/context only. It never enables alpha or action by itself.
+    # Execution readiness remains governed by the existing decision/data/SLA/corporate-action gates.
     out["execution_ready_internal_v7"] = (
         out["decision_candidate_v7"]
         & out["operational_research_ready_v7"]
@@ -233,6 +249,10 @@ def build(args) -> None:
     if not authoritative_ready:
         publication_blockers.append("AUTHORITATIVE_CURRENT_CORPORATE_ACTIONS")
 
+    official_source_ready_count = int(out["official_hose_source_ready_v3"].sum())
+    official_verified_count = int(out["catalyst_official_verified_v3"].sum())
+    official_items_90d = int(pd.to_numeric(out.get("official_items_90d_v3", pd.Series(0, index=out.index)), errors="coerce").fillna(0).sum())
+
     manifest = {
         "schema_version": "STOCKRADAR_UNIFIED_V7",
         "as_of": args.as_of,
@@ -248,13 +268,17 @@ def build(args) -> None:
         "execution_ready_internal": int(out["execution_ready_internal_v7"].sum()),
         "news_derived_capital_action_review_required": int(out["news_derived_capital_action_review_required_v7"].sum()),
         "catalyst_data_ready": int(_bool_series(out.get("catalyst_data_ready_v2", pd.Series(False, index=out.index))).sum()),
+        "official_hose_catalyst_source_ready": bool(official_source_ready_count == EXPECTED_HOSE),
+        "official_hose_catalyst_verified_tickers_90d": official_verified_count,
+        "official_hose_catalyst_items_90d": official_items_90d,
         "radar_status_counts": out["radar_status_v7"].value_counts().to_dict(),
         "catalyst_alpha_weight": 0,
         "institutional_alpha_weight": 0,
         "corporate_action_policy": "AUTHORITATIVE_TICKER_GATE_NOT_ALPHA; TICKER_GATE_MUST_PASS; NEWS_DERIVED_EVENTS_ONLY_ADD_REVIEW_BLOCKERS",
+        "catalyst_policy": "KBS_RECALL_ONLY; HOSE_OFFICIAL_VERIFICATION_CONTEXT; OFFICIAL_EVIDENCE_DOES_NOT_ENABLE_ALPHA",
         "public_action_allowed": False,
         "publication_blockers": publication_blockers,
-        "note": "V7 separates research ranking, private decision candidates, ticker-level corporate-action execution readiness, and public publication. Missing/incomplete authoritative events can never be interpreted as no event.",
+        "note": "V7 separates research ranking, private decision candidates, ticker-level corporate-action execution readiness, official catalyst provenance, and public publication. Missing/incomplete authoritative evidence can never be interpreted as no event.",
     }
     Path(args.manifest).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(manifest, ensure_ascii=False))
