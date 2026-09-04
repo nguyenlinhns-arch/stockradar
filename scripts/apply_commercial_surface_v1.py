@@ -9,6 +9,8 @@ from pathlib import Path
 
 STYLE_NAME = "commercial-v1.css"
 STYLE_MARKER = "data-commercial-v1"
+COMMERCIAL_SCRIPT_NAME = "commercial-v1.js"
+COMMERCIAL_RUNTIME_MARKER = "data-commercial-runtime-v1"
 NOTIFICATION_STYLE_NAME = "header-notifications.css"
 NOTIFICATION_SCRIPT_NAME = "header-notifications.js"
 NOTIFICATION_MARKER = "data-header-notifications-v1"
@@ -33,11 +35,16 @@ def write(path: Path, source: str) -> None:
 
 
 def inject_style(source: str) -> str:
-    if STYLE_MARKER in source:
-        return source
     if "</head>" not in source:
         raise RuntimeError("Commercial surface page has no closing head tag")
-    return source.replace("</head>", f'<link rel="stylesheet" href="assets/{STYLE_NAME}?v=20260904-commercial1" {STYLE_MARKER}>\n</head>', 1)
+    tags: list[str] = []
+    if STYLE_MARKER not in source:
+        tags.append(f'<link rel="stylesheet" href="assets/{STYLE_NAME}?v=20260904-commercial2" {STYLE_MARKER}>')
+    if COMMERCIAL_RUNTIME_MARKER not in source:
+        tags.append(f'<script src="assets/{COMMERCIAL_SCRIPT_NAME}?v=20260904-commercial2" defer {COMMERCIAL_RUNTIME_MARKER}></script>')
+    if not tags:
+        return source
+    return source.replace("</head>", "\n".join(tags) + "\n</head>", 1)
 
 
 def inject_notification_assets(source: str) -> str:
@@ -196,26 +203,62 @@ def commercial_plans(source: str) -> str:
     source = remove_section(source, "conversion-plan-value")
     source = remove_section(source, "buyer-plan-value")
     source = re.sub(r'\s*<section class="plan-comparison" aria-labelledby="premium-notify-title">.*?</section>\s*', "\n", source, count=1, flags=re.I | re.S)
-    replacements = (
-        ("199K/tháng", "199K/30 ngày"), ("199K / THÁNG", "199K / 30 NGÀY"),
-        ("199.000đ / tháng*", "199.000đ / 30 ngày"), ("199.000đ / tháng", "199.000đ / 30 ngày"),
-        ("0đ / tháng", "0đ"), ("Chọn Free hoặc đăng ký Premium", "Chọn gói StockRadar"),
-        ("Miễn phí và 199K/30 ngày khác nhau thế nào?", "So sánh Free và Premium"),
-        ("Free giúp quan sát và tự đánh giá; Premium 199K/30 ngày thêm lớp quyết định có vùng giá, quản trị rủi ro và cảnh báo hành động.", ""),
-        ("SO SÁNH HAI GÓI", "SO SÁNH"), ("Radar 30 và theo ngành", "Radar và theo ngành"),
-    )
-    for before, after in replacements:
-        source = source.replace(before, after)
-    return re.sub(r'<p>Premium: tạo tài khoản → thanh toán 199\.000đ/30 ngày\. Không cần tạo Free rồi mới nâng cấp\.</p>', "", source, count=1)
+
+    free_card = '''<article class="plan-card commercial-plan-card" data-plan-free>
+            <span class="plan-kicker">FREE</span><h2>StockRadar Free</h2>
+            <div class="plan-price"><strong>0đ</strong></div>
+            <p class="plan-summary">Dùng StockRadar AI và các công cụ cơ bản.</p>
+            <ul class="plan-feature-list"><li>AI 10 câu/ngày</li><li>Tra cứu cổ phiếu HOSE</li><li>Radar &amp; hiệu quả</li><li>Watchlist cơ bản</li></ul>
+            <div class="plan-info-box">Không Daily 09:00 · Không Action Alert.</div>
+            <a class="button button-secondary" href="signup/?plan=free" data-registration-plan="free">Đăng ký Free</a>
+          </article>'''
+    source, free_count = re.subn(r'<article\b[^>]*data-plan-free[^>]*>.*?</article>', free_card, source, count=1, flags=re.I | re.S)
+    if free_count != 1:
+        raise RuntimeError("Commercial Free plan card not found")
+
+    premium_card = '''<article class="plan-card plan-card-premium conversion-plan-card commercial-plan-card" data-plan-premium id="premium" data-checkout-ready="true">
+            <span class="plan-ribbon">ĐẦY ĐỦ TÍNH NĂNG</span><span class="plan-kicker">PREMIUM</span><h2>StockRadar Premium</h2>
+            <div class="plan-price"><strong>199.000đ</strong><span>/ 30 ngày</span></div>
+            <p class="plan-summary">AI không giới hạn + lớp quyết định + theo dõi chủ động.</p>
+            <ul class="plan-feature-list"><li>AI không giới hạn</li><li>MUA/CHỜ · GIỮ/TĂNG/GIẢM/BÁN</li><li>Buy Zone · Stop · Target · Risk/Reward</li><li>My StockRadar + quyền Daily 09:00 / Action Alert</li></ul>
+            <div class="plan-info-box plan-info-box-premium">30 ngày · Không tự gia hạn. Email chỉ hoạt động khi kênh production sẵn sàng.</div>
+            <a class="button button-primary" href="signup/?plan=premium&amp;next=thanh-toan/%3Fplan%3Dpremium" data-registration-plan="premium" data-premium-conversion-cta data-conversion-action="plans_premium">Đăng ký Premium</a>
+          </article>'''
+    source, premium_count = re.subn(r'<article\b[^>]*data-plan-premium[^>]*>.*?</article>', premium_card, source, count=1, flags=re.I | re.S)
+    if premium_count != 1:
+        raise RuntimeError("Commercial Premium plan card not found")
+
+    comparison = '''<section class="plan-comparison commercial-plan-comparison" data-plan-comparison aria-labelledby="compare-title"><div class="plan-comparison-header"><span class="plan-kicker">SO SÁNH</span><h2 id="compare-title">Free và Premium</h2></div><div class="plan-table-wrap"><table class="plan-table"><thead><tr><th>Tính năng</th><th>Free</th><th>Premium</th></tr></thead><tbody><tr><td>StockRadar AI</td><td>10 câu/ngày</td><td>Không giới hạn</td></tr><tr><td>Tra cứu / Radar</td><td>Có</td><td>Có</td></tr><tr><td>My StockRadar</td><td>Cơ bản</td><td>Đầy đủ</td></tr><tr><td>Quyết định mua / giữ</td><td>Tự đánh giá</td><td>Đầy đủ</td></tr><tr><td>Buy Zone · Stop · Target · R/R</td><td>Không</td><td>Có</td></tr><tr><td>Daily 09:00 / Action Alert</td><td>Không</td><td>Theo quyền gói*</td></tr></tbody></table></div><p class="plan-price-note">* Kênh email được kích hoạt khi production đạt chuẩn vận hành.</p></section>'''
+    source, comparison_count = re.subn(r'<section class="plan-comparison"\s+data-plan-comparison.*?</section>', comparison, source, count=1, flags=re.I | re.S)
+    if comparison_count != 1:
+        raise RuntimeError("Commercial plan comparison not found")
+
+    source = source.replace("Chọn Free hoặc đăng ký Premium", "Chọn gói StockRadar")
+    source = re.sub(r'<p>Premium: tạo tài khoản → thanh toán 199\.000đ/30 ngày\. Không cần tạo Free rồi mới nâng cấp\.</p>', "", source, count=1)
+    source = re.sub(r'<script[^>]+src=["\'][^"\']*assets/email-interest\.js[^"\']*["\'][^>]*></script>\s*', "", source, flags=re.I)
+    return source
 
 
 def commercial_account(source: str) -> str:
     source = remove_section(source, "my-stockradar-hero", required=False)
     replacements = (
         ("Quản lý watchlist, mã đang sở hữu, email Premium, cảnh báo và bảo mật.", "Watchlist · vị thế · cảnh báo · bảo mật."),
+        ("Chỉ hiển thị thay đổi trạng thái hành động đã qua đầy đủ gate dữ liệu và đúng mã/khung bạn bật cảnh báo.", ""),
+        ("StockRadar có đang canh email cho bạn không?", "Email Premium"),
         ("Kiểm tra nhanh cấu hình theo dõi và lần giao email gần nhất của chính tài khoản này.", "Trạng thái email Premium của tài khoản."),
         ("Chọn chính xác loại thông tin bạn muốn StockRadar chủ động gửi. Không có email mua/bán nếu không có tín hiệu hành động đủ điều kiện.", "Chọn loại email Premium bạn muốn nhận."),
+        ("Bản chủ động theo watchlist và việc cần chú ý, chỉ dành cho Trial/Paid khi delivery production đạt chuẩn.", "Daily 09:00 theo watchlist."),
+        ("Gửi khi có hành động được xác nhận: đạt điểm mua, nhồi lệnh, hạ tỷ trọng, cắt lỗ/bán hoặc thay đổi trạng thái quan trọng.", "Gửi khi trạng thái hành động thay đổi."),
+        ("Cần tài khoản Trial/Paid, email đã xác minh và hệ thống delivery production đã được kích hoạt.", "Trial/Premium · email production sẵn sàng."),
+        ("Bạn có thể đổi lựa chọn hoặc rút đăng ký email bất kỳ lúc nào.", "Có thể thay đổi bất kỳ lúc nào."),
         ("StockRadar không yêu cầu tài khoản chứng khoán, OTP, số lượng cổ phiếu, NAV hay quyền giao dịch. Nếu muốn AI cá nhân hóa sâu hơn, bạn có thể tự nguyện nhập giá vốn và tỷ trọng ước tính cho mã đang sở hữu.", "Có thể nhập giá vốn và tỷ trọng ước tính nếu muốn cá nhân hóa sâu hơn."),
+        ("Tôi đang sở hữu mã này — dùng để tách riêng quyết định “đang nắm giữ” khỏi “mua mới”.", "Tôi đang sở hữu mã này"),
+        ("Dữ liệu tự khai báo:", "Tùy chọn:"),
+        ("giá vốn/tỷ trọng chỉ dùng cho AI và My StockRadar của chính bạn; không lưu số lượng cổ phiếu, NAV hoặc tài khoản môi giới.", "chỉ dùng cho tài khoản của bạn."),
+        ("Sau khi thêm mã, có thể bật “Cảnh báo mã này” ngay trên từng dòng. Action Alert qua email vẫn cần quyền Premium và công tắc email toàn cục.", "Có thể bật cảnh báo trên từng mã."),
+        ("Quyền truy cập:", "Bảo mật:"),
+        ("hồ sơ, tùy chọn email, watchlist và dữ liệu vị thế tự khai báo được bảo vệ bằng Supabase RLS. Các dữ liệu này không được đưa vào nội dung công khai hoặc email của người khác.", "dữ liệu cá nhân được bảo vệ bằng Supabase RLS."),
+        ("Xóa vĩnh viễn tài khoản StockRadar, hồ sơ và dữ liệu liên kết. Hành động này không thể hoàn tác và cần xác minh lại mật khẩu hiện tại.", "Xóa vĩnh viễn tài khoản và dữ liệu liên kết."),
     )
     for before, after in replacements:
         source = source.replace(before, after)
@@ -241,7 +284,7 @@ def verify(output: Path) -> None:
         "khuyen-nghi": ("buyer-recommendation-contract", "recommendation-reference-note", "conversion-rail"),
         "nganh": ("conversion-rail", "30 cổ phiếu HOSE", "3 mã mỗi ngành"),
         "hieu-qua": ("buyer-first-section", "conversion-rail"),
-        "dang-ky": ("conversion-plan-value", "buyer-plan-value", "premium-notify-title", "199K/tháng"),
+        "dang-ky": ("conversion-plan-value", "buyer-plan-value", "premium-notify-title", "199K/tháng", "email-interest.js"),
         "tai-khoan": ("my-stockradar-hero",),
     }
     for route, markers in forbidden.items():
@@ -249,18 +292,20 @@ def verify(output: Path) -> None:
             if marker in pages[route]:
                 raise RuntimeError(f"Commercial {route or 'homepage'} still contains verbose marker: {marker}")
     for route, source in pages.items():
-        if STYLE_MARKER not in source:
-            raise RuntimeError(f"Commercial stylesheet missing from {route or 'home'}")
+        if STYLE_MARKER not in source or COMMERCIAL_RUNTIME_MARKER not in source or COMMERCIAL_SCRIPT_NAME not in source:
+            raise RuntimeError(f"Commercial bundle missing from {route or 'home'}")
         if NOTIFICATION_MARKER not in source or NOTIFICATION_SCRIPT_NAME not in source:
             raise RuntimeError(f"Notification bell bundle missing from {route or 'home'}")
-    print("Commercial surface v1: PASS (AI → signals → proof → pricing; notification bell enabled)")
+    if "0đ</strong><span>/ tháng" in pages["dang-ky"]:
+        raise RuntimeError("Free plan still contains monthly period copy")
+    print("Commercial surface v1: PASS (AI → signals → proof → pricing; compact runtime + notification bell enabled)")
 
 
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
         raise RuntimeError(f"Pages output does not exist: {output}")
-    for asset in (STYLE_NAME, NOTIFICATION_STYLE_NAME, NOTIFICATION_SCRIPT_NAME):
+    for asset in (STYLE_NAME, COMMERCIAL_SCRIPT_NAME, NOTIFICATION_STYLE_NAME, NOTIFICATION_SCRIPT_NAME):
         if not (output / "assets" / asset).is_file():
             raise RuntimeError(f"Missing commercial asset: {asset}")
     for route in CORE_ROUTES:
