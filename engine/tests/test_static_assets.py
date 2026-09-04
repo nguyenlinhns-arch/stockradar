@@ -69,7 +69,11 @@ class StaticAssetTests(unittest.TestCase):
             for html in output.rglob("*.html"):
                 source = html.read_text(encoding="utf-8")
                 self.assertIn('data-api-mode="disabled"', source, html)
-                self.assertIn('name="robots" content="noindex,nofollow"', source, html)
+                if html == output / "index.html":
+                    self.assertIn('name="robots" content="index,follow,max-image-preview:large"', source, html)
+                    self.assertNotIn('name="robots" content="noindex,nofollow"', source, html)
+                else:
+                    self.assertIn('name="robots" content="noindex,nofollow"', source, html)
             for path in [*(output / "public" / "data").glob("*.json"), output / "assets" / "app.js"]:
                 source = path.read_text(encoding="utf-8").upper()
                 for forbidden in ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE"):
@@ -255,14 +259,20 @@ class StaticAssetTests(unittest.TestCase):
 
     def test_public_positioning_matches_current_horizons_and_pricing(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
-        for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
-            self.assertIn(horizon, homepage)
-        self.assertIn("RA QUYẾT ĐỊNH TRÊN HOSE", homepage)
+        for marker in (
+            "STOCKRADAR AI · CỬA VÀO CHÍNH",
+            "Hỏi một mã cổ phiếu",
+            "Khách có 3 câu/ngày",
+            "Free có 10 câu/ngày",
+            "PREMIUM · 199K/30 NGÀY",
+            "Free và Premium có gì?",
+            "Radar HOSE",
+            "Full HOSE → Full-Scan Gate → Ranking",
+            "Radar động theo snapshot",
+        ):
+            self.assertIn(marker, homepage)
         self.assertIn('content="PRODUCTION"', homepage)
-        self.assertIn("Free và Premium có gì?", homepage)
-        self.assertIn("Radar HOSE", homepage)
-        self.assertIn("Full HOSE → Full-Scan Gate → Ranking", homepage)
-        self.assertIn("Radar động theo snapshot", homepage)
+        self.assertIn('name="robots" content="index,follow,max-image-preview:large"', homepage)
         self.assertNotIn("Radar 30", homepage)
         self.assertNotIn("30 mã", homepage)
         self.assertNotIn("10 ngành · 3 mã", homepage)
