@@ -143,14 +143,26 @@
       .replace(/\bPaid\b/g, 'Premium');
   }
 
+  function normalizeTextNodes(target) {
+    if (!target) return;
+    const walker = document.createTreeWalker(target, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    let current = walker.nextNode();
+    while (current) {
+      nodes.push(current);
+      current = walker.nextNode();
+    }
+    nodes.forEach(textNode => {
+      const before = String(textNode.nodeValue || '');
+      const after = normalizeText(before);
+      if (after !== before) textNode.nodeValue = after;
+    });
+  }
+
   function normalizeVisibleTierCopy() {
     document.querySelectorAll(
       '.sr-center-plan,.sr-center-meta,.sr-center-foot,[data-account-tier],[data-email-pref-tier],[data-email-health-tier],[data-product-email-tier-note],[data-email-health-note],.auth-security-note'
-    ).forEach(target => {
-      const before = String(target.textContent || '');
-      const after = normalizeText(before);
-      if (after !== before) target.textContent = after;
-    });
+    ).forEach(normalizeTextNodes);
   }
 
   function observeHeader() {
