@@ -36,36 +36,54 @@ def validate(root: Path) -> dict:
     website = _read_csv(root / REQUIRED_FILES["website_feed"])
     manifest = json.loads((root / REQUIRED_FILES["runtime_manifest"]).read_text(encoding="utf-8"))
 
+    eligible = scanner.loc[scanner.get("full_scan_eligible", False).fillna(False).astype(bool), "ticker"]
+    eligible_set = set(eligible)
+    website_set = set(website["ticker"])
+
     checks = {
         "scanner_rows_405": len(scanner) == EXPECTED_HOSE,
         "valuation_rows_405": len(valuation) == EXPECTED_HOSE,
-        "website_feed_rows_405": len(website) == EXPECTED_HOSE,
         "scanner_unique_405": scanner["ticker"].nunique() == EXPECTED_HOSE,
         "valuation_unique_405": valuation["ticker"].nunique() == EXPECTED_HOSE,
-        "website_unique_405": website["ticker"].nunique() == EXPECTED_HOSE,
         "scanner_valuation_same_universe": set(scanner["ticker"]) == set(valuation["ticker"]),
-        "scanner_website_same_universe": set(scanner["ticker"]) == set(website["ticker"]),
-        "manifest_hose_405": int(manifest.get("canonical_hose_count", 0)) == EXPECTED_HOSE,
-        "public_gate_closed": manifest.get("public_gate", {}).get("allowed") is False,
+        "website_feed_unique": website["ticker"].nunique() == len(website),
+        "website_feed_subset_of_scanner": website_set.issubset(set(scanner["ticker"])),
+        "website_feed_matches_full_scan_eligible": website_set == eligible_set,
+        "manifest_hose_405": int(manifest.get("canonical_universe", 0)) == EXPECTED_HOSE,
+        "public_gate_closed": manifest.get("public_feed_allowed") is False,
     }
 
-    # Internal scanner must retain core decision inputs. This does not authorize publication.
     required_scanner_columns = {
         "ticker",
         "price",
         "vol20",
         "stage",
-        "stockradar_score_v2",
-        "setup_internal",
-        "action_candidate_internal",
-        "buy_zone_low_internal",
-        "buy_zone_high_internal",
-        "stop_loss_internal",
-        "target_near_rr2_internal",
+        "stockradar_score",
+        "candidate_setup",
+        "rvol_progress_adjusted",
+        "same_time_volume_ratio",
+        "pivot20",
+        "roe_ttm_pct",
+        "upside_to_base_pct",
+        "liquidity_pass_500k",
+        "full_scan_eligible",
     }
     checks["scanner_core_columns"] = required_scanner_columns.issubset(scanner.columns)
 
-    # Public-facing cache must not leak explicit personal-priority fields.
+    required_website_columns = {
+        "ticker",
+        "price",
+        "stockradar_score",
+        "candidate_setup",
+        "publication_gate",
+    }
+    checks["website_feed_core_columns"] = required_website_columns.issubset(website.columns)
+
+    if "publication_gate" in website.columns and manifest.get("public_feed_allowed") is False:
+        checks["website_feed_fail_closed"] = website["publication_gate"].astype(str).str.startswith("BLOCKED").all()
+    else:
+        checks["website_feed_fail_closed"] = False
+
     forbidden_public_columns = {
         "personal_priority",
         "priority_rank_personal",
@@ -79,9 +97,13 @@ def validate(root: Path) -> dict:
     return {
         "status": "PASS_INTERNAL" if passed else "BLOCKED",
         "canonical_hose_count": EXPECTED_HOSE,
+        "scanner_rows": len(scanner),
+        "valuation_rows": len(valuation),
+        "eligible_feed_rows": len(eligible_set),
+        "website_feed_rows": len(website_set),
         "checks": checks,
         "public_publication_authorized": False,
-        "note": "PASS_INTERNAL only means the private scanner bundle is structurally usable. Publication remains separately gated by source rights, freshness, compliance and production approval.",
+        "note": "PASS_INTERNAL means the private scanner bundle is structurally usable. Publication remains gated by source rights, freshness, corporate-action reconciliation, compliance and production approval.",
     }
 
 
