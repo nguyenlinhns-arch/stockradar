@@ -8,6 +8,7 @@ on:
       - 'scripts/acquire_reference_depth_v2.py'
       - 'scripts/acquire_vsdc_corporate_actions.py'
       - 'scripts/run_vsdc_corporate_actions_v2.py'
+      - 'scripts/acquire_kbs_events_depth_v3.py'
   workflow_dispatch:
 
 permissions:
@@ -31,6 +32,41 @@ jobs:
         with:
           name: stockradar-news-insider-depth-v2
           path: artifacts/reference-depth-v2/
+          retention-days: 14
+          if-no-files-found: error
+
+  kbs-events:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install KBS event dependencies
+        run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5 requests==2.32.5
+      - name: Acquire deep paginated KBS events by event type
+        run: python scripts/acquire_kbs_events_depth_v3.py --workers 10 --output-dir artifacts/kbs-events-depth-v3
+      - name: Enforce KBS event coverage
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          path = Path('artifacts/kbs-events-depth-v3/kbs_company_events_coverage_v3.json')
+          c = json.loads(path.read_text(encoding='utf-8'))
+          if int(c.get('canonical_hose') or 0) < 405:
+              raise SystemExit('KBS event universe below 405')
+          if int(c.get('ticker_rows') or 0) < 405:
+              raise SystemExit('KBS event ticker rows below 405')
+          if c.get('errors'):
+              raise SystemExit(f"KBS event acquisition errors: {len(c['errors'])}")
+          print(json.dumps(c, ensure_ascii=False))
+          PY
+      - name: Upload KBS event artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-kbs-events-depth-v3
+          path: artifacts/kbs-events-depth-v3/
           retention-days: 14
           if-no-files-found: error
 
