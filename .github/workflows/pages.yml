@@ -31,6 +31,7 @@ on:
       - 'scripts/apply_commercial_runtime_v2.py'
       - 'scripts/apply_commercial_support_v1.py'
       - 'scripts/optimize_home_asset_budget_v1.py'
+      - 'scripts/optimize_conversion_asset_budget_v1.py'
       - 'scripts/verify*.py'
       - 'scripts/visual_qa.cjs'
       - 'package.json'
@@ -130,6 +131,7 @@ jobs:
           python scripts/apply_commercial_runtime_v2.py .pages-site
           python scripts/apply_commercial_support_v1.py .pages-site
           python scripts/optimize_home_asset_budget_v1.py .pages-site
+          python scripts/optimize_conversion_asset_budget_v1.py .pages-site
       - name: Install Chromium visual QA
         run: |
           npm install --ignore-scripts --no-audit --no-fund --package-lock=false
