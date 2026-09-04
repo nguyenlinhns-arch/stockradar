@@ -1,4 +1,4 @@
-name: Inspect Vietnam raw reference schemas
+name: Inspect VNDirect raw statement model types
 
 on:
   push:
@@ -10,42 +10,39 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install client
-        run: python -m pip install 'vnstock==4.0.7' 'pandas<3'
-      - name: Inspect raw HOSE industry and shares schemas
+        run: python -m pip install requests
+      - name: Inspect statement model types and model names
         run: |
           python - <<'PY'
-          import json
-          import pandas as pd
-          from vnstock import Reference
-
-          def pack(df, limit=8):
-              return {
-                  'shape': list(getattr(df,'shape',(0,0))),
-                  'columns': [str(c) for c in getattr(df,'columns',[])],
-                  'sample': df.head(limit).to_dict(orient='records') if isinstance(df,pd.DataFrame) else str(df)[:1000],
+          import json, requests
+          UA={'User-Agent':'Mozilla/5.0 StockRadar internal raw-input probe','Accept':'application/json'}
+          base='https://api-finfo.vndirect.com.vn/v4'
+          def get(path,params):
+              r=requests.get(base+path,params=params,headers=UA,timeout=30); r.raise_for_status(); return r.json()
+          out={}
+          for ticker in ('HPG','MBB','SSI','BVH'):
+              p=get('/financial_statements',{'q':f'code:{ticker}~reportType:ANNUAL','sort':'fiscalDate:desc','size':'1000','page':'1'})
+              rows=p.get('data') or []
+              out[ticker]={
+                  'rows':len(rows),
+                  'model_types':sorted({str(row.get('modelType')) for row in rows}),
+                  'periods':sorted({str(row.get('fiscalDate')) for row in rows if row.get('fiscalDate')},reverse=True)[:6],
               }
-
-          ref=Reference()
-          exchanges=ref.equity.list_by_exchange()
-          industries=ref.equity.list_by_industry()
-          companies={}
-          for ticker in ('HPG','MBB','SSI','FPT'):
-              try:
-                  info=ref.company(ticker).info()
-                  companies[ticker]=pack(info)
-              except Exception as e:
-                  companies[ticker]={'error':str(e)}
-          print(json.dumps({
-              'role':'RAW_INPUT_ONLY_SCHEMA_PROBE',
-              'exchanges':pack(exchanges,12),
-              'industries':pack(industries,12),
-              'companies':companies,
-          },ensure_ascii=False,indent=2,default=str))
+          models=get('/financial_models',{'size':'5000','page':'1'}).get('data') or []
+          grouped={}
+          for row in models:
+              mt=str(row.get('modelType'))
+              grouped.setdefault(mt,{'modelTypeName':row.get('modelTypeName'),'modelVnDesc':row.get('modelVnDesc'),'companyForm':row.get('companyForm'),'rows':0,'sample_names':[]})
+              grouped[mt]['rows']+=1
+              if len(grouped[mt]['sample_names'])<12:
+                  grouped[mt]['sample_names'].append({'code':row.get('itemCode'),'vn':row.get('itemVnName'),'en':row.get('itemEnName')})
+          used={mt:grouped.get(mt) for t in out.values() for mt in t['model_types']}
+          print(json.dumps({'role':'RAW_INPUT_ONLY_SCHEMA_PROBE','tickers':out,'used_models':used,'all_model_types':sorted(grouped)},ensure_ascii=False,indent=2,default=str))
           PY
