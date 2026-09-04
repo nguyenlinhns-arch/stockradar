@@ -80,22 +80,25 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertNotIn("service_role", guard.lower())
         self.assertNotIn("sb_secret_", guard.lower())
 
-    def test_premium_registration_routes_directly_to_payment(self):
+    def test_premium_registration_routes_directly_to_payment_without_signup_otp(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
+        signup = (ROOT / "website" / "signup" / "index.html").read_text(encoding="utf-8")
+        signup_client = (ROOT / "website" / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
+        confirm = (ROOT / "website" / "xac-minh-email" / "index.html").read_text(encoding="utf-8")
         registration_guard = (ROOT / "scripts" / "enforce_registration_plan_ctas.py").read_text(encoding="utf-8")
-        auth = (ROOT / "website" / "assets" / "auth.js").read_text(encoding="utf-8")
 
         self.assertIn('data-plan-free', plans)
         self.assertIn('data-plan-premium', plans)
         self.assertIn('signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium', registration_guard)
         self.assertIn('Đăng ký & thanh toán', registration_guard)
-        self.assertIn('data-premium-signup-payment-flow-v1', registration_guard)
-        self.assertIn('dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium', registration_guard)
-        self.assertIn('Xác minh & sang thanh toán', registration_guard)
         self.assertIn('Không cần tạo Free rồi nâng cấp', registration_guard)
-        self.assertIn("plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/'", auth)
-        self.assertIn("options: { emailRedirectTo: destination }", auth)
-        self.assertIn("location.href = destination", auth)
+        self.assertIn('assets/signup-link-v1.js', signup)
+        self.assertIn('data-signup-email-sent', signup)
+        self.assertNotIn('data-auth-signup-otp-form', signup)
+        self.assertNotIn('autocomplete="one-time-code"', signup)
+        self.assertIn("'thanh-toan/?plan=premium'", signup_client)
+        self.assertIn('data-signup-existing-login', registration_guard)
+        self.assertIn('assets/email-confirm-v1.js', confirm)
         self.assertIn('Legacy Premium CTA leaked into final registration page', registration_guard)
 
 
