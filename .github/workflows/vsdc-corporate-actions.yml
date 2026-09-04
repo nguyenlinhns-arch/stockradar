@@ -1,0 +1,109 @@
+name: StockRadar VSDC Corporate Actions
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/acquire_vsdc_corporate_actions.py'
+      - 'scripts/run_vsdc_corporate_actions_v2.py'
+      - 'scripts/build_corporate_action_gate_v2.py'
+      - '.github/workflows/vsdc-corporate-actions.yml'
+  schedule:
+    # 15:40 Asia/Ho_Chi_Minh on trading weekdays, after the post-close market snapshot.
+    - cron: '40 8 * * 1-5'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  corporate-actions:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check pandas requests lxml html5lib beautifulsoup4
+
+      - name: Reuse latest non-expired HOSE market artifact for canonical universe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/market
+          artifact_id="$(gh api \
+            -H 'Accept: application/vnd.github+json' \
+            "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-market-bootstrap&per_page=100" \
+            --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -z "$artifact_id" ]; then
+            echo 'No reusable market artifact found; corporate-action gate remains fail-closed.' >&2
+            exit 1
+          fi
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > /tmp/market.zip
+          unzip -q -o /tmp/market.zip -d artifacts/market
+
+      - name: Acquire current VSDC corporate-action calendar window
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          read -r start end <<EOF
+          $(python - "$as_of" <<'PY'
+          from datetime import date, timedelta
+          import sys
+          d = date.fromisoformat(sys.argv[1])
+          print((d - timedelta(days=180)).isoformat(), (d + timedelta(days=180)).isoformat())
+          PY
+          )
+          EOF
+          python scripts/run_vsdc_corporate_actions_v2.py \
+            --start "$start" \
+            --end "$end" \
+            --output-dir artifacts/vsdc
+
+      - name: Build 405-HOSE corporate-action risk gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          python scripts/build_corporate_action_gate_v2.py \
+            --universe artifacts/market/security_master.csv \
+            --events artifacts/vsdc/vsdc_hose_corporate_actions_current.csv \
+            --coverage artifacts/vsdc/vsdc_hose_corporate_actions_coverage.json \
+            --as-of "$as_of" \
+            --output artifacts/vsdc/corporate_action_gate_v2_405.csv \
+            --manifest artifacts/vsdc/corporate_action_gate_v2_manifest.json
+
+      - name: Enforce source coverage and fail-closed publication policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          coverage = json.loads(Path('artifacts/vsdc/vsdc_hose_corporate_actions_coverage.json').read_text(encoding='utf-8'))
+          manifest = json.loads(Path('artifacts/vsdc/corporate_action_gate_v2_manifest.json').read_text(encoding='utf-8'))
+          requested = max(int(coverage.get('days_requested') or 0), 1)
+          fetched = int(coverage.get('days_fetched') or 0)
+          ratio = fetched / requested
+          if ratio < 0.98:
+              raise SystemExit(f'VSDC coverage too low: {fetched}/{requested} ({ratio:.2%})')
+          if manifest.get('canonical_hose') != 405:
+              raise SystemExit('Corporate-action gate must cover canonical 405 HOSE tickers')
+          if manifest.get('publication_allowed') is not False:
+              raise SystemExit('Corporate-action raw publication must remain fail-closed')
+          print(json.dumps({'coverage_ratio': ratio, 'event_rows': manifest.get('event_rows'), 'gate_counts': manifest.get('gate_counts')}, ensure_ascii=False))
+          PY
+
+      - name: Upload internal VSDC corporate-action artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-vsdc-corporate-actions-v2
+          path: artifacts/vsdc/
+          retention-days: 30
+          if-no-files-found: error
