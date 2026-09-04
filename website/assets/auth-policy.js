@@ -1,7 +1,8 @@
 (() => {
   'use strict';
 
-  const LEGAL_VERSION = '2026-09-03';
+  const TERMS_VERSION = '2026-09-03';
+  const PRIVACY_VERSION = '2026-09-04';
   if (!window.supabase || typeof window.supabase.createClient !== 'function') return;
 
   const originalCreateClient = window.supabase.createClient.bind(window.supabase);
@@ -20,8 +21,8 @@
           signup_source: 'stockradar_web',
           terms_accepted: accepted,
           privacy_accepted: accepted,
-          terms_version: LEGAL_VERSION,
-          privacy_version: LEGAL_VERSION,
+          terms_version: TERMS_VERSION,
+          privacy_version: PRIVACY_VERSION,
         };
         return originalSignUp({
           ...credentials,
