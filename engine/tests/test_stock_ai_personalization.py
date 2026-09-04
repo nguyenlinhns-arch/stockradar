@@ -28,22 +28,28 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('Khi REQUEST_SCOPE=ticker, USER_CONTEXT chỉ chứa cấu hình liên quan đúng mã đang hỏi', source)
         self.assertNotIn("user.email", source)
 
-    def test_portfolio_mode_remains_fail_closed_and_free_redacted(self):
+    def test_free_and_premium_share_decision_context_while_data_gate_remains_fail_closed(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn("redactForFree", source)
-        self.assertIn('tier === "FREE" ? redactForFree', source)
+        self.assertNotIn("redactForFree", source)
+        self.assertNotIn('tier === "FREE" ? redactForFree', source)
+        self.assertIn("Không làm nghèo câu trả lời chỉ vì tài khoản Free", source)
+        self.assertIn("const reports = readyRows.map((row) => normalizeReport", source)
         self.assertIn("NO_READY_REPORT", source)
         self.assertIn("quota_consumed: false", source)
         self.assertIn("Không xếp hạng các score của các horizon khác nhau", source)
         self.assertNotIn("user.email", source)
 
-    def test_browser_supports_ticker_and_portfolio_questions_without_secrets(self):
+    def test_browser_supports_inline_ai_ticker_and_portfolio_questions_without_secrets(self):
         source = CLIENT.read_text(encoding="utf-8")
         self.assertIn("portfolioIntent", source)
         self.assertIn("tickerForMessage", source)
         self.assertIn("if (portfolioIntent(text)) return '';", source)
         self.assertIn("requestScope", source)
         self.assertIn("Danh mục hôm nay", source)
+        self.assertIn("mountInlineSurface", source)
+        self.assertIn("data-stockradar-ai-inline", source)
+        self.assertIn("Tạo Free · 10 lượt/ngày", source)
+        self.assertIn("PREMIUM · AI + EMAIL ACTION ALERT", source)
         self.assertIn("Hỏi StockRadar AI", source)
         self.assertIn("scope,", source)
         self.assertNotIn("OPENAI_API_KEY", source)
