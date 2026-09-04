@@ -14,10 +14,14 @@ jobs:
   patch:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out source
+      - name: Check out current main
         uses: actions/checkout@v7
         with:
+          ref: main
           fetch-depth: 0
+
+      - name: Refresh current main
+        run: git pull --ff-only origin main
 
       - name: Patch regression
         run: python scripts/patch_registration_regression_once.py
