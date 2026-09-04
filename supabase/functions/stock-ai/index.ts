@@ -26,6 +26,8 @@ type WatchItem = {
   horizon: Horizon;
   owns_stock: boolean;
   alert_enabled: boolean;
+  cost_basis: number | null;
+  portfolio_weight_pct: number | null;
 };
 
 function corsHeaders(origin: string | null): HeadersInit {
@@ -74,6 +76,13 @@ function cleanHistory(value: unknown): Array<{ role: "user" | "assistant"; conte
     const content = cleanMessage(row.content, MAX_HISTORY_CHARS);
     return role && content ? [{ role, content }] : [];
   });
+}
+
+function positionNumber(value: unknown, min: number, max = Number.POSITIVE_INFINITY): number | null {
+  if (value == null || value === "") return null;
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < min || number > max) return null;
+  return number;
 }
 
 function messageHasExplicitHorizon(value: string): boolean {
@@ -167,7 +176,9 @@ NGUYÊN TẮC BẮT BUỘC:
 - Nếu dữ liệu thiếu hoặc một horizon không READY, phải nói rõ CHƯA ĐỦ DỮ LIỆU cho phần đó.
 - Ranking không đồng nghĩa khuyến nghị. Không biến điểm cao thành lệnh mua khi Action Gate chưa xác nhận.
 - Tách riêng: người chưa có cổ phiếu (mua mới/chờ) và người đang nắm giữ (giữ/giảm/thoát/chưa đủ dữ liệu).
-- USER_CONTEXT.requested_ticker.owns_stock hoặc USER_CONTEXT.watchlist[].owns_stock chỉ có nghĩa người dùng đã đánh dấu đang sở hữu; không được suy đoán số lượng, giá vốn, NAV hay lãi/lỗ cá nhân nếu không có dữ liệu đó.
+- USER_CONTEXT.requested_ticker.owns_stock hoặc USER_CONTEXT.watchlist[].owns_stock chỉ có nghĩa người dùng đã đánh dấu đang sở hữu. cost_basis và portfolio_weight_pct, nếu có, là số người dùng tự khai báo chứ không phải dữ liệu môi giới.
+- Chỉ khi owns_stock=true và cost_basis có giá trị mới được dùng giá hiện tại trong DATA_CONTEXT để tính lãi/lỗ tương đối ước tính. Phải nói rõ đây là phép tính từ giá vốn người dùng tự nhập; không suy đoán số lượng cổ phiếu, NAV, tiền lãi tuyệt đối hoặc phí/thuế.
+- portfolio_weight_pct có thể dùng để nhận diện mức tập trung danh mục và rủi ro phân bổ. Không suy ra NAV hay quy mô vị thế tuyệt đối từ tỷ trọng.
 - Khi REQUEST_SCOPE=ticker, USER_CONTEXT chỉ chứa cấu hình liên quan đúng mã đang hỏi; không được suy đoán các mã khác trong tài khoản.
 - Khi REQUEST_SCOPE=portfolio: ưu tiên mã đang sở hữu trước, sau đó watchlist. Chỉ nhắc đến mã nằm trong USER_CONTEXT. Không xếp hạng các score của các horizon khác nhau như thể cùng thang so sánh; nếu horizon lẫn nhau thì trình bày theo từng mã.
 - Nếu người dùng nêu rõ một khung thời gian, chỉ so sánh report của đúng khung đó khi DATA_CONTEXT đã cung cấp.
@@ -177,10 +188,10 @@ NGUYÊN TẮC BẮT BUỘC:
 
 CÁCH TRẢ LỜI:
 - Tiếng Việt, trực tiếp, ngắn gọn nhưng đủ để ra quyết định.
-- Với một mã: ưu tiên Kết luận hiện tại; Mua mới; Đang nắm giữ; Góc nhìn theo khung thời gian có dữ liệu; Vì sao; Rủi ro/điều kiện thay đổi; dấu thời gian dữ liệu.
-- Với danh mục: ưu tiên Việc cần làm trước; Mã đang sở hữu cần chú ý; Watchlist đáng chú ý; Rủi ro; mã nào chưa đủ dữ liệu. Không ép phải có hành động nếu không có mã đạt chuẩn.
+- Với một mã: ưu tiên Kết luận hiện tại; Mua mới; Đang nắm giữ; nếu có giá vốn/tỷ trọng thì thêm góc nhìn vị thế; Góc nhìn theo khung thời gian có dữ liệu; Vì sao; Rủi ro/điều kiện thay đổi; dấu thời gian dữ liệu.
+- Với danh mục: ưu tiên Việc cần làm trước; Mã đang sở hữu cần chú ý; mức tập trung nếu tỷ trọng được khai báo; Watchlist đáng chú ý; Rủi ro; mã nào chưa đủ dữ liệu. Không ép phải có hành động nếu không có mã đạt chuẩn.
 - Nếu người dùng hỏi riêng một ý, tập trung trả lời ý đó trước.
-- Chỉ nêu con số xuất hiện trong DATA_CONTEXT hoặc USER_CONTEXT.`;
+- Chỉ nêu con số xuất hiện trong DATA_CONTEXT/USER_CONTEXT hoặc phép tính trực tiếp, minh bạch từ chính các con số đó.`;
 
 Deno.serve(async (req: Request) => {
   const startedAt = performance.now();
@@ -237,7 +248,7 @@ Deno.serve(async (req: Request) => {
     serviceClient.from("profiles").select("account_tier,account_status").eq("id", user.id).maybeSingle(),
     serviceClient.from("user_preferences").select("preferred_horizons,preferred_sectors,updated_at").eq("user_id", user.id).maybeSingle(),
     serviceClient.from("watchlist_items")
-      .select("ticker,horizon,owns_stock,alert_enabled,created_at")
+      .select("ticker,horizon,owns_stock,alert_enabled,cost_basis,portfolio_weight_pct,created_at")
       .eq("user_id", user.id)
       .is("removed_at", null)
       .order("owns_stock", { ascending: false })
@@ -265,22 +276,27 @@ Deno.serve(async (req: Request) => {
     const itemTicker = String(row.ticker || "").trim().toUpperCase();
     const itemHorizon = String(row.horizon || "SHORT_TERM").trim().toUpperCase();
     if (!validTicker(itemTicker) || !validHorizon(itemHorizon)) return [];
+    const ownsStock = row.owns_stock === true;
     return [{
       ticker: itemTicker,
       horizon: itemHorizon as Horizon,
-      owns_stock: row.owns_stock === true,
+      owns_stock: ownsStock,
       alert_enabled: PREMIUM_TIERS.has(tier) && row.alert_enabled === true,
+      cost_basis: ownsStock ? positionNumber(row.cost_basis, 0.0001) : null,
+      portfolio_weight_pct: ownsStock ? positionNumber(row.portfolio_weight_pct, 0, 100) : null,
     }];
   });
   const ownedCount = watchlist.filter((item) => item.owns_stock).length;
   const alertCount = watchlist.filter((item) => item.alert_enabled).length;
+  const positionContextCount = watchlist.filter((item) => item.owns_stock && (item.cost_basis !== null || item.portfolio_weight_pct !== null)).length;
   const requestedWatchItem = scope === "ticker" ? (watchlist.find((item) => item.ticker === ticker) || null) : null;
   const personalizationSummary = scope === "portfolio"
-    ? { watchlist_count: watchlist.length, owned_count: ownedCount, alert_count: alertCount }
+    ? { watchlist_count: watchlist.length, owned_count: ownedCount, alert_count: alertCount, position_context_count: positionContextCount }
     : {
         requested_ticker_configured: requestedWatchItem !== null,
         owns_stock: requestedWatchItem?.owns_stock ?? null,
         alert_enabled: requestedWatchItem?.alert_enabled ?? null,
+        position_context_configured: Boolean(requestedWatchItem?.cost_basis !== null || requestedWatchItem?.portfolio_weight_pct !== null),
       };
 
   if (scope === "portfolio" && !watchlist.length) {
@@ -403,10 +419,13 @@ Deno.serve(async (req: Request) => {
           horizon: item.horizon,
           owns_stock: item.owns_stock,
           alert_enabled: item.alert_enabled,
+          cost_basis: item.cost_basis,
+          portfolio_weight_pct: item.portfolio_weight_pct,
         })),
         watchlist_count: watchlist.length,
         owned_count: ownedCount,
         alert_count: alertCount,
+        position_context_count: positionContextCount,
       }
     : {
         preferred_horizons: preferences.preferred_horizons,
@@ -416,6 +435,8 @@ Deno.serve(async (req: Request) => {
           horizon: requestedWatchItem.horizon,
           owns_stock: requestedWatchItem.owns_stock,
           alert_enabled: requestedWatchItem.alert_enabled,
+          cost_basis: requestedWatchItem.cost_basis,
+          portfolio_weight_pct: requestedWatchItem.portfolio_weight_pct,
         } : null,
       };
 
