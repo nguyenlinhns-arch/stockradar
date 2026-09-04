@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="vi" data-api-mode="auto">
+<head>
+  <base href="../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Bảng Hôm nay của StockRadar: việc cần làm, mã đang sở hữu, watchlist, Action Alert và thay đổi mới nhất theo tài khoản.">
+  <title>Hôm nay — StockRadar</title>
+  <link rel="icon" href="assets/logo.svg">
+  <link rel="stylesheet" href="assets/styles.css?v=20260904-operational3">
+  <link rel="stylesheet" href="assets/auth.css?v=20260903-auth7">
+  <link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth7">
+  <link rel="stylesheet" href="assets/paid-dashboard-v1.css?v=20260904-paid1">
+  <script src="assets/app.js?v=20260904-operational3" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="assets/auth-config.js?v=20260903-auth7" defer></script>
+  <script src="assets/auth.js?v=20260903-auth7" defer></script>
+  <script src="assets/paid-dashboard-v1.js?v=20260904-paid1" defer></script>
+</head>
+<body data-proposition="paid-dashboard">
+  <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
+  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính"><a href="hom-nay/" aria-current="page">Hôm nay</a><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
+
+  <main id="content">
+    <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Hôm nay</span></nav><h1>Hôm nay</h1><p>Việc cần làm trước · mã đang sở hữu · mã theo dõi · thay đổi mới · trạng thái cảnh báo.</p></div><div class="page-heading-actions"><span class="data-pill" data-paid-tier-badge>TÀI KHOẢN</span><a class="button button-secondary button-small" href="tai-khoan/">Cài đặt</a></div></div></section>
+
+    <section class="paid-dashboard-shell" data-paid-dashboard><div class="container">
+      <p class="auth-message paid-dashboard-loading" data-paid-dashboard-loading aria-live="polite">Đang tải bảng Hôm nay theo tài khoản…</p>
+
+      <div class="paid-dashboard-guest" data-paid-dashboard-guest hidden>
+        <h2>Đăng nhập để mở bảng Hôm nay</h2>
+        <p>StockRadar sẽ ưu tiên mã đang sở hữu, watchlist và cảnh báo đã bật trên chính tài khoản của bạn.</p>
+        <div class="hero-actions"><a class="button button-primary" href="dang-nhap/?next=hom-nay/">Đăng nhập</a><a class="button button-secondary" href="signup/">Tạo tài khoản</a></div>
+      </div>
+
+      <div data-paid-dashboard-content hidden>
+        <div class="paid-plan-banner" data-paid-plan-banner></div>
+
+        <section class="paid-summary-grid" aria-label="Tóm tắt tài khoản hôm nay">
+          <article><span>Gói</span><strong data-paid-tier>—</strong></article>
+          <article><span>Đang theo dõi</span><strong><b data-paid-watchlist-count>—</b> mã</strong></article>
+          <article><span>Đang sở hữu</span><strong><b data-paid-owned-count>—</b> mã</strong></article>
+          <article><span>Action Alert bật</span><strong><b data-paid-alert-count>—</b> mã</strong></article>
+          <article><span>Email</span><strong data-paid-email-state>—</strong></article>
+        </section>
+
+        <div class="paid-dashboard-grid">
+          <div class="paid-main-column">
+            <section class="paid-panel" aria-labelledby="paid-actions-title">
+              <header><div><span class="panel-label">VIỆC CẦN LÀM</span><h2 id="paid-actions-title">Hành động ưu tiên</h2></div><div><small data-paid-decision-status>ĐANG KIỂM TRA</small><br><small>Snapshot: <b data-paid-snapshot>—</b></small></div></header>
+              <div class="paid-action-list" data-paid-actions></div>
+            </section>
+
+            <section class="paid-panel" aria-labelledby="paid-owned-title">
+              <header><div><span class="panel-label">ĐANG SỞ HỮU</span><h2 id="paid-owned-title">Mã cần quản trị vị thế</h2></div><small>Ưu tiên góc nhìn giữ · gia tăng · hạ tỷ trọng · bán</small></header>
+              <div class="paid-stock-list" data-paid-owned-list></div>
+            </section>
+
+            <section class="paid-panel" aria-labelledby="paid-watch-title">
+              <header><div><span class="panel-label">WATCHLIST</span><h2 id="paid-watch-title">Mã đang chờ cơ hội</h2></div><small>Ưu tiên điểm mua sớm, breakout và thay đổi setup</small></header>
+              <div class="paid-stock-list" data-paid-watch-list></div>
+            </section>
+
+            <section class="paid-panel" aria-labelledby="paid-changes-title">
+              <header><div><span class="panel-label">THAY ĐỔI MỚI</span><h2 id="paid-changes-title">Có gì khác so với snapshot trước?</h2></div><a class="text-link" href="thay-doi-hom-nay/">Xem toàn bộ →</a></header>
+              <div class="paid-change-list" data-paid-changes></div>
+            </section>
+          </div>
+
+          <aside class="paid-side-column">
+            <section class="paid-panel" aria-labelledby="paid-profile-title">
+              <header><div><span class="panel-label">CÁ NHÂN HÓA</span><h2 id="paid-profile-title">Ưu tiên của bạn</h2></div></header>
+              <div class="paid-preference-grid"><div><span>Tài khoản</span><strong data-paid-user-email>—</strong></div><div><span>Khung đầu tư</span><strong data-paid-horizons>—</strong></div><div><span>Ngành ưu tiên</span><strong data-paid-sectors>—</strong></div></div>
+            </section>
+
+            <section class="paid-panel" aria-labelledby="paid-shortcuts-title">
+              <header><div><span class="panel-label">TRUY CẬP NHANH</span><h2 id="paid-shortcuts-title">Đi thẳng tới việc cần làm</h2></div></header>
+              <div class="paid-quick-links">
+                <a href="kiem-tra-co-phieu/"><strong>Tra cứu một mã</strong><span>Mua mới / đang nắm giữ</span></a>
+                <a href="khuyen-nghi/"><strong>Khuyến nghị đang hiệu lực</strong><span>Buy Zone · Stop · Target</span></a>
+                <a href="radar5/"><strong>Radar toàn HOSE</strong><span>Tìm cơ hội mới</span></a>
+                <a href="hieu-qua/"><strong>Hiệu quả</strong><span>Kiểm chứng track record</span></a>
+                <a href="tai-khoan/"><strong>Cài đặt tài khoản</strong><span>Watchlist · Email · Alert</span></a>
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
+    </div></section>
+  </main>
+
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="hom-nay/">Hôm nay</a><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="tai-khoan/">Tài khoản</a></div></div><p class="disclaimer">StockRadar chỉ hiển thị tín hiệu hành động khi dữ liệu và điều kiện phát hành đạt chuẩn tại snapshot tương ứng.</p></div></footer>
+</body>
+</html>
