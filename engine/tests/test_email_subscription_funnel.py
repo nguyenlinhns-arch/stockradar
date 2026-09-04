@@ -188,7 +188,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertLess(len(payload["items"]), payload["internal_reference"]["record_count"])
         workflow = self.read(".github/workflows/pages.yml")
         self.assertIn("python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json", workflow)
-        self.assertLess(workflow.index("Fail-close public ticker seed before tests and Pages build"), workflow.index("Run regression suite"))
+        self.assertLess(workflow.index("Run regression suite"), workflow.index("Fail-close public ticker seed before Pages build"))
+        self.assertLess(workflow.index("Fail-close public ticker seed before Pages build"), workflow.index("Build static Pages artifact"))
 
     def test_registration_page_compares_free_public_and_premium_daily_intraday(self):
         register = self.read("website/dang-ky/index.html")
