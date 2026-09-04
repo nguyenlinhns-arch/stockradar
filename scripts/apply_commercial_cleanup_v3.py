@@ -20,17 +20,17 @@ def read(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def remove_block_by_class(source: str, class_name: str) -> str:
-    pattern = re.compile(
-        rf'\s*<(?:section|article|div)\b[^>]*class=["\'][^"\']*\b{re.escape(class_name)}\b[^"\']*["\'][^>]*>.*?</(?:section|article|div)>\s*',
+def cleanup_signup(source: str) -> str:
+    # Remove the nested onboarding explanation without touching the following plan summary/form.
+    source, count = re.subn(
+        r'\s*<div\b[^>]*class=["\'][^"\']*\bpremium-email-onboarding-v1\b[^"\']*["\'][^>]*>.*?</div>\s*</div>\s*(?=<div\b[^>]*class=["\'][^"\']*\bconversion-premium-summary\b)',
+        "\n",
+        source,
+        count=1,
         flags=re.I | re.S,
     )
-    return pattern.sub("\n", source, count=1)
-
-
-def cleanup_signup(source: str) -> str:
-    # Marketing/onboarding explanation is redundant with plan selection and account page.
-    source = remove_block_by_class(source, "premium-email-onboarding-v1")
+    if count != 1:
+        raise RuntimeError("Premium onboarding explanation block not found")
     source = source.replace("Free 10 câu AI/ngày · Premium không giới hạn.", "Free 10 câu/ngày · Premium không giới hạn.")
     source = source.replace("Có thể bật/tắt từng loại email.", "Email Premium là tùy chọn.")
     return source
@@ -137,7 +137,6 @@ def verify(output: Path) -> None:
             if term.lower() in low:
                 raise RuntimeError(f"Residual explanatory copy survived on {route}: {term}")
 
-    # Preserve conversion/auth/billing functionality using actual final-artifact hooks.
     required = {
         "signup": ("data-auth-signup-form", "data-signup-plan-name", "data-signup-submit-label"),
         "dang-ky": ("data-plan-free", "data-plan-premium", "data-plan-comparison"),
