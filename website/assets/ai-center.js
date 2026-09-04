@@ -14,7 +14,7 @@
   }
 
   function validTicker(value) {
-    const ticker = String(value || '').toUpperCase();
+    const ticker = String(value || '').trim().toUpperCase();
     return /^[A-Z0-9]{3}$/.test(ticker) && /[A-Z]/.test(ticker);
   }
 
@@ -95,22 +95,15 @@
     const source = data?.source || {};
     const quota = data?.quota || {};
     if (data?.mode === 'ACTION_READY') bits.push('Action đã xác nhận');
-    else if (data?.mode === 'RESEARCH_ONLY') bits.push('Góc nhìn nghiên cứu');
-    else if (data?.mode === 'METHOD_ONLY') bits.push('Chưa đủ dữ liệu hiện tại');
+    else if (data?.mode === 'RESEARCH_ONLY') bits.push('Dữ liệu nghiên cứu hiện hành');
+    else if (data?.mode === 'METHOD_ONLY') bits.push('Chế độ phương pháp · không dùng tín hiệu hiện tại');
     if (source.generated_at) {
       try { bits.push(`Dữ liệu ${new Date(source.generated_at).toLocaleString('vi-VN')}`); } catch (_) {}
     }
-    if (data?.tier === 'GUEST') {
-      if (quota.remaining != null) bits.push(`Khách · còn ${quota.remaining}/3 câu hôm nay`);
-      else bits.push('Khách · tối đa 3 câu/ngày');
-    } else if (data?.tier === 'FREE') {
-      if (quota.remaining != null) bits.push(`Free · còn ${quota.remaining}/10 câu hôm nay`);
-      else bits.push('Free · tối đa 10 câu/ngày');
-    } else if (data?.tier === 'PAID') {
-      bits.push('Paid · hỏi không giới hạn');
-    } else if (data?.tier === 'TRIAL') {
-      bits.push('Trial');
-    }
+    if (data?.tier === 'GUEST') bits.push(quota.remaining != null ? `Khách · còn ${quota.remaining}/3 câu hôm nay` : 'Khách · tối đa 3 câu/ngày');
+    else if (data?.tier === 'FREE') bits.push(quota.remaining != null ? `Free · còn ${quota.remaining}/10 câu hôm nay` : 'Free · tối đa 10 câu/ngày');
+    else if (data?.tier === 'PAID') bits.push('Paid · hỏi không giới hạn');
+    else if (data?.tier === 'TRIAL') bits.push('Trial');
     return bits.join(' · ');
   }
 
@@ -136,6 +129,11 @@
       status.textContent = 'ĐÃ ĐĂNG NHẬP · QUYỀN THEO TÀI KHOẢN';
       status.dataset.tier = 'account';
     }
+  }
+
+  function freshnessNotice(data) {
+    if (data?.mode !== 'METHOD_ONLY') return '';
+    return 'Dữ liệu thị trường của mã này hiện chưa đủ mới hoặc chưa vượt toàn bộ kiểm tra chất lượng. StockRadar AI đã tự chuyển sang chế độ phương pháp và không dùng giá, điểm mua/bán hay tín hiệu cũ để đưa ra hành động.';
   }
 
   async function ask(message, log, input, send, status) {
@@ -165,16 +163,9 @@
       if (authenticated) headers.Authorization = `Bearer ${session.access_token}`;
       const body = authenticated ? {
         scope: ticker ? 'ticker' : (portfolioIntent(message) ? 'portfolio' : 'portfolio'),
-        ticker: ticker || '',
-        horizon,
-        message: String(message).slice(0, 700),
-        history: state.history.slice(-MAX_HISTORY)
+        ticker: ticker || '', horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY)
       } : {
-        ticker,
-        horizon,
-        message: String(message).slice(0, 700),
-        history: state.history.slice(-MAX_HISTORY),
-        guest_id: guestId()
+        ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY), guest_id: guestId()
       };
 
       const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
@@ -188,11 +179,13 @@
 
       const answer = data.answer || (response.ok ? 'StockRadar AI chưa có nội dung để trả lời.' : 'StockRadar AI tạm thời chưa thể phản hồi.');
       addMessage(log, 'assistant', answer, sourceMeta(data));
+      const warning = freshnessNotice(data);
+      if (warning) addMessage(log, 'assistant', warning, 'Fail-closed · không dùng dữ liệu cũ để khuyến nghị');
       updatePlan(status, data, authenticated);
 
       if (response.status === 429) {
-        if (data?.tier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục ngay bằng tài khoản Free với 10 câu/ngày.', 'dang-ky/?plan=free', 'Đăng ký Free');
-        if (data?.tier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert qua email, hãy mở Premium.', 'dang-ky/?plan=premium', 'Xem gói Paid');
+        if (data?.tier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục bằng tài khoản Free với 10 câu/ngày.', 'dang-ky/?plan=free', 'Đăng ký Free');
+        if (data?.tier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert qua email khi hệ thống đủ điều kiện phát hành, hãy mở Premium.', 'dang-ky/?plan=premium', 'Xem gói Paid');
         return;
       }
 
@@ -224,7 +217,7 @@
 
     const log = node('div', 'sr-center-log');
     log.setAttribute('aria-live', 'polite');
-    addMessage(log, 'assistant', 'Tôi là StockRadar AI, dùng cùng lõi 4M/Payback · CANSLIM · định giá · SEPA/VCP · VPA · Pocket Pivot của StockRadar. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết.');
+    addMessage(log, 'assistant', 'Tôi là StockRadar AI, dùng lõi 4M/Payback · CANSLIM · định giá · SEPA/VCP · VPA · Pocket Pivot. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết. Nếu dữ liệu chưa đủ mới/đủ chuẩn, tôi sẽ tự chuyển sang chế độ phương pháp thay vì dùng tín hiệu cũ.');
 
     const chips = node('div', 'sr-center-chips');
     ['FPT mua được chưa?', 'MWG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
@@ -244,8 +237,7 @@
     form.append(input, send);
 
     const foot = node('div', 'sr-center-foot');
-    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Paid:</strong> không giới hạn + email Action Alert</span>';
-
+    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Paid:</strong> không giới hạn + email Action Alert khi hệ thống đủ điều kiện gửi</span>';
     host.replaceChildren(top, log, chips, form, foot);
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
