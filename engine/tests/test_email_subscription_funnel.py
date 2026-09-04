@@ -94,23 +94,25 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('id="nhan-ban-tin"', home)
         self.assertIn('href="thanh-toan/?plan=premium"', home)
         self.assertIn("home-radar-sector-list", home)
+        self.assertIn("data-live-radar-home", home)
         self.assertIn("home-tier-grid", home)
         self.assertIn("Free và Premium có gì?", home)
         self.assertIn("Nhận bản rà soát thị trường mỗi sáng", home)
         self.assertIn("FREE 09:00", home)
         self.assertIn("199K", home)
-        for ticker in ("ACB", "VNM", "NKG", "CMG", "PVD", "FRT", "VHM", "POW", "GMD", "HAH"):
-            self.assertIn(f"ticker={ticker}", home)
         for feature in (
-            "Radar 30", "4M · CANSLIM · Payback", "So sánh theo ngành", "Hiệu quả khuyến nghị",
-            "Định giá Bear / Base / Bull", "SEPA/VCP · Stage · Pivot",
-            "VPA · RVOL · dòng tiền lớn", "Email & cảnh báo trong phiên",
+            "Radar HOSE", "Full HOSE → Full-Scan Gate → Ranking", "So sánh theo ngành",
+            "Hiệu quả khuyến nghị", "Market/Sector", "VPA/RVOL",
+            "Email & cảnh báo trong phiên",
         ):
             self.assertIn(feature, home)
-        self.assertIn("30 mã", home)
-        self.assertIn("10 ngành · 3 mã mỗi ngành", home)
         self.assertIn("4 mốc/ngày", home)
         self.assertIn("10:30 · 11:15 · 13:30 · 14:15", home)
+        self.assertIn("Radar động theo snapshot", home)
+        self.assertNotIn("Radar 30", home)
+        self.assertNotIn("30 mã", home)
+        self.assertNotIn("10 ngành · 3 mã", home)
+        self.assertNotIn("co-phieu/?ticker=", home)
         self.assertIn("assets/home-focus-v1.css", home)
         self.assertIn("assets/home-conversion-v2.css", home)
         self.assertNotIn("assets/email-interest.js", home)
@@ -124,12 +126,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("MẪU EMAIL GÓI TRẢ PHÍ", home)
         self.assertNotIn("DỮ LIỆU MẪU", home)
         self.assertNotIn("MINH HỌA", home.upper())
-        self.assertNotIn("Chưa có setup", home)
         self.assertNotIn("đang hoàn thiện", home.lower())
-        self.assertNotIn("Trạng thái công khai", home)
-        self.assertNotIn("Danh sách cổ phiếu đang theo dõi", home)
-        self.assertNotIn("Chưa phát hành", home)
-        self.assertNotIn("Chưa sẵn sàng", home)
 
     def test_home_and_global_conversion_state_skip_repeated_lead_cta(self):
         home_core = self.read("website/assets/home-core-v1.js")
@@ -175,14 +172,15 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
             self.assertIn(marker, client)
         self.assertNotIn("service_role", client.lower())
 
-    def test_radar_review_payload_is_30_tickers_10_sectors_3_each(self):
+    def test_public_ticker_seed_is_fail_closed_until_full_hose_master_is_approved(self):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
-        items = payload["items"]
-        counts = Counter(item["sector"] for item in items)
-        self.assertEqual(len(items), 30)
-        self.assertEqual(len(counts), 10)
-        self.assertEqual(set(counts.values()), {3})
-        self.assertTrue(all(item["exchange"] == "HOSE" for item in items))
+        self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(payload["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")
+        self.assertEqual(payload["selection_kind"], "NONE_FAIL_CLOSED")
+        self.assertEqual(payload["items"], [])
+        self.assertEqual(payload["internal_reference"]["record_count"], 405)
+        self.assertEqual(payload["internal_reference"]["validated_count"], 405)
+        self.assertFalse(payload["internal_reference"]["raw_publication_allowed"])
 
     def test_registration_page_compares_free_daily_and_premium_intraday(self):
         register = self.read("website/dang-ky/index.html")
@@ -201,16 +199,20 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("data-email-interest-form", register)
         self.assertIn("assets/email-interest.js", register)
 
-    def test_recommendation_page_uses_30_stock_radar_review_list(self):
+    def test_recommendation_page_uses_snapshot_bound_full_hose_radar(self):
         page = self.read("website/khuyen-nghi/index.html")
         self.assertIn("Tín hiệu hành động hiện tại", page)
         self.assertIn("0 mã", page)
-        self.assertIn("Danh sách cổ phiếu theo Radar rà soát", page)
-        self.assertIn("30 mã", page)
-        for ticker in ("ACB", "VNM", "NKG", "HAH"):
-            self.assertIn(f">{ticker}<", page)
-        self.assertIn("không phải khuyến nghị mua", page)
-        self.assertNotIn("Mã tham chiếu đang theo dõi", page)
+        self.assertIn("Phạm vi quét", page)
+        self.assertIn("Toàn HOSE", page)
+        self.assertIn("Shortlist theo snapshot", page)
+        self.assertIn("data-radar-review-list", page)
+        self.assertIn("Không dùng mã mẫu hoặc danh sách lựa chọn thủ công", page)
+        self.assertIn("Radar và Khuyến nghị là hai lớp khác nhau", page)
+        self.assertNotIn("30 mã", page)
+        self.assertNotIn("10 ngành · 3 mã", page)
+        for ticker in ("ACB", "MBB", "HPG", "FPT", "VHM"):
+            self.assertNotIn(f">{ticker}<", page)
 
     def test_public_interest_client_calls_edge_without_privileged_secret(self):
         client = self.read("website/assets/email-interest.js")

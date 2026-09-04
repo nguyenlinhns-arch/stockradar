@@ -143,19 +143,23 @@ class StaticAssetTests(unittest.TestCase):
         focus_styles = (WEBSITE / "assets" / "home-focus-v1.css").read_text(encoding="utf-8")
 
         for expected in (
-            "operations-shell", "operations-search", "home-focus-grid", "home-radar-sector-list", "home-tier-grid",
-            "Free và Premium có gì?", "Radar 30", "4M · CANSLIM · Payback", "Định giá Bear / Base / Bull",
-            "SEPA/VCP · Stage · Pivot", "VPA · RVOL · dòng tiền lớn", "30 mã",
+            "operations-shell", "operations-search", "home-focus-grid", "home-radar-sector-list",
+            "data-live-radar-home", "home-tier-grid", "Free và Premium có gì?", "Radar HOSE",
+            "Full HOSE → Full-Scan Gate → Ranking", "Radar động theo snapshot",
         ):
             self.assertIn(expected, homepage)
-        for expected in ("radar-workspace-grid", "data-radar-filter", "data-radar-table"):
+        for expected in (
+            "radar-workspace-grid", "data-radar-filter", "data-radar-table",
+            "Radar toàn bộ cổ phiếu HOSE", "mỗi mã phải đi qua 8 lớp",
+        ):
             self.assertIn(expected, radar)
         for removed in (
-            "BỘ NÃO STOCKRADAR", "TRUNG TÂM KIẾN THỨC", "KIẾN TRÚC 3 TẦNG",
-            "Free bên trái · Premium bên phải", "Trạng thái công khai", "Chưa có setup",
-            "home-status-band", "home-status-grid",
+            "Radar 30", "30 mã", "10 ngành · 3 mã", "BỘ NÃO STOCKRADAR", "TRUNG TÂM KIẾN THỨC",
+            "KIẾN TRÚC 3 TẦNG", "Free bên trái · Premium bên phải", "Trạng thái công khai",
+            "Chưa có setup", "home-status-band", "home-status-grid",
         ):
             self.assertNotIn(removed, homepage)
+        self.assertNotIn("co-phieu/?ticker=", homepage)
         self.assertNotIn("home-watchlist-grid", homepage)
         self.assertNotIn("home-ticker-grid", homepage)
         self.assertNotIn("premium-preview-section", homepage)
@@ -256,8 +260,13 @@ class StaticAssetTests(unittest.TestCase):
         self.assertIn("RA QUYẾT ĐỊNH TRÊN HOSE", homepage)
         self.assertIn('content="PRODUCTION"', homepage)
         self.assertIn("Free và Premium có gì?", homepage)
-        self.assertIn("Radar 30", homepage)
-        self.assertIn("Định giá Bear / Base / Bull", homepage)
+        self.assertIn("Radar HOSE", homepage)
+        self.assertIn("Full HOSE → Full-Scan Gate → Ranking", homepage)
+        self.assertIn("Radar động theo snapshot", homepage)
+        self.assertNotIn("Radar 30", homepage)
+        self.assertNotIn("30 mã", homepage)
+        self.assertNotIn("10 ngành · 3 mã", homepage)
+        self.assertNotIn("co-phieu/?ticker=", homepage)
         self.assertNotIn("home-status-band", homepage)
         self.assertNotIn("home-status-grid", homepage)
         self.assertNotIn("TRẠNG THÁI DỮ LIỆU", homepage)
