@@ -30,6 +30,7 @@ from .models import Candidate, SetupState, UniverseSnapshot
 from .ranking import build_top_hose
 from .scoring import calculate_score
 from .state_machine import SetupFacts, derive_state
+from .ticker_symbol import is_valid_hose_ticker
 
 
 INTERNAL_ENGINE_VERSION = "STOCKRADAR_INTERNAL_V2.1"
@@ -286,8 +287,8 @@ def compute_stock(
     previous_state: SetupState | None = None,
 ) -> InternalStockComputation:
     normalized_ticker = ticker.strip().upper()
-    if len(normalized_ticker) != 3 or not normalized_ticker.isalpha() or not normalized_ticker.isascii():
-        raise ValueError("ticker must be a 3-letter ASCII symbol")
+    if not is_valid_hose_ticker(normalized_ticker):
+        raise ValueError("ticker must be a 3-character HOSE symbol")
     if not sector.strip():
         raise ValueError("sector is required")
 
