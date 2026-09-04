@@ -100,11 +100,11 @@ class BuyerReadinessTests(unittest.TestCase):
             self.assertIn(marker, client)
         self.assertIn("payload?.ranking_valid === true", client)
 
-    def test_inactive_email_and_checkout_are_removed_from_pages_artifact(self):
+    def test_email_stays_inactive_while_checkout_is_enabled(self):
         script = (ROOT / "scripts/apply_buyer_readiness.py").read_text(encoding="utf-8")
         workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
         self.assertIn('STOCKRADAR_PRODUCT_EMAIL_READY: "0"', workflow)
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', workflow)
         self.assertIn("shutil.rmtree(checkout)", script)
         self.assertIn("buyer-readiness-v1.js", script)
         self.assertIn("verify_buyer_readiness.py", workflow)
