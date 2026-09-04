@@ -91,7 +91,7 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertIn('data-plan-premium', plans)
         self.assertIn('signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium', registration_guard)
         self.assertIn('Đăng ký & thanh toán', registration_guard)
-        self.assertIn('Không cần tạo Free rồi nâng cấp', registration_guard)
+        self.assertIn('không phải đăng ký Free trước', registration_guard)
         self.assertIn('assets/signup-link-v1.js', signup)
         self.assertIn('data-signup-email-sent', signup)
         self.assertNotIn('data-auth-signup-otp-form', signup)
