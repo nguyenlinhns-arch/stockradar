@@ -4,6 +4,9 @@ from typing import Any, Mapping
 
 
 HORIZONS = frozenset({"SHORT_TERM", "MEDIUM_TERM", "LONG_TERM", "ACCUMULATION"})
+ACTION_CONTRACT_SCHEMA = "STOCKRADAR_ACTION_V1"
+NEW_POSITION_ACTION_STATES = frozenset({"WAIT", "BUY"})
+HOLDING_ACTION_STATES = frozenset({"WAIT", "HOLD", "ADD", "REDUCE", "SELL"})
 
 
 class ReportContractError(ValueError):
@@ -58,6 +61,79 @@ def _string_list_if_present(payload: Mapping[str, Any], key: str) -> None:
         return
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise ReportContractError(f"report {key} must be a list of strings")
+
+
+def _validate_action_lane(
+    action_contract: Mapping[str, Any],
+    lane_key: str,
+    allowed_states: frozenset[str],
+) -> None:
+    lane = action_contract.get(lane_key)
+    if not isinstance(lane, Mapping):
+        raise ReportContractError(f"action_contract.{lane_key} must be an object")
+
+    state = lane.get("state")
+    if not isinstance(state, str) or state not in allowed_states:
+        allowed = ", ".join(sorted(allowed_states))
+        raise ReportContractError(
+            f"action_contract.{lane_key}.state must be one of: {allowed}"
+        )
+
+    setup = lane.get("setup")
+    if setup is not None and (not isinstance(setup, str) or not setup.strip()):
+        raise ReportContractError(f"action_contract.{lane_key}.setup must be non-empty text")
+
+    reasons = lane.get("reasons")
+    if reasons is not None and (
+        not isinstance(reasons, list)
+        or any(not isinstance(item, str) or not item.strip() for item in reasons)
+    ):
+        raise ReportContractError(
+            f"action_contract.{lane_key}.reasons must be a list of non-empty strings"
+        )
+
+    confirmed_at = lane.get("confirmed_at")
+    if confirmed_at is not None and (
+        not isinstance(confirmed_at, str) or not confirmed_at.strip()
+    ):
+        raise ReportContractError(
+            f"action_contract.{lane_key}.confirmed_at must be non-empty text"
+        )
+
+
+def _validate_action_contract(result: Mapping[str, Any]) -> None:
+    action_contract = result.get("action_contract")
+    if action_contract is None:
+        return
+    if not isinstance(action_contract, Mapping):
+        raise ReportContractError("report action_contract must be an object")
+    if action_contract.get("schema_version") != ACTION_CONTRACT_SCHEMA:
+        raise ReportContractError(
+            f"action_contract.schema_version must be {ACTION_CONTRACT_SCHEMA}"
+        )
+    if not isinstance(action_contract.get("alert_eligible"), bool):
+        raise ReportContractError("action_contract.alert_eligible must be boolean")
+
+    _validate_action_lane(
+        action_contract,
+        "new_position",
+        NEW_POSITION_ACTION_STATES,
+    )
+    _validate_action_lane(
+        action_contract,
+        "holding",
+        HOLDING_ACTION_STATES,
+    )
+
+    if action_contract.get("alert_eligible") is True:
+        if result.get("public_release_allowed") is not True:
+            raise ReportContractError(
+                "alert-eligible action_contract requires public_release_allowed=true"
+            )
+        if str(result.get("data_freshness") or "").strip().upper() != "FRESH":
+            raise ReportContractError(
+                "alert-eligible action_contract requires data_freshness=FRESH"
+            )
 
 
 def validate_report_payload(
@@ -154,4 +230,5 @@ def validate_report_payload(
     for key in ("thesis", "catalysts", "risks", "invalidation_conditions"):
         _string_list_if_present(result, key)
 
+    _validate_action_contract(result)
     return result
