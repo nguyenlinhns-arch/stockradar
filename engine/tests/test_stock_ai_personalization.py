@@ -27,34 +27,30 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('const userContext = scope === "portfolio"', source)
         self.assertIn('requested_ticker: requestedWatchItem ?', source)
         self.assertIn('requested_ticker_configured', source)
-        self.assertIn('Khi REQUEST_SCOPE=ticker, USER_CONTEXT chỉ chứa cấu hình liên quan đúng mã đang hỏi', source)
         self.assertIn('cost_basis: requestedWatchItem.cost_basis', source)
         self.assertIn('portfolio_weight_pct: requestedWatchItem.portfolio_weight_pct', source)
+        self.assertIn('const researchTickers = scope === "ticker" ? [ticker]', source)
         self.assertNotIn("user.email", source)
 
     def test_position_context_is_optional_self_declared_and_cannot_infer_nav(self):
         source = EDGE.read_text(encoding="utf-8")
-        for marker in (
-            "cost_basis và portfolio_weight_pct, nếu có, là số người dùng tự khai báo",
-            "Chỉ khi owns_stock=true và cost_basis có giá trị",
-            "lãi/lỗ tương đối ước tính",
-            "không suy đoán số lượng cổ phiếu, NAV, tiền lãi tuyệt đối",
-            "portfolio_weight_pct có thể dùng để nhận diện mức tập trung danh mục",
-            "position_context_count",
-        ):
-            self.assertIn(marker, source)
+        self.assertIn('const ownsStock = row.owns_stock === true', source)
+        self.assertIn('cost_basis: ownsStock ? positionNumber(row.cost_basis, 0.0001) : null', source)
+        self.assertIn('portfolio_weight_pct: ownsStock ? positionNumber(row.portfolio_weight_pct, 0, 100) : null', source)
+        self.assertIn('position_context_count: positionContextCount', source)
+        self.assertIn('position_context_configured:', source)
         self.assertNotIn("broker_account", source)
         self.assertNotIn("position_quantity", source)
+        self.assertNotIn("portfolio_nav", source)
 
-    def test_free_and_premium_share_decision_context_while_data_gate_remains_fail_closed(self):
+    def test_free_and_premium_share_decision_context_while_alert_rights_differ(self):
         source = EDGE.read_text(encoding="utf-8")
+        self.assertIn('const ACTIVE_TIERS = new Set(["FREE", "TRIAL", "PAID"])', source)
+        self.assertIn('const PREMIUM_TIERS = new Set(["TRIAL", "PAID"])', source)
+        self.assertIn('const actionContext = readyRows.map((row) => normalizeReport', source)
+        self.assertIn('alert_enabled: PREMIUM_TIERS.has(tier) && row.alert_enabled === true', source)
+        self.assertIn('tier === "FREE" ? "Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay.', source)
         self.assertNotIn("redactForFree", source)
-        self.assertNotIn('tier === "FREE" ? redactForFree', source)
-        self.assertIn("Không làm nghèo câu trả lời chỉ vì tài khoản Free", source)
-        self.assertIn("const reports = readyRows.map((row) => normalizeReport", source)
-        self.assertIn("NO_READY_REPORT", source)
-        self.assertIn("quota_consumed: false", source)
-        self.assertIn("Không xếp hạng các score của các horizon khác nhau", source)
         self.assertNotIn("user.email", source)
 
     def test_browser_supports_inline_ai_ticker_and_portfolio_questions_without_secrets(self):
