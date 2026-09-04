@@ -1,0 +1,54 @@
+name: StockRadar Production Data Preflight
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/production-data-preflight.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  credentials:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SSI_FASTCONNECT_CLIENT_ID: ${{ secrets.SSI_FASTCONNECT_CLIENT_ID }}
+      SSI_FASTCONNECT_API_KEY: ${{ secrets.SSI_FASTCONNECT_API_KEY }}
+      SSI_FASTCONNECT_API_SECRET: ${{ secrets.SSI_FASTCONNECT_API_SECRET }}
+      DATACORE_API_KEY: ${{ secrets.DATACORE_API_KEY }}
+      X_API_KEY: ${{ secrets.X_API_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check production provider credentials without exposing values
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          required_ssi = (
+              'SSI_FASTCONNECT_CLIENT_ID',
+              'SSI_FASTCONNECT_API_KEY',
+              'SSI_FASTCONNECT_API_SECRET',
+          )
+          missing_ssi = [name for name in required_ssi if not os.environ.get(name, '').strip()]
+          datacore_ready = bool(os.environ.get('DATACORE_API_KEY', '').strip() or os.environ.get('X_API_KEY', '').strip())
+          status = {
+              'ssi_fastconnect_configured': not missing_ssi,
+              'ssi_missing_variable_names': missing_ssi,
+              'datacore_configured': datacore_ready,
+              'publication_rights_assumed': False,
+              'raw_data_downloaded': False,
+              'secrets_logged': False,
+              'next_gate': 'RIGHTS_AND_SECURE_ACQUISITION' if not missing_ssi and datacore_ready else 'CONFIGURE_PROVIDER_CREDENTIALS',
+          }
+          Path('production-data-preflight.json').write_text(json.dumps(status, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          print(json.dumps(status, ensure_ascii=False))
+          if missing_ssi or not datacore_ready:
+              raise SystemExit('Production provider credentials are incomplete; StockRadar decision/public cache remains fail-closed.')
+          PY
