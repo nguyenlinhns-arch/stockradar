@@ -82,14 +82,19 @@ def main() -> int:
                 "KHÁCH · 3 CÂU / NGÀY",
                 "FREE · 10 CÂU / NGÀY",
                 "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
-                "signup/?plan=free",
-                "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
-                "Mở Premium · 199K/30 ngày",
+                "dang-ky/?plan=free",
+                "dang-ky/?plan=premium",
+                "Đăng ký Free",
+                "Xem gói Paid",
             ),
             "Native AI browser product contract",
         )
-        if "dang-ky/?plan=premium" in center_js:
-            raise SystemExit("Native AI Premium CTA must continue directly to Premium signup/payment")
+        for stale_ai_route in (
+            "signup/?plan=free",
+            "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
+        ):
+            if stale_ai_route in center_js:
+                raise SystemExit(f"Native AI CTA bypasses the plan selection surface: {stale_ai_route}")
         require_markers(
             home,
             (
@@ -148,7 +153,7 @@ def main() -> int:
         if "sr-ai-nav-link" not in source:
             raise SystemExit(f"AI navigation missing from: {relative}")
 
-    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement + direct Premium payment path")
+    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement; Premium registration continues to payment after plan selection")
     return 0
 
 
