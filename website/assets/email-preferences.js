@@ -85,6 +85,12 @@
     return data || null;
   }
 
+  async function loadDeliveryHealth(client) {
+    const { data, error } = await client.rpc('get_my_stockradar_email_health_v1');
+    if (error) throw error;
+    return data || null;
+  }
+
   async function recordConsentIfChanged(client, userId, latest, granted) {
     if (latest && latest.granted === granted && latest.document_version === CONSENT_VERSION) return latest;
     const { data, error } = await client
@@ -101,6 +107,73 @@
     return data;
   }
 
+  function formatHealthTime(value) {
+    if (!value) return 'Chưa có';
+    try {
+      return new Intl.DateTimeFormat('vi-VN', {
+        day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
+      }).format(new Date(value));
+    } catch (_) {
+      return 'Chưa có';
+    }
+  }
+
+  function emailKindLabel(value) {
+    return ({
+      DAILY_BRIEF: 'Daily 09:00',
+      EVENT_ALERT: 'Action Alert',
+      POST_SESSION_DIGEST: 'Cuối phiên',
+      WEEKLY_REPORT: 'Weekly',
+    })[String(value || '').toUpperCase()] || '';
+  }
+
+  function renderDeliveryHealth(health) {
+    const root = document.querySelector('[data-premium-email-health]');
+    if (!root || !health) return;
+
+    const set = (selector, text) => {
+      const target = root.querySelector(selector);
+      if (target) target.textContent = text;
+    };
+
+    const premium = PREMIUM_TIERS.has(String(health.account_tier || '').toUpperCase());
+    const active = String(health.account_status || '').toUpperCase() === 'ACTIVE';
+    const deliveryReady = Boolean(health.delivery_system_ready);
+    const suppressed = String(health.suppression_reason || '').trim();
+
+    set('[data-email-health-system]', suppressed
+      ? 'Đang bị chặn gửi'
+      : deliveryReady
+        ? 'Hệ thống gửi hoạt động'
+        : 'Hệ thống gửi chưa kích hoạt');
+    set('[data-email-health-tier]', `${health.account_tier || 'FREE'} · ${health.account_status || 'PENDING'}`);
+    set('[data-email-health-daily]', health.daily_brief ? 'Đã chọn' : 'Tắt');
+    set('[data-email-health-alerts]', premium && health.event_alerts ? 'Đã chọn' : premium ? 'Tắt' : 'Cần Premium');
+    set('[data-email-health-watchlist]', `${Number(health.watchlist_count || 0)} mã`);
+    set('[data-email-health-tickers]', `${Number(health.alert_ticker_count || 0)} mã`);
+
+    const kind = emailKindLabel(health.last_email_kind);
+    const last = health.last_email_at
+      ? `${kind ? `${kind} · ` : ''}${health.last_delivery_status || '—'} · ${formatHealthTime(health.last_email_at)}`
+      : 'Chưa có email';
+    set('[data-email-health-last]', last);
+
+    const note = root.querySelector('[data-email-health-note]');
+    if (note) {
+      if (suppressed) {
+        note.textContent = `Email đang bị suppression: ${suppressed}. Kiểm tra tùy chọn email hoặc liên hệ hỗ trợ nếu bạn không chủ động tắt.`;
+      } else if (!active) {
+        note.textContent = 'Xác minh tài khoản trước khi bật gửi. Các lựa chọn có thể được lưu nhưng chưa tạo quyền delivery.';
+      } else if (!deliveryReady) {
+        note.textContent = 'Cấu hình của bạn đã được lưu. Email production chỉ được gửi khi hệ thống delivery vượt đủ các cổng an toàn và được kích hoạt.';
+      } else if (premium && Number(health.alert_ticker_count || 0) === 0) {
+        note.textContent = 'Premium đang hoạt động nhưng chưa có mã nào bật Action Alert. Thêm watchlist và bật “Cảnh báo mã này” để StockRadar canh đúng mã bạn quan tâm.';
+      } else {
+        note.textContent = 'Email chỉ được tạo theo quyền gói, consent và trạng thái đủ điều kiện; không đổi trạng thái thì không tạo Action Alert riêng.';
+      }
+    }
+  }
+
   function renderState(root, user, profile, preferences, consent) {
     const active = profile.account_status === 'ACTIVE' && KNOWN_TIERS.has(profile.account_tier);
     const premium = PREMIUM_TIERS.has(profile.account_tier);
@@ -109,7 +182,12 @@
     const master = form?.elements?.enabled;
     const daily = form?.elements?.daily_brief;
     const alerts = form?.elements?.event_alerts;
-    const hasDeliverable = Boolean(preferences.daily_brief || (premium && preferences.event_alerts));
+    const postSession = form?.elements?.post_session_digest;
+    const weekly = form?.elements?.weekly_report;
+    const hasDeliverable = Boolean(
+      preferences.daily_brief ||
+      (premium && (preferences.event_alerts || preferences.post_session_digest || preferences.weekly_report))
+    );
 
     if (master) {
       master.checked = Boolean(preferences.enabled && active && hasDeliverable);
@@ -117,6 +195,14 @@
     }
     if (daily) daily.checked = Boolean(preferences.daily_brief);
     if (alerts) alerts.checked = Boolean(preferences.event_alerts);
+    if (postSession) {
+      postSession.checked = Boolean(preferences.post_session_digest && premium);
+      postSession.disabled = !premium;
+    }
+    if (weekly) {
+      weekly.checked = Boolean(preferences.weekly_report && premium);
+      weekly.disabled = !premium;
+    }
 
     const address = root.querySelector('[data-email-pref-address]');
     const verified = root.querySelector('[data-email-pref-verified]');
@@ -140,22 +226,24 @@
       eligibility.textContent = !active
         ? 'Cần xác minh email'
         : premium
-          ? 'Premium · bản tin 09:00 + cảnh báo trong phiên'
+          ? 'Premium · Daily + Action Alert + tùy chọn digest'
           : 'Free · bản tin 09:00';
     }
 
     const note = root.querySelector('[data-product-email-tier-note]');
     if (note) {
       note.textContent = !active
-        ? 'Xác minh email để bật bản rà soát 09:00. Cảnh báo điểm mua/bán chỉ được gửi khi tài khoản có quyền Premium.'
+        ? 'Xác minh email để bật bản rà soát 09:00. Các email Action Alert/cuối phiên/tuần chỉ có hiệu lực khi tài khoản có quyền Premium.'
         : premium
-          ? 'Premium nhận bản tin 09:00 và có thể bật cảnh báo điểm mua/bán trong phiên tại các mốc quét chính thức khi tín hiệu đủ chuẩn.'
-          : 'Free nhận bản rà soát thị trường cơ bản lúc 09:00 khi bạn bật gửi. Cảnh báo điểm mua/bán trong phiên chỉ dành cho Premium.';
+          ? 'Premium cho phép chọn riêng Daily 09:00, Action Alert, cuối phiên và Weekly. Action Alert chỉ được tạo khi trạng thái thay đổi đủ điều kiện.'
+          : 'Free nhận bản rà soát thị trường cơ bản lúc 09:00 khi bạn bật gửi. Các email hành động và digest nâng cao chỉ dành cho Premium.';
     }
 
     if (free && alerts) {
-      alerts.title = 'Bạn có thể lưu nhu cầu; cảnh báo điểm mua/bán chỉ được gửi sau khi nâng Premium.';
+      alerts.title = 'Bạn có thể lưu nhu cầu; Action Alert chỉ được gửi sau khi nâng Premium.';
     }
+    if (free && postSession) postSession.title = 'Tóm tắt cuối phiên chỉ dành cho Premium.';
+    if (free && weekly) weekly.title = 'Tổng kết tuần chỉ dành cho Premium.';
   }
 
   async function loadWatchlistAlertState(client, userId) {
@@ -214,6 +302,7 @@
         loadLatestConsent(client, user.id),
       ]);
       renderState(root, user, profile, preferences, consent);
+      try { renderDeliveryHealth(await loadDeliveryHealth(client)); } catch (_) {}
       setMessage(status, 'Tùy chọn email được lưu theo tài khoản và có thể thay đổi bất kỳ lúc nào.', 'success');
     } catch (error) {
       setMessage(status, friendlyError(error), 'error');
@@ -222,11 +311,13 @@
 
     form?.addEventListener('submit', async event => {
       event.preventDefault();
+      const premium = PREMIUM_TIERS.has(profile.account_tier);
       const dailyBrief = Boolean(form.elements.daily_brief?.checked);
       const eventAlerts = Boolean(form.elements.event_alerts?.checked);
-      const selectedAny = dailyBrief || eventAlerts;
+      const postSessionDigest = Boolean(premium && form.elements.post_session_digest?.checked);
+      const weeklyReport = Boolean(premium && form.elements.weekly_report?.checked);
+      const selectedAny = dailyBrief || eventAlerts || postSessionDigest || weeklyReport;
       const active = profile.account_status === 'ACTIVE' && KNOWN_TIERS.has(profile.account_tier);
-      const premium = PREMIUM_TIERS.has(profile.account_tier);
       const free = profile.account_tier === 'FREE';
       const masterRequested = Boolean(form.elements.enabled?.checked);
 
@@ -235,11 +326,11 @@
         return;
       }
       if (masterRequested && free && !dailyBrief) {
-        setMessage(message, 'Gói Free cần chọn bản rà soát 09:00 để bật gửi. Cảnh báo mua/bán chỉ dành cho Premium.', 'error');
+        setMessage(message, 'Gói Free cần chọn bản rà soát 09:00 để bật gửi. Action Alert chỉ dành cho Premium.', 'error');
         return;
       }
 
-      const deliverableSelected = Boolean(dailyBrief || (premium && eventAlerts));
+      const deliverableSelected = Boolean(dailyBrief || (premium && (eventAlerts || postSessionDigest || weeklyReport)));
       const enabled = Boolean(active && masterRequested && deliverableSelected);
       const granted = selectedAny;
       const button = form.querySelector('button[type="submit"]');
@@ -252,24 +343,25 @@
           enabled,
           daily_brief: dailyBrief,
           event_alerts: eventAlerts,
-          post_session_digest: false,
-          weekly_report: false,
+          post_session_digest: postSessionDigest,
+          weekly_report: weeklyReport,
         }, { onConflict: 'user_id' });
         if (error) throw error;
 
         consent = await recordConsentIfChanged(client, user.id, consent, granted);
         preferences = await loadPreferences(client, user.id);
         renderState(root, user, profile, preferences, consent);
+        try { renderDeliveryHealth(await loadDeliveryHealth(client)); } catch (_) {}
 
         if (!selectedAny) {
           setMessage(message, 'Đã rút đăng ký email nội dung.', 'success');
         } else if (!active) {
           setMessage(message, 'Đã lưu lựa chọn. Xác minh email để có thể bật gửi theo quyền gói.', 'success');
         } else if (enabled && premium) {
-          setMessage(message, 'Đã bật bản tin 09:00 và các email Premium bạn chọn.', 'success');
+          setMessage(message, 'Đã lưu các email Premium bạn chọn. Action Alert chỉ phát sinh khi trạng thái thực sự thay đổi.', 'success');
         } else if (enabled && free) {
           setMessage(message, eventAlerts
-            ? 'Đã bật bản rà soát 09:00. Nhu cầu cảnh báo mua/bán đã được lưu và chỉ có hiệu lực sau khi nâng Premium.'
+            ? 'Đã bật bản rà soát 09:00. Nhu cầu Action Alert đã được lưu và chỉ có hiệu lực sau khi nâng Premium.'
             : 'Đã bật bản rà soát thị trường 09:00 cho tài khoản Free.', 'success');
         } else {
           setMessage(message, 'Đã lưu loại email quan tâm; gửi email hiện đang tắt.', 'success');
@@ -290,6 +382,7 @@
       try {
         alertState = await loadWatchlistAlertState(client, user.id);
         mountWatchlistToggles(watchlistTarget, alertState);
+        try { renderDeliveryHealth(await loadDeliveryHealth(client)); } catch (_) {}
       } catch (_) {}
     };
     const scheduleRefresh = () => {
@@ -320,9 +413,10 @@
           .eq('user_id', user.id);
         if (error) throw error;
         alertState.set(id, nextValue);
+        try { renderDeliveryHealth(await loadDeliveryHealth(client)); } catch (_) {}
         setMessage(status, nextValue
-          ? 'Đã lưu mã ưu tiên nhận cảnh báo. Gửi cảnh báo qua email chỉ hoạt động khi tài khoản có quyền Premium và email toàn cục đang bật.'
-          : 'Đã tắt cảnh báo riêng cho mã này.', 'success');
+          ? 'Đã lưu mã ưu tiên Action Alert. Email chỉ được gửi khi tài khoản có quyền Premium, email toàn cục đang bật và trạng thái đủ điều kiện thay đổi.'
+          : 'Đã tắt Action Alert riêng cho mã này.', 'success');
       } catch (error) {
         toggle.checked = !nextValue;
         setMessage(status, friendlyError(error), 'error');
