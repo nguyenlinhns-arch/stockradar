@@ -23,39 +23,72 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn("Không dùng thuật ngữ nội bộ “Action Gate”, “Data Gate”", source)
         self.assertIn("Góc nhìn nghiên cứu — chưa phải tín hiệu hành động đã được xác nhận.", source)
 
-    def test_deterministic_research_answer_starts_with_actionable_conclusion(self):
+    def test_current_internal_research_bundle_is_mapped(self):
         source = self.source
-        conclusion = "KẾT LUẬN: ${ticker} CHƯA MUA MỚI"
-        identity = "${ticker}: ${identityBits.join"
-        self.assertIn(conclusion, source)
-        self.assertIn(identity, source)
-        self.assertLess(source.index(conclusion), source.index(identity))
+        for marker in (
+            "p.research_v7",
+            "p.quote",
+            "p.setup",
+            "p.scores",
+            "p.risk",
+            "p.market_context",
+            "p.trade_plan",
+            "p.catalyst",
+            "p.corporate_action",
+            "p.supply_institutional",
+            "p.fundamental_valuation",
+        ):
+            self.assertIn(marker, source)
+        self.assertIn("analysis: merge(rv7, quote, setup, scores, risk, market, p.analysis)", source)
+        self.assertIn("scanner_postclose: merge(rv7, quote, setup, scores, risk, market, plan, p.scanner_postclose)", source)
+
+    def test_research_answer_is_decision_first_and_rich(self):
+        source = self.source
+        self.assertIn("KẾT LUẬN: ${ticker} CHƯA MUA MỚI", source)
         self.assertIn("MUA MỚI:", source)
         self.assertIn("NẾU ĐANG NẮM GIỮ:", source)
+        self.assertIn("VÌ SAO:", source)
+        self.assertIn("THAM CHIẾU NGHIÊN CỨU:", source)
+        self.assertIn("CATALYST:", source)
         self.assertIn("RỦI RO / ĐIỀU KIỆN ĐỔI:", source)
         self.assertIn("DỮ LIỆU:", source)
+        self.assertIn("Radar Score", source)
+        self.assertIn("target_3_6m", source)
+        self.assertIn("target_12m", source)
 
-    def test_user_facing_state_normalization_is_present(self):
+    def test_user_facing_state_and_block_reason_normalization_is_present(self):
         source = self.source
-        self.assertIn('.replace(/\\bWATCH\\b/gi, "THEO DÕI")', source)
-        self.assertIn('.replace(/\\bTHEO DOI\\b/gi, "THEO DÕI")', source)
-        self.assertIn('.replace(/\\bKHONG HANH DONG\\b/gi, "CHƯA HÀNH ĐỘNG")', source)
+        self.assertIn("'THEO DOI KHONG HANH DONG': 'THEO DÕI — CHƯA HÀNH ĐỘNG'", source)
+        self.assertIn("'HA TY TRONG HOAC BAN': 'HẠ TỶ TRỌNG HOẶC BÁN'", source)
+        self.assertIn("'PHAN HOA THAN TRONG': 'PHÂN HÓA, THẬN TRỌNG'", source)
+        self.assertIn("'LAGGING': 'YẾU HƠN THỊ TRƯỜNG'", source)
+        self.assertIn("NO_BUY_SETUP: 'chưa có setup mua đạt chuẩn'", source)
+        self.assertIn("RR_BELOW_2: 'Risk/Reward dưới 2'", source)
+
+    def test_action_ready_fallback_uses_published_fields(self):
+        source = self.source
+        self.assertIn("function actionAnswer", source)
+        self.assertIn("plan.buy_zone_low", source)
+        self.assertIn("plan.stop_loss", source)
+        self.assertIn("plan.target_near", source)
+        self.assertIn("plan.risk_reward_to_base", source)
+
+    def _assert_model_research_path(self, raw_source: str):
+        source = "".join(raw_source.split())
+        self.assertIn('if(mode==="METHOD_ONLY")', source)
+        self.assertNotIn('if(mode!=="ACTION_READY")', source)
+        self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
+        self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
 
     def test_signed_in_research_uses_model_when_data_exists(self):
-        source = self.auth_ai.replace(" ", "")
-        self.assertIn('if(mode==="METHOD_ONLY")', source)
-        self.assertNotIn('if(mode!=="ACTION_READY")', source)
+        source = "".join(self.auth_ai.split())
+        self._assert_model_research_path(self.auth_ai)
         self.assertIn('RESEARCH_CONTEXT:researchContexts', source)
-        self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
-        self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
 
     def test_guest_research_uses_model_when_data_exists(self):
-        source = self.guest_ai.replace(" ", "")
-        self.assertIn('if(mode==="METHOD_ONLY")', source)
-        self.assertNotIn('if(mode!=="ACTION_READY")', source)
+        source = "".join(self.guest_ai.split())
+        self._assert_model_research_path(self.guest_ai)
         self.assertIn('RESEARCH_CONTEXT:researchContext', source)
-        self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
-        self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
 
 
 if __name__ == "__main__":
