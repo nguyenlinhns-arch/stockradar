@@ -28,6 +28,12 @@ replace_once(
 )
 
 replace_once(
+    "engine/tests/test_email_subscription_funnel.py",
+    '        self.assertLess(workflow.index("Run regression suite"), workflow.index("Fail-close public ticker seed before Pages build"))\n',
+    '        self.assertLess(workflow.index("Fail-close public ticker seed before tests and Pages build"), workflow.index("Run regression suite"))\n',
+)
+
+replace_once(
     "engine/tests/test_static_assets.py",
     '        self.assertEqual(master["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")\n',
     '        self.assertIn(master["public_scope"], {"REFERENCE_ONLY", "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED"})\n',
