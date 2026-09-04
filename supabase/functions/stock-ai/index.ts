@@ -80,18 +80,6 @@ function messageHasExplicitHorizon(value: string): boolean {
   return /(tích sản|tich san|2\s*[-–]\s*5\s*năm|12\s*tháng|12\s*thang|6\s*[-–]\s*18\s*tháng|dài hạn|dai han|3\s*[-–]\s*6\s*tháng|1\s*[-–]\s*6\s*tháng|trung hạn|trung han|6\s*tháng|6\s*thang|ngắn hạn|ngan han|5\s*[-–]\s*20\s*phiên)/i.test(value);
 }
 
-function redactForFree(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(redactForFree);
-  if (!value || typeof value !== "object") return value;
-  const sensitive = /(buy|entry|activation|stop|target|risk[_-]?reward|fair[_-]?value|margin[_-]?of[_-]?safety|\bmos\b|valuation|invalidation|performance|owner[_-]?earnings|payback)/i;
-  const output: JsonObject = {};
-  for (const [key, item] of Object.entries(value as JsonObject)) {
-    if (sensitive.test(key)) continue;
-    output[key] = redactForFree(item);
-  }
-  return output;
-}
-
 function extractOpenAIText(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "";
   const data = payload as JsonObject;
@@ -166,7 +154,12 @@ function latestTimestamp(values: unknown[]): string | null {
   return clean.length ? clean[clean.length - 1] : null;
 }
 
-const SYSTEM_PROMPT = `Bạn là StockRadar AI, lớp giải thích của StockRadar.vn cho cổ phiếu HOSE và cho dữ liệu cá nhân hóa của chính tài khoản đang đăng nhập.
+const SYSTEM_PROMPT = `Bạn là StockRadar AI, trung tâm ra quyết định của StockRadar.vn cho cổ phiếu HOSE và dữ liệu cá nhân hóa của chính tài khoản đang đăng nhập.
+
+MÔ HÌNH SẢN PHẨM:
+- FREE và TRIAL/PAID dùng cùng lõi dữ liệu quyết định được cung cấp trong DATA_CONTEXT. Không làm nghèo câu trả lời chỉ vì tài khoản Free.
+- Free bị giới hạn số lượt hỏi theo quota máy chủ; không tự giảm chất lượng phân tích để ép nâng cấp.
+- Quyền email Action Alert là một năng lực chủ động riêng của Trial/Paid và được phản ánh qua USER_CONTEXT.alert_enabled; không suy đoán rằng email đã được gửi nếu dữ liệu không nói vậy.
 
 NGUYÊN TẮC BẮT BUỘC:
 - Chỉ sử dụng DATA_CONTEXT và USER_CONTEXT được cung cấp. Không dùng trí nhớ để tự tạo giá, volume, MA, định giá, Buy Zone, Stop, Target, R/R hoặc trạng thái hiện tại.
@@ -181,7 +174,6 @@ NGUYÊN TẮC BẮT BUỘC:
 - Không hứa chắc lợi nhuận, không gọi score là xác suất nếu context không có calibration.
 - Không yêu cầu mật khẩu, OTP, quyền đặt lệnh hay thông tin tài khoản môi giới.
 - Không tiết lộ logic ưu tiên nội bộ, danh sách vận hành nội bộ hoặc quy tắc không có trong DATA_CONTEXT.
-- Nếu ACCESS_TIER=FREE, không suy diễn hoặc khôi phục các trường trả phí đã bị lược bỏ; nếu người dùng hỏi trường Premium bị ẩn, giải thích ngắn gọn rằng tài khoản hiện không có quyền xem trường đó.
 
 CÁCH TRẢ LỜI:
 - Tiếng Việt, trực tiếp, ngắn gọn nhưng đủ để ra quyết định.
@@ -372,24 +364,35 @@ Deno.serve(async (req: Request) => {
   const remaining = Number.isFinite(remainingNumber) ? remainingNumber : null;
   const limit = Number(quota.limit ?? Number.NaN);
   const retryAfter = Number(quota.retry_after ?? 0);
+  const resetAt = String(quota.reset_at || "") || null;
   const rateHeaders: Record<string, string> = {};
   if (Number.isFinite(limit)) rateHeaders["X-RateLimit-Limit"] = String(limit);
   if (remaining !== null) rateHeaders["X-RateLimit-Remaining"] = String(remaining);
   if (quota.allowed !== true) {
     if (retryAfter > 0) rateHeaders["Retry-After"] = String(retryAfter);
     await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "RATE_LIMITED", "AI_RATE_LIMITED", 429, startedAt, remaining);
+    const rateAnswer = tier === "FREE"
+      ? "Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay. Hạn mức Free được làm mới lúc 00:00 theo giờ Việt Nam."
+      : "Bạn đã dùng hết lượt StockRadar AI trong cửa sổ hiện tại. Hãy thử lại sau khi hạn mức được làm mới.";
     return jsonResponse({
       status: "RATE_LIMITED",
       reason: "AI_RATE_LIMITED",
-      answer: "Bạn đã dùng hết lượt StockRadar AI trong cửa sổ hiện tại. Hãy thử lại sau khi hạn mức được làm mới.",
+      answer: rateAnswer,
+      tier,
+      quota: {
+        remaining: 0,
+        limit: Number.isFinite(limit) ? limit : null,
+        window_seconds: Number(quota.window_seconds || 0) || null,
+        reset_at: resetAt,
+        reset_timezone: quota.daily_reset_timezone || null,
+      },
       retry_after: retryAfter,
     }, 429, origin, rateHeaders);
   }
 
-  const reports = readyRows.map((row) => {
-    const normalized = normalizeReport(row.data as JsonObject);
-    return tier === "FREE" ? redactForFree(normalized) : normalized;
-  });
+  // Free and Premium share the same decision-grade report context. The Free product
+  // differentiator is the daily question quota; Premium adds proactive alert delivery.
+  const reports = readyRows.map((row) => normalizeReport(row.data as JsonObject));
 
   const userContext = scope === "portfolio"
     ? {
@@ -494,6 +497,8 @@ Deno.serve(async (req: Request) => {
       remaining,
       limit: Number.isFinite(limit) ? limit : null,
       window_seconds: Number(quota.window_seconds || 0) || null,
+      reset_at: resetAt,
+      reset_timezone: quota.daily_reset_timezone || null,
     },
   }, 200, origin, rateHeaders);
 });
