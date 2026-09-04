@@ -177,7 +177,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def test_reference_seed_is_non_publishable_and_pages_workflow_fail_closes_it(self):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
         self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
-        self.assertEqual(payload["public_scope"], "REFERENCE_ONLY")
+        self.assertEqual(payload["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")
+        self.assertEqual(payload["items"], [])
         self.assertFalse(payload["full_universe"])
         self.assertEqual(payload["internal_reference"]["record_count"], 405)
         self.assertEqual(payload["internal_reference"]["validated_count"], 405)

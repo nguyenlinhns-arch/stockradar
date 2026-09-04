@@ -292,7 +292,7 @@ class StaticAssetTests(unittest.TestCase):
         changes = json.loads((WEBSITE / "public/data/today-changes.json").read_text(encoding="utf-8"))
         journal = json.loads((WEBSITE / "public/data/recommendation-journal.json").read_text(encoding="utf-8"))
         self.assertFalse(master["full_universe"])
-        self.assertEqual(master["public_scope"], "REFERENCE_ONLY")
+        self.assertEqual(master["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")
         self.assertEqual(master["data_status"], "BLOCKED_DATA_GATE")
         reference = master["internal_reference"]
         self.assertEqual(reference["snapshot_id"], "hose-universe-2026-09-02-065632-vn")
@@ -301,8 +301,7 @@ class StaticAssetTests(unittest.TestCase):
         self.assertFalse(reference["raw_publication_allowed"])
         self.assertFalse(reference["market_data_ready"])
         self.assertFalse(reference["ranking_ready"])
-        self.assertLess(len(master["items"]), reference["record_count"])
-        self.assertIn("VCI", {item["ticker"] for item in master["items"]})
+        self.assertEqual(master["items"], [])
         self.assertEqual(reports["data_status"], "BLOCKED_DATA_GATE")
         self.assertEqual(reports["items"], [])
         self.assertEqual(changes["data_status"], "BLOCKED_DATA_GATE")
