@@ -21,7 +21,6 @@ def read(path: Path) -> str:
 
 
 def cleanup_signup(source: str) -> str:
-    # Remove the nested onboarding explanation without touching the following plan summary/form.
     source, count = re.subn(
         r'\s*<div\b[^>]*class=["\'][^"\']*\bpremium-email-onboarding-v1\b[^"\']*["\'][^>]*>.*?</div>\s*</div>\s*(?=<div\b[^>]*class=["\'][^"\']*\bconversion-premium-summary\b)',
         "\n",
@@ -37,6 +36,10 @@ def cleanup_signup(source: str) -> str:
 
 
 def cleanup_plans(source: str) -> str:
+    source = source.replace(
+        "Email chỉ hoạt động khi kênh production sẵn sàng.",
+        "Email Premium được bật khi kênh gửi chính thức sẵn sàng.",
+    )
     source = re.sub(
         r'<p class="plan-price-note">.*?</p>',
         '<p class="plan-price-note">* Email Premium được bật khi kênh gửi chính thức sẵn sàng.</p>',
@@ -81,13 +84,33 @@ def cleanup_performance(source: str) -> str:
 
 
 def cleanup_account(source: str) -> str:
-    source = source.replace(
-        "Chỉ hiển thị metadata vận hành của chính tài khoản; không hiển thị provider secret hoặc nội dung email.",
-        "Chỉ hiển thị trạng thái của tài khoản này.",
+    replacements = (
+        ("Chỉ hiển thị metadata vận hành của chính tài khoản; không hiển thị provider secret hoặc nội dung email.", "Chỉ hiển thị trạng thái của tài khoản này."),
+        ("Theo dõi đúng thứ bạn quan tâm", "Danh sách theo dõi"),
+        ("CÁ NHÂN HÓA", "WATCHLIST & VỊ THẾ"),
+        ("ƯU TIÊN PHÂN TÍCH", "ƯU TIÊN"),
+        ("Có thể nhập giá vốn và tỷ trọng ước tính nếu muốn cá nhân hóa sâu hơn.", "Giá vốn và tỷ trọng là tùy chọn."),
+        ("Có thể bật cảnh báo trên từng mã.", "Bật cảnh báo trên từng mã nếu cần."),
+        ("Trial/Premium · email production sẵn sàng.", "Theo quyền Premium."),
+        ("Free chỉ nhận email hệ thống cần thiết cho tài khoản; Trial/Paid mới có email nội dung Premium và Action Alert.", "Free: email tài khoản · Premium: báo cáo và Action Alert."),
+        ("Bản chủ động theo watchlist và việc cần chú ý, chỉ dành cho Trial/Paid khi delivery production đạt chuẩn.", "Daily 09:00 theo watchlist."),
+        ("Cần tài khoản Trial/Paid, email đã xác minh và hệ thống delivery production đã được kích hoạt.", "Theo quyền Premium."),
+        ("dữ liệu cá nhân được bảo vệ bằng Supabase RLS.", "Dữ liệu cá nhân chỉ hiển thị trong tài khoản của bạn."),
+        ("Có thể để trống; hệ thống sẽ dùng thứ tự trung tính.", "Không bắt buộc."),
+        ("Tôi đang sở hữu mã này — dùng để tách riêng quyết định “đang nắm giữ” khỏi “mua mới”.", "Tôi đang sở hữu mã này"),
+        ("Bạn có thể đổi lựa chọn hoặc rút đăng ký email bất kỳ lúc nào.", "Có thể thay đổi bất kỳ lúc nào."),
     )
-    source = source.replace("Theo dõi đúng thứ bạn quan tâm", "Danh sách theo dõi")
-    source = source.replace("Có thể nhập giá vốn và tỷ trọng ước tính nếu muốn cá nhân hóa sâu hơn.", "Giá vốn và tỷ trọng là tùy chọn.")
-    source = source.replace("Có thể bật cảnh báo trên từng mã.", "Bật cảnh báo trên từng mã nếu cần.")
+    for before, after in replacements:
+        source = source.replace(before, after)
+
+    # Keep the email card operational: status + choices + save action, without implementation commentary.
+    source = re.sub(
+        r'<div class="auth-security-note"><strong>Quyền email:</strong>\s*<span data-email-pref-eligibility>.*?</span>.*?</div>',
+        '<div class="auth-security-note"><strong>Quyền email:</strong> <span data-email-pref-eligibility>Đang kiểm tra…</span></div>',
+        source,
+        count=1,
+        flags=re.I | re.S,
+    )
     return source
 
 
@@ -124,10 +147,10 @@ def verify(output: Path) -> None:
     pages = {route: read(output / route / "index.html") for route in ROUTES}
     forbidden = {
         "signup": ("premium-email-onboarding-v1", "Để StockRadar canh mã thay bạn"),
-        "dang-ky": ("production đạt chuẩn vận hành", "Gói 199K/30 ngày hiện được vận hành"),
+        "dang-ky": ("production đạt chuẩn vận hành", "Gói 199K/30 ngày hiện được vận hành", "kênh production"),
         "thanh-toan": ("Tài khoản nhận tiền vẫn là VPBank", "Điều này giúp StockRadar đối soát"),
         "hieu-qua": ("Hãy nhìn dữ liệu thực tế trước khi quyết định trả phí", "KẾT QUẢ TRƯỚC, CÁCH ĐO SAU"),
-        "tai-khoan": ("metadata vận hành", "cá nhân hóa sâu hơn"),
+        "tai-khoan": ("metadata vận hành", "provider secret", "cá nhân hóa sâu hơn", "delivery production", "email production", "Supabase RLS"),
         "hom-nay": ("Bảng Hôm nay hiển thị theo trạng thái tài khoản đã xác định",),
         "khuyen-nghi": ("Tín hiệu hành động đã được StockRadar phát hành",),
     }
