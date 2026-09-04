@@ -56,6 +56,21 @@
       const radio = form.querySelector(`input[name="selected_plan"][value="${requested.toLowerCase()}"]`);
       if (radio) radio.checked = true;
     }
+    const lockedPlan = requested && VALID_PLANS.has(requested.toLowerCase()) ? requested.toLowerCase() : '';
+    const selector = form.querySelector('.signup-plan-selector');
+    if (selector && lockedPlan) {
+      selector.hidden = true;
+      selector.dataset.planLocked = lockedPlan;
+      if (!form.querySelector('[data-signup-locked-plan]')) {
+        const summary = document.createElement('div');
+        summary.className = 'signup-plan-note signup-locked-plan';
+        summary.dataset.signupLockedPlan = lockedPlan;
+        summary.textContent = lockedPlan === 'premium'
+          ? 'Đang đăng ký Premium · 199.000đ/30 ngày. Xác minh tài khoản xong sẽ chuyển sang bước thanh toán.'
+          : 'Đang đăng ký Free · 0đ. Xác minh tài khoản xong sẽ mở trang tài khoản.';
+        selector.before(summary);
+      }
+    }
     if (presetEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(presetEmail) && form.elements.email && !form.elements.email.value) {
       form.elements.email.value = presetEmail;
     }

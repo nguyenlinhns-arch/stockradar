@@ -13,6 +13,8 @@
 
   let authClient = null;
   const PENDING_SIGNUP_KEY = 'sr_pending_signup_email';
+  const PENDING_SIGNUP_PLAN_KEY = 'sr_pending_signup_plan';
+  const PENDING_SIGNUP_NEXT_KEY = 'sr_pending_signup_next';
   const OTP_RESEND_SECONDS = 60;
 
   function siteUrl(path = '') {
@@ -96,6 +98,45 @@
 
   function clearPendingSignupEmail() {
     try { sessionStorage.removeItem(PENDING_SIGNUP_KEY); } catch (_) {}
+  }
+
+  function selectedSignupPlan(form) {
+    return String(form?.elements?.selected_plan?.value || 'free').trim().toLowerCase() === 'premium' ? 'premium' : 'free';
+  }
+
+  function signupDestination(plan) {
+    const params = new URLSearchParams(location.search);
+    const requestedNext = params.get('next');
+    if (requestedNext) return safeNext(requestedNext);
+    const target = new URL(plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/', document.baseURI);
+    const ticker = String(params.get('ticker') || '').trim().toUpperCase();
+    if (/^[A-Z0-9]{3}$/.test(ticker)) target.searchParams.set('ticker', ticker);
+    return target.toString();
+  }
+
+  function setPendingSignupFlow(plan, destination) {
+    try {
+      sessionStorage.setItem(PENDING_SIGNUP_PLAN_KEY, plan === 'premium' ? 'premium' : 'free');
+      sessionStorage.setItem(PENDING_SIGNUP_NEXT_KEY, destination);
+    } catch (_) {}
+  }
+
+  function pendingSignupDestination() {
+    try {
+      const saved = sessionStorage.getItem(PENDING_SIGNUP_NEXT_KEY) || '';
+      if (saved) return safeNext(saved);
+      const plan = sessionStorage.getItem(PENDING_SIGNUP_PLAN_KEY) === 'premium' ? 'premium' : 'free';
+      return signupDestination(plan);
+    } catch (_) {
+      return signupDestination('free');
+    }
+  }
+
+  function clearPendingSignupFlow() {
+    try {
+      sessionStorage.removeItem(PENDING_SIGNUP_PLAN_KEY);
+      sessionStorage.removeItem(PENDING_SIGNUP_NEXT_KEY);
+    } catch (_) {}
   }
 
   function passwordToggles() {
@@ -226,9 +267,11 @@
           const { data, error } = await authClient.auth.verifyOtp({ email, token, type: 'email' });
           if (error) throw error;
           if (!data?.session) throw new Error('missing verified session');
+          const destination = pendingSignupDestination();
           clearPendingSignupEmail();
-          setMessage(message, 'Xác minh thành công. Đang mở tài khoản…', 'success');
-          location.href = siteUrl('tai-khoan/?verified=1');
+          clearPendingSignupFlow();
+          setMessage(message, 'Xác minh thành công. Đang tiếp tục…', 'success');
+          location.href = destination;
         } catch (error) {
           setMessage(message, friendlyError(error), 'error');
         } finally {
@@ -246,7 +289,7 @@
           const { error } = await authClient.auth.resend({
             type: 'signup',
             email,
-            options: { emailRedirectTo: siteUrl('tai-khoan/?verified=1') }
+            options: { emailRedirectTo: pendingSignupDestination() }
           });
           if (error) throw error;
           setMessage(message, 'Đã gửi lại mã xác minh. Kiểm tra cả Inbox và Spam.', 'success');
@@ -276,21 +319,26 @@
       if (password !== confirm) return setMessage(message, 'Mật khẩu nhập lại chưa khớp.', 'error');
       if (!terms) return setMessage(message, 'Cần đồng ý Điều khoản và Chính sách quyền riêng tư để tạo tài khoản.', 'error');
 
+      const plan = selectedSignupPlan(form);
+      const destination = signupDestination(plan);
+      setPendingSignupFlow(plan, destination);
+
       setBusy(form, true, 'Đang tạo tài khoản…');
       setMessage(message, 'Đang tạo tài khoản và gửi mã xác minh…');
       try {
         const { data, error } = await authClient.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: siteUrl('tai-khoan/?verified=1') }
+          options: { emailRedirectTo: destination }
         });
         form.elements.password.value = '';
         form.elements.password_confirm.value = '';
         if (error) throw error;
         if (data?.session) {
           clearPendingSignupEmail();
-          setMessage(message, 'Tạo tài khoản thành công. Đang mở trang tài khoản…', 'success');
-          location.href = siteUrl('tai-khoan/');
+          clearPendingSignupFlow();
+          setMessage(message, plan === 'premium' ? 'Tạo tài khoản thành công. Đang mở thanh toán Premium…' : 'Tạo tài khoản thành công. Đang mở trang tài khoản…', 'success');
+          location.href = destination;
           return;
         }
         if (otpForm) {
@@ -333,6 +381,7 @@
         form.elements.password.value = '';
         if (error) throw error;
         clearPendingSignupEmail();
+        clearPendingSignupFlow();
         setMessage(message, 'Đăng nhập thành công.', 'success');
         location.href = safeNext(params.get('next'));
       } catch (error) {

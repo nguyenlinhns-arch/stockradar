@@ -251,7 +251,7 @@ def main() -> None:
         raise RuntimeError(f"Pages output does not exist: {output}")
 
     email_ready = enabled("STOCKRADAR_PRODUCT_EMAIL_READY")
-    checkout_ready = enabled("STOCKRADAR_CHECKOUT_READY")
+    checkout_ready = enabled("STOCKRADAR_CHECKOUT_READY") or (output / "thanh-toan" / "index.html").is_file()
 
     for required in ("buyer-readiness-v1.css", "buyer-readiness-v1.js"):
         if not (output / "assets" / required).is_file():
