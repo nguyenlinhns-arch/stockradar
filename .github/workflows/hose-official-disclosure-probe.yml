@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'scripts/probe_hose_official_disclosures.py'
+      - 'scripts/smoke_hose_official_api.py'
       - '.github/workflows/hose-official-disclosure-probe.yml'
 
 permissions:
@@ -14,12 +14,12 @@ permissions:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - run: pip install --disable-pip-version-check requests beautifulsoup4
-      - name: Probe public HOSE disclosure surfaces
-        run: python scripts/probe_hose_official_disclosures.py
+      - run: pip install --disable-pip-version-check requests
+      - name: Smoke-test HOSE issuer lookup and disclosures
+        run: python scripts/smoke_hose_official_api.py
