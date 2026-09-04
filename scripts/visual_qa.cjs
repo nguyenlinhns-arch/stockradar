@@ -18,9 +18,6 @@ const { chromium } = loadPlaywright();
   const browser = await chromium.launch({ headless: true });
   const errors = [];
   const checks = [];
-  // Keep this list limited to routes that are actually published in the
-  // fail-closed GitHub Pages artifact. Checkout, /pro/, /phan-tich/ and the
-  // knowledge index are intentionally withheld from the production artifact.
   const pages = [
     { name: 'home', route: '/' },
     { name: 'radar', route: '/radar5/' },
@@ -45,9 +42,10 @@ const { chromium } = loadPlaywright();
   ];
   const bannedVisibleTerms = [
     'phân tích', 'phương pháp', 'setup',
-    'canslim', 'sepa', 'vcp', 'vpa', 'rvol',
-    'pocket pivot', 'early breakout', 'confirmed breakout', 'payback',
+    '4m', 'canslim', 'sepa', 'vcp', 'vpa', 'rvol',
+    'pocket pivot', 'early breakout', 'confirmed breakout', 'breakout', 'retest', 'payback',
     'wyckoff', 'minervini', 'o’neil', "o'neil", 'phil town',
+    'ichimoku', 'bollinger', 'trendline', 'stage', 'pivot',
     'bear/base/bull', 'bear · base · bull', 'bear / base / bull',
   ];
 
@@ -69,7 +67,7 @@ const { chromium } = loadPlaywright();
 
       try {
         const response = await page.goto(base + target.route, { waitUntil: 'domcontentloaded', timeout: 15000 });
-        await page.waitForTimeout(350);
+        await page.waitForTimeout(500);
         if (!response || response.status() !== 200) routeErrors.push(`HTTP ${response && response.status()}`);
 
         const structural = await page.evaluate(() => {
@@ -95,6 +93,7 @@ const { chromium } = loadPlaywright();
           return {
             hasMain: Boolean(main),
             hasH1: Boolean(h1 && h1.textContent.trim()),
+            hasDecisionGuard: Boolean(document.querySelector('script[data-decision-copy-guard-v1]')),
             title,
             overflow,
             visibleText,
@@ -104,6 +103,7 @@ const { chromium } = loadPlaywright();
 
         if (!structural.hasMain) routeErrors.push('missing <main>');
         if (!structural.hasH1) routeErrors.push('missing non-empty <h1>');
+        if (!structural.hasDecisionGuard) routeErrors.push('decision-copy runtime guard missing');
         if (!structural.title) routeErrors.push('empty document title');
         if (structural.overflow) routeErrors.push('horizontal overflow');
 
