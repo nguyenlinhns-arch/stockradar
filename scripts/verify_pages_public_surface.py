@@ -20,6 +20,7 @@ FORBIDDEN_HTML_TERMS = (
     "MẪU BÁO CÁO", "MẪU EMAIL", "DỮ LIỆU MẪU", "MINH HỌA", "MINH HOẠ",
 )
 FORBIDDEN_PUBLIC_METHOD_TERMS = (
+    "PHÂN TÍCH",
     "4M", "CANSLIM", "SEPA", "VCP", "VPA", "RVOL", "POCKET PIVOT",
     "EARLY BREAKOUT", "CONFIRMED BREAKOUT", "PAYBACK", "WYCKOFF", "MINERVINI",
     "O’NEIL", "O'NEIL", "PHIL TOWN", "BEAR/BASE/BULL", "BEAR · BASE · BULL",
@@ -46,6 +47,7 @@ REQUIRED_HOME_FILES = (
 )
 EXCLUDED_PUBLIC_ROUTES = (
     "co-phieu/demo1/index.html", "kien-thuc/index.html", "pro/index.html", "email/index.html", "theo-doi/index.html",
+    "phan-tich/index.html",
 )
 
 
@@ -226,11 +228,6 @@ def main() -> None:
     for route, features in route_features.items():
         require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS, *features), errors)
 
-    require_text(
-        output, "phan-tich/index.html",
-        ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS, '<h1>Tra cứu cổ phiếu HOSE</h1>', 'Xem trạng thái'),
-        errors,
-    )
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
     fallback_js = output / "assets" / "public-fallbacks-v4.js"
@@ -268,7 +265,9 @@ def main() -> None:
                 errors.append(f"unfinished/sample public HTML term {term}: {page.relative_to(output)}")
         for term in FORBIDDEN_PUBLIC_METHOD_TERMS:
             if term in upper:
-                errors.append(f"internal analysis method leaked to public HTML {term}: {page.relative_to(output)}")
+                errors.append(f"analysis/method language leaked to public HTML {term}: {page.relative_to(output)}")
+        if re.search(r'href=["\'][^"\']*phan-tich/', source, flags=re.IGNORECASE):
+            errors.append(f"legacy analysis route link remains: {page.relative_to(output)}")
         errors.extend(verify_injected_assets(page, output, source))
         errors.extend(verify_header_auth_pair(page, output, source))
 
@@ -283,7 +282,7 @@ def main() -> None:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
     print(
-        f"Verified production public surface: {len(pages)} HTML pages; decision-first product pages + 30 Radar ticker routes; no named analysis methods/setup jargon or demo/sample/unfinished public copy"
+        f"Verified production public surface: {len(pages)} HTML pages; decision-first product pages + 30 Radar ticker routes; /phan-tich/ retired; no analysis labels, named methods/setup jargon or demo/sample/unfinished public copy"
     )
 
 
