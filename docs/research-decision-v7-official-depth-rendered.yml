@@ -1,0 +1,377 @@
+name: StockRadar Research Decision V7
+
+on:
+  workflow_run:
+    workflows: ["StockRadar HOSE Data Bootstrap"]
+    types: [completed]
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/prepare_research_pipeline_inputs_v7.py'
+      - 'scripts/build_operational_radar_v3.py'
+      - 'scripts/build_domain_fundamental_valuation_v4.py'
+      - 'scripts/build_supply_institutional_v1.py'
+      - 'scripts/build_catalyst_layer_v3.py'
+      - 'scripts/build_decision_layer_v5.py'
+      - 'scripts/build_unified_radar_v6.py'
+      - 'scripts/build_unified_radar_v7.py'
+      - '.github/workflows/research-decision-v7.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  research-decision-v7:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install research dependencies
+        run: pip install --disable-pip-version-check pandas numpy requests
+
+      - name: Resolve successful HOSE core run
+        id: core
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "workflow_run" ] && [ -n "${EVENT_RUN_ID:-}" ]; then
+            run_id="$EVENT_RUN_ID"
+          else
+            run_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/workflows/hose-data-bootstrap.yml/runs?status=success&per_page=20" --jq '.workflow_runs | map(select(.conclusion == "success")) | .[0].id // empty')"
+          fi
+          if [ -z "$run_id" ]; then
+            echo 'No successful HOSE core run found.' >&2
+            exit 1
+          fi
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+          echo "Using HOSE core run $run_id"
+
+      - name: Download core market, fundamentals and scanner artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CORE_RUN_ID: ${{ steps.core.outputs.run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/market artifacts/fundamentals artifacts/scanner
+          download_from_run() {
+            local name="$1" dest="$2" zipfile="/tmp/${1}.zip"
+            local id
+            id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${CORE_RUN_ID}/artifacts?per_page=100" --jq ".artifacts | map(select(.name == \"${name}\" and .expired == false)) | .[0].id // empty")"
+            if [ -z "$id" ]; then
+              echo "Missing artifact ${name} in run ${CORE_RUN_ID}" >&2
+              exit 1
+            fi
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > "$zipfile"
+            unzip -q -o "$zipfile" -d "$dest"
+          }
+          download_from_run stockradar-hose-market-bootstrap artifacts/market
+          download_from_run stockradar-hose-fundamentals-bootstrap artifacts/fundamentals
+          download_from_run stockradar-hose-scanner-v2 artifacts/scanner
+
+      - name: Download latest deep news and insider reference artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/reference
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-news-insider-depth-v2&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -z "$id" ]; then
+            echo 'No non-expired news/insider depth artifact found.' >&2
+            exit 1
+          fi
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/reference.zip
+          unzip -q -o /tmp/reference.zip -d artifacts/reference
+
+      - name: Download latest official HOSE disclosure verification artifact when available
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/hose-official
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-official-disclosures-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -n "$id" ]; then
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/hose-official.zip
+            unzip -q -o /tmp/hose-official.zip -d artifacts/hose-official
+          else
+            echo 'Official HOSE disclosure artifact unavailable; Catalyst V3 will remain recall-only/unverified.'
+          fi
+
+      - name: Download latest deep official HOSE disclosure artifact when available
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/hose-official-depth
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-official-disclosures-depth-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -n "$id" ]; then
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/hose-official-depth.zip
+            unzip -q -o /tmp/hose-official-depth.zip -d artifacts/hose-official-depth
+          else
+            echo 'Deep official HOSE disclosure artifact unavailable; official catalyst source remains fail-closed.'
+          fi
+
+      - name: Merge realtime and deep official HOSE disclosures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/hose-official-merged
+          realtime_csv="$(find artifacts/hose-official -name 'hose_official_disclosures_history.csv' -print -quit || true)"
+          realtime_manifest="$(find artifacts/hose-official -name 'hose_official_disclosures_manifest.json' -print -quit || true)"
+          deep_csv="$(find artifacts/hose-official-depth -name 'hose_official_disclosures_history.csv' -print -quit || true)"
+          deep_manifest="$(find artifacts/hose-official-depth -name 'hose_official_disclosures_manifest.json' -print -quit || true)"
+          args=(
+            --universe artifacts/market/security_master.csv
+            --output artifacts/hose-official-merged/hose_official_disclosures_history.csv
+            --manifest artifacts/hose-official-merged/hose_official_disclosures_manifest.json
+          )
+          if [ -n "$realtime_csv" ]; then args+=(--realtime-history "$realtime_csv"); fi
+          if [ -n "$realtime_manifest" ]; then args+=(--realtime-manifest "$realtime_manifest"); fi
+          if [ -n "$deep_csv" ]; then args+=(--deep-history "$deep_csv"); fi
+          if [ -n "$deep_manifest" ]; then args+=(--deep-manifest "$deep_manifest"); fi
+          python scripts/merge_hose_official_disclosures_v1.py "${args[@]}"
+
+      - name: Resolve authoritative corporate-action coverage
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/research-v7 artifacts/vsdc
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-vsdc-corporate-actions-v2&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -n "$id" ]; then
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/vsdc.zip
+            unzip -q -o /tmp/vsdc.zip -d artifacts/vsdc
+          fi
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          matches = list(Path('artifacts/vsdc').rglob('vsdc_hose_corporate_actions_coverage.json'))
+          if not matches:
+              payload = {
+                  'source_ready': False,
+                  'source_coverage_ratio': 0.0,
+                  'row_count': 0,
+                  'pagination_complete': False,
+                  'days_pagination_incomplete': 0,
+                  'reason': 'AUTHORITATIVE_VSDC_ARTIFACT_UNAVAILABLE_OR_FAILED',
+              }
+          else:
+              raw = json.loads(matches[0].read_text(encoding='utf-8'))
+              requested = max(int(raw.get('days_requested') or 0), 1)
+              fetched = int(raw.get('days_fetched') or 0)
+              rows = int(raw.get('row_count') or 0)
+              ratio = fetched / requested
+              pagination_complete = bool(raw.get('pagination_complete') is True)
+              incomplete = int(raw.get('days_pagination_incomplete') or 0)
+              source_ready = bool(
+                  raw.get('source_ready') is True
+                  and ratio >= 0.98
+                  and rows > 0
+                  and pagination_complete
+                  and incomplete == 0
+              )
+              payload = {
+                  'source_ready': source_ready,
+                  'source_coverage_ratio': ratio,
+                  'row_count': rows,
+                  'days_requested': requested,
+                  'days_fetched': fetched,
+                  'pagination_complete': pagination_complete,
+                  'days_pagination_incomplete': incomplete,
+                  'reason': 'PASS' if source_ready else 'AUTHORITATIVE_VSDC_QUALITY_GATE_FAILED',
+              }
+          Path('artifacts/research-v7/authoritative_ca_coverage_v7.json').write_text(
+              json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
+          )
+          print(json.dumps(payload, ensure_ascii=False))
+          PY
+
+      - name: Normalize full-HOSE research inputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          scanner_file="$(ls artifacts/scanner/scanner/stockradar_scanner_master_v2_405_*.csv | head -n 1)"
+          python scripts/prepare_research_pipeline_inputs_v7.py \
+            --security-master artifacts/market/security_master.csv \
+            --technical artifacts/market/technical_features_bootstrap.csv \
+            --fundamental artifacts/scanner/derived/fundamental_features_bootstrap.csv \
+            --scanner "$scanner_file" \
+            --profile-raw artifacts/fundamentals/company_profiles_raw.csv \
+            --snapshot artifacts/market/latest_snapshot.csv \
+            --output-dir artifacts/research-v7/inputs
+
+      - name: Build Market, Sector and Risk operational layer
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          python scripts/build_operational_radar_v3.py \
+            --scanner artifacts/research-v7/inputs/scanner_compat_v7.csv \
+            --status artifacts/research-v7/inputs/status_normalized_v7.csv \
+            --ohlcv artifacts/market/ohlcv.csv \
+            --intraday artifacts/market/intraday_5m.csv \
+            --news artifacts/reference/company_news_depth_v2.csv \
+            --events artifacts/fundamentals/corporate_events_raw.csv \
+            --market-context artifacts/research-v7/inputs/market_context_v7.json \
+            --vnindex artifacts/market/vnindex_daily.csv \
+            --as-of "$as_of" \
+            --output artifacts/research-v7/operational_v3.csv \
+            --sector-output artifacts/research-v7/sector_strength_v3.csv \
+            --manifest artifacts/research-v7/operational_v3_manifest.json
+
+      - name: Build 4M Payback and domain valuation V4
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/build_domain_fundamental_valuation_v4.py \
+            --fundamental artifacts/scanner/derived/fundamental_features_bootstrap.csv \
+            --profile artifacts/research-v7/inputs/profile_normalized_v7.csv \
+            --status artifacts/research-v7/inputs/status_normalized_v7.csv \
+            --scanner artifacts/research-v7/inputs/scanner_compat_v7.csv \
+            --valuation artifacts/scanner/derived/valuation_bootstrap.csv \
+            --financial artifacts/fundamentals/financial_statements_long.csv \
+            --sector artifacts/research-v7/sector_strength_v3.csv \
+            --operational artifacts/research-v7/operational_v3.csv \
+            --output artifacts/research-v7/domain_v4.csv \
+            --manifest artifacts/research-v7/domain_v4_manifest.json
+
+      - name: Build Supply and Institutional context
+        run: |
+          python scripts/build_supply_institutional_v1.py \
+            --profile artifacts/research-v7/inputs/profile_normalized_v7.csv \
+            --snapshot artifacts/market/latest_snapshot.csv \
+            --scanner artifacts/research-v7/inputs/scanner_compat_v7.csv \
+            --output artifacts/research-v7/supply_institutional_v1.csv \
+            --manifest artifacts/research-v7/supply_institutional_v1_manifest.json
+
+      - name: Build Catalyst context V3 with official HOSE verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          official_csv="artifacts/hose-official-merged/hose_official_disclosures_history.csv"
+          official_manifest="artifacts/hose-official-merged/hose_official_disclosures_manifest.json"
+          args=(
+            --news artifacts/reference/company_news_depth_v2.csv
+            --insider artifacts/reference/insider_trading_depth_v2.csv
+            --universe artifacts/market/security_master.csv
+            --as-of "$as_of"
+            --output artifacts/research-v7/catalyst_v3.csv
+            --manifest artifacts/research-v7/catalyst_v3_manifest.json
+          )
+          if [ -n "$official_csv" ]; then
+            args+=(--official-disclosures "$official_csv")
+          fi
+          if [ -n "$official_manifest" ]; then
+            args+=(--official-manifest "$official_manifest")
+          fi
+          python scripts/build_catalyst_layer_v3.py "${args[@]}"
+
+      - name: Build Decision Layer V5
+        run: |
+          python scripts/build_decision_layer_v5.py \
+            --scanner artifacts/research-v7/inputs/scanner_compat_v7.csv \
+            --domain artifacts/research-v7/domain_v4.csv \
+            --operational artifacts/research-v7/operational_v3.csv \
+            --output artifacts/research-v7/decision_v5.csv \
+            --manifest artifacts/research-v7/decision_v5_manifest.json
+
+      - name: Build Unified Radar V6
+        run: |
+          python scripts/build_unified_radar_v6.py \
+            --domain artifacts/research-v7/domain_v4.csv \
+            --decision artifacts/research-v7/decision_v5.csv \
+            --supply artifacts/research-v7/supply_institutional_v1.csv \
+            --operational artifacts/research-v7/operational_v3.csv \
+            --output artifacts/research-v7/unified_v6.csv \
+            --manifest artifacts/research-v7/unified_v6_manifest.json
+
+      - name: Build Unified Radar V7 with execution/event gate
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          sla_file="$(ls artifacts/scanner/scanner/stockradar_intraday_sla_v1.json | head -n 1)"
+          ca_gate_file="$(find artifacts/vsdc -name 'corporate_action_gate_v2_405.csv' -print -quit || true)"
+          if [ -z "$ca_gate_file" ]; then
+            echo 'Authoritative 405-ticker corporate-action gate artifact is missing.' >&2
+            exit 1
+          fi
+          python scripts/build_unified_radar_v7.py \
+            --unified-v6 artifacts/research-v7/unified_v6.csv \
+            --catalyst-v2 artifacts/research-v7/catalyst_v3.csv \
+            --news-ca-candidates artifacts/reference/corporate_action_candidates_from_news_v2.csv \
+            --sla "$sla_file" \
+            --authoritative-ca-coverage artifacts/research-v7/authoritative_ca_coverage_v7.json \
+            --corporate-action-gate "$ca_gate_file" \
+            --as-of "$as_of" \
+            --output artifacts/research-v7/unified_v7.csv \
+            --manifest artifacts/research-v7/unified_v7_manifest.json
+
+      - name: Enforce V7 fail-closed QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+
+          csv_path = Path('artifacts/research-v7/unified_v7.csv')
+          manifest_path = Path('artifacts/research-v7/unified_v7_manifest.json')
+          catalyst_manifest_path = Path('artifacts/research-v7/catalyst_v3_manifest.json')
+          df = pd.read_csv(csv_path)
+          manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
+          catalyst_manifest = json.loads(catalyst_manifest_path.read_text(encoding='utf-8'))
+          failures = []
+          if len(df) != 405 or df['ticker'].nunique() != 405:
+              failures.append('UNIVERSE_NOT_405')
+          if df['public_action_allowed_v7'].fillna(False).astype(bool).any():
+              failures.append('PUBLIC_ACTION_MUST_REMAIN_FALSE')
+          if manifest.get('public_action_allowed') is not False:
+              failures.append('MANIFEST_PUBLIC_GATE_MUST_REMAIN_FALSE')
+          authoritative = bool(manifest.get('authoritative_corporate_action_source_ready'))
+          gate_counts = manifest.get('corporate_action_gate_counts') or {}
+          if sum(int(v) for v in gate_counts.values()) != 405:
+              failures.append('CORPORATE_ACTION_GATE_NOT_405')
+          if not authoritative and df['execution_ready_internal_v7'].fillna(False).astype(bool).any():
+              failures.append('EXECUTION_READY_WITHOUT_AUTHORITATIVE_EVENTS')
+          if catalyst_manifest.get('catalyst_alpha_weight_allowed') is not False:
+              failures.append('CATALYST_ALPHA_MUST_REMAIN_ZERO')
+          if catalyst_manifest.get('publication_allowed') is not False:
+              failures.append('CATALYST_PUBLICATION_MUST_REMAIN_FALSE')
+          if failures:
+              raise SystemExit(f'V7 QA failed: {failures}')
+          print(json.dumps({
+              'canonical_hose': len(df),
+              'research_ready': manifest.get('operational_research_ready'),
+              'decision_candidates': manifest.get('decision_candidates'),
+              'execution_ready_internal': manifest.get('execution_ready_internal'),
+              'authoritative_corporate_action_source_ready': authoritative,
+              'corporate_action_gate_counts': gate_counts,
+              'official_hose_catalyst_source_ready': catalyst_manifest.get('official_hose_source_ready'),
+              'official_hose_catalyst_tickers_90d': catalyst_manifest.get('tickers_with_official_90d_items'),
+              'public_action_allowed': False,
+          }, ensure_ascii=False))
+          PY
+
+      - name: Upload private research and decision artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-research-decision-v7
+          path: artifacts/research-v7/
+          retention-days: 14
+          if-no-files-found: error
