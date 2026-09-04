@@ -74,14 +74,6 @@
     throw lastError || new Error('sign in failed');
   }
 
-  function clearLegacyPendingSignup() {
-    try {
-      sessionStorage.removeItem('sr_pending_signup_plan');
-      sessionStorage.removeItem('sr_pending_signup_next');
-      sessionStorage.removeItem('sr_pending_signup_email');
-    } catch (_) {}
-  }
-
   async function submitSignup(event, form) {
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -149,7 +141,6 @@
       await signInCreatedAccount(client, email, password);
       form.elements.password.value = '';
       form.elements.password_confirm.value = '';
-      clearLegacyPendingSignup();
       window.location.replace(destinationFor(plan));
     } catch (_) {
       form.elements.password.value = '';
