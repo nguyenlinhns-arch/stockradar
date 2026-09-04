@@ -1,7 +1,8 @@
 StockRadar auth + checkout release marker
-2026-09-04 · release 5
+2026-09-04 · release 6
 Signup -> verification -> Premium checkout
 Login + recovery via Supabase Auth
 Checkout UI + authenticated VietQR request flow are ready.
 AI-first homepage is compatible with current Premium transforms and verifiers.
+Release includes the native AI verifier fix required by the Pages pipeline.
 Checkout backend remains fail-closed until real bank receiving details are configured.
