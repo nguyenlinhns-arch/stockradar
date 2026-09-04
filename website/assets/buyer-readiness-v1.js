@@ -5,7 +5,7 @@
   const UNIVERSE_DATA = 'public/data/ticker-universe.json';
   const RECOMMENDATION_DATA = 'public/data/recommendations.json';
 
-  const config = () => window.STOCKRADAR_AUTH_CONFIG || {};
+  const config = () => window.STOCKRADAR_BUYER_CONFIG || window.STOCKRADAR_AUTH_CONFIG || {};
   const emailReady = () => config().emailDeliveryReady === true;
   const checkoutReady = () => config().checkoutReady === true;
 
