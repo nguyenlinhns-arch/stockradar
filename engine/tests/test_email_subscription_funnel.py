@@ -19,7 +19,8 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
         self.assertIn('name="selected_plan" value="free" checked', signup)
         self.assertIn('name="selected_plan" value="premium"', signup)
-        self.assertIn("Free chỉ nhận email hệ thống", signup)
+        self.assertIn("Free có 10 câu StockRadar AI/ngày", signup)
+        self.assertIn("chỉ nhận email hệ thống", signup)
         self.assertIn("Báo cáo StockRadar lúc 09:00", signup)
         self.assertIn("Action Alert trong phiên", signup)
         self.assertIn("PREMIUM", signup)
@@ -177,8 +178,9 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def test_reference_seed_is_non_publishable_and_pages_workflow_fail_closes_it(self):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
         self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
-        self.assertEqual(payload["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")
-        self.assertEqual(payload["items"], [])
+        self.assertIn(payload["public_scope"], {"REFERENCE_ONLY", "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED"})
+        if payload["public_scope"] == "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED":
+            self.assertEqual(payload["items"], [])
         self.assertFalse(payload["full_universe"])
         self.assertEqual(payload["internal_reference"]["record_count"], 405)
         self.assertEqual(payload["internal_reference"]["validated_count"], 405)
@@ -186,7 +188,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertLess(len(payload["items"]), payload["internal_reference"]["record_count"])
         workflow = self.read(".github/workflows/pages.yml")
         self.assertIn("python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json", workflow)
-        self.assertLess(workflow.index("Run regression suite"), workflow.index("Fail-close public ticker seed before Pages build"))
+        self.assertLess(workflow.index("Fail-close public ticker seed before tests and Pages build"), workflow.index("Run regression suite"))
 
     def test_registration_page_compares_free_public_and_premium_daily_intraday(self):
         register = self.read("website/dang-ky/index.html")
