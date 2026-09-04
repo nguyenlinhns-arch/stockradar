@@ -34,6 +34,9 @@ const { chromium } = loadPlaywright();
     { name: 'login', route: '/dang-nhap/' },
     { name: 'account', route: '/tai-khoan/' },
     { name: 'stock', route: '/co-phieu/?ticker=FPT' },
+    { name: 'breakout', route: '/breakout/' },
+    { name: 'risk', route: '/risk/' },
+    { name: 'track-record', route: '/track-record/' },
   ];
   const viewports = [
     { name: 'desktop', width: 1440, height: 1000 },
