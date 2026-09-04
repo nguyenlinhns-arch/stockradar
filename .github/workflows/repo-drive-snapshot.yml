@@ -1,0 +1,29 @@
+name: StockRadar Repository Snapshot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/repo-drive-snapshot.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build repository snapshot
+        run: |
+          mkdir -p snapshot
+          rsync -a --exclude='.git' --exclude='node_modules' --exclude='dist' --exclude='artifacts' ./ snapshot/stockradar-main/
+          tar -czf stockradar-repository-main.tar.gz -C snapshot stockradar-main
+      - name: Upload snapshot artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-repository-main-snapshot
+          path: stockradar-repository-main.tar.gz
+          retention-days: 30
+          if-no-files-found: error
