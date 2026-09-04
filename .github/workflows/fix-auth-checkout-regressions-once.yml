@@ -1,0 +1,91 @@
+name: Fix auth checkout regressions once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-auth-checkout-regressions-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Refresh main
+        run: git pull --ff-only origin main
+
+      - name: Align paid-email copy and checkout navigation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('website/assets/email-interest.js')
+          text = path.read_text(encoding='utf-8')
+          old = "payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bản tin 09:00 cần quyền Free trở lên; cảnh báo mua/bán cần quyền Premium.'"
+          new = "payload.message || 'Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền nhận email và chưa phải quyền gửi email. Product email chỉ có hiệu lực với tài khoản Trial/Paid đã xác minh và đủ điều kiện gửi.'"
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif 'chưa phải quyền gửi email' not in text:
+              raise SystemExit('email-interest paid-only marker not found')
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('supabase/functions/email-interest/index.ts')
+          text = path.read_text(encoding='utf-8')
+          old = 'Bước này chưa tạo quyền nhận email và chưa phải quyền gửi email.'
+          new = 'Bước này chưa tạo quyền nhận email, chưa tạo quyền gửi email và chưa phải quyền gửi email.'
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif 'chưa tạo quyền gửi email' not in text:
+              raise SystemExit('email-interest edge paid-only marker not found')
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('website/assets/home-core-v1.js')
+          text = path.read_text(encoding='utf-8')
+          old = 'Việc này chưa kích hoạt gửi email hoặc thanh toán; hãy tạo tài khoản để tiếp tục.'
+          new = 'Việc này không kích hoạt gửi email hoặc thanh toán; hãy tạo tài khoản để tiếp tục.'
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif 'không kích hoạt gửi email hoặc thanh toán' not in text:
+              raise SystemExit('home paid-only marker not found')
+          path.write_text(text, encoding='utf-8')
+
+          path = Path('website/thanh-toan/index.html')
+          text = path.read_text(encoding='utf-8')
+          old = '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính">'
+          new = '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>'
+          if old in text:
+              text = text.replace(old, new, 1)
+          elif 'data-nav-menu' not in text:
+              raise SystemExit('checkout mobile nav marker not found')
+          path.write_text(text, encoding='utf-8')
+
+          Path('.github/workflows/fix-auth-checkout-regressions-once.yml').unlink()
+          PY
+
+      - name: Run focused regressions
+        run: |
+          python -m unittest -v \
+            engine.tests.test_email_paid_only_runtime \
+            engine.tests.test_paid_only_email_copy \
+            engine.tests.test_paid_only_product_email_contract \
+            engine.tests.test_static_assets \
+            engine.tests.test_auth_surfaces \
+            engine.tests.test_checkout_surface \
+            engine.tests.test_manual_checkout_runtime
+
+      - name: Commit fixes
+        run: |
+          set -euo pipefail
+          git config user.name "stockradar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Finish auth checkout paid-only regression alignment"
+          git pull --rebase origin main
+          git push origin HEAD:main
