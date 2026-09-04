@@ -226,7 +226,7 @@ def main() -> None:
         "thay-doi-hom-nay/index.html": ('Trạng thái · Vùng giá · Dòng tiền · Thị trường', '4 MỐC QUÉT TRONG PHIÊN'),
         "hieu-qua/index.html": ('Kích hoạt · Entry · Target/Stop · Benchmark', 'KẾT QUẢ TRƯỚC, CÁCH ĐO SAU', 'data-performance-summary'),
         "nganh/index.html": ('SO SÁNH CÙNG NGÀNH',),
-        "kiem-tra-co-phieu/index.html": ('4 KHUNG ĐẦU TƯ', 'Buy Zone · Stop · Target'),
+        "kiem-tra-co-phieu/index.html": ('TOÀN HOSE · 4 KHUNG', 'Buy Zone · Stop · Target'),
         "co-phieu/index.html": ('Mã này nên làm gì?', 'BẢN XEM TRƯỚC PREMIUM', 'MUA / CHỜ', 'GIỮ / TĂNG / GIẢM / BÁN', 'Vùng mua', 'Target', 'Xem mẫu Premium'),
         "premium-mau/index.html": ('MẪU GIAO DIỆN · KHÔNG PHẢI KHUYẾN NGHỊ', 'MUA / CHỜ', 'GIỮ / TĂNG / GIẢM / BÁN', '[Theo snapshot thật]'),
     }
