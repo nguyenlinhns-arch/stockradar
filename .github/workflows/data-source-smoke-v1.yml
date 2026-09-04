@@ -1,4 +1,4 @@
-name: Inspect VNDirect raw statement model types
+name: Probe raw price and financial units
 
 on:
   push:
@@ -10,39 +10,56 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Install client
-        run: python -m pip install requests
-      - name: Inspect statement model types and model names
+      - name: Install clients
+        run: python -m pip install requests 'vnstock==4.0.7' 'pandas<3'
+      - name: Compare raw unit scales
         run: |
           python - <<'PY'
           import json, requests
+          from vnstock import Reference
+          from vnstock.ui import Market
+
           UA={'User-Agent':'Mozilla/5.0 StockRadar internal raw-input probe','Accept':'application/json'}
           base='https://api-finfo.vndirect.com.vn/v4'
           def get(path,params):
               r=requests.get(base+path,params=params,headers=UA,timeout=30); r.raise_for_status(); return r.json()
-          out={}
-          for ticker in ('HPG','MBB','SSI','BVH'):
-              p=get('/financial_statements',{'q':f'code:{ticker}~reportType:ANNUAL','sort':'fiscalDate:desc','size':'1000','page':'1'})
-              rows=p.get('data') or []
-              out[ticker]={
-                  'rows':len(rows),
-                  'model_types':sorted({str(row.get('modelType')) for row in rows}),
-                  'periods':sorted({str(row.get('fiscalDate')) for row in rows if row.get('fiscalDate')},reverse=True)[:6],
+          def rows(ticker, model, report='ANNUAL'):
+              p=get('/financial_statements',{'q':f'code:{ticker}~reportType:{report}~modelType:{model}','sort':'fiscalDate:desc','size':'1000','page':'1'})
+              return p.get('data') or []
+          def latest_values(ticker, model, codes):
+              data=rows(ticker,model)
+              periods=sorted({str(x.get('fiscalDate')) for x in data if x.get('fiscalDate')},reverse=True)
+              latest=periods[0] if periods else ''
+              out={}
+              for x in data:
+                  if str(x.get('fiscalDate'))==latest and str(int(float(x.get('itemCode')))) in codes:
+                      out[str(int(float(x['itemCode'])))]=x.get('numericValue')
+              return latest,out
+
+          ref=Reference()
+          result={}
+          for ticker, models, codes in (
+              ('HPG',(1,2,3),({"100","110","300","400"},{"5","60","90"},{"20","21","22","23","24","25","26","27","28","29","30"})),
+              ('MBB',(101,102,103),({"300","400","101","301","307"},{"95","108","1554","1905"},{"20","30","50","70"})),
+          ):
+              info=ref.company(ticker).info().iloc[0].to_dict()
+              px=Market().equity(ticker).ohlcv(start='2026-08-20',end='2026-09-04',interval='1D',count=20)
+              model_values={}
+              for model, wanted in zip(models,codes):
+                  period, values=latest_values(ticker,model,wanted)
+                  model_values[str(model)]={'period':period,'values':values}
+              result[ticker]={
+                  'last_close':float(px.iloc[-1]['close']),
+                  'outstanding_shares':info.get('outstanding_shares'),
+                  'charter_capital':info.get('charter_capital'),
+                  'par_value':info.get('par_value'),
+                  'statement_values':model_values,
               }
-          models=get('/financial_models',{'size':'5000','page':'1'}).get('data') or []
-          grouped={}
-          for row in models:
-              mt=str(row.get('modelType'))
-              grouped.setdefault(mt,{'modelTypeName':row.get('modelTypeName'),'modelVnDesc':row.get('modelVnDesc'),'companyForm':row.get('companyForm'),'rows':0,'sample_names':[]})
-              grouped[mt]['rows']+=1
-              if len(grouped[mt]['sample_names'])<12:
-                  grouped[mt]['sample_names'].append({'code':row.get('itemCode'),'vn':row.get('itemVnName'),'en':row.get('itemEnName')})
-          used={mt:grouped.get(mt) for t in out.values() for mt in t['model_types']}
-          print(json.dumps({'role':'RAW_INPUT_ONLY_SCHEMA_PROBE','tickers':out,'used_models':used,'all_model_types':sorted(grouped)},ensure_ascii=False,indent=2,default=str))
+          print(json.dumps({'role':'RAW_INPUT_ONLY_UNIT_PROBE','result':result},ensure_ascii=False,indent=2,default=str))
           PY
