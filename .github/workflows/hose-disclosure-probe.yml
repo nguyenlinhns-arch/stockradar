@@ -24,3 +24,5 @@ jobs:
         run: pip install --disable-pip-version-check requests
       - name: Probe HOSE official disclosure page and sample announcement
         run: python scripts/probe_hose_disclosures.py
+
+# Triggered after workflow installation so the push path is active.
