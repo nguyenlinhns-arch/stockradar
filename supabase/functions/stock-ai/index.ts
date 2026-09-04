@@ -1,6 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
-import { STOCKRADAR_SYSTEM_CORE, normalizeResearchContext, stockRadarMode } from "../_shared/stockradar-core.ts";
+import {
+  STOCKRADAR_SYSTEM_CORE,
+  deterministicStockRadarAnswer,
+  normalizeResearchContext,
+  stockRadarMode,
+} from "../_shared/stockradar-core.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://stockradar.vn",
@@ -31,7 +36,11 @@ type WatchItem = {
 };
 
 function corsHeaders(origin: string | null): HeadersInit {
-  const headers: Record<string, string> = { "Vary": "Origin", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" };
+  const headers: Record<string, string> = {
+    "Vary": "Origin",
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+  };
   if (origin && ALLOWED_ORIGINS.has(origin)) {
     headers["Access-Control-Allow-Origin"] = origin;
     headers["Access-Control-Allow-Headers"] = "authorization, apikey, content-type";
@@ -39,12 +48,26 @@ function corsHeaders(origin: string | null): HeadersInit {
   }
   return headers;
 }
+
 function jsonResponse(body: unknown, status: number, origin: string | null, extra: HeadersInit = {}): Response {
-  return new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(origin), ...extra, "Content-Type": "application/json; charset=utf-8" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders(origin), ...extra, "Content-Type": "application/json; charset=utf-8" },
+  });
 }
-function validTicker(value: string): boolean { return /^[A-Z0-9]{3}$/.test(value) && /[A-Z]/.test(value); }
-function validHorizon(value: string): value is Horizon { return HORIZONS.includes(value as Horizon); }
-function cleanMessage(value: unknown, maxChars = MAX_MESSAGE_CHARS): string { return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxChars); }
+
+function validTicker(value: string): boolean {
+  return /^[A-Z0-9]{3}$/.test(value) && /[A-Z]/.test(value);
+}
+
+function validHorizon(value: string): value is Horizon {
+  return HORIZONS.includes(value as Horizon);
+}
+
+function cleanMessage(value: unknown, maxChars = MAX_MESSAGE_CHARS): string {
+  return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, maxChars);
+}
+
 function cleanHistory(value: unknown): Array<{ role: "user" | "assistant"; content: string }> {
   if (!Array.isArray(value)) return [];
   return value.slice(-MAX_HISTORY_ITEMS).flatMap((item) => {
@@ -55,18 +78,30 @@ function cleanHistory(value: unknown): Array<{ role: "user" | "assistant"; conte
     return role && content ? [{ role, content }] : [];
   });
 }
+
 function positionNumber(value: unknown, min: number, max = Number.POSITIVE_INFINITY): number | null {
   if (value == null || value === "") return null;
   const number = Number(value);
   if (!Number.isFinite(number) || number < min || number > max) return null;
   return number;
 }
+
 function messageHasExplicitHorizon(value: string): boolean {
   return /(tích sản|tich san|2\s*[-–]\s*5\s*năm|12\s*tháng|12\s*thang|6\s*[-–]\s*18\s*tháng|dài hạn|dai han|3\s*[-–]\s*6\s*tháng|1\s*[-–]\s*6\s*tháng|trung hạn|trung han|6\s*tháng|6\s*thang|ngắn hạn|ngan han|5\s*[-–]\s*20\s*phiên)/i.test(value);
 }
+
 function normalizeReport(raw: JsonObject): JsonObject {
-  return { status: raw.status, ticker: raw.ticker, horizon: raw.horizon, snapshot_id: raw.snapshot_id, generated_at: raw.generated_at, expires_at: raw.expires_at, payload: raw.payload };
+  return {
+    status: raw.status,
+    ticker: raw.ticker,
+    horizon: raw.horizon,
+    snapshot_id: raw.snapshot_id,
+    generated_at: raw.generated_at,
+    expires_at: raw.expires_at,
+    payload: raw.payload,
+  };
 }
+
 function extractOpenAIText(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "";
   const data = payload as JsonObject;
@@ -85,6 +120,7 @@ function extractOpenAIText(payload: unknown): string {
   }
   return pieces.join("\n").trim();
 }
+
 function providerErrorCode(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "UNKNOWN";
   const error = (payload as JsonObject).error;
@@ -92,7 +128,44 @@ function providerErrorCode(payload: unknown): string {
   const row = error as JsonObject;
   return String(row.code || row.type || "UNKNOWN").toUpperCase().replace(/[^A-Z0-9_]+/g, "_").slice(0, 80);
 }
-async function audit(client: ServiceClient, userId: string, ticker: string, horizon: Horizon, outcome: string, reason: string, httpStatus: number, startedAt: number, remaining: number | null = null): Promise<void> {
+
+function latestTimestamp(values: unknown[]): string | null {
+  const clean = values.map((value) => String(value || "")).filter(Boolean).sort();
+  return clean.length ? clean[clean.length - 1] : null;
+}
+
+function appendPositionContext(answer: string, scope: RequestScope, ticker: string, watchlist: WatchItem[]): string {
+  if (scope === "ticker") {
+    const item = watchlist.find((row) => row.ticker === ticker && row.owns_stock);
+    if (!item) return answer;
+    const notes: string[] = [];
+    if (item.cost_basis !== null) notes.push(`giá vốn tự khai báo ${item.cost_basis.toLocaleString("vi-VN")}đ`);
+    if (item.portfolio_weight_pct !== null) notes.push(`tỷ trọng tự khai báo ${item.portfolio_weight_pct.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`);
+    return notes.length ? `${answer}\n\n**Vị thế của bạn:** ${notes.join(" · ")}.` : answer;
+  }
+
+  const owned = watchlist.filter((row) => row.owns_stock && (row.cost_basis !== null || row.portfolio_weight_pct !== null));
+  if (!owned.length) return answer;
+  const lines = owned.slice(0, 10).map((row) => {
+    const bits: string[] = [];
+    if (row.cost_basis !== null) bits.push(`giá vốn ${row.cost_basis.toLocaleString("vi-VN")}đ`);
+    if (row.portfolio_weight_pct !== null) bits.push(`tỷ trọng ${row.portfolio_weight_pct.toLocaleString("vi-VN", { maximumFractionDigits: 1 })}%`);
+    return `- ${row.ticker}: ${bits.join(" · ")}`;
+  });
+  return `${answer}\n\n**Dữ liệu vị thế bạn đã khai báo:**\n${lines.join("\n")}`;
+}
+
+async function audit(
+  client: ServiceClient,
+  userId: string,
+  ticker: string,
+  horizon: Horizon,
+  outcome: string,
+  reason: string,
+  httpStatus: number,
+  startedAt: number,
+  remaining: number | null = null,
+): Promise<void> {
   try {
     await client.rpc("record_stockradar_api_request_event", {
       p_user_id: userId,
@@ -104,11 +177,9 @@ async function audit(client: ServiceClient, userId: string, ticker: string, hori
       p_latency_ms: Math.max(0, Math.round(performance.now() - startedAt)),
       p_rate_limit_remaining: remaining,
     });
-  } catch { console.error("stock-ai audit failed"); }
-}
-function latestTimestamp(values: unknown[]): string | null {
-  const clean = values.map((value) => String(value || "")).filter(Boolean).sort();
-  return clean.length ? clean[clean.length - 1] : null;
+  } catch {
+    console.error("stock-ai audit failed");
+  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -134,6 +205,7 @@ Deno.serve(async (req: Request) => {
 
   let body: JsonObject;
   try { body = await req.json(); } catch { return jsonResponse({ status: "INVALID_REQUEST", reason: "INVALID_JSON" }, 400, origin); }
+
   const ticker = String(body.ticker || "").trim().toUpperCase();
   const scopeRaw = String(body.scope || "auto").trim().toLowerCase();
   const horizonRaw = String(body.horizon || "SHORT_TERM").trim().toUpperCase();
@@ -154,7 +226,13 @@ Deno.serve(async (req: Request) => {
   const [{ data: profile, error: profileError }, { data: preferenceRows }, { data: watchRows }] = await Promise.all([
     serviceClient.from("profiles").select("account_tier,account_status").eq("id", user.id).maybeSingle(),
     serviceClient.from("user_preferences").select("preferred_horizons,preferred_sectors,updated_at").eq("user_id", user.id).maybeSingle(),
-    serviceClient.from("watchlist_items").select("ticker,horizon,owns_stock,alert_enabled,cost_basis,portfolio_weight_pct,created_at").eq("user_id", user.id).is("removed_at", null).order("owns_stock", { ascending: false }).order("created_at", { ascending: true }).limit(MAX_PORTFOLIO_TICKERS),
+    serviceClient.from("watchlist_items")
+      .select("ticker,horizon,owns_stock,alert_enabled,cost_basis,portfolio_weight_pct,created_at")
+      .eq("user_id", user.id)
+      .is("removed_at", null)
+      .order("owns_stock", { ascending: false })
+      .order("created_at", { ascending: true })
+      .limit(MAX_PORTFOLIO_TICKERS),
   ]);
 
   const tier = String(profile?.account_tier || "").toUpperCase();
@@ -165,9 +243,14 @@ Deno.serve(async (req: Request) => {
   }
 
   const preferences = {
-    preferred_horizons: Array.isArray(preferenceRows?.preferred_horizons) ? preferenceRows.preferred_horizons.map((value: unknown) => String(value)).filter(validHorizon) : [],
-    preferred_sectors: Array.isArray(preferenceRows?.preferred_sectors) ? preferenceRows.preferred_sectors.map((value: unknown) => cleanMessage(value, 80)).filter(Boolean).slice(0, 3) : [],
+    preferred_horizons: Array.isArray(preferenceRows?.preferred_horizons)
+      ? preferenceRows.preferred_horizons.map((value: unknown) => String(value)).filter(validHorizon)
+      : [],
+    preferred_sectors: Array.isArray(preferenceRows?.preferred_sectors)
+      ? preferenceRows.preferred_sectors.map((value: unknown) => cleanMessage(value, 80)).filter(Boolean).slice(0, 3)
+      : [],
   };
+
   const watchlist: WatchItem[] = (Array.isArray(watchRows) ? watchRows : []).flatMap((row: JsonObject) => {
     const itemTicker = String(row.ticker || "").trim().toUpperCase();
     const itemHorizon = String(row.horizon || "SHORT_TERM").trim().toUpperCase();
@@ -182,17 +265,31 @@ Deno.serve(async (req: Request) => {
       portfolio_weight_pct: ownsStock ? positionNumber(row.portfolio_weight_pct, 0, 100) : null,
     }];
   });
+
   const ownedCount = watchlist.filter((item) => item.owns_stock).length;
   const alertCount = watchlist.filter((item) => item.alert_enabled).length;
   const positionContextCount = watchlist.filter((item) => item.owns_stock && (item.cost_basis !== null || item.portfolio_weight_pct !== null)).length;
   const requestedWatchItem = scope === "ticker" ? (watchlist.find((item) => item.ticker === ticker) || null) : null;
   const personalizationSummary = scope === "portfolio"
     ? { watchlist_count: watchlist.length, owned_count: ownedCount, alert_count: alertCount, position_context_count: positionContextCount }
-    : { requested_ticker_configured: requestedWatchItem !== null, owns_stock: requestedWatchItem?.owns_stock ?? null, alert_enabled: requestedWatchItem?.alert_enabled ?? null, position_context_configured: Boolean(requestedWatchItem?.cost_basis !== null || requestedWatchItem?.portfolio_weight_pct !== null) };
+    : {
+        requested_ticker_configured: requestedWatchItem !== null,
+        owns_stock: requestedWatchItem?.owns_stock ?? null,
+        alert_enabled: requestedWatchItem?.alert_enabled ?? null,
+        position_context_configured: Boolean(requestedWatchItem?.cost_basis !== null || requestedWatchItem?.portfolio_weight_pct !== null),
+      };
 
   if (scope === "portfolio" && !watchlist.length) {
     await audit(serviceClient, user.id, "", horizon, "NO_WATCHLIST", "EMPTY_WATCHLIST", 200, startedAt);
-    return jsonResponse({ status: "NO_WATCHLIST", scope, horizon, tier, answer: "Tài khoản hiện chưa có mã trong watchlist. Hãy thêm mã và đánh dấu mã đang sở hữu nếu có; StockRadar AI sẽ dùng đúng danh sách đó cho câu hỏi về danh mục.", personalization: personalizationSummary, quota_consumed: false }, 200, origin);
+    return jsonResponse({
+      status: "NO_WATCHLIST",
+      scope,
+      horizon,
+      tier,
+      answer: "Tài khoản hiện chưa có mã trong watchlist. Hãy thêm mã và đánh dấu mã đang sở hữu nếu có; StockRadar AI sẽ dùng đúng danh sách đó cho câu hỏi về danh mục.",
+      personalization: personalizationSummary,
+      quota_consumed: false,
+    }, 200, origin);
   }
 
   const explicitPortfolioHorizon = messageHasExplicitHorizon(message);
@@ -202,9 +299,12 @@ Deno.serve(async (req: Request) => {
   const researchTickers = scope === "ticker" ? [ticker] : [...new Set(watchlist.map((item) => item.ticker))];
 
   const [reportRows, researchRows] = await Promise.all([
-    Promise.all(reportRequests.map(async (request) => {
-      const { data, error } = await serviceClient.rpc("fetch_stockradar_cached_report", { p_ticker: request.ticker, p_horizon: request.horizon });
-      return { ...request, data: data as JsonObject | null, error };
+    Promise.all(reportRequests.map(async (reportRequest) => {
+      const { data, error } = await serviceClient.rpc("fetch_stockradar_cached_report", {
+        p_ticker: reportRequest.ticker,
+        p_horizon: reportRequest.horizon,
+      });
+      return { ...reportRequest, data: data as JsonObject | null, error };
     })),
     Promise.all(researchTickers.map(async (researchTicker) => {
       const { data, error } = await serviceClient.rpc("fetch_stockradar_internal_research_context", { p_ticker: researchTicker });
@@ -220,18 +320,16 @@ Deno.serve(async (req: Request) => {
   });
   const mode = stockRadarMode(readyRows.length > 0, researchContexts.length > 0);
 
-  const openAIKey = Deno.env.get("OPENAI_API_KEY")?.trim();
-  if (!openAIKey) {
-    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_CONFIG_PENDING", "OPENAI_KEY_MISSING", 200, startedAt);
-    return jsonResponse({ status: "AI_CONFIG_PENDING", scope, ticker: scope === "ticker" ? ticker : null, horizon, tier, mode, answer: "StockRadar AI đã nối tới lõi phân tích nhưng lớp model production chưa được kích hoạt.", personalization: personalizationSummary, quota_consumed: false }, 200, origin);
-  }
-
-  const { data: quotaRaw, error: quotaError } = await serviceClient.rpc("consume_stockradar_api_quota", { p_user_id: user.id, p_bucket: "stock_ai" });
+  const { data: quotaRaw, error: quotaError } = await serviceClient.rpc("consume_stockradar_api_quota", {
+    p_user_id: user.id,
+    p_bucket: "stock_ai",
+  });
   const quota = (quotaRaw || {}) as JsonObject;
   if (quotaError || !quotaRaw) {
     await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "SERVICE_UNAVAILABLE", "AI_QUOTA_RPC_FAILED", 503, startedAt);
     return jsonResponse({ status: "SERVICE_UNAVAILABLE", reason: "AI_QUOTA_RPC_FAILED" }, 503, origin);
   }
+
   const remainingNumber = Number(quota.remaining ?? Number.NaN);
   const remaining = Number.isFinite(remainingNumber) ? remainingNumber : null;
   const limit = Number(quota.limit ?? Number.NaN);
@@ -240,19 +338,46 @@ Deno.serve(async (req: Request) => {
   const rateHeaders: Record<string, string> = {};
   if (Number.isFinite(limit)) rateHeaders["X-RateLimit-Limit"] = String(limit);
   if (remaining !== null) rateHeaders["X-RateLimit-Remaining"] = String(remaining);
+
   if (quota.allowed !== true) {
     if (retryAfter > 0) rateHeaders["Retry-After"] = String(retryAfter);
     await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "RATE_LIMITED", "AI_RATE_LIMITED", 429, startedAt, remaining);
-    const rateAnswer = tier === "FREE" ? "Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay. Hạn mức Free được làm mới lúc 00:00 theo giờ Việt Nam." : "Bạn đã dùng hết lượt StockRadar AI trong cửa sổ hiện tại. Hãy thử lại sau khi hạn mức được làm mới.";
-    return jsonResponse({ status: "RATE_LIMITED", reason: "AI_RATE_LIMITED", answer: rateAnswer, tier, quota: { remaining: 0, limit: Number.isFinite(limit) ? limit : null, window_seconds: Number(quota.window_seconds || 0) || null, reset_at: resetAt, reset_timezone: quota.daily_reset_timezone || null }, retry_after: retryAfter }, 429, origin, rateHeaders);
+    return jsonResponse({
+      status: "RATE_LIMITED",
+      reason: "AI_RATE_LIMITED",
+      answer: tier === "FREE"
+        ? "Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay. Hạn mức Free được làm mới lúc 00:00 theo giờ Việt Nam."
+        : "Bạn đã dùng hết lượt StockRadar AI trong cửa sổ hiện tại. Hãy thử lại sau khi hạn mức được làm mới.",
+      tier,
+      quota: { remaining: 0, limit: Number.isFinite(limit) ? limit : null, reset_at: resetAt, reset_timezone: quota.daily_reset_timezone || null },
+      retry_after: retryAfter,
+    }, 429, origin, rateHeaders);
   }
 
   const actionContext = readyRows.map((row) => normalizeReport(row.data as JsonObject));
+  const researchForFallback: JsonObject | JsonObject[] | null = scope === "ticker"
+    ? (researchContexts[0] || null)
+    : researchContexts;
+  let fallbackAnswer = deterministicStockRadarAnswer({
+    mode,
+    researchContext: researchForFallback,
+    actionContext,
+    question: message,
+  });
+  fallbackAnswer = appendPositionContext(fallbackAnswer, scope, ticker, watchlist);
+
   const userContext = scope === "portfolio"
     ? {
         preferred_horizons: preferences.preferred_horizons,
         preferred_sectors: preferences.preferred_sectors,
-        watchlist: watchlist.map((item) => ({ ticker: item.ticker, horizon: item.horizon, owns_stock: item.owns_stock, alert_enabled: item.alert_enabled, cost_basis: item.cost_basis, portfolio_weight_pct: item.portfolio_weight_pct })),
+        watchlist: watchlist.map((item) => ({
+          ticker: item.ticker,
+          horizon: item.horizon,
+          owns_stock: item.owns_stock,
+          alert_enabled: item.alert_enabled,
+          cost_basis: item.cost_basis,
+          portfolio_weight_pct: item.portfolio_weight_pct,
+        })),
         watchlist_count: watchlist.length,
         owned_count: ownedCount,
         alert_count: alertCount,
@@ -261,10 +386,66 @@ Deno.serve(async (req: Request) => {
     : {
         preferred_horizons: preferences.preferred_horizons,
         preferred_sectors: preferences.preferred_sectors,
-        requested_ticker: requestedWatchItem ? { ticker: requestedWatchItem.ticker, horizon: requestedWatchItem.horizon, owns_stock: requestedWatchItem.owns_stock, alert_enabled: requestedWatchItem.alert_enabled, cost_basis: requestedWatchItem.cost_basis, portfolio_weight_pct: requestedWatchItem.portfolio_weight_pct } : null,
+        requested_ticker: requestedWatchItem ? {
+          ticker: requestedWatchItem.ticker,
+          horizon: requestedWatchItem.horizon,
+          owns_stock: requestedWatchItem.owns_stock,
+          alert_enabled: requestedWatchItem.alert_enabled,
+          cost_basis: requestedWatchItem.cost_basis,
+          portfolio_weight_pct: requestedWatchItem.portfolio_weight_pct,
+        } : null,
       };
 
-  const context = {
+  const snapshotIds = [...new Set([
+    ...actionContext.map((row) => String(row.snapshot_id || "")),
+    ...researchContexts.map((row) => String(row.snapshot_id || "")),
+  ].filter(Boolean))];
+  const source = {
+    action_gate: readyRows.length ? "READY" : "PENDING",
+    research_ready: researchContexts.length > 0,
+    snapshot_id: snapshotIds.length === 1 ? snapshotIds[0] : null,
+    snapshot_count: snapshotIds.length,
+    generated_at: latestTimestamp([
+      ...actionContext.map((row) => row.generated_at),
+      ...researchContexts.map((row) => row.generated_at),
+    ]),
+    ready_horizons: scope === "ticker" ? readyRows.map((row) => row.horizon) : undefined,
+    ready_reports: readyRows.length,
+    covered_tickers: scope === "portfolio" ? [...new Set(researchContexts.map((row) => String(row.ticker || "")).filter(Boolean))] : undefined,
+  };
+  const quotaResponse = {
+    remaining,
+    limit: Number.isFinite(limit) ? limit : null,
+    unlimited: quota.unlimited === true,
+    reset_at: resetAt,
+    reset_timezone: quota.daily_reset_timezone || null,
+  };
+
+  if (mode !== "ACTION_READY") {
+    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_READY", "STOCKRADAR_CORE_RESEARCH", 200, startedAt, remaining);
+    return jsonResponse({
+      status: "READY",
+      scope,
+      ticker: scope === "ticker" ? ticker : null,
+      horizon,
+      tier,
+      mode,
+      answer_engine: "STOCKRADAR_CORE",
+      answer: fallbackAnswer,
+      personalization: personalizationSummary,
+      source,
+      quota: quotaResponse,
+      quota_consumed: true,
+    }, 200, origin, rateHeaders);
+  }
+
+  const openAIKey = Deno.env.get("OPENAI_API_KEY")?.trim();
+  if (!openAIKey) {
+    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_READY_FALLBACK", "OPENAI_KEY_MISSING", 200, startedAt, remaining);
+    return jsonResponse({ status: "READY_FALLBACK", scope, ticker: scope === "ticker" ? ticker : null, horizon, tier, mode, answer_engine: "STOCKRADAR_CORE", answer: fallbackAnswer, personalization: personalizationSummary, source, quota: quotaResponse, quota_consumed: true }, 200, origin, rateHeaders);
+  }
+
+  const modelContext = {
     RESPONSE_MODE: mode,
     ACCESS_TIER: tier,
     REQUEST_SCOPE: scope,
@@ -275,7 +456,7 @@ Deno.serve(async (req: Request) => {
     RECENT_CONVERSATION: history,
     USER_CONTEXT: userContext,
     ACTION_CONTEXT: actionContext,
-    RESEARCH_CONTEXT: scope === "ticker" ? (researchContexts[0] || null) : researchContexts,
+    RESEARCH_CONTEXT: researchContexts,
   };
 
   const model = Deno.env.get("OPENAI_MODEL")?.trim() || "gpt-5-mini";
@@ -284,45 +465,29 @@ Deno.serve(async (req: Request) => {
     aiResponse = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
       headers: { "Authorization": `Bearer ${openAIKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model, instructions: STOCKRADAR_SYSTEM_CORE, input: JSON.stringify(context), max_output_tokens: scope === "portfolio" ? 1500 : 1100, store: false }),
+      body: JSON.stringify({
+        model,
+        instructions: STOCKRADAR_SYSTEM_CORE,
+        input: JSON.stringify(modelContext),
+        max_output_tokens: scope === "portfolio" ? 1200 : 1000,
+        store: false,
+      }),
     });
   } catch {
-    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_UPSTREAM_ERROR", "OPENAI_NETWORK_ERROR", 502, startedAt, remaining);
-    return jsonResponse({ status: "AI_UPSTREAM_ERROR", mode, answer: "Lớp AI tạm thời không phản hồi. Dữ liệu StockRadar không bị thay thế bằng nguồn khác." }, 502, origin, rateHeaders);
+    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_READY_FALLBACK", "OPENAI_NETWORK_ERROR", 200, startedAt, remaining);
+    return jsonResponse({ status: "READY_FALLBACK", reason: "OPENAI_NETWORK_ERROR", scope, ticker: scope === "ticker" ? ticker : null, horizon, tier, mode, answer_engine: "STOCKRADAR_CORE", answer: fallbackAnswer, personalization: personalizationSummary, source, quota: quotaResponse, quota_consumed: true }, 200, origin, rateHeaders);
   }
 
   let aiPayload: unknown = null;
   try { aiPayload = await aiResponse.json(); } catch { aiPayload = null; }
   if (!aiResponse.ok) {
     const code = providerErrorCode(aiPayload);
-    console.error("stock-ai upstream", aiResponse.status, code);
-    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_UPSTREAM_ERROR", `OPENAI_${aiResponse.status}_${code}`, 502, startedAt, remaining);
-    return jsonResponse({ status: "AI_UPSTREAM_ERROR", reason: `OPENAI_${aiResponse.status}_${code}`, provider_status: aiResponse.status, provider_code: code, mode, answer: "Lớp AI tạm thời chưa thể diễn giải dữ liệu." }, 502, origin, rateHeaders);
+    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_READY_FALLBACK", `OPENAI_${aiResponse.status}_${code}`, 200, startedAt, remaining);
+    return jsonResponse({ status: "READY_FALLBACK", reason: `OPENAI_${aiResponse.status}_${code}`, scope, ticker: scope === "ticker" ? ticker : null, horizon, tier, mode, answer_engine: "STOCKRADAR_CORE", answer: fallbackAnswer, personalization: personalizationSummary, source, quota: quotaResponse, quota_consumed: true }, 200, origin, rateHeaders);
   }
 
-  const answer = extractOpenAIText(aiPayload);
-  if (!answer) {
-    await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_UPSTREAM_ERROR", "EMPTY_AI_RESPONSE", 502, startedAt, remaining);
-    return jsonResponse({ status: "AI_UPSTREAM_ERROR", mode, answer: "Lớp AI không trả về nội dung hợp lệ." }, 502, origin, rateHeaders);
-  }
-
-  const selectedReport = scope === "ticker" ? (readyRows.find((row) => row.horizon === horizon)?.data || readyRows[0]?.data || {}) : (readyRows[0]?.data || {});
-  const selected = selectedReport as JsonObject;
-  const snapshotIds = [...new Set([
-    ...readyRows.map((row) => String(row.data?.snapshot_id || "")),
-    ...researchContexts.map((row) => String(row.snapshot_id || "")),
-  ].filter(Boolean))];
-  const coveredTickers = [...new Set([
-    ...readyRows.map((row) => row.ticker),
-    ...researchContexts.map((row) => String(row.ticker || "")),
-  ].filter(Boolean))];
-  const generatedAt = latestTimestamp([
-    ...readyRows.map((row) => row.data?.generated_at),
-    ...researchContexts.map((row) => row.generated_at),
-  ]);
-
-  const auditReason = mode === "ACTION_READY" ? (scope === "portfolio" ? "ACTION_AND_RESEARCH_PORTFOLIO" : "ACTION_AND_RESEARCH_TICKER") : mode === "RESEARCH_ONLY" ? "RESEARCH_CONTEXT" : "METHOD_ONLY";
-  await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_READY", auditReason, 200, startedAt, remaining);
+  const answer = appendPositionContext(extractOpenAIText(aiPayload) || fallbackAnswer, scope, ticker, watchlist);
+  await audit(serviceClient, user.id, scope === "ticker" ? ticker : "", horizon, "AI_READY", scope === "portfolio" ? "MODEL_PLUS_STOCKRADAR_CORE_PORTFOLIO" : "MODEL_PLUS_STOCKRADAR_CORE", 200, startedAt, remaining);
   return jsonResponse({
     status: "READY",
     scope,
@@ -330,27 +495,11 @@ Deno.serve(async (req: Request) => {
     horizon,
     tier,
     mode,
+    answer_engine: "MODEL_PLUS_STOCKRADAR_CORE",
     answer,
     personalization: personalizationSummary,
-    source: {
-      action_gate: readyRows.length ? "READY" : "PENDING",
-      action_ready_reports: readyRows.length,
-      research_ready: researchContexts.length > 0,
-      research_ready_count: researchContexts.length,
-      snapshot_id: snapshotIds.length === 1 ? snapshotIds[0] : (selected.snapshot_id || null),
-      snapshot_count: snapshotIds.length,
-      generated_at: generatedAt || selected.generated_at || null,
-      expires_at: selected.expires_at || null,
-      ready_horizons: scope === "ticker" ? readyRows.map((row) => row.horizon) : undefined,
-      covered_tickers: scope === "portfolio" ? coveredTickers : undefined,
-    },
-    quota: {
-      remaining,
-      limit: Number.isFinite(limit) ? limit : null,
-      unlimited: quota.unlimited === true,
-      window_seconds: Number(quota.window_seconds || 0) || null,
-      reset_at: resetAt,
-      reset_timezone: quota.daily_reset_timezone || null,
-    },
+    source,
+    quota: quotaResponse,
+    quota_consumed: true,
   }, 200, origin, rateHeaders);
 });
