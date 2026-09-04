@@ -2,10 +2,23 @@
   'use strict';
 
   const config = window.STOCKRADAR_AUTH_CONFIG || {};
-  if (config.emailDeliveryReady === true) return;
+  const transactionalAuthReady = Boolean(
+    config.configured === true &&
+    config.provider === 'supabase' &&
+    config.supabaseUrl &&
+    config.supabasePublishableKey
+  );
 
-  const BLOCKED_MESSAGE = 'Đăng ký mới đang tạm đóng trong khi StockRadar hoàn tất kênh email xác minh. Đăng nhập tài khoản đã có vẫn hoạt động.';
-  const RECOVERY_MESSAGE = 'Khôi phục mật khẩu qua email đang tạm đóng trong khi kênh email production được kích hoạt.';
+  // emailDeliveryReady is the historical launch flag for email-dependent product UX.
+  // Account verification/recovery is transactional auth and must not be coupled to
+  // Premium content-email delivery readiness once Supabase Auth itself is configured.
+  const productEmailLaunchState = config.emailDeliveryReady === true;
+  void productEmailLaunchState;
+
+  if (transactionalAuthReady) return;
+
+  const BLOCKED_MESSAGE = 'Đăng ký mới đang tạm đóng vì dịch vụ xác thực tài khoản chưa được cấu hình đầy đủ. Đăng nhập tài khoản đã có chỉ hoạt động khi Supabase Auth sẵn sàng.';
+  const RECOVERY_MESSAGE = 'Khôi phục mật khẩu đang tạm đóng vì dịch vụ xác thực tài khoản chưa sẵn sàng.';
   const BLOCKED_FORMS = '[data-auth-signup-form],[data-auth-signup-otp-form],[data-auth-login-otp-form],[data-auth-forgot-form]';
 
   function messageFor(form) {
@@ -34,7 +47,7 @@
       status.className = 'auth-email-gate';
       status.dataset.emailDeliveryStatus = '';
       status.setAttribute('role', 'status');
-      status.innerHTML = '<strong>Đăng ký tạm đóng</strong><span>Hệ thống đang hoàn tất email xác minh trước khi mở đăng ký công khai.</span>';
+      status.innerHTML = '<strong>Đăng ký tạm đóng</strong><span>Dịch vụ xác thực tài khoản chưa được cấu hình đầy đủ.</span>';
       signupCard.prepend(status);
     }
   }
