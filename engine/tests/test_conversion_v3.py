@@ -35,11 +35,15 @@ class ConversionV3Tests(unittest.TestCase):
 
     def test_pricing_is_short_and_value_first(self) -> None:
         transformed = MODULE.transform_plans(self.read("website/dang-ky/index.html"), checkout_ready=False)
+        # The source is intentionally commercial and concise: two plans plus one comparison table.
         for marker in (
-            "Bốn thứ trực tiếp giúp bạn ra quyết định", "1 · Quyết định", "2 · Vùng hành động",
-            "3 · Cảnh báo", "4 · Kiểm chứng", "conversion-plan-card", "199.000đ",
+            "data-plan-free", "data-plan-premium", "data-plan-comparison",
+            "StockRadar Free", "StockRadar Premium", "199.000đ",
+            "Mua mới", "Đang nắm giữ", "Buy Zone", "không tự gia hạn",
         ):
             self.assertIn(marker, transformed)
+        # Do not reintroduce the retired explanatory block merely to satisfy an old test contract.
+        self.assertNotIn("Bốn thứ trực tiếp giúp bạn ra quyết định", transformed)
         self.assertNotIn("299.000", transformed)
 
     def test_signup_keeps_paid_email_consent_optional_and_supports_premium_fast_path(self) -> None:
