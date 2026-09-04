@@ -1,6 +1,13 @@
 (() => {
   'use strict';
 
+  const PUBLIC_BANK = Object.freeze({
+    bin: '970432',
+    name: 'VPBank',
+    accountNumber: '0934389822',
+    accountName: 'NGUYỄN TỬ LINH',
+  });
+
   const runtime = {
     amount: 199000,
     durationDays: 30,
@@ -40,6 +47,13 @@
     document.querySelectorAll(selector).forEach(node => { node.textContent = value; });
   }
 
+  function renderPublicBank() {
+    setText('[data-checkout-bank]', PUBLIC_BANK.name);
+    setText('[data-checkout-account-number]', PUBLIC_BANK.accountNumber);
+    setText('[data-checkout-account-name]', PUBLIC_BANK.accountName);
+    setCopyValue('[data-copy-account]', PUBLIC_BANK.accountNumber);
+  }
+
   function setState(message, kind = 'warn') {
     document.querySelectorAll('[data-checkout-state]').forEach(node => {
       node.className = `checkout-state is-${kind}`;
@@ -52,7 +66,7 @@
     if (raw.includes('AUTH_REQUIRED')) return 'Vui lòng đăng nhập trước khi thanh toán.';
     if (raw.includes('EMAIL_VERIFICATION_REQUIRED')) return 'Hãy xác minh email tài khoản trước khi thanh toán.';
     if (raw.includes('ACCOUNT_NOT_ACTIVE')) return 'Tài khoản chưa ở trạng thái hoạt động.';
-    if (raw.includes('CHECKOUT_DISABLED')) return 'StockRadar đã hoàn thiện luồng thanh toán nhưng tài khoản nhận tiền chưa được kích hoạt.';
+    if (raw.includes('CHECKOUT_DISABLED')) return 'Thanh toán tạm thời chưa tạo được mã giao dịch. Thông tin tài khoản VPBank vẫn là tài khoản nhận tiền chính thức.';
     if (raw.includes('PLAN_NOT_AVAILABLE')) return 'Gói Premium hiện chưa mở bán.';
     if (raw.includes('CHECKOUT_EXPIRED')) return 'Mã thanh toán đã hết hạn. Hãy tạo lại yêu cầu thanh toán.';
     if (raw.includes('CHECKOUT_NOT_FOUND')) return 'Không tìm thấy yêu cầu thanh toán của tài khoản này.';
@@ -111,12 +125,15 @@
   }
 
   function qrUrl(request) {
-    if (!request?.bank_bin || !request?.account_number || !request?.payment_reference) return '';
-    const base = `https://img.vietqr.io/image/${encodeURIComponent(request.bank_bin)}-${encodeURIComponent(request.account_number)}-compact2.png`;
+    if (!request?.payment_reference) return '';
+    const bankBin = request.bank_bin || PUBLIC_BANK.bin;
+    const accountNumber = request.account_number || PUBLIC_BANK.accountNumber;
+    const accountName = request.account_name || PUBLIC_BANK.accountName;
+    const base = `https://img.vietqr.io/image/${encodeURIComponent(bankBin)}-${encodeURIComponent(accountNumber)}-compact2.png`;
     const params = new URLSearchParams({
       amount: String(request.amount_vnd || runtime.amount),
       addInfo: request.payment_reference,
-      accountName: request.account_name || '',
+      accountName,
     });
     return `${base}?${params.toString()}`;
   }
@@ -169,12 +186,12 @@
     runtime.durationDays = Number(request?.duration_days || 30);
 
     setText('[data-checkout-amount]', formatVnd(amount));
-    setText('[data-checkout-bank]', enabled ? (request.bank_name || '—') : 'Chưa mở');
-    setText('[data-checkout-account-number]', enabled ? (request.account_number || '—') : '—');
-    setText('[data-checkout-account-name]', enabled ? (request.account_name || '—') : '—');
+    setText('[data-checkout-bank]', request?.bank_name || PUBLIC_BANK.name);
+    setText('[data-checkout-account-number]', request?.account_number || PUBLIC_BANK.accountNumber);
+    setText('[data-checkout-account-name]', request?.account_name || PUBLIC_BANK.accountName);
     setText('[data-checkout-reference]', enabled ? (request.payment_reference || '—') : '—');
     setText('[data-checkout-expiry-at]', enabled ? formatDateTime(request.expires_at) : '—');
-    setCopyValue('[data-copy-account]', enabled ? request.account_number : '');
+    setCopyValue('[data-copy-account]', request?.account_number || PUBLIC_BANK.accountNumber);
     setCopyValue('[data-copy-reference]', enabled ? request.payment_reference : '');
     renderQr(enabled ? request : null);
     startCountdown(enabled ? request.expires_at : null);
@@ -190,7 +207,7 @@
           : 'Tôi đã chuyển khoản · Gửi xác nhận';
     }
 
-    showPaymentFallback(!enabled);
+    showPaymentFallback(!enabled && Boolean(runtime.user));
 
     if (!enabled) return;
     if (request.status === 'PENDING') {
@@ -271,17 +288,18 @@
     const login = document.querySelector('[data-checkout-login]');
     const mobile = document.querySelector('[data-checkout-mobile-action]');
 
+    renderPublicBank();
     if (target) target.textContent = runtime.user?.email || 'Chưa đăng nhập';
     if (!runtime.user) {
       if (login) {
-        login.textContent = 'Đăng nhập để thanh toán';
+        login.textContent = 'Đăng nhập để tạo mã thanh toán';
         login.href = `dang-nhap/?next=${encodeURIComponent('thanh-toan/?plan=premium')}`;
       }
       if (mobile) {
-        mobile.textContent = 'Đăng nhập để thanh toán';
+        mobile.textContent = 'Đăng nhập để tạo mã thanh toán';
         mobile.href = `dang-nhap/?next=${encodeURIComponent('thanh-toan/?plan=premium')}`;
       }
-      setState('Đăng nhập bằng tài khoản đã xác minh để tạo mã thanh toán riêng.', 'warn');
+      setState('VPBank 0934389822 · NGUYỄN TỬ LINH là tài khoản nhận tiền chính thức. Đăng nhập để tạo nội dung chuyển khoản riêng và VietQR.', 'warn');
       showPaymentFallback(false);
       return;
     }
@@ -306,6 +324,7 @@
 
   async function mount() {
     setText('[data-checkout-amount]', formatVnd(runtime.amount));
+    renderPublicBank();
     wireCopyButtons();
     wireConfirm();
     await renderAccount();
