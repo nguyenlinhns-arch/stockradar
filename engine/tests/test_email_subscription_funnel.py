@@ -91,53 +91,171 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
 
     def test_homepage_is_email_first_with_clear_paid_conversion(self):
         home = self.read("website/index.html")
-        self.assertIn("StockRadar", home)
+        self.assertIn("data-email-conversion", home)
+        self.assertIn("data-home-email-form", home)
+        self.assertIn('id="nhan-ban-tin"', home)
+        self.assertIn('href="thanh-toan/?plan=premium"', home)
+        self.assertIn("home-radar-sector-list", home)
+        self.assertIn("data-live-radar-home", home)
+        self.assertIn("home-tier-grid", home)
+        self.assertIn("Free và Premium có gì?", home)
+        self.assertIn("Nhận bản rà soát thị trường mỗi sáng", home)
+        self.assertIn("FREE 09:00", home)
+        self.assertIn("199K", home)
+        for feature in (
+            "Radar HOSE", "Full HOSE → Full-Scan Gate → Ranking", "So sánh theo ngành",
+            "Hiệu quả khuyến nghị", "Market/Sector", "VPA/RVOL",
+            "Email & cảnh báo trong phiên",
+        ):
+            self.assertIn(feature, home)
+        self.assertIn("4 mốc/ngày", home)
+        self.assertIn("10:30 · 11:15 · 13:30 · 14:15", home)
+        self.assertIn("Radar động theo snapshot", home)
+        self.assertNotIn("Radar 30", home)
+        self.assertNotIn("30 mã", home)
+        self.assertNotIn("10 ngành · 3 mã", home)
+        self.assertNotIn("co-phieu/?ticker=", home)
+        self.assertIn("assets/home-focus-v1.css", home)
+        self.assertIn("assets/home-conversion-v2.css", home)
+        self.assertNotIn("assets/email-interest.js", home)
+        self.assertNotIn("home-status-band", home)
+        self.assertNotIn("home-status-grid", home)
+        self.assertNotIn("assets/premium-preview-v7.css", home)
+        self.assertNotIn("assets/home-dashboard.js", home)
+        self.assertNotIn("home-watchlist-grid", home)
+        self.assertNotIn("home-ticker-grid", home)
+        self.assertNotIn("MẪU BÁO CÁO CHUYÊN SÂU", home)
+        self.assertNotIn("MẪU EMAIL GÓI TRẢ PHÍ", home)
+        self.assertNotIn("DỮ LIỆU MẪU", home)
+        self.assertNotIn("MINH HỌA", home.upper())
+        self.assertNotIn("đang hoàn thiện", home.lower())
+
+    def test_home_and_global_conversion_state_skip_repeated_lead_cta(self):
+        home_core = self.read("website/assets/home-core-v1.js")
+        conversion_state = self.read("website/assets/conversion-state-v1.js")
+        for source in (home_core, conversion_state):
+            self.assertIn("sr_email_lead_captured", source)
+            self.assertIn("emailDeliveryReady", source)
+        self.assertIn("sr_pending_lead_email", home_core)
+        self.assertIn("Hoàn tất Free", home_core)
+        self.assertIn("data-conversion-free-lead", conversion_state)
+        self.assertIn("Hoàn tất tài khoản Free", conversion_state)
 
     def test_email_lead_landing_captures_interest_then_routes_to_free_signup(self):
         page = self.read("website/nhan-ban-tin/index.html")
+        client = self.read("website/assets/email-interest.js")
+        self.assertIn('data-proposition="email-lead"', page)
+        self.assertIn("Nhận bản rà soát 09:00 miễn phí", page)
         self.assertIn("data-email-interest-form", page)
-
-    def test_pre_auth_interest_queue_never_authorizes_delivery(self):
-        migration = self.read("supabase/migrations/20260903074211_add_public_email_subscription_interest_queue.sql").lower()
-        self.assertIn("pending", migration)
-
-    def test_public_interest_client_calls_edge_without_privileged_secret(self):
-        source = self.read("website/assets/email-interest.js")
-        self.assertNotIn("service_role", source.lower())
-
-    def test_reference_seed_is_non_publishable_and_pages_workflow_fail_closes_it(self):
-        workflow = self.read(".github/workflows/pages.yml")
-        self.assertIn("fail_close_public_ticker_seed.py", workflow)
-
-    def test_registration_page_compares_free_daily_and_premium_intraday(self):
-        page = self.read("website/signup/index.html")
-        self.assertIn("FREE + PREMIUM", page)
-
-    def test_recommendation_page_uses_snapshot_bound_full_hose_radar(self):
-        page = self.read("website/khuyen-nghi/index.html")
-        self.assertNotIn("Radar 30", page)
+        self.assertIn('name="daily_brief" type="checkbox"', page)
+        self.assertIn('name="privacy" type="checkbox"', page)
+        self.assertNotIn('name="daily_brief" type="checkbox" checked', page)
+        self.assertIn('data-next-href="signup/?plan=free"', page)
+        self.assertIn('href="thanh-toan/?plan=premium"', page)
+        self.assertIn("renderNextStep", client)
+        self.assertIn("data-email-interest-next", client)
+        self.assertIn("sr_pending_lead_email", client)
+        self.assertIn("sessionStorage.setItem", client)
+        self.assertNotIn("url.searchParams.set('email'", client)
 
     def test_email_lead_attribution_records_first_and_last_touch_without_public_access(self):
         migration = self.read("supabase/migrations/20260904004118_add_email_lead_attribution_v2.sql").lower()
-        self.assertIn("first", migration)
-        self.assertIn("last", migration)
+        edge = self.read("supabase/functions/email-interest/index.ts")
+        client = self.read("website/assets/email-interest.js")
+        for marker in (
+            "first_source_path", "last_source_path", "first_utm_source", "last_utm_source",
+            "first_utm_campaign", "last_utm_campaign", "first_referrer_host", "last_referrer_host",
+            "capture_email_subscription_interest_v2", "to service_role",
+        ):
+            self.assertIn(marker, migration)
+        self.assertIn("capture_email_subscription_interest_v2", edge)
+        for marker in ("source_path", "utm_source", "utm_campaign", "referrer_host"):
+            self.assertIn(marker, edge)
+            self.assertIn(marker, client)
+        self.assertNotIn("service_role", client.lower())
+
+    def test_reference_seed_is_non_publishable_and_pages_workflow_fail_closes_it(self):
+        payload = json.loads(self.read("website/public/data/ticker-universe.json"))
+        self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
+        self.assertEqual(payload["public_scope"], "REFERENCE_ONLY")
+        self.assertFalse(payload["full_universe"])
+        self.assertEqual(payload["internal_reference"]["record_count"], 405)
+        self.assertEqual(payload["internal_reference"]["validated_count"], 405)
+        self.assertFalse(payload["internal_reference"]["raw_publication_allowed"])
+        self.assertLess(len(payload["items"]), payload["internal_reference"]["record_count"])
+        workflow = self.read(".github/workflows/pages.yml")
+        self.assertIn("python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json", workflow)
+        self.assertLess(workflow.index("Run regression suite"), workflow.index("Fail-close public ticker seed before Pages build"))
+
+    def test_registration_page_compares_free_daily_and_premium_intraday(self):
+        register = self.read("website/dang-ky/index.html")
+        self.assertIn('data-proposition="plans"', register)
+        self.assertIn("data-plan-free", register)
+        self.assertIn("data-plan-premium", register)
+        self.assertIn("data-plan-comparison", register)
+        self.assertIn('href="signup/?plan=free"', register)
+        self.assertIn('href="signup/?plan=premium"', register)
+        self.assertIn('href="thanh-toan/?plan=premium"', register)
+        self.assertIn("StockRadar Free", register)
+        self.assertIn("StockRadar Premium", register)
+        self.assertIn("Có · bản cơ bản", register)
+        self.assertIn("cảnh báo điểm mua/bán trong phiên", register.lower())
+        self.assertIn("10:30 · 11:15 · 13:30 · 14:15", register)
+        self.assertIn("data-email-interest-form", register)
+        self.assertIn("assets/email-interest.js", register)
+
+    def test_recommendation_page_uses_snapshot_bound_full_hose_radar(self):
+        page = self.read("website/khuyen-nghi/index.html")
+        self.assertIn("Tín hiệu hành động hiện tại", page)
+        self.assertIn("0 mã", page)
+        self.assertIn("Phạm vi quét", page)
+        self.assertIn("Toàn HOSE", page)
+        self.assertIn("Shortlist theo snapshot", page)
+        self.assertIn("data-radar-review-list", page)
+        self.assertIn("Không dùng mã mẫu hoặc danh sách lựa chọn thủ công", page)
+        self.assertIn("Radar và Khuyến nghị là hai lớp khác nhau", page)
+        self.assertNotIn("Radar 30", page)
+        self.assertNotIn("10 ngành · 3 mã", page)
+        for ticker in ("ACB", "MBB", "HPG", "FPT", "VHM"):
+            self.assertNotIn(f">{ticker}<", page)
+
+    def test_public_interest_client_calls_edge_without_privileged_secret(self):
+        client = self.read("website/assets/email-interest.js")
+        self.assertIn("/functions/v1/email-interest", client)
+        self.assertIn("privacy_accepted", client)
+        self.assertIn("consent_version", client)
+        self.assertIn("payload.accepted !== true", client)
+        self.assertIn("chờ xác minh", client)
+        self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", client)
+        self.assertNotIn("service_role", client.lower())
+
+    def test_pre_auth_interest_queue_never_authorizes_delivery(self):
+        migration = self.read("supabase/migrations/20260903074211_add_public_email_subscription_interest_queue.sql").lower()
+        self.assertIn("private.email_subscription_intents", migration)
+        self.assertIn("pending_verification", migration)
+        self.assertIn("interval '30 days'", migration)
+        self.assertIn("revoke all on function public.capture_email_subscription_interest", migration)
+        self.assertIn("grant execute on function public.capture_email_subscription_interest", migration)
+        self.assertIn("to service_role", migration)
+        self.assertIn("never authorizes delivery", migration)
 
     def test_public_interest_edge_has_origin_honeypot_rate_limit_and_v2_attribution(self):
-        source = self.read("supabase/functions/email-interest/index.ts")
-        self.assertIn("ALLOWED_ORIGINS", source)
-
-    def test_signup_trigger_persists_preferences_and_consent_fail_closed(self):
-        migration = self.read("supabase/migrations/20260903064500_capture_signup_email_preferences_and_consent.sql").lower()
-        self.assertIn("insert into public.product_email_preferences", migration)
-        self.assertIn("insert into public.product_email_consent_events", migration)
-
-    def test_home_and_global_conversion_state_skip_repeated_lead_cta(self):
-        source = self.read("website/assets/conversion-state-v1.js")
-        self.assertIn("sr_email_lead_captured", source)
+        edge = self.read("supabase/functions/email-interest/index.ts")
+        self.assertIn("ALLOWED_ORIGINS", edge)
+        self.assertIn("payload.company", edge)
+        self.assertIn("capture_email_subscription_interest_v2", edge)
+        self.assertIn("rate limit exceeded", edge)
+        self.assertIn("SUPABASE_SERVICE_ROLE_KEY", edge)
+        self.assertIn("PENDING_VERIFICATION", edge)
+        self.assertIn("Hoàn tất tạo tài khoản Free", edge)
+        self.assertIn("stockradar-email-interest-v2", edge)
 
     def test_privacy_page_discloses_pending_interest_retention(self):
-        page = self.read("website/quyen-rieng-tu/index.html")
-        self.assertIn("2026-09-04", page)
+        privacy = self.read("website/quyen-rieng-tu/index.html")
+        self.assertIn("Đăng ký email trước khi xác minh tài khoản", privacy)
+        self.assertIn("chờ xác minh", privacy)
+        self.assertIn("tối đa 30 ngày", privacy)
+        self.assertIn("không lưu địa chỉ IP thô", privacy)
 
 
 if __name__ == "__main__":
