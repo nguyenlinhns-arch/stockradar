@@ -78,7 +78,7 @@ jobs:
       - name: Apply production UX transforms
         env:
           STOCKRADAR_PRODUCT_EMAIL_READY: "0"
-          STOCKRADAR_CHECKOUT_READY: "0"
+          STOCKRADAR_CHECKOUT_READY: "1"
         run: |
           python scripts/inject_public_ux.py .pages-site
           python scripts/inject_home_radar_polish.py .pages-site
