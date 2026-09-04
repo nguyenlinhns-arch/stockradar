@@ -1,0 +1,27 @@
+name: StockRadar Production Gate Regression
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'engine/stockradar/production_data.py'
+      - 'engine/stockradar/production_bundle.py'
+      - 'engine/tests/test_production_data.py'
+      - 'engine/tests/test_production_bundle.py'
+      - '.github/workflows/production-gate-regression.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  production-gate-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Run production data and bundle contract regressions
+        run: python -m unittest engine.tests.test_production_data engine.tests.test_production_bundle
