@@ -28,12 +28,12 @@
       const link = document.createElement('link');
       link.rel = 'stylesheet';
       link.dataset.marketReferenceStyle = '';
-      link.href = new URL('assets/public-market-reference-v1.css?v=20260904-market1', document.baseURI).toString();
+      link.href = new URL('assets/public-market-reference-v1.css?v=20260904-market3', document.baseURI).toString();
       document.head.appendChild(link);
     }
     if (!document.querySelector('script[data-market-reference-script]')) {
       const script = document.createElement('script');
-      script.src = new URL('assets/public-market-reference-v1.js?v=20260904-market2', document.baseURI).toString();
+      script.src = new URL('assets/public-market-reference-v1.js?v=20260904-market4', document.baseURI).toString();
       script.async = true;
       script.dataset.marketReferenceScript = '';
       document.head.appendChild(script);
@@ -61,30 +61,19 @@
 
   function markup(ticker, security) {
     const verified = Boolean(security);
-    const company = verified
-      ? security.company_name || 'Doanh nghiệp đã được xác minh trong universe công khai'
-      : 'Mã đã được nhận; dữ liệu giá/biểu đồ tham chiếu hiển thị trực tiếp phía dưới';
-    const sector = verified
-      ? security.sector || 'Chưa có phân loại ngành trong feed công khai'
-      : 'Kết luận riêng của StockRadar vẫn chờ feed production được cấp quyền';
-    const releaseState = verified ? 'ĐÃ XÁC MINH CÔNG KHAI' : 'DECISION FEED ĐANG CHỜ';
+    const identity = verified
+      ? [security.company_name, security.sector].filter(Boolean).join(' · ')
+      : 'Decision Feed StockRadar chưa phát hành';
     return `
-      <section class="free-context-card" data-free-stock-context>
-        <header class="free-context-head">
-          <div><span class="panel-label">FREE · BỐI CẢNH STOCKRADAR</span><h3>${escapeHtml(ticker)}</h3><p>${escapeHtml(company)} · ${escapeHtml(sector)}</p></div>
-          <span class="free-context-status ${verified ? 'is-verified' : ''}">${releaseState}</span>
-        </header>
-        <div class="free-context-horizons" aria-label="Bốn khung đầu tư">
-          <div><span>5–20 phiên</span><strong>Ngắn hạn</strong><small>Xem giá/biểu đồ tham chiếu bên dưới; quyết định StockRadar chưa phát hành.</small></div>
-          <div><span>1–6 tháng</span><strong>Trung hạn</strong><small>Xem giá/biểu đồ tham chiếu bên dưới; quyết định StockRadar chưa phát hành.</small></div>
-          <div><span>6–18 tháng</span><strong>Dài hạn</strong><small>Xem hồ sơ/tài chính tham chiếu bên dưới; Fair Value StockRadar chưa phát hành.</small></div>
-          <div><span>2–5 năm+</span><strong>Tích sản</strong><small>Xem hồ sơ/tài chính tham chiếu bên dưới; luận điểm StockRadar chưa phát hành.</small></div>
+      <section class="free-context-card free-context-card-compact" data-free-stock-context>
+        <div class="free-context-compact-row">
+          <div>
+            <span class="panel-label">KẾT LUẬN STOCKRADAR</span>
+            <strong>${escapeHtml(ticker)} · CHƯA PHÁT HÀNH MUA/BÁN</strong>
+            <small>${escapeHtml(identity)}. Dữ liệu thị trường thực tế được hiển thị ở phía trên; StockRadar chỉ bổ sung Score, xếp hạng, 4 khung, Fair Value và kế hoạch hành động khi Decision Feed đạt chuẩn.</small>
+          </div>
+          <span class="free-context-status ${verified ? 'is-verified' : ''}">DECISION PENDING</span>
         </div>
-        <div class="free-context-grid">
-          <article><strong>Free có ngay</strong><ul><li>Giá và biểu đồ mã HOSE qua widget hiển thị trực tiếp.</li><li>Hồ sơ doanh nghiệp và dữ liệu tài chính tham chiếu khi TradingView hỗ trợ mã.</li><li>Bốn khung đầu tư và lịch sử khuyến nghị StockRadar khi feed được phát hành.</li></ul></article>
-          <article><strong>StockRadar không tự dựng</strong><ul><li>Không bịa Fair Value, Buy Zone, Stop hay Target khi feed production chưa đạt gate.</li><li>Không dùng tín hiệu/điểm của bên hiển thị tham chiếu làm tín hiệu StockRadar.</li><li>Không biến dữ liệu nghiên cứu nội bộ thành dữ liệu khách hàng khi chưa có quyền phát hành.</li></ul></article>
-        </div>
-        <div class="free-context-conclusion"><span>Trạng thái quyết định StockRadar</span><strong>CHƯA PHÁT HÀNH MUA/BÁN — DỮ LIỆU THỊ TRƯỜNG THAM CHIẾU VẪN XEM ĐƯỢC BÊN DƯỚI</strong><p>Khi production manifest hợp lệ và Decision Gate đạt chuẩn, phần này tự thay bằng điểm, xếp hạng, trạng thái 4 khung và kết luận thực tế của StockRadar.</p></div>
       </section>`;
   }
 
@@ -105,7 +94,7 @@
     }
     if (target.querySelector('[data-free-stock-context]')) return;
     const security = Array.isArray(payload.items) ? payload.items.find(item => item.ticker === ticker) : null;
-    target.insertAdjacentHTML('afterbegin', markup(ticker, security));
+    target.insertAdjacentHTML('beforeend', markup(ticker, security));
     target.classList.add('has-free-context');
   }
 
