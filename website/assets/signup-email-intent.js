@@ -66,8 +66,8 @@
         summary.className = 'signup-plan-note signup-locked-plan';
         summary.dataset.signupLockedPlan = lockedPlan;
         summary.textContent = lockedPlan === 'premium'
-          ? 'Đang đăng ký Premium · 199.000đ/30 ngày · StockRadar AI không giới hạn. Xác minh tài khoản xong sẽ chuyển sang bước thanh toán.'
-          : 'Đang đăng ký Free · 0đ · StockRadar AI 10 câu/ngày. Xác minh tài khoản xong sẽ mở trang tài khoản.';
+          ? 'Đang đăng ký Premium · 199.000đ/30 ngày · StockRadar AI không giới hạn. Bấm xác minh trong email xong sẽ chuyển sang bước thanh toán.'
+          : 'Đang đăng ký Free · 0đ · StockRadar AI 10 câu/ngày. Bấm xác minh trong email xong sẽ mở trang tài khoản.';
         selector.before(summary);
       }
     }
@@ -94,7 +94,7 @@
       if (name) name.textContent = premium ? 'Premium' : 'Free';
       if (note) {
         note.textContent = premium
-          ? 'Premium mở StockRadar AI không giới hạn, Daily 09:00, kế hoạch giao dịch và Action Alert trong phiên khi dữ liệu đủ chuẩn. Giá sáng lập dự kiến 199.000đ/30 ngày; tạo tài khoản chưa phát sinh thanh toán.'
+          ? 'Premium mở StockRadar AI không giới hạn, Daily 09:00, kế hoạch giao dịch và Action Alert trong phiên khi dữ liệu đủ chuẩn. Giá 199.000đ/30 ngày; tạo tài khoản chưa phát sinh thanh toán.'
           : 'Free có phí 0đ, StockRadar AI 10 câu/ngày, dùng các chức năng công khai và email hệ thống cần thiết cho tài khoản. Báo cáo hằng ngày và Action Alert thuộc Trial/Premium.';
       }
       [daily, alerts].forEach(input => {
@@ -103,8 +103,8 @@
         if (!premium) input.checked = false;
       });
       if (submit) submit.textContent = premium
-        ? 'Tạo tài khoản Premium & gửi mã xác minh'
-        : 'Tạo tài khoản Free & gửi mã xác minh';
+        ? 'Tạo tài khoản Premium & gửi email xác minh'
+        : 'Tạo tài khoản Free & gửi email xác minh';
     };
 
     form.querySelectorAll('input[name="selected_plan"]').forEach(input => input.addEventListener('change', render));
