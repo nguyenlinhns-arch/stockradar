@@ -1,4 +1,4 @@
-name: Smoke raw Vietnam data source
+name: Smoke official HOSE disclosures
 
 on:
   push:
@@ -10,68 +10,62 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Install raw market client
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install 'vnstock==4.0.7' 'pandas<3' requests
-      - name: Fetch raw listing OHLCV and VNDirect statement rows
+      - name: Install client
+        run: python -m pip install requests beautifulsoup4
+      - name: Query official HOSE disclosures and attachments
         run: |
           python - <<'PY'
-          import json, requests
-          import pandas as pd
-          from vnstock import Reference
-          from vnstock.ui import Market
+          import json, re, requests
+          from bs4 import BeautifulSoup
 
-          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124.0 Safari/537.36'
-          ref = Reference()
-          exchanges = ref.equity.list_by_exchange()
-          if not isinstance(exchanges, pd.DataFrame) or exchanges.empty:
-              raise RuntimeError('Reference exchange list is empty')
+          category='dca0933e-a578-4eaf-8b29-beb4575052c5'
+          base=f'https://www.hsx.vn/Modules/CMS/Web/ArticleInCategory/{category}'
+          referer=f'https://www.hsx.vn/Modules/Cms/Web/NewsByCat/{category}?fid=6d1f1d5e9e6c4fb593077d461e5155e7'
+          headers={
+              'Accept':'application/json, text/javascript, */*; q=0.01',
+              'Accept-Language':'vi,en-US;q=0.9,en;q=0.8',
+              'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126 Safari/537.36',
+              'X-Requested-With':'XMLHttpRequest',
+              'Referer':referer,
+          }
+          params={
+              'exclude':'00000000-0000-0000-0000-000000000000','lim':'True',
+              'pageFieldName1':'FromDate','pageFieldValue1':'01.01.2026','pageFieldOperator1':'eq',
+              'pageFieldName2':'ToDate','pageFieldValue2':'04.09.2026','pageFieldOperator2':'eq',
+              'pageFieldName3':'TokenCode','pageFieldValue3':'HPG','pageFieldOperator3':'eq',
+              'pageFieldName4':'CategoryId','pageFieldValue4':category,'pageFieldOperator4':'eq',
+              'pageCriteriaLength':'4','_search':'false','rows':'300','page':'1','sidx':'id','sord':'desc',
+          }
+          s=requests.Session(); s.headers.update(headers)
+          r=s.get(base,params=params,timeout=30); r.raise_for_status(); payload=r.json(); rows=payload.get('rows') or []
+          if not rows: raise RuntimeError(f'HOSE returned no HPG disclosures: {payload}')
 
-          px = Market().equity('HPG').ohlcv(start='2025-01-01', end='2026-09-04', interval='1D', count=500)
-          required_px={'time','open','high','low','close','volume'}
-          if not required_px.issubset(set(map(str, px.columns))) or len(px) < 250:
-              raise RuntimeError(f'OHLCV invalid: rows={len(px)} columns={list(px.columns)}')
+          found=[]
+          for row in rows:
+              cells=row.get('cell') or []
+              cell_text=' '.join(str(x) for x in cells)
+              soup=BeautifulSoup(cell_text,'html.parser')
+              title=' '.join(soup.stripped_strings)
+              if not re.search(r'BCTC|báo cáo tài chính|bao cao tai chinh', title, re.I):
+                  continue
+              article_id=str(row.get('id'))
+              meta_url=f'https://www.hsx.vn/Modules/CMS/Web/GetRelatedFiles/{article_id}'
+              meta=s.get(meta_url,params={'_search':'false','rows':'100','page':'1','sidx':'id','sord':'desc'},headers={**headers,'Referer':f'https://www.hsx.vn/Modules/Cms/Web/ViewArticle/{article_id}'},timeout=30)
+              meta.raise_for_status(); meta_payload=meta.json(); files=[]
+              for f in meta_payload.get('rows') or []:
+                  fc=f.get('cell') or []
+                  name=str(fc[1] if len(fc)>1 else '')
+                  files.append({'id':str(f.get('id')),'name':name,'ext':name.rsplit('.',1)[-1].lower() if '.' in name else ''})
+              found.append({'article_id':article_id,'title':title[:500],'files':files})
 
-          base='https://api-finfo.vndirect.com.vn/v4/financial_statements'
-          results={}
-          for report_type in ('QUARTER','ANNUAL'):
-              params={
-                  'q':f'code:HPG~reportType:{report_type}~modelType:1',
-                  'sort':'fiscalDate:desc',
-                  'size':'500',
-                  'page':'1',
-              }
-              r=requests.get(base,params=params,headers={'User-Agent':UA,'Accept':'application/json'},timeout=30)
-              r.raise_for_status()
-              payload=r.json()
-              rows=payload.get('data') or []
-              if not rows:
-                  raise RuntimeError(f'VNDirect {report_type} rows empty: {payload}')
-              forbidden={'score','rank','rating','recommendation','signal','pe','pb','roe','rvol','target_price','fair_value'}
-              keys={str(k).lower() for row in rows[:20] for k in row.keys()}
-              if keys & forbidden:
-                  raise RuntimeError(f'Derived provider fields present: {sorted(keys & forbidden)}')
-              periods=sorted({str(row.get('fiscalDate')) for row in rows if row.get('fiscalDate')}, reverse=True)
-              results[report_type]={
-                  'row_count':len(rows),
-                  'period_count':len(periods),
-                  'periods':periods[:8],
-                  'keys':sorted(keys),
-                  'sample_item_codes':sorted({str(row.get('itemCode')) for row in rows[:100] if row.get('itemCode') is not None})[:30],
-              }
-
-          print(json.dumps({
-              'provider_role':'RAW_INPUT_ONLY_TECHNICAL_SMOKE_NOT_PRODUCTION_RIGHTS_APPROVAL',
-              'reference_rows':len(exchanges),
-              'ohlcv_rows':len(px),
-              'ohlcv_columns':list(map(str,px.columns)),
-              'statements':results,
-          },ensure_ascii=False,indent=2))
+          if not found:
+              raise RuntimeError(f'No BCTC disclosures found among {len(rows)} HPG rows')
+          extensions=sorted({f['ext'] for item in found for f in item['files'] if f['ext']})
+          print(json.dumps({'source':'OFFICIAL_HOSE','ticker':'HPG','disclosure_count':len(rows),'bctc_count':len(found),'attachment_extensions':extensions,'bctc':found[:20]},ensure_ascii=False,indent=2))
           PY
