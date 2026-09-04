@@ -1,0 +1,35 @@
+name: Migrate Radar V3 regression contracts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/migrate-radar-v3-regressions.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Patch obsolete Radar 30 assertions
+        run: python scripts/migrate_radar_v3_regressions.py
+      - name: Commit updated regression contracts
+        run: |
+          if git diff --quiet -- engine/tests/test_email_subscription_funnel.py engine/tests/test_static_assets.py; then
+            echo 'Regression contracts already migrated.'
+            exit 0
+          fi
+          git config user.name 'stockradar-automation'
+          git config user.email 'stockradar-automation@users.noreply.github.com'
+          git add engine/tests/test_email_subscription_funnel.py engine/tests/test_static_assets.py
+          git commit -m 'Migrate regression contracts to dynamic full-HOSE Radar'
+          git push origin HEAD:main
