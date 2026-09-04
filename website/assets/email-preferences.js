@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONSENT_VERSION = '2026-09-03';
+  const CONSENT_VERSION = '2026-09-04';
   const KNOWN_TIERS = new Set(['FREE', 'TRIAL', 'PAID']);
   const PREMIUM_TIERS = new Set(['TRIAL', 'PAID']);
 
