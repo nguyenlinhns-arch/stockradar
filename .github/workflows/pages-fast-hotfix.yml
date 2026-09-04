@@ -19,6 +19,7 @@ on:
       - 'scripts/enforce_registration_plan_ctas.py'
       - 'scripts/enforce_checkout_public_bank_info.py'
       - 'scripts/enforce_ai_registration_ctas.py'
+      - 'scripts/apply_commercial_surface_v1.py'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
@@ -136,6 +137,9 @@ jobs:
           grep -q 'data-checkout-confirm' .pages-site/thanh-toan/index.html
           ! grep -q 'BẢO VỆ NGƯỜI DÙNG TRẢ PHÍ' .pages-site/thanh-toan/index.html
           ! grep -q 'Premium tạm dừng kích hoạt mới' .pages-site/thanh-toan/index.html
+
+      - name: Apply final commercial surface
+        run: python scripts/apply_commercial_surface_v1.py .pages-site
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
