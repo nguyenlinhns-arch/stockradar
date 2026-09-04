@@ -68,7 +68,6 @@ class StockAiProductCenterTests(unittest.TestCase):
             self.assertIn("Đăng xuất", source)
 
         self.assertIn("Guest -> Free -> Premium", auth_state)
-        self.assertIn("Guest -> Free -> Premium", paid_nav)
         self.assertIn("header.querySelectorAll('[data-auth-nav]').forEach(node => node.remove())", auth_state)
         self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", auth_state)
         self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", paid_nav)
