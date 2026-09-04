@@ -37,7 +37,7 @@ jobs:
               raise RuntimeError('Reference exchange list is empty')
 
           mkt = Market()
-          px = mkt.equity('HPG').ohlcv(start='2025-01-01', end='2026-09-04', interval='1D')
+          px = mkt.equity('HPG').ohlcv(start='2025-01-01', end='2026-09-04', interval='1D', count=500)
           required_px = {'time','open','high','low','close','volume'}
           if not required_px.issubset(set(map(str, px.columns))):
               raise RuntimeError(f'OHLCV schema missing columns: {cols(px)}')
