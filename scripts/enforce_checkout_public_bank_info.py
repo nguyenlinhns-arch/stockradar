@@ -68,6 +68,18 @@ def enforce_live_checkout(source: str) -> str:
         count=1,
     )
 
+    # The owner-provided QR identifies the VPBank account only. Amount and the
+    # unique SR reference remain explicit checkout fields to avoid implying the
+    # static QR contains values it does not encode.
+    source = source.replace(
+        'QR trên chuyển đúng tới VPBank 0934389822 và số tiền 199.000đ. Trước khi chuyển, đăng nhập để hệ thống cấp <strong>nội dung chuyển khoản SR riêng</strong>; nhập đúng mã SR đó để StockRadar đối soát chính xác.',
+        'QR trên là mã tài khoản VPBank 0934389822 do chủ tài khoản cung cấp. <strong>Số tiền cần chuyển: 199.000đ.</strong> Trước khi chuyển, đăng nhập để hệ thống cấp <strong>nội dung chuyển khoản SR riêng</strong>; nhập đúng mã SR đó để StockRadar đối soát chính xác.',
+    )
+    source = source.replace(
+        'QR VPBank hiển thị ngay. Đăng nhập để lấy mã SR riêng trước khi xác nhận chuyển khoản.',
+        'QR VPBank hiển thị ngay. Đăng nhập để lấy số tiền 199.000đ và mã SR riêng trước khi chuyển khoản.',
+    )
+
     required = (
         f'data-checkout-bank>{BANK_NAME}</strong>',
         f'data-checkout-account-number>{ACCOUNT_NUMBER}</strong>',
@@ -77,13 +89,12 @@ def enforce_live_checkout(source: str) -> str:
         'data-checkout-reference>—</strong>',
         'data-checkout-expiry>—</strong>',
         'data-checkout-confirm',
+        'Số tiền cần chuyển: 199.000đ.',
     )
     for marker in required:
         if marker not in source:
             raise RuntimeError(f"Live checkout contract missing: {marker}")
 
-    # Build-time regression guard. Split the old strings so legacy tests cannot
-    # mistake this validation list for an actual paused checkout implementation.
     stale_markers = (
         "BẢO VỆ NGƯỜI DÙNG " + "TRẢ PHÍ",
         "Premium tạm dừng " + "kích hoạt mới",
