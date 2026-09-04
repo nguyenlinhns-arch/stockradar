@@ -224,7 +224,7 @@
 
     const log = node('div', 'sr-center-log');
     log.setAttribute('aria-live', 'polite');
-    addMessage(log, 'assistant', 'Tôi là StockRadar AI, dùng cùng lõi 4M/Payback · CANSLIM · định giá · SEPA/VCP · VPA · Pocket Pivot của StockRadar. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết.');
+    addMessage(log, 'assistant', 'Tôi là StockRadar AI. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết. Tôi sẽ kiểm tra dữ liệu doanh nghiệp, định giá, xu hướng, dòng tiền và rủi ro trước khi trả lời; nếu dữ liệu chưa đủ chuẩn, tôi sẽ nói rõ chưa đủ cơ sở để hành động.');
 
     const chips = node('div', 'sr-center-chips');
     ['FPT mua được chưa?', 'MWG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
