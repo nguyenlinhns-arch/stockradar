@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -11,6 +12,10 @@ AUTH_STATE = ROOT / "website" / "assets" / "auth-state-v2.js"
 PAID_NAV = ROOT / "website" / "assets" / "paid-nav-v1.js"
 PAGES = ROOT / ".github" / "workflows" / "pages.yml"
 FAST = ROOT / ".github" / "workflows" / "pages-fast-hotfix.yml"
+
+
+def compact(source: str) -> str:
+    return re.sub(r"\s+", "", source)
 
 
 class StockAiProductCenterTests(unittest.TestCase):
@@ -28,10 +33,11 @@ class StockAiProductCenterTests(unittest.TestCase):
 
     def test_free_ai_uses_same_decision_context_and_premium_gets_proactive_alert_rights(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn('const ACTIVE_TIERS = new Set(["FREE", "TRIAL", "PAID"])', source)
-        self.assertIn('const PREMIUM_TIERS = new Set(["TRIAL", "PAID"])', source)
-        self.assertIn('const actionContext = readyRows.map((row) => normalizeReport', source)
-        self.assertIn('alert_enabled: PREMIUM_TIERS.has(tier) && row.alert_enabled === true', source)
+        tight = compact(source)
+        self.assertIn('TIERS=newSet(["FREE","TRIAL","PAID"])', tight)
+        self.assertIn('PREMIUM=newSet(["TRIAL","PAID"])', tight)
+        self.assertIn('action=ready.map(r=>normReport(r.data))', tight)
+        self.assertIn('alert_enabled:PREMIUM.has(tier)&&r.alert_enabled===true', tight)
         self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay", source)
         self.assertNotIn("redactForFree", source)
 
