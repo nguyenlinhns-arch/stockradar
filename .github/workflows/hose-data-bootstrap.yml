@@ -9,6 +9,7 @@ on:
       - 'scripts/bootstrap_kbs_hose_data.py'
       - 'scripts/build_bootstrap_derived_features_v2.py'
       - 'scripts/build_internal_scanner_feed_v2.py'
+      - 'scripts/validate_intraday_scan_sla.py'
       - '.github/workflows/hose-data-bootstrap.yml'
   schedule:
     # Vietnam: 10:30, 11:15, 13:30, 14:15 and 15:25 on trading weekdays.
@@ -168,6 +169,20 @@ jobs:
               'public_gate': qa['public_gate'],
           }, ensure_ascii=False))
           PY
+
+      - name: Enforce 4-checkpoint freshness and liquidity SLA
+        shell: bash
+        run: |
+          set -euo pipefail
+          qa_file="$(ls artifacts/scanner/stockradar_scanner_qa_v2_*.json | head -n 1)"
+          scanner_file="$(ls artifacts/scanner/stockradar_scanner_master_v2_405_*.csv | head -n 1)"
+          python scripts/validate_intraday_scan_sla.py \
+            --market-coverage artifacts/market/market_coverage.json \
+            --fundamental-coverage artifacts/fundamentals/fundamentals_coverage.json \
+            --scanner-qa "$qa_file" \
+            --scanner "$scanner_file" \
+            --intraday artifacts/market/intraday_5m.csv \
+            --output artifacts/scanner/stockradar_intraday_sla_v1.json
 
       - name: Upload internal scanner artifact
         uses: actions/upload-artifact@v4
