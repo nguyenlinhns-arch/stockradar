@@ -19,7 +19,7 @@ jobs:
       - name: Install raw-data client
         run: |
           python -m pip install --upgrade pip
-          python -m pip install 'vnstock>=3.4,<4' pandas
+          python -m pip install 'vnstock==3.5.1' 'pandas<3'
       - name: Fetch raw listing OHLCV and statements only
         run: |
           python - <<'PY'
@@ -55,14 +55,15 @@ jobs:
           if len(px) < 250:
               raise RuntimeError(f'OHLCV history too short: {len(px)}')
 
-          finance = Finance(source='KBS', symbol='HPG')
+          # VCI is used only for raw statement line-items; no provider ratios/scores are accepted.
+          finance = Finance(source='VCI', symbol='HPG')
           income = finance.income_statement(period='quarter')
           balance = finance.balance_sheet(period='quarter')
           cash = finance.cash_flow(period='quarter')
           if min(len(income), len(balance), len(cash)) == 0:
               raise RuntimeError('One or more raw statement tables are empty')
 
-          company = Company(source='KBS', symbol='HPG')
+          company = Company(source='VCI', symbol='HPG')
           overview = company.overview()
 
           print(json.dumps({
