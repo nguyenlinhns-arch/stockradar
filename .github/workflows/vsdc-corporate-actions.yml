@@ -10,12 +10,18 @@ on:
       - 'scripts/build_corporate_action_gate_v2.py'
       - '.github/workflows/vsdc-corporate-actions.yml'
   schedule:
-    # 15:40 Asia/Ho_Chi_Minh on trading weekdays, after the post-close market snapshot.
+    # 07:45 Asia/Ho_Chi_Minh: refresh event-risk gate before the 09:00 brief.
+    - cron: '45 0 * * 1-5'
+    # 15:40 Asia/Ho_Chi_Minh: refresh after the post-close market snapshot.
     - cron: '40 8 * * 1-5'
 
 permissions:
   contents: read
   actions: read
+
+concurrency:
+  group: stockradar-vsdc-corporate-actions
+  cancel-in-progress: false
 
 jobs:
   corporate-actions:
