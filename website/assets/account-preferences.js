@@ -8,6 +8,7 @@
     ACCUMULATION: 'Tích sản',
   });
   const PREMIUM_TIERS = new Set(['TRIAL', 'PAID']);
+  let positionContextReady = true;
 
   function siteUrl(path = '') {
     return new URL(String(path).replace(/^\/+/, ''), document.baseURI).toString();
@@ -83,12 +84,23 @@
     if (!form) return;
     const ownsStock = Boolean(form.elements.owns_stock?.checked);
     const fields = [form.elements.cost_basis, form.elements.portfolio_weight_pct].filter(Boolean);
+    const note = form.querySelector('[data-position-context-note]');
+    if (!positionContextReady) {
+      fields.forEach(input => { input.disabled = true; input.value = ''; });
+      if (note) {
+        note.hidden = false;
+        note.innerHTML = '<strong>Đang chờ backend:</strong> watchlist vẫn hoạt động bình thường; giá vốn/tỷ trọng sẽ tự mở sau khi migration production được áp dụng.';
+      }
+      return;
+    }
     fields.forEach(input => {
       input.disabled = !ownsStock;
       if (!ownsStock) input.value = '';
     });
-    const note = form.querySelector('[data-position-context-note]');
-    if (note) note.hidden = !ownsStock;
+    if (note) {
+      note.hidden = !ownsStock;
+      note.innerHTML = '<strong>Dữ liệu tự khai báo:</strong> giá vốn/tỷ trọng chỉ dùng cho AI và My StockRadar của chính bạn; không lưu số lượng cổ phiếu, NAV hoặc tài khoản môi giới.';
+    }
   }
 
   function renderWatchlist(target, items, profile) {
@@ -155,14 +167,26 @@
   }
 
   async function loadWatchlist(client, userId) {
-    const { data, error } = await client
+    const query = client
       .from('watchlist_items')
       .select('id,ticker,horizon,owns_stock,alert_enabled,cost_basis,portfolio_weight_pct,created_at')
       .eq('user_id', userId)
       .is('removed_at', null)
       .order('created_at', { ascending: true });
-    if (error) throw error;
-    return data || [];
+    const { data, error } = await query;
+    if (!error) return data || [];
+
+    const raw = String(error?.message || '').toLowerCase();
+    if (!raw.includes('cost_basis') && !raw.includes('portfolio_weight_pct')) throw error;
+    positionContextReady = false;
+    const fallback = await client
+      .from('watchlist_items')
+      .select('id,ticker,horizon,owns_stock,alert_enabled,created_at')
+      .eq('user_id', userId)
+      .is('removed_at', null)
+      .order('created_at', { ascending: true });
+    if (fallback.error) throw fallback.error;
+    return (fallback.data || []).map(item => ({ ...item, cost_basis: null, portfolio_weight_pct: null }));
   }
 
   async function mountAccountPreferences() {
@@ -208,7 +232,9 @@
       mountTodayEntry(root, profile, watchlist);
       const limit = profile.account_tier === 'PAID' ? 20 : 3;
       if (limitTarget) limitTarget.textContent = `${watchlist.length}/${limit} mã`;
-      setMessage(status, 'Tùy chọn được lưu theo tài khoản và bảo vệ bằng RLS.', 'success');
+      setMessage(status, positionContextReady
+        ? 'Tùy chọn được lưu theo tài khoản và bảo vệ bằng RLS.'
+        : 'Watchlist đang hoạt động; giá vốn/tỷ trọng sẽ tự mở sau khi backend production được cập nhật.', 'success');
     } catch (error) {
       setMessage(status, friendlyDatabaseError(error), 'error');
       return;
@@ -252,8 +278,8 @@
       const ticker = normalizeTicker(watchlistForm.elements.ticker?.value);
       const horizon = String(watchlistForm.elements.horizon?.value || 'SHORT_TERM');
       const owns_stock = Boolean(watchlistForm.elements.owns_stock?.checked);
-      const cost_basis = owns_stock ? optionalNumber(watchlistForm.elements.cost_basis?.value, 0.0001) : null;
-      const portfolio_weight_pct = owns_stock ? optionalNumber(watchlistForm.elements.portfolio_weight_pct?.value, 0, 100) : null;
+      const cost_basis = owns_stock && positionContextReady ? optionalNumber(watchlistForm.elements.cost_basis?.value, 0.0001) : null;
+      const portfolio_weight_pct = owns_stock && positionContextReady ? optionalNumber(watchlistForm.elements.portfolio_weight_pct?.value, 0, 100) : null;
       const button = watchlistForm.querySelector('button[type="submit"]');
       if (!/^[A-Z0-9]{3}$/.test(ticker)) return setMessage(watchlistMessage, 'Nhập mã gồm đúng 3 ký tự A-Z hoặc 0-9.', 'error');
       if (Number.isNaN(cost_basis)) return setMessage(watchlistMessage, 'Giá vốn phải lớn hơn 0 hoặc để trống.', 'error');
@@ -263,7 +289,9 @@
       setMessage(watchlistMessage, 'Đang lưu…');
       try {
         const existing = watchlist.find(item => item.ticker === ticker && item.horizon === horizon);
-        const positionUpdate = { owns_stock, cost_basis, portfolio_weight_pct };
+        const positionUpdate = positionContextReady
+          ? { owns_stock, cost_basis, portfolio_weight_pct }
+          : { owns_stock };
         if (existing) {
           const { error } = await client
             .from('watchlist_items')
@@ -288,7 +316,7 @@
         if (limitTarget) limitTarget.textContent = `${watchlist.length}/${limit} mã`;
         watchlistForm.reset();
         syncPositionFields(watchlistForm);
-        setMessage(watchlistMessage, existing ? 'Đã cập nhật mã theo dõi và dữ liệu vị thế.' : 'Đã thêm mã theo dõi.', 'success');
+        setMessage(watchlistMessage, existing ? 'Đã cập nhật mã theo dõi.' : 'Đã thêm mã theo dõi.', 'success');
       } catch (error) {
         setMessage(watchlistMessage, friendlyDatabaseError(error), 'error');
       } finally {
@@ -334,9 +362,11 @@
       if (!id) return;
       button.disabled = true;
       try {
+        const removeUpdate = { removed_at: new Date().toISOString(), alert_enabled: false };
+        if (positionContextReady) Object.assign(removeUpdate, { cost_basis: null, portfolio_weight_pct: null });
         const { error } = await client
           .from('watchlist_items')
-          .update({ removed_at: new Date().toISOString(), alert_enabled: false, cost_basis: null, portfolio_weight_pct: null })
+          .update(removeUpdate)
           .eq('id', id)
           .eq('user_id', user.id);
         if (error) throw error;
