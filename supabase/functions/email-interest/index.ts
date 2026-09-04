@@ -6,6 +6,7 @@ const ALLOWED_ORIGINS = new Set([
   "https://nguyenlinhns-arch.github.io",
   "http://localhost:8000",
 ]);
+const INTENT_KIND = "PREMIUM_EMAIL_INTEREST";
 
 function responseHeaders(origin: string) {
   return {
@@ -60,7 +61,7 @@ Deno.serve(async (req: Request) => {
 
   // Honeypot: bots get a generic accepted response but no database write.
   if (typeof payload.company === "string" && payload.company.trim()) {
-    return json(origin, 202, { accepted: true, status: "PENDING_VERIFICATION" });
+    return json(origin, 202, { accepted: true, status: "PENDING_VERIFICATION", intent_kind: INTENT_KIND });
   }
 
   const email = typeof payload.email === "string" ? payload.email.trim().toLowerCase() : "";
@@ -138,6 +139,7 @@ Deno.serve(async (req: Request) => {
   return json(origin, 202, {
     accepted: true,
     status: "PENDING_VERIFICATION",
-    message: "Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền gửi email. Product email chỉ được gửi khi tài khoản Trial/Paid đã xác minh, có đồng ý nhận hiện hành, không bị suppression và delivery gate production đã được kích hoạt.",
+    intent_kind: INTENT_KIND,
+    message: "Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền nhận email và chưa phải quyền gửi email. Product email chỉ được gửi khi tài khoản Trial/Paid đã xác minh, có đồng ý nhận hiện hành, không bị suppression và delivery gate production đã được kích hoạt.",
   });
 });
