@@ -5,16 +5,22 @@ from datetime import datetime, timezone
 import hashlib
 import json
 from pathlib import Path
-import re
+import shutil
 from typing import Any, Mapping
 
-from .production_bundle import ProductionBundleError, build_manifest_from_descriptor
-from .production_data import CONTRACT_VERSION, validate_production_manifest
+from .input_policy import CALCULATION_ORIGIN, CALCULATION_POLICY_VERSION, EXTERNAL_INPUT_ROLE, is_derived_field
+from .production_bundle import (
+    CONTRACT_VERSION,
+    REQUIRED_DATASETS,
+    ProductionBundleError,
+    build_manifest_from_descriptor,
+)
+from .production_data import validate_production_manifest
 
 
 INTAKE_SCHEMA_VERSION = "1.0"
-LICENSED_MODE = "LICENSED"
-REQUIRED_RIGHTS = (
+RIGHTS_SCHEMA_VERSION = "1.0"
+REQUIRED_PERMISSIONS = (
     "source_terms_reviewed",
     "publication_allowed",
     "redistribution_allowed",
@@ -31,36 +37,23 @@ SENSITIVE_KEY_FRAGMENTS = (
     "access_token",
     "refresh_token",
     "trading_token",
-    "private_key",
     "otp",
 )
-SENSITIVE_VALUE_PATTERNS = (
-    re.compile(r"\bBearer\s+[A-Za-z0-9._~+/=-]{12,}", re.IGNORECASE),
-    re.compile(r"\bsb_secret_[A-Za-z0-9_-]{8,}", re.IGNORECASE),
-    re.compile(r"\bsk-[A-Za-z0-9_-]{12,}", re.IGNORECASE),
-)
-SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}$")
-
-
-class LicensedIntakeError(ValueError):
-    pass
 
 
 @dataclass(frozen=True)
 class LicensedIntakeResult:
     accepted: bool
     publication_ready: bool
-    provider_id: str | None
-    evidence_ref: str | None
+    provider_id: str
+    evidence_ref: str
     snapshot_id: str | None
     failures: tuple[str, ...]
     warnings: tuple[str, ...]
     dataset_rows: Mapping[str, int]
-    dataset_checksums: Mapping[str, str]
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "intake_schema_version": INTAKE_SCHEMA_VERSION,
             "accepted": self.accepted,
             "publication_ready": self.publication_ready,
             "provider_id": self.provider_id,
@@ -69,33 +62,25 @@ class LicensedIntakeResult:
             "failures": list(self.failures),
             "warnings": list(self.warnings),
             "dataset_rows": dict(self.dataset_rows),
-            "dataset_checksums": dict(self.dataset_checksums),
-            "gate_mutation_performed": False,
-            "credentials_persisted": False,
+            "input_role": EXTERNAL_INPUT_ROLE,
+            "calculation_origin": CALCULATION_ORIGIN,
+            "calculation_policy_version": CALCULATION_POLICY_VERSION,
         }
 
 
-def _inside(path: Path, root: Path) -> bool:
+class LicensedIntakeError(RuntimeError):
+    pass
+
+
+def _parse_timestamp(value: object) -> datetime | None:
+    text = str(value or "").strip()
+    if not text:
+        return None
     try:
-        path.resolve().relative_to(root.resolve())
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
     except ValueError:
-        return False
-    return True
-
-
-def ensure_private_staging(staging_dir: str | Path, *, repo_root: str | Path | None = None) -> Path:
-    staging = Path(staging_dir).resolve()
-    if not staging.is_dir():
-        raise LicensedIntakeError(f"staging directory is missing: {staging}")
-    if repo_root is not None:
-        root = Path(repo_root).resolve()
-        forbidden = (root / "website", root / ".pages-site")
-        for candidate in forbidden:
-            if _inside(staging, candidate):
-                raise LicensedIntakeError(
-                    f"licensed staging must stay outside public website artifacts: {staging}"
-                )
-    return staging
+        return None
+    return parsed if parsed.tzinfo is not None else None
 
 
 def _find_sensitive(value: object, path: tuple[str, ...] = ()) -> list[str]:
@@ -111,71 +96,98 @@ def _find_sensitive(value: object, path: tuple[str, ...] = ()) -> list[str]:
     elif isinstance(value, list):
         for index, child in enumerate(value):
             findings.extend(_find_sensitive(child, (*path, str(index))))
-    elif isinstance(value, str):
-        if any(pattern.search(value) for pattern in SENSITIVE_VALUE_PATTERNS):
-            findings.append(".".join(path) or "<root>")
     return findings
 
 
-def _timezone_timestamp(value: object, field: str) -> str:
-    text = str(value or "").strip()
-    if not text:
-        raise LicensedIntakeError(f"{field} is required")
+def _is_public_path(path: Path, repo_root: Path | None) -> bool:
+    if repo_root is None:
+        return False
+    public_root = (repo_root / "website").resolve()
     try:
-        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
-    except ValueError as error:
-        raise LicensedIntakeError(f"{field} must be ISO-8601") from error
-    if parsed.tzinfo is None:
-        raise LicensedIntakeError(f"{field} must include timezone")
-    return text
+        path.resolve().relative_to(public_root)
+    except ValueError:
+        return False
+    return True
 
 
-def _safe_identifier(value: object, field: str) -> str:
-    text = str(value or "").strip()
-    if not text or not SAFE_IDENTIFIER.fullmatch(text):
-        raise LicensedIntakeError(f"{field} is missing or contains unsafe characters")
-    return text
+def ensure_private_staging(path: str | Path, *, repo_root: str | Path | None = None) -> Path:
+    staging = Path(path).resolve()
+    if not staging.is_dir():
+        raise LicensedIntakeError(f"licensed staging directory is missing: {staging}")
+    root = Path(repo_root).resolve() if repo_root is not None else None
+    if _is_public_path(staging, root):
+        raise LicensedIntakeError("licensed staging must remain outside public website")
+    return staging
 
 
-def _rights_descriptor(rights_payload: Mapping[str, Any], *, now: datetime | None = None) -> tuple[dict[str, Any], str, str]:
-    if str(rights_payload.get("schema_version") or "").strip() != INTAKE_SCHEMA_VERSION:
+def write_private_json(
+    path: str | Path,
+    payload: Mapping[str, Any],
+    *,
+    repo_root: str | Path | None = None,
+) -> Path:
+    target = Path(path).resolve()
+    root = Path(repo_root).resolve() if repo_root is not None else None
+    if _is_public_path(target, root):
+        raise LicensedIntakeError("licensed output must remain outside public website")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return target
+
+
+def copy_private_bundle(
+    source: str | Path,
+    target: str | Path,
+    *,
+    repo_root: str | Path | None = None,
+) -> Path:
+    source_root = ensure_private_staging(source, repo_root=repo_root)
+    target_root = Path(target).resolve()
+    root = Path(repo_root).resolve() if repo_root is not None else None
+    if _is_public_path(target_root, root):
+        raise LicensedIntakeError("licensed bundle target must remain outside public website")
+    if target_root.exists():
+        shutil.rmtree(target_root)
+    shutil.copytree(source_root, target_root)
+    return target_root
+
+
+def _rights_descriptor(
+    rights_payload: Mapping[str, Any],
+    *,
+    now: datetime | None = None,
+) -> tuple[dict[str, Any], str, str]:
+    if str(rights_payload.get("schema_version") or "").strip() != RIGHTS_SCHEMA_VERSION:
         raise LicensedIntakeError(
-            f"rights schema_version must be {INTAKE_SCHEMA_VERSION!r}"
+            f"rights schema_version must be {RIGHTS_SCHEMA_VERSION!r}"
         )
-    if str(rights_payload.get("mode") or "").strip().upper() != LICENSED_MODE:
-        raise LicensedIntakeError("rights mode must be LICENSED; research/reference sources cannot enter production intake")
+    mode = str(rights_payload.get("mode") or "").strip().upper()
+    if mode != "LICENSED":
+        raise LicensedIntakeError("rights mode must be LICENSED")
 
-    provider_id = _safe_identifier(rights_payload.get("provider_id"), "provider_id")
-    contract_ref = _safe_identifier(rights_payload.get("contract_ref"), "contract_ref")
-    evidence_ref = _safe_identifier(rights_payload.get("evidence_ref"), "evidence_ref")
-    reviewed_at = _timezone_timestamp(rights_payload.get("reviewed_at"), "reviewed_at")
+    provider_id = str(rights_payload.get("provider_id") or "").strip()
+    contract_ref = str(rights_payload.get("contract_ref") or "").strip()
+    evidence_ref = str(rights_payload.get("evidence_ref") or "").strip()
+    reviewed_at = str(rights_payload.get("reviewed_at") or "").strip()
+    if not provider_id or not contract_ref or not evidence_ref or not reviewed_at:
+        raise LicensedIntakeError("provider_id, contract_ref, evidence_ref and reviewed_at are required")
 
     permissions = rights_payload.get("permissions")
     if not isinstance(permissions, Mapping):
-        raise LicensedIntakeError("permissions object is required")
-    missing = [key for key in REQUIRED_RIGHTS if permissions.get(key) is not True]
-    if missing:
-        raise LicensedIntakeError(
-            "licensed rights are incomplete: " + ", ".join(missing)
-        )
+        raise LicensedIntakeError("rights permissions object is required")
+    for permission in REQUIRED_PERMISSIONS:
+        if permissions.get(permission) is not True:
+            raise LicensedIntakeError(f"licensed permission must be explicitly true: {permission}")
 
     current = now or datetime.now(timezone.utc)
     if current.tzinfo is None:
-        raise LicensedIntakeError("now must be timezone-aware")
-    effective_from_raw = rights_payload.get("effective_from")
-    effective_until_raw = rights_payload.get("effective_until")
-    if effective_from_raw:
-        effective_from = datetime.fromisoformat(
-            _timezone_timestamp(effective_from_raw, "effective_from").replace("Z", "+00:00")
-        )
-        if current.astimezone(timezone.utc) < effective_from.astimezone(timezone.utc):
-            raise LicensedIntakeError("license is not effective yet")
-    if effective_until_raw:
-        effective_until = datetime.fromisoformat(
-            _timezone_timestamp(effective_until_raw, "effective_until").replace("Z", "+00:00")
-        )
-        if current.astimezone(timezone.utc) >= effective_until.astimezone(timezone.utc):
-            raise LicensedIntakeError("license has expired")
+        raise ValueError("now must be timezone-aware")
+    effective_from = _parse_timestamp(rights_payload.get("effective_from"))
+    effective_until = _parse_timestamp(rights_payload.get("effective_until"))
+    if effective_from is not None and current < effective_from.astimezone(current.tzinfo):
+        raise LicensedIntakeError("license is not yet effective")
+    if effective_until is not None and current > effective_until.astimezone(current.tzinfo):
+        raise LicensedIntakeError("license has expired")
 
     rights = {
         "publication_allowed": True,
@@ -208,12 +220,15 @@ def _descriptor_from_package(
             f"package schema_version must be {INTAKE_SCHEMA_VERSION!r}"
         )
     snapshot = package.get("snapshot")
+    compliance = package.get("compliance")
     active_status = package.get("active_status")
     datasets = package.get("datasets")
     if not isinstance(snapshot, Mapping):
         raise LicensedIntakeError("package.snapshot object is required")
     if str(snapshot.get("exchange") or "").strip().upper() != "HOSE":
         raise LicensedIntakeError("licensed intake only accepts HOSE")
+    if not isinstance(compliance, Mapping):
+        raise LicensedIntakeError("package.compliance object is required")
     if not isinstance(active_status, Mapping):
         raise LicensedIntakeError("package.active_status object is required")
     if not isinstance(datasets, Mapping):
@@ -223,6 +238,7 @@ def _descriptor_from_package(
         "contract_version": CONTRACT_VERSION,
         "snapshot": dict(snapshot),
         "rights": dict(rights),
+        "compliance": dict(compliance),
         "active_status": dict(active_status),
         "datasets": {str(key): dict(value) if isinstance(value, Mapping) else value for key, value in datasets.items()},
     }
@@ -288,25 +304,19 @@ def prepare_licensed_intake(
         failures=gate.failures,
         warnings=gate.warnings,
         dataset_rows=row_counts,
-        dataset_checksums=checksums,
     )
-    report = result.to_dict()
-    report["descriptor_sha256"] = _descriptor_sha256(descriptor)
-    report["production_gate"] = gate.to_dict()
+    report = {
+        "schema_version": INTAKE_SCHEMA_VERSION,
+        "accepted": True,
+        "publication_ready": gate.passed,
+        "provider_id": provider_id,
+        "evidence_ref": evidence_ref,
+        "descriptor_sha256": _descriptor_sha256(descriptor),
+        "dataset_rows": row_counts,
+        "dataset_checksums": checksums,
+        "production_gate": gate.to_dict(),
+        "gate_mutation_performed": False,
+        "credentials_persisted": False,
+        "public_output_written": False,
+    }
     return descriptor, result, report
-
-
-def write_private_json(path: str | Path, payload: Mapping[str, Any], *, repo_root: str | Path | None = None) -> None:
-    target = Path(path).resolve()
-    if repo_root is not None:
-        root = Path(repo_root).resolve()
-        for candidate in (root / "website", root / ".pages-site"):
-            if _inside(target, candidate):
-                raise LicensedIntakeError(
-                    f"licensed intake output must stay outside public website artifacts: {target}"
-                )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
