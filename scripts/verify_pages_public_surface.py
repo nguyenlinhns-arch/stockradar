@@ -1,23 +1,27 @@
 #!/usr/bin/env python3
-"""Verify the generated GitHub Pages artifact is production-facing and decision-first."""
+"""Verify the generated GitHub Pages artifact is production-facing and decision-first.
+
+Public publication is dynamic full-HOSE. Until licensed production data is approved, the
+public ticker seed must remain fail-closed: no curated ticker list and no generated ticker
+routes. The verifier protects that contract instead of requiring the retired Radar-30 demo.
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
 import re
-from collections import Counter
 from pathlib import Path
 from urllib.parse import urlsplit
 
 
 FORBIDDEN_ASSET_TERMS = ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE", "SHADOW")
 FORBIDDEN_HTML_TERMS = (
-    *FORBIDDEN_ASSET_TERMS,
+    "DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE",
     "DATA GATE", "CHƯA SẴN SÀNG", "CHƯA PHÁT HÀNH", "CHƯA CÓ SETUP",
     "ĐANG HOÀN THIỆN", "TRẠNG THÁI CÔNG KHAI", "ĐANG TẢI", "ĐANG KIỂM TRA",
-    "CHỜ DỮ LIỆU", "CHƯA ĐỦ MẪU", "DỮ LIỆU THAM CHIẾU", "MÃ THAM CHIẾU",
-    "MẪU BÁO CÁO", "MẪU EMAIL", "DỮ LIỆU MẪU", "MINH HỌA", "MINH HOẠ",
+    "CHỜ DỮ LIỆU", "DỮ LIỆU THAM CHIẾU", "MÃ THAM CHIẾU",
+    "MẪU BÁO CÁO", "MẪU EMAIL", "DỮ LIỆU MẪU",
 )
 FORBIDDEN_PUBLIC_METHOD_TERMS = (
     "PHÂN TÍCH",
@@ -123,6 +127,35 @@ def verify_header_auth_pair(page: Path, output: Path, source: str) -> list[str]:
     return errors
 
 
+def verify_fail_closed_universe(output: Path, errors: list[str]) -> None:
+    universe_path = output / "public" / "data" / "ticker-universe.json"
+    if not universe_path.is_file():
+        errors.append("public ticker universe missing")
+        return
+    payload = json.loads(universe_path.read_text(encoding="utf-8"))
+    if payload.get("data_status") != "BLOCKED_DATA_GATE":
+        errors.append(f"public ticker seed must be fail-closed, got data_status={payload.get('data_status')}")
+    if payload.get("public_scope") != "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED":
+        errors.append(f"public ticker seed scope is not fail-closed: {payload.get('public_scope')}")
+    if payload.get("items") != []:
+        errors.append("fail-closed public ticker seed must contain zero public ticker rows")
+    internal = payload.get("internal_reference") or {}
+    if int(internal.get("record_count") or 0) <= 0:
+        errors.append("fail-closed ticker contract lost internal reference count")
+    if internal.get("raw_publication_allowed") is not False:
+        errors.append("raw public ticker publication must remain disabled")
+
+    co_phieu = output / "co-phieu"
+    if co_phieu.is_dir():
+        generated = sorted(
+            path.parent.name
+            for path in co_phieu.glob("*/index.html")
+            if path.parent.name != "demo1"
+        )
+        if generated:
+            errors.append("fail-closed Pages artifact generated fixed ticker routes: " + ", ".join(generated))
+
+
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
@@ -141,21 +174,7 @@ def main() -> None:
         if not (output / asset).is_file():
             errors.append(f"required UX asset missing: {asset}")
 
-    radar_tickers: list[str] = []
-    universe_path = output / "public" / "data" / "ticker-universe.json"
-    if not universe_path.is_file():
-        errors.append("Radar review universe missing")
-    else:
-        payload = json.loads(universe_path.read_text(encoding="utf-8"))
-        items = payload.get("items", [])
-        counts = Counter(item.get("sector") for item in items)
-        radar_tickers = [str(item.get("ticker") or "").upper() for item in items]
-        if len(items) != 30:
-            errors.append(f"Radar review must contain 30 tickers, got {len(items)}")
-        if len(counts) != 10 or set(counts.values()) != {3}:
-            errors.append(f"Radar review sector balance must be 10x3, got {dict(counts)}")
-        if any(item.get("exchange") != "HOSE" for item in items):
-            errors.append("Radar review contains non-HOSE ticker")
+    verify_fail_closed_universe(output, errors)
 
     require_text(output, "signup/index.html", ('name="email_daily_brief"', 'name="email_event_alerts"', 'assets/signup-email-intent.js'), errors)
     require_text(output, "tai-khoan/index.html", ('data-product-email-preferences', 'data-product-email-form', 'assets/email-preferences.js'), errors)
@@ -164,10 +183,9 @@ def main() -> None:
         (
             'data-email-conversion', 'href="signup/"', 'href="dang-nhap/"', 'data-header-auth-actions',
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
-            'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
-            'Radar 30', '30 mã', '10 ngành · 3 mã mỗi ngành', 'Free và Premium có gì?',
-            'Lý do chính', 'Biên an toàn &amp; kỳ vọng', 'Trạng thái giá', 'Dòng tiền &amp; rủi ro',
-            'Email & cảnh báo trong phiên', '4 mốc/ngày',
+            'home-radar-sector-list', 'home-tier-grid', 'Bạn đang quan tâm mã nào?', 'Tra mã miễn phí',
+            'home-decision-v2', 'Free và Premium có gì?', 'Lý do chính', 'Biên an toàn &amp; kỳ vọng',
+            'Trạng thái giá', 'Dòng tiền &amp; rủi ro', 'Email & cảnh báo trong phiên', '4 mốc/ngày',
         ), errors,
     )
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
@@ -181,49 +199,36 @@ def main() -> None:
         if obsolete.lower() in home_source.lower():
             errors.append(f"obsolete homepage element remains: {obsolete}")
 
-    if len(set(radar_tickers)) != 30:
-        errors.append("Radar ticker routes require 30 unique public tickers")
-    for ticker in radar_tickers:
-        require_text(
-            output, f"co-phieu/{ticker}/index.html",
-            (
-                '<base href="../../">', f'<title>{ticker} — Tra cứu &amp; quyết định | StockRadar</title>',
-                f'<link rel="canonical" href="https://stockradar.vn/co-phieu/{ticker}/">',
-                f'<meta property="og:url" content="https://stockradar.vn/co-phieu/{ticker}/">',
-                f'data-static-ticker="{ticker}"', 'name="robots" content="noindex,nofollow"', 'assets/stock-page-context-v1.js',
-            ), errors,
-        )
-
     require_text(
         output, "dang-ky/index.html",
         (
             'data-header-auth-actions', 'href="dang-nhap/"', 'href="signup/?plan=free"', 'href="signup/?plan=premium"',
             'data-proposition="plans"', 'data-plan-free', 'data-plan-premium', 'data-plan-comparison', 'assets/plans-v1.css',
             'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js',
-            'assets/auth-production-gate.js', 'assets/public-copy-v7.js',
+            'assets/auth-production-gate.js', 'assets/public-copy-v7.js', 'conversion-plan-card', '199.000đ', 'Xem mẫu Premium',
         ), errors,
     )
     require_text(
         output, "khuyen-nghi/index.html",
         (
-            '<strong>0 mã</strong>', '<strong>30 mã</strong>', 'Danh sách cổ phiếu theo Radar rà soát',
-            'reference-watch-table', '<b>ACB</b>', '<b>VNM</b>', '<b>NKG</b>', '<b>HAH</b>',
-            'không phải khuyến nghị mua', 'assets/recommendation-dense-v3.css', 'assets/site-v4.css',
-            'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js',
+            'data-current-action-count', 'Toàn HOSE', 'Shortlist theo snapshot', 'reference-watch-table',
+            'data-radar-review-list', 'Không đủ chuẩn → không công bố', 'assets/recommendation-dense-v3.css',
+            'assets/site-v4.css', 'assets/public-ux.js', 'assets/public-fallbacks-v4.js', 'assets/direct-ticker-nav-v1.js',
             'assets/auth-production-gate.js', 'assets/public-copy-v7.js', 'data-header-auth-actions',
         ), errors,
     )
 
     route_features = {
-        "radar5/index.html": ('RADAR 30 · HOSE', '30 mã', 'CÁCH DÙNG RADAR', '3. Xem trạng thái', '4. Quản trị rủi ro'),
+        "radar5/index.html": ('CÁCH DÙNG RADAR', '3. Xem trạng thái', '4. Quản trị rủi ro'),
         "breakout/index.html": ('Mua · chờ · theo dõi · bỏ qua', 'TRẠNG THÁI HÀNH ĐỘNG'),
         "risk/index.html": ('Stop-loss · Hạ tỷ trọng · Cắt lỗ · Risk/Reward', '4 MỐC QUÉT TRONG PHIÊN'),
         "track-record/index.html": ('Dấu thời gian · Entry · Target/Stop · Vòng đời khuyến nghị', 'NHẬT KÝ APPEND-ONLY'),
         "thay-doi-hom-nay/index.html": ('Trạng thái · Vùng giá · Dòng tiền · Thị trường', '4 MỐC QUÉT TRONG PHIÊN'),
-        "hieu-qua/index.html": ('Kích hoạt · Entry · Target/Stop · Benchmark', 'QUY TẮC ĐO NHẤT QUÁN'),
-        "nganh/index.html": ('10 nhóm ngành · 3 mã mỗi ngành · 30 cổ phiếu HOSE', 'SO SÁNH CÙNG NGÀNH'),
+        "hieu-qua/index.html": ('Kích hoạt · Entry · Target/Stop · Benchmark', 'KẾT QUẢ TRƯỚC, CÁCH ĐO SAU', 'data-performance-summary'),
+        "nganh/index.html": ('SO SÁNH CÙNG NGÀNH',),
         "kiem-tra-co-phieu/index.html": ('4 KHUNG ĐẦU TƯ', 'Buy Zone · Stop · Target'),
-        "co-phieu/index.html": ('Mã này nên làm gì?', 'MUA hay CHỜ', 'GIỮ, NHỒI, HẠ TỶ TRỌNG hay BÁN', 'Kế hoạch giao dịch'),
+        "co-phieu/index.html": ('Mã này nên làm gì?', 'BẢN XEM TRƯỚC PREMIUM', 'MUA / CHỜ', 'GIỮ / TĂNG / GIẢM / BÁN', 'Vùng mua', 'Target', 'Xem mẫu Premium'),
+        "premium-mau/index.html": ('MẪU GIAO DIỆN · KHÔNG PHẢI KHUYẾN NGHỊ', 'MUA / CHỜ', 'GIỮ / TĂNG / GIẢM / BÁN', '[Theo snapshot thật]'),
     }
     for route, features in route_features.items():
         require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS, *features), errors)
@@ -262,7 +267,7 @@ def main() -> None:
         upper = source.upper()
         for term in FORBIDDEN_HTML_TERMS:
             if term in upper:
-                errors.append(f"unfinished/sample public HTML term {term}: {page.relative_to(output)}")
+                errors.append(f"unfinished/fake-data public HTML term {term}: {page.relative_to(output)}")
         for term in FORBIDDEN_PUBLIC_METHOD_TERMS:
             if term in upper:
                 errors.append(f"analysis/method language leaked to public HTML {term}: {page.relative_to(output)}")
@@ -282,7 +287,7 @@ def main() -> None:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
     print(
-        f"Verified production public surface: {len(pages)} HTML pages; decision-first product pages + 30 Radar ticker routes; /phan-tich/ retired; no analysis labels, named methods/setup jargon or demo/sample/unfinished public copy"
+        f"Verified production public surface: {len(pages)} HTML pages; dynamic full-HOSE contract fail-closed; no fixed public ticker seed/routes; /phan-tich/ retired; no analysis labels, named methods/setup jargon or fake-data copy"
     )
 
 
