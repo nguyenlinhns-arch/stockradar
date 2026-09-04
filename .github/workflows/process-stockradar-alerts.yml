@@ -1,0 +1,74 @@
+name: Process StockRadar Action Alerts
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/process-stockradar-alerts.yml"
+      - "supabase/functions/stock-alert-orchestrator/**"
+      - "engine/stockradar/report_contract.py"
+      - "engine/tests/test_action_alert_contract.py"
+      - "supabase/migrations/*stockradar*signal*"
+      - "supabase/migrations/*stockradar*notification*"
+  schedule:
+    # Run shortly after the official intraday scan checkpoints (Vietnam time).
+    # 10:35, 11:20, 13:35, 14:20 ICT = UTC+7.
+    - cron: "35 3 * * 1-5"
+    - cron: "20 4 * * 1-5"
+    - cron: "35 6 * * 1-5"
+    - cron: "20 7 * * 1-5"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: stockradar-action-alerts
+  cancel-in-progress: false
+
+jobs:
+  process:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate explicit action alert contract
+        run: python -m unittest engine.tests.test_action_alert_contract -v
+
+      - name: Obtain GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=stockradar-alert-orchestrator")"
+          TOKEN="$(python -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"${RESPONSE}")"
+          echo "token=${TOKEN}" >> "${GITHUB_OUTPUT}"
+
+      - name: Process approved StockRadar report transitions
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --retry 2 \
+            -H "Authorization: Bearer ${GITHUB_OIDC_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data '{"emit_notifications":true,"enqueue_emails":true}' \
+            "https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/stock-alert-orchestrator" \
+            | tee /tmp/stockradar-alert-result.json
+          python - <<'PY'
+          import json
+          data = json.load(open('/tmp/stockradar-alert-result.json', encoding='utf-8'))
+          if data.get('status') != 'PROCESSED':
+              raise SystemExit(f"Unexpected alert orchestrator status: {data}")
+          result = data.get('result') or {}
+          print(json.dumps(data, ensure_ascii=False, indent=2))
+          if int(result.get('emails_enqueued', 0)) > int(result.get('notifications_created', 0)):
+              raise SystemExit('Email enqueue count cannot exceed in-app notifications created')
+          PY
