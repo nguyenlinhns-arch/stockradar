@@ -1,67 +1,139 @@
 #!/usr/bin/env python3
-"""Production checks for StockRadar AI as the primary web product surface."""
+"""Production checks for StockRadar AI as the primary web product surface.
+
+Supports the native AI-first homepage (`ai-center.js`, including Guest 3/day) and
+the older injected inline AI center used as a backwards-compatible fallback.
+"""
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
 
+# Keep the legacy contract explicit so older pages/builds remain verifiable.
+LEGACY_HOME_COPY = (
+    "Hỏi StockRadar AI trước khi ra quyết định.",
+    "10 lượt hỏi mỗi ngày",
+    "email Action Alert chủ động",
+)
+
+
+def require_markers(source: str, markers: tuple[str, ...], label: str) -> None:
+    for marker in markers:
+        if marker not in source:
+            raise SystemExit(f"{label} missing: {marker}")
+
+
+def reject_browser_secrets(source: str, label: str) -> None:
+    for token in ("OPENAI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "sb_secret_"):
+        if token in source:
+            raise SystemExit(f"Secret-like token must not be present in {label}: {token}")
+
+
 def main() -> int:
     output = Path(sys.argv[1] if len(sys.argv) > 1 else ".pages-site").resolve()
-    required_assets = [output / "assets" / "ai-assistant.js", output / "assets" / "ai-assistant.css"]
-    for asset in required_assets:
+    assistant_assets = [output / "assets" / "ai-assistant.js", output / "assets" / "ai-assistant.css"]
+    for asset in assistant_assets:
         if not asset.is_file() or asset.stat().st_size < 500:
             raise SystemExit(f"Missing AI asset: {asset}")
 
-    js = required_assets[0].read_text(encoding="utf-8")
-    css = required_assets[1].read_text(encoding="utf-8")
-    forbidden = ("OPENAI_API_KEY", "SUPABASE_SERVICE_ROLE_KEY", "sb_secret_")
-    for token in forbidden:
-        if token in js:
-            raise SystemExit(f"Secret-like token must not be present in browser JS: {token}")
+    assistant_js = assistant_assets[0].read_text(encoding="utf-8")
+    assistant_css = assistant_assets[1].read_text(encoding="utf-8")
+    reject_browser_secrets(assistant_js, "AI assistant browser JS")
 
-    for marker in (
-        "data-stockradar-ai-inline",
-        "10 lượt mỗi ngày",
-        "Tạo Free · 10 lượt/ngày",
-        "PREMIUM · AI + EMAIL ACTION ALERT",
-        "Free · còn",
-    ):
-        if marker not in js:
-            raise SystemExit(f"AI browser product contract missing: {marker}")
-
-    for marker in (
-        ".sr-ai-center",
-        ".sr-ai-inline-host",
-        ".sr-ai-inline-form",
-        ".sr-ai-product-model",
-    ):
-        if marker not in css:
-            raise SystemExit(f"AI center styling missing: {marker}")
+    require_markers(
+        assistant_js,
+        (
+            "data-stockradar-ai-inline",
+            "10 lượt mỗi ngày",
+            "Tạo Free · 10 lượt/ngày",
+            "PREMIUM · AI + EMAIL ACTION ALERT",
+            "Free · còn",
+        ),
+        "AI browser product contract",
+    )
+    require_markers(
+        assistant_css,
+        (
+            ".sr-ai-center",
+            ".sr-ai-inline-host",
+            ".sr-ai-inline-form",
+            ".sr-ai-product-model",
+        ),
+        "AI center styling",
+    )
 
     home = (output / "index.html").read_text(encoding="utf-8")
-    required_home = (
-        'id="stockradar-ai"',
-        "data-stockradar-ai-center",
-        "data-stockradar-ai-inline",
-        "Hỏi StockRadar AI trước khi ra quyết định.",
-        "FREE",
-        "10 lượt hỏi mỗi ngày",
-        "PREMIUM",
-        "email Action Alert chủ động",
-        "Radar HOSE",
-        "Khuyến nghị",
-        "Hiệu quả",
-        "sr-ai-nav-link",
-    )
-    for marker in required_home:
-        if marker not in home:
-            raise SystemExit(f"Homepage is not AI-first; missing: {marker}")
-    if home.index('id="stockradar-ai"') > home.index("SAU KHI TRA MÃ"):
-        raise SystemExit("StockRadar AI center must appear before legacy/product supporting sections")
+    native_ai_first = "assets/ai-center.js" in home and "data-stockradar-ai-center" in home
+
+    if native_ai_first:
+        center_asset = output / "assets" / "ai-center.js"
+        center_css = output / "assets" / "home-ai-center-v1.css"
+        for asset in (center_asset, center_css):
+            if not asset.is_file() or asset.stat().st_size < 500:
+                raise SystemExit(f"Missing native AI-first asset: {asset}")
+
+        center_js = center_asset.read_text(encoding="utf-8")
+        reject_browser_secrets(center_js, "native AI center browser JS")
+        require_markers(
+            center_js,
+            (
+                "stock-ai-guest",
+                "stock-ai",
+                "KHÁCH · 3 CÂU / NGÀY",
+                "FREE · 10 CÂU / NGÀY",
+                "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
+                "signup/?plan=free",
+                "dang-ky/?plan=premium",
+            ),
+            "Native AI browser product contract",
+        )
+        require_markers(
+            home,
+            (
+                'id="stockradar-ai"',
+                "data-stockradar-ai-center",
+                "3 câu/ngày",
+                "10 câu/ngày",
+                "Hỏi không giới hạn",
+                "Action Alert",
+                "Radar HOSE",
+                "Khuyến nghị",
+                "Hiệu quả",
+                "sr-ai-nav-link",
+            ),
+            "Native AI-first homepage",
+        )
+        ai_pos = home.index('id="stockradar-ai"')
+        lookup_pos = home.find("data-stock-search-form")
+        radar_pos = home.find("data-live-radar-home")
+        if lookup_pos < 0 or radar_pos < 0 or not (ai_pos < lookup_pos < radar_pos):
+            raise SystemExit("Native StockRadar AI center must appear before lookup and supporting Radar")
+    else:
+        require_markers(
+            home,
+            (
+                'id="stockradar-ai"',
+                "data-stockradar-ai-center",
+                "data-stockradar-ai-inline",
+                *LEGACY_HOME_COPY,
+                "FREE",
+                "PREMIUM",
+                "Radar HOSE",
+                "Khuyến nghị",
+                "Hiệu quả",
+                "sr-ai-nav-link",
+            ),
+            "Legacy AI-first homepage",
+        )
+        if "SAU KHI TRA MÃ" in home and home.index('id="stockradar-ai"') > home.index("SAU KHI TRA MÃ"):
+            raise SystemExit("StockRadar AI center must appear before legacy/product supporting sections")
+
     if home.count("<h1") != 1:
         raise SystemExit("StockRadar AI center must own the single homepage H1")
 
+    # The supporting AI assistant must remain available on core product pages,
+    # even when the homepage uses the newer guest-capable native AI center.
     for relative in (
         "index.html",
         "hom-nay/index.html",
@@ -76,7 +148,7 @@ def main() -> int:
         if "sr-ai-nav-link" not in source:
             raise SystemExit(f"AI navigation missing from: {relative}")
 
-    print("StockRadar AI production surface verified: AI-first homepage + Free 10/day + Premium proactive email positioning")
+    print("StockRadar AI production surface verified: AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement")
     return 0
 
 
