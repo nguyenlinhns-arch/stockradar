@@ -1,0 +1,16 @@
+.home-premium-email-v1{margin-top:18px;padding:18px;border:1px solid rgba(255,255,255,.13);border-radius:16px;background:rgba(255,255,255,.045)}
+.home-premium-email-v1 h3{margin:6px 0 8px;font-size:1.08rem}.home-premium-email-v1>p{margin:0;color:var(--muted,#aebbd0)}
+.home-premium-email-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}.home-premium-email-step{padding:12px;border-radius:12px;background:rgba(8,18,35,.45);border:1px solid rgba(255,255,255,.09)}
+.home-premium-email-step strong,.home-premium-email-step span{display:block}.home-premium-email-step strong{font-size:.88rem}.home-premium-email-step span{margin-top:4px;font-size:.8rem;color:var(--muted,#aebbd0);line-height:1.45}
+.home-premium-email-rule{display:block;margin-top:12px;font-size:.8rem;color:var(--muted,#aebbd0)}
+.premium-email-onboarding-v1{display:none;margin:0 0 16px;padding:16px;border-radius:16px;border:1px solid rgba(54,135,255,.24);background:rgba(54,135,255,.07)}
+.conversion-premium-flow .premium-email-onboarding-v1{display:block}.premium-email-onboarding-v1 h3{margin:4px 0 8px}.premium-email-onboarding-v1 p{margin:0;color:var(--muted,#667085)}
+.premium-email-onboarding-steps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}.premium-email-onboarding-steps span{display:block;padding:10px;border-radius:10px;background:rgba(255,255,255,.7);font-size:.84rem;line-height:1.4}
+.premium-email-health-v1{margin:0 0 24px}.premium-email-health-card{padding:20px;border:1px solid rgba(65,105,225,.16);border-radius:18px;background:linear-gradient(145deg,rgba(37,99,235,.06),rgba(255,255,255,.02))}
+.premium-email-health-head{display:flex;justify-content:space-between;gap:18px;align-items:flex-start}.premium-email-health-head h2{margin:4px 0 6px}.premium-email-health-head p{margin:0;color:var(--muted,#667085)}
+.premium-email-health-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin-top:16px}.premium-email-health-grid>div{padding:12px;border-radius:12px;background:var(--surface,#fff);border:1px solid rgba(15,23,42,.08)}
+.premium-email-health-grid span,.premium-email-health-grid strong{display:block}.premium-email-health-grid span{font-size:.74rem;color:var(--muted,#667085)}.premium-email-health-grid strong{margin-top:4px;font-size:.92rem;word-break:break-word}
+.premium-email-health-note{margin:12px 0 0;font-size:.82rem;color:var(--muted,#667085)}
+.email-choice.is-optional-premium{border-style:dashed}.email-choice.is-optional-premium .email-choice-badge{margin-right:6px}
+@media(max-width:900px){.home-premium-email-steps,.premium-email-onboarding-steps{grid-template-columns:1fr}.premium-email-health-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:620px){.premium-email-health-head{display:block}.premium-email-health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.home-premium-email-v1,.premium-email-health-card{padding:15px}}
