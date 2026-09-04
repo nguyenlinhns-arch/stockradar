@@ -25,10 +25,12 @@ class ConversionFunnelV4Tests(unittest.TestCase):
         self.assertIn("session_hash", sql)
         self.assertIn("ip_hash", sql)
 
-    def test_public_edge_is_origin_limited_and_hashes_connection_data(self) -> None:
+    def test_public_edge_is_origin_limited_hashes_connection_data_and_excludes_qa(self) -> None:
         edge = self.read("supabase/functions/conversion-event/index.ts")
         self.assertIn("https://stockradar.vn", edge)
         self.assertIn("ALLOWED_EVENTS", edge)
+        self.assertIn("NON_PRODUCTION_ORIGINS", edge)
+        self.assertIn("recorded: false", edge)
         self.assertIn("sha256Hex", edge)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY", edge)
         self.assertIn("capture_conversion_event_v1", edge)
@@ -92,7 +94,18 @@ function wireSignup() {
         privacy = self.read("website/quyen-rieng-tu/index.html")
         self.assertIn("Dữ liệu kỹ thuật, đo funnel và chống lạm dụng", privacy)
         self.assertIn("không ghi email, mật khẩu, OTP, NAV", privacy)
-        self.assertIn("địa chỉ IP thô", privacy)
+        self.assertIn("không lưu địa chỉ IP thô", privacy)
+
+    def test_private_business_views_report_30_day_funnel_and_ticker_interest(self) -> None:
+        sql = self.read("supabase/migrations/20260904075200_add_commercial_funnel_views.sql")
+        self.assertIn("private.conversion_funnel_30d_v1", sql)
+        self.assertIn("home_to_lookup_pct", sql)
+        self.assertIn("lookup_to_preview_pct", sql)
+        self.assertIn("pricing_to_premium_signup_pct", sql)
+        self.assertIn("premium_signup_to_checkout_pct", sql)
+        self.assertIn("private.conversion_ticker_interest_30d_v1", sql)
+        self.assertIn("premium_interest_sessions", sql)
+        self.assertIn("revoke all on private.conversion_funnel_30d_v1 from public, anon, authenticated", sql)
 
     def test_pages_workflow_applies_conversion_funnel_patch(self) -> None:
         workflow = self.read(".github/workflows/pages.yml")
