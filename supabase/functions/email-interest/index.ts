@@ -27,6 +27,11 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
+function textField(payload: Record<string, unknown>, key: string, maxLength: number) {
+  const value = typeof payload[key] === "string" ? String(payload[key]).trim() : "";
+  return value.replace(/[\r\n\t]/g, "").slice(0, maxLength);
+}
+
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get("origin") || "";
   if (!ALLOWED_ORIGINS.has(origin)) {
@@ -53,6 +58,7 @@ Deno.serve(async (req: Request) => {
     return json(origin, 400, { accepted: false, message: "Yêu cầu không hợp lệ." });
   }
 
+  // Honeypot: bots get a generic accepted response but no database write.
   if (typeof payload.company === "string" && payload.company.trim()) {
     return json(origin, 202, { accepted: true, status: "PENDING_VERIFICATION" });
   }
@@ -62,6 +68,13 @@ Deno.serve(async (req: Request) => {
   const eventAlerts = payload.event_alerts === true;
   const consentVersion = typeof payload.consent_version === "string" ? payload.consent_version : "";
   const privacyAccepted = payload.privacy_accepted === true;
+  const sourcePathRaw = textField(payload, "source_path", 256);
+  const sourcePath = sourcePathRaw.startsWith("/") ? sourcePathRaw : "";
+  const utmSource = textField(payload, "utm_source", 120);
+  const utmCampaign = textField(payload, "utm_campaign", 160);
+  const referrerHost = textField(payload, "referrer_host", 253)
+    .toLowerCase()
+    .replace(/[^a-z0-9.:-]/g, "");
 
   if (
     email.length < 3 || email.length > 160 ||
@@ -80,7 +93,7 @@ Deno.serve(async (req: Request) => {
   const clientIp = req.headers.get("cf-connecting-ip") || forwarded || "unknown";
   const userAgent = req.headers.get("user-agent") || "unknown";
   const day = new Date().toISOString().slice(0, 10);
-  const ipHash = await sha256Hex(`${day}|${clientIp}|${userAgent}|stockradar-email-interest-v1`);
+  const ipHash = await sha256Hex(`${day}|${clientIp}|${userAgent}|stockradar-email-interest-v2`);
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -89,7 +102,7 @@ Deno.serve(async (req: Request) => {
     return json(origin, 503, { accepted: false, message: "Dịch vụ đăng ký email đang tạm thời chưa sẵn sàng." });
   }
 
-  const rpc = await fetch(`${supabaseUrl}/rest/v1/rpc/capture_email_subscription_interest`, {
+  const rpc = await fetch(`${supabaseUrl}/rest/v1/rpc/capture_email_subscription_interest_v2`, {
     method: "POST",
     headers: {
       apikey: serviceRoleKey,
@@ -103,6 +116,10 @@ Deno.serve(async (req: Request) => {
       p_event_alerts: eventAlerts,
       p_consent_version: consentVersion,
       p_ip_hash: ipHash,
+      p_source_path: sourcePath || null,
+      p_utm_source: utmSource || null,
+      p_utm_campaign: utmCampaign || null,
+      p_referrer_host: referrerHost || null,
     }),
   });
 
@@ -121,6 +138,6 @@ Deno.serve(async (req: Request) => {
   return json(origin, 202, {
     accepted: true,
     status: "PENDING_VERIFICATION",
-    message: "Đã ghi nhận email và lựa chọn ở trạng thái chờ xác minh. StockRadar chưa gửi báo cáo hoặc cảnh báo cho tới khi email được xác minh và các điều kiện gửi được đáp ứng.",
+    message: "Đã ghi nhận email và lựa chọn ở trạng thái chờ xác minh. Hoàn tất tạo tài khoản Free và xác minh email để kích hoạt bản rà soát 09:00; cảnh báo mua/bán chỉ dành cho Premium.",
   });
 });
