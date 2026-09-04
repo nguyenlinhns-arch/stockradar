@@ -72,7 +72,9 @@ ROUTES = {
             "auth-config.js", "app.js", "checkout-v1.js", "paid-nav-v1.js", "conversion-v3.js",
             "decision-copy-guard-v1.js", "header-notifications.js", "commercial-v2.js",
         },
-        "max_css": 6, "max_js": 8, "max_bytes": 225_000,
+        # paid-nav-v1 now owns canonical signed-in header state and session bridging;
+        # keep a small explicit budget allowance for that functional runtime.
+        "max_css": 6, "max_js": 8, "max_bytes": 230_000,
     },
 }
 
