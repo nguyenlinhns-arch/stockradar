@@ -5,7 +5,7 @@ import re
 def replace_method(relative: str, name: str, new_block: str) -> None:
     path = Path(relative)
     text = path.read_text(encoding="utf-8")
-    pattern = re.compile(rf"^    def {re.escape(name)}\([^\n]*\):\n.*?(?=^    def |^if __name__ ==)", re.M | re.S)
+    pattern = re.compile(rf"^    def {re.escape(name)}.*?:\n.*?(?=^    def |^if __name__ ==)", re.M | re.S)
     match = pattern.search(text)
     if not match:
         raise SystemExit(f"method not found: {relative}:{name}")
