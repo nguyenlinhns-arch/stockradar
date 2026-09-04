@@ -12,14 +12,14 @@
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
-  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
+  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="hom-nay/">Hôm nay</a><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
   <main id="content" class="auth-shell">
     <div class="container auth-layout">
       <section class="auth-intro">
         <span class="panel-label">ĐĂNG NHẬP</span>
-        <h1>Quay lại bảng điều hành StockRadar.</h1>
-        <p>Dùng đúng email và mật khẩu đã đăng ký. Nếu tài khoản chưa xác minh, có thể gửi lại và nhập OTP 6 số ngay tại trang này.</p>
-        <ul class="auth-benefits"><li>Giữ phiên đăng nhập trên thiết bị hiện tại.</li><li>Khôi phục mật khẩu qua email nếu quên.</li><li>Gửi lại OTP cho tài khoản chưa xác minh.</li></ul>
+        <h1>Quay lại bảng Hôm nay của StockRadar.</h1>
+        <p>Dùng đúng email và mật khẩu đã đăng ký. Sau khi đăng nhập, StockRadar đưa bạn thẳng tới các mã đang sở hữu, watchlist và hành động cần chú ý.</p>
+        <ul class="auth-benefits"><li>Ưu tiên việc cần làm thay vì quay lại trang cài đặt.</li><li>Giữ phiên đăng nhập trên thiết bị hiện tại.</li><li>Gửi lại OTP hoặc khôi phục mật khẩu khi cần.</li></ul>
       </section>
       <section class="auth-card" aria-labelledby="login-title">
         <div class="auth-card-header"><span class="auth-config-pill">SECURE AUTH</span><h2 id="login-title">Đăng nhập</h2><p>Nhập thông tin tài khoản StockRadar.</p></div>
@@ -36,5 +36,14 @@
     </div>
   </main>
   <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="signup/">Đăng ký</a></div></div><p class="disclaimer">Không chia sẻ mật khẩu hoặc mã OTP xác minh tài khoản StockRadar.</p></div></footer>
+  <script>
+    (() => {
+      const url = new URL(location.href);
+      if (!url.searchParams.has('next')) {
+        url.searchParams.set('next', 'hom-nay/');
+        history.replaceState(null, '', url);
+      }
+    })();
+  </script>
 </body>
 </html>
