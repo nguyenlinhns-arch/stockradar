@@ -9,7 +9,6 @@ No fake ticker result, performance number, or payment capability is introduced h
 from __future__ import annotations
 
 import argparse
-import re
 from pathlib import Path
 
 
@@ -135,10 +134,6 @@ def main() -> None:
         raise RuntimeError("Could not locate homepage conversion body")
 
     source = source[:start] + SECTIONS + "\n  " + source[end:]
-
-    # Remove duplicate explanatory rows above the fold. The hero should have one task: lookup.
-    source = re.sub(r'\s*<div class="home-value-strip".*?</div>\s*</div>', "", source, count=1, flags=re.DOTALL)
-    source = re.sub(r'\s*<nav class="horizon-tabs operations-horizons".*?</nav>', "", source, count=1, flags=re.DOTALL)
 
     source = source.replace(
         '<p class="stock-analysis-intro">Nhập mã HOSE để xem ngay <strong>MUA hay CHỜ</strong>. Khi cần quyết định đầy đủ, Premium mở trạng thái vị thế, vùng mua, Stop, Target và cảnh báo thay đổi.</p>',
