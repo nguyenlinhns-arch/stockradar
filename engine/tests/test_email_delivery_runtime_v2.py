@@ -109,11 +109,33 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             "record_stockradar_email_delivery_event_v1",
             '"email.bounced"',
             '"email.complained"',
+            '"email.suppressed"',
+            "suppression_type",
+            "suppression_message",
             "RESEND_WEBHOOK_SECRET",
             "SUPABASE_SECRET_KEYS",
         ):
             self.assertIn(marker, source)
         self.assertLess(source.index("verifySvix(rawBody"), source.index("JSON.parse(rawBody)"))
+
+    def test_provider_suppressed_event_is_idempotent_and_blocks_future_product_email(self) -> None:
+        sql = self.read("supabase/migrations/20260904124120_mirror_resend_suppressed_delivery_events.sql")
+        for marker in (
+            "'email.suppressed'",
+            "get diagnostics v_inserted = row_count",
+            "return jsonb_build_object('status','DUPLICATE'",
+            "v_event_type in ('email.bounced','email.complained','email.suppressed')",
+            "else 'ADMIN'",
+            "insert into private.email_suppressions",
+            "update public.product_email_preferences",
+            "set enabled=false",
+            "to service_role",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn(
+            "grant execute on function public.record_stockradar_email_delivery_event_v1",
+            sql.split("to service_role")[0].lower().replace("revoke all on function", ""),
+        )
 
     def test_unsubscribe_is_token_scoped_and_does_not_delete_account(self) -> None:
         source = self.read("supabase/functions/email-unsubscribe/index.ts")
