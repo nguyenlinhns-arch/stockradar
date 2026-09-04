@@ -4,18 +4,19 @@
   <base href="./">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="StockRadar — tra cứu cổ phiếu HOSE, Radar 30 mã cân bằng ngành, phân tích Free và bộ công cụ Premium chuyên sâu.">
+  <meta name="description" content="StockRadar — tra cứu cổ phiếu HOSE, nhận bản rà soát 09:00 miễn phí và nâng Premium để nhận cảnh báo điểm mua/bán trong phiên.">
   <meta name="stockradar-internal-status" content="PRODUCTION">
-  <meta property="og:title" content="StockRadar — Radar và phân tích cổ phiếu HOSE">
-  <meta property="og:description" content="Tra cứu HOSE, Radar 30 cổ phiếu theo 10 ngành, phân tích doanh nghiệp, định giá và kế hoạch giao dịch.">
+  <meta property="og:title" content="StockRadar — Radar cổ phiếu HOSE & bản rà soát 09:00">
+  <meta property="og:description" content="Tra cứu HOSE, Radar 30 cổ phiếu theo 10 ngành, nhận email Free lúc 09:00 và cảnh báo hành động Premium trong phiên.">
   <meta property="og:type" content="website">
-  <title>StockRadar — Radar & phân tích cổ phiếu HOSE</title>
+  <title>StockRadar — Radar HOSE & bản rà soát 09:00</title>
   <link rel="icon" href="assets/logo.svg">
-  <link rel="stylesheet" href="assets/styles.css?v=20260902-data1">
+  <link rel="stylesheet" href="assets/styles.css?v=20260904-funnel1">
   <link rel="stylesheet" href="assets/home-dashboard.css?v=20260903-home2">
   <link rel="stylesheet" href="assets/home-dense-v3.css?v=20260903-dense3">
   <link rel="stylesheet" href="assets/home-focus-v1.css?v=20260903-focus2">
-  <script src="assets/app.js?v=20260902-data1" defer></script>
+  <link rel="stylesheet" href="assets/home-conversion-v2.css?v=20260904-funnel1">
+  <script src="assets/app.js?v=20260904-funnel1" defer></script>
 </head>
 <body data-proposition="organic" class="app-home">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -24,7 +25,7 @@
     <div class="container nav">
       <a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button>
-      <nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>
+      <nav class="nav-links" id="site-menu" aria-label="Điều hướng chính">
         <a href="radar5/">Radar</a>
         <a href="kiem-tra-co-phieu/">Tra cứu</a>
         <a href="khuyen-nghi/">Khuyến nghị</a>
@@ -38,8 +39,8 @@
     <section class="operations-toolbar compact-home-toolbar">
       <div class="container">
         <div class="operations-title-row">
-          <div><span class="panel-label">BẢNG ĐIỀU HÀNH HOSE</span><h1>StockRadar</h1></div>
-          <span class="data-pill">HOSE · 4 KHUNG ĐẦU TƯ</span>
+          <div><span class="panel-label">RADAR CỔ PHIẾU HOSE</span><h1>StockRadar</h1></div>
+          <span class="data-pill">FREE 09:00 · PREMIUM TRONG PHIÊN</span>
         </div>
         <div class="home-command-row">
           <div class="operations-search">
@@ -50,12 +51,30 @@
             </form>
             <div class="search-result" data-stock-search-result aria-live="polite"></div>
           </div>
-          <div class="home-register-compact">
-            <strong>StockRadar Premium</strong>
-            <span>Free: tra cứu, Radar và phân tích công khai · Premium: phân tích sâu, email hằng ngày và cảnh báo hành động.</span>
-            <a class="button button-primary" href="signup/">Đăng ký</a>
-          </div>
+
+          <article class="home-lead-card" id="nhan-ban-tin">
+            <span>FREE · EMAIL 09:00</span>
+            <strong>Nhận bản rà soát thị trường mỗi sáng</strong>
+            <p>Để lại email trước. Sau đó tạo tài khoản Free và xác minh email để kích hoạt bản tin 09:00.</p>
+            <form class="home-lead-form" data-home-email-form novalidate>
+              <input name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="Email của bạn">
+              <button type="submit">Nhận miễn phí</button>
+              <div class="home-lead-consents">
+                <label class="home-lead-check"><input name="daily_brief" type="checkbox"><span>Tôi muốn nhận <strong>bản rà soát 09:00 hằng ngày</strong>.</span></label>
+                <label class="home-lead-check"><input name="privacy" type="checkbox"><span>Tôi đồng ý lưu email theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a>.</span></label>
+              </div>
+              <div class="home-lead-honeypot" aria-hidden="true"><label>Công ty<input name="company" type="text" autocomplete="off" tabindex="-1"></label></div>
+              <p class="home-lead-message" data-home-lead-message aria-live="polite">0đ · Không cần tài khoản chứng khoán · Không tự thu phí.</p>
+            </form>
+          </article>
         </div>
+
+        <div class="home-value-strip" aria-label="Giá trị cốt lõi StockRadar">
+          <div><strong>09:00 · Bản rà soát Free</strong><span>Thị trường, Radar, ngành đáng chú ý và rủi ro cần theo dõi.</span></div>
+          <div><strong>Trong phiên · Premium</strong><span>Cảnh báo mua/bán chỉ khi setup đạt chuẩn tại 10:30 · 11:15 · 13:30 · 14:15.</span></div>
+          <div><strong>30 ngày · 199.000đ</strong><span>Không tự gia hạn. Premium chỉ kích hoạt sau khi thanh toán được xác minh.</span></div>
+        </div>
+
         <nav class="horizon-tabs operations-horizons" aria-label="Mục tiêu đầu tư">
           <a class="horizon-tab is-active" href="radar5/"><span>5–20 phiên</span>Ngắn hạn</a>
           <a class="horizon-tab" href="kiem-tra-co-phieu/"><span>1–6 tháng</span>Trung hạn</a>
@@ -92,15 +111,15 @@
         </article>
 
         <aside class="home-focus-panel home-quick-panel">
-          <header class="home-focus-head"><div><span class="panel-label">TRUY CẬP NHANH</span><h2>Đi thẳng tới tính năng</h2><p>Các chức năng chính của StockRadar.</p></div></header>
+          <header class="home-focus-head"><div><span class="panel-label">BẮT ĐẦU NHANH</span><h2>Giá trị trước, nâng cấp sau</h2><p>Ưu tiên Free email và Premium ở đúng thời điểm.</p></div></header>
           <div class="home-focus-body">
             <div class="home-quick-actions">
+              <a class="is-conversion" href="#nhan-ban-tin"><span><strong>Nhận bản tin 09:00 miễn phí</strong><span>Email tổng hợp thị trường mỗi sáng</span></span><b>→</b></a>
+              <a class="is-conversion" href="thanh-toan/?plan=premium"><span><strong>Nâng Premium · 199.000đ</strong><span>Cảnh báo mua/bán trong phiên khi đủ chuẩn</span></span><b>→</b></a>
               <a href="kiem-tra-co-phieu/"><span><strong>Tra cứu cổ phiếu</strong><span>Nhập bất kỳ mã HOSE 3 ký tự</span></span><b>→</b></a>
               <a href="radar5/"><span><strong>Radar 30</strong><span>30 mã · 10 ngành · 3 mã mỗi ngành</span></span><b>→</b></a>
               <a href="khuyen-nghi/"><span><strong>Điểm mua / bán</strong><span>Pocket Pivot · Early Breakout · Confirmed Breakout</span></span><b>→</b></a>
-              <a href="nganh/"><span><strong>So sánh theo ngành</strong><span>Đối chiếu nhóm cổ phiếu trên HOSE</span></span><b>→</b></a>
               <a href="hieu-qua/"><span><strong>Hiệu quả khuyến nghị</strong><span>Theo dõi giá mua, mục tiêu, cắt lỗ và kết quả</span></span><b>→</b></a>
-              <a href="signup/"><span><strong>Tài khoản StockRadar</strong><span>Lưu mã quan tâm và quản lý quyền Premium</span></span><b>→</b></a>
             </div>
           </div>
         </aside>
@@ -109,42 +128,47 @@
 
     <section class="home-tier-section" aria-labelledby="home-tier-title">
       <div class="container">
-        <header class="home-tier-section-head"><div><span class="panel-label">TÍNH NĂNG</span><h2 id="home-tier-title">Free và Premium có gì?</h2></div><p>Free tập trung vào tra cứu và Radar công khai; Premium bổ sung phân tích chuyên sâu, kế hoạch giao dịch và cảnh báo qua email.</p></header>
+        <header class="home-tier-section-head"><div><span class="panel-label">FREE → PREMIUM</span><h2 id="home-tier-title">Bắt đầu miễn phí. Trả phí khi cần hành động.</h2></div><p>Free tạo thói quen theo dõi lúc 09:00. Premium giải quyết nhu cầu quan trọng hơn: phân tích sâu và nhận cảnh báo mua/bán trong phiên.</p></header>
         <div class="home-tier-grid">
           <article class="home-tier-card is-free">
-            <header class="home-tier-card-head"><div><span class="home-tier-badge is-free">FREE</span><h3>Công cụ miễn phí</h3><p>Tra cứu nhanh, xem Radar và đối chiếu cổ phiếu trên HOSE.</p></div></header>
+            <header class="home-tier-card-head"><div><span class="home-tier-badge is-free">FREE · 0Đ</span><h3>Theo dõi thị trường mỗi ngày</h3><p>Tra cứu, Radar và bản rà soát 09:00 để người dùng thấy giá trị trước khi trả phí.</p></div></header>
             <div class="home-tier-feature-list">
+              <div class="home-tier-feature"><strong>Bản rà soát 09:00</strong><span>Market state, Radar, nhóm ngành nổi bật và rủi ro đáng chú ý.</span></div>
               <div class="home-tier-feature"><strong>Tra cứu mã HOSE</strong><span>Nhập mã 3 ký tự và mở trang phân tích cổ phiếu.</span></div>
               <div class="home-tier-feature"><strong>Radar 30</strong><span>30 mã được chia cân bằng 10 ngành, 3 mã mỗi ngành.</span></div>
               <div class="home-tier-feature"><strong>4 khung đầu tư</strong><span>Ngắn hạn, trung hạn, dài hạn và tích sản.</span></div>
               <div class="home-tier-feature"><strong>So sánh theo ngành</strong><span>Xem nhóm ngân hàng, chứng khoán, thép, công nghệ và các ngành lớn.</span></div>
-              <div class="home-tier-feature"><strong>Điểm mua / bán công khai</strong><span>Xem các tín hiệu hành động được StockRadar công bố trên website.</span></div>
               <div class="home-tier-feature"><strong>Hiệu quả khuyến nghị</strong><span>Đối chiếu lịch sử giá mua, mục tiêu, cắt lỗ và kết quả.</span></div>
             </div>
-            <div class="home-tier-actions"><span>Free dùng trực tiếp trên website.</span><a class="button button-secondary" href="kiem-tra-co-phieu/">Dùng Free</a></div>
+            <div class="home-tier-actions is-conversion-actions"><span><strong>Miễn phí để bắt đầu</strong><small>Xác minh email để kích hoạt quyền nhận bản tin.</small></span><a class="button button-secondary" href="#nhan-ban-tin">Nhận email 09:00</a></div>
           </article>
 
           <article class="home-tier-card is-premium" data-email-conversion>
-            <header class="home-tier-card-head"><div><span class="home-tier-badge is-premium">PREMIUM</span><h3>Phân tích chuyên sâu & cảnh báo</h3><p>Phân tích doanh nghiệp, định giá, kỹ thuật, dòng tiền và kế hoạch giao dịch trong một báo cáo.</p></div></header>
+            <header class="home-tier-card-head"><div><span class="home-tier-badge is-premium">PREMIUM · 199K/30 NGÀY</span><h3>Phân tích chuyên sâu & cảnh báo</h3><p>Khi nhà đầu tư cần biết nên làm gì và khi nào, Premium bổ sung kế hoạch giao dịch và cảnh báo hành động.</p></div></header>
             <div class="home-tier-feature-list">
               <div class="home-tier-feature"><strong>4M · CANSLIM · Payback</strong><span>Meaning, Moat, Management, tăng trưởng, catalyst và Owner Earnings/FCF.</span></div>
               <div class="home-tier-feature"><strong>Định giá Bear / Base / Bull</strong><span>Fair Value, Margin of Safety, Upside/Downside và kịch bản 3–12 tháng.</span></div>
               <div class="home-tier-feature"><strong>SEPA/VCP · Stage · Pivot</strong><span>MA10/50/150/200, Relative Strength, VCP, Pocket Pivot và Breakout.</span></div>
               <div class="home-tier-feature"><strong>VPA · RVOL · dòng tiền lớn</strong><span>Volume Dry-up, Demand/Supply, Absorption, same-time volume và Whale Move.</span></div>
               <div class="home-tier-feature"><strong>Kế hoạch giao dịch</strong><span>Buy Zone, tỷ trọng, Stop-loss, Target, Upside/Downside và Risk/Reward.</span></div>
-              <div class="home-tier-feature"><strong>Email & cảnh báo trong phiên</strong><span>TOP 30, Top theo ngành và cảnh báo tại 10:30 · 11:15 · 13:30 · 14:15.</span></div>
+              <div class="home-tier-feature"><strong>Email & cảnh báo trong phiên</strong><span>10:30 · 11:15 · 13:30 · 14:15; không đạt chuẩn thì không gửi.</span></div>
             </div>
-            <div class="home-tier-actions"><span>Premium: báo cáo hằng ngày + cảnh báo hành động.</span><a class="button button-primary" href="signup/">Đăng ký Premium</a></div>
+            <div class="home-tier-actions is-conversion-actions"><span><strong>Không tự gia hạn</strong><small>Premium kích hoạt sau khi thanh toán được xác minh.</small></span><a class="button button-primary" href="thanh-toan/?plan=premium">Nâng Premium</a></div>
           </article>
         </div>
+
+        <section class="home-conversion-band" aria-label="Bắt đầu với StockRadar">
+          <div><span class="panel-label">BẮT ĐẦU NGAY</span><h2>Một email Free hôm nay có thể trở thành khách Premium khi họ thấy đủ giá trị.</h2><p>Funnel của StockRadar: nhận email 09:00 → dùng Radar/tra cứu → thấy nhu cầu cảnh báo trong phiên → nâng Premium 30 ngày.</p></div>
+          <div class="home-conversion-band-actions"><a class="is-free" href="#nhan-ban-tin">Nhận email 09:00 miễn phí</a><a class="is-premium" href="thanh-toan/?plan=premium">Premium · 199.000đ/30 ngày</a></div>
+        </section>
       </div>
     </section>
   </main>
 
-  <div class="mobile-newsletter-bar" aria-label="Đăng ký StockRadar Premium"><span>Premium: phân tích sâu + email + cảnh báo hành động</span><a class="button button-primary" href="signup/">Đăng ký</a></div>
+  <div class="mobile-newsletter-bar" aria-label="Nhận bản rà soát StockRadar"><span><strong>FREE 09:00</strong> Nhận bản rà soát thị trường qua email</span><a class="button button-primary" href="#nhan-ban-tin">Nhận miễn phí</a></div>
 
   <footer class="site-footer">
-    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="signup/">Đăng ký</a></div></div><p class="disclaimer">StockRadar cung cấp công cụ phân tích, định giá và quản trị rủi ro; quyết định đầu tư thuộc người dùng.</p></div>
+    <div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="nhan-ban-tin/">Bản tin 09:00</a><a href="dang-ky/">Free / Premium</a><a href="thanh-toan/?plan=premium">Nâng Premium</a><a href="quyen-rieng-tu/">Quyền riêng tư</a></div></div><p class="disclaimer">StockRadar cung cấp công cụ phân tích, định giá và quản trị rủi ro; quyết định đầu tư thuộc người dùng.</p></div>
   </footer>
 </body>
 </html>
