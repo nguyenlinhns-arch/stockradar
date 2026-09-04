@@ -1,4 +1,4 @@
-# Bootstrap trigger: 2026-09-04
+# Reference-cache v3 retrigger: 2026-09-05
 name: Sync StockRadar Research Cache
 
 on:
