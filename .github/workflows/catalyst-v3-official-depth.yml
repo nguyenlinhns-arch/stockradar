@@ -1,0 +1,109 @@
+name: StockRadar Catalyst V3 Official Depth
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: ["StockRadar HOSE Official Disclosure Depth"]
+    types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/build_catalyst_layer_v3.py'
+      - '.github/workflows/catalyst-v3-official-depth.yml'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  catalyst-v3:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --disable-pip-version-check pandas numpy
+
+      - name: Download latest market universe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/market
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-market-bootstrap&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          test -n "$id"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/market.zip
+          unzip -q -o /tmp/market.zip -d artifacts/market
+
+      - name: Download latest recall-depth reference
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/reference
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-news-insider-depth-v2&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          test -n "$id"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/reference.zip
+          unzip -q -o /tmp/reference.zip -d artifacts/reference
+
+      - name: Download latest deep official HOSE disclosures
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/official
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-official-disclosures-depth-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          test -n "$id"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/official.zip
+          unzip -q -o /tmp/official.zip -d artifacts/official
+
+      - name: Build Catalyst V3 with official depth
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          news="$(find artifacts/reference -name 'company_news_depth_v2.csv' -o -name 'company_news_depth_v2_405_*.csv' | head -n 1)"
+          insider="$(find artifacts/reference -name 'insider_trading_depth_v2.csv' -o -name 'insider_trading_depth_v2_405_*.csv' | head -n 1)"
+          official="$(find artifacts/official -name 'hose_official_disclosures_history.csv' | head -n 1)"
+          official_manifest="$(find artifacts/official -name 'hose_official_disclosures_manifest.json' | head -n 1)"
+          mkdir -p artifacts/catalyst
+          python scripts/build_catalyst_layer_v3.py \
+            --news "$news" \
+            --insider "$insider" \
+            --official-disclosures "$official" \
+            --official-manifest "$official_manifest" \
+            --universe artifacts/market/security_master.csv \
+            --as-of "$as_of" \
+            --output artifacts/catalyst/catalyst_v3_405.csv \
+            --manifest artifacts/catalyst/catalyst_v3_manifest.json
+
+      - name: Enforce 405-ticker official-depth catalyst QA
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import pandas as pd
+          m=json.loads(Path('artifacts/catalyst/catalyst_v3_manifest.json').read_text(encoding='utf-8'))
+          d=pd.read_csv('artifacts/catalyst/catalyst_v3_405.csv')
+          failures=[]
+          if len(d)!=405 or d['ticker'].nunique()!=405: failures.append('CATALYST_NOT_405')
+          if m.get('official_hose_source_ready') is not True: failures.append('OFFICIAL_SOURCE_NOT_READY')
+          if int(m.get('tickers_with_official_90d_items') or 0) < 400: failures.append('OFFICIAL_90D_COVERAGE_LT_400')
+          if m.get('catalyst_alpha_weight_allowed') is not False: failures.append('CATALYST_ALPHA_MUST_REMAIN_ZERO')
+          if m.get('publication_allowed') is not False: failures.append('PUBLICATION_MUST_REMAIN_CLOSED')
+          if failures: raise SystemExit(';'.join(failures))
+          print(json.dumps(m, ensure_ascii=False))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-catalyst-v3-official-depth
+          path: artifacts/catalyst/
+          retention-days: 30
+          if-no-files-found: error
