@@ -11,7 +11,7 @@ from pathlib import Path
 
 HEAD_MARKER = "data-stockradar-public-ux"
 CONVERSION_ROUTES = {
-    "radar5", "kiem-tra-co-phieu", "phan-tich", "khuyen-nghi", "hieu-qua", "nganh",
+    "radar5", "kiem-tra-co-phieu", "khuyen-nghi", "hieu-qua", "nganh",
     "co-phieu", "breakout", "risk", "track-record", "thay-doi-hom-nay",
 }
 PUBLIC_HTML_REPLACEMENTS = (
@@ -46,6 +46,10 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument("output", type=Path)
     return parser.parse_args()
+
+
+def checkout_ready() -> bool:
+    return os.environ.get("STOCKRADAR_CHECKOUT_READY", "").strip().lower() in {"1", "true", "yes", "on"}
 
 
 def has_base(source: str) -> bool:
@@ -139,15 +143,14 @@ def normalize_header_auth_actions(source: str, page: Path, output: Path) -> str:
         return source
 
     login_href = route_href(source, page, output, "dang-nhap")
-    lead_href = route_href(source, page, output, "nhan-ban-tin")
     plans_href = route_href(source, page, output, "dang-ky")
     signup_href = route_href(source, page, output, "signup")
+    signup_free_href = signup_href + "?plan=free"
     actions = (
         '<div class="header-auth-actions" data-header-auth-actions>'
         f'<a class="header-login-cta" href="{login_href}">Đăng nhập</a>'
-        f'<a class="header-register-cta" href="{lead_href}">Nhận email 09:00</a>'
+        f'<a class="header-register-cta" href="{signup_free_href}">Đăng ký miễn phí</a>'
         f'<a href="{plans_href}" hidden aria-hidden="true" tabindex="-1">So sánh gói</a>'
-        f'<a href="{signup_href}" hidden aria-hidden="true" tabindex="-1">Tạo tài khoản trực tiếp</a>'
         '</div>'
     )
     return source[: match.start(2)] + actions + source[match.start(2) :]
@@ -160,19 +163,27 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
     if "</main>" not in source:
         return source
 
-    lead_href = route_href(source, page, output, "nhan-ban-tin")
     plans_href = route_href(source, page, output, "dang-ky")
-    premium_href = route_href(source, page, output, "thanh-toan") + "?plan=premium"
+    signup_free_href = route_href(source, page, output, "signup") + "?plan=free"
+    if checkout_ready():
+        premium_href = route_href(source, page, output, "thanh-toan") + "?plan=premium"
+        premium_label = "Premium · 199.000đ/30 ngày"
+        premium_copy = "Premium bổ sung AI không giới hạn, lớp quyết định, Daily 09:00 và Action Alert trong phiên khi tín hiệu đủ chuẩn."
+    else:
+        premium_href = plans_href + "#premium"
+        premium_label = "Premium · đang hoàn thiện production"
+        premium_copy = "Premium đang tạm dừng kích hoạt mới cho tới khi Decision Feed và email Action Alert hoàn tất kiểm thử end-to-end."
+
     rail = (
         '<section class="conversion-rail" data-conversion-rail>'
         '<div class="container conversion-rail-inner">'
         '<div class="conversion-rail-copy"><span>FREE → PREMIUM</span>'
-        '<strong>Nhận bản rà soát 09:00 miễn phí. Nâng Premium khi cần cảnh báo trong phiên.</strong>'
-        '<p>Free giúp theo dõi thị trường mỗi ngày; Premium bổ sung Buy Zone · Stop · Target · R/R và cảnh báo hành động tại 10:30 · 11:15 · 13:30 · 14:15 khi tín hiệu đủ chuẩn.</p></div>'
+        '<strong>Bắt đầu với StockRadar AI Free 10 câu/ngày sau khi đăng nhập.</strong>'
+        f'<p>Free có AI, tra cứu và watchlist cơ bản. {premium_copy}</p></div>'
         '<div class="conversion-rail-actions">'
-        f'<a class="conversion-free" data-conversion-free-lead href="{lead_href}">Nhận email 09:00</a>'
+        f'<a class="conversion-free" data-conversion-free-lead href="{signup_free_href}">Tạo tài khoản Free</a>'
         f'<a class="conversion-free" href="{plans_href}">So sánh gói</a>'
-        f'<a class="conversion-premium" href="{premium_href}">Premium · 199.000đ</a>'
+        f'<a class="conversion-premium" href="{premium_href}">{premium_label}</a>'
         '</div></div></section>'
     )
     source = source.replace("</main>", rail + "</main>", 1)
@@ -180,8 +191,8 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
     if "conversion-mobile-cta" not in source and "</body>" in source:
         mobile = (
             '<div class="conversion-mobile-cta">'
-            '<span><strong>FREE 09:00</strong>Bắt đầu bằng email miễn phí</span>'
-            f'<a data-conversion-mobile-lead href="{lead_href}">Nhận email</a>'
+            '<span><strong>FREE · 10 CÂU/NGÀY</strong>AI StockRadar sau khi đăng nhập</span>'
+            f'<a data-conversion-mobile-lead href="{signup_free_href}">Đăng ký Free</a>'
             '</div>'
         )
         source = source.replace("</body>", mobile + "</body>", 1)
@@ -191,9 +202,11 @@ def inject_conversion_rail(source: str, page: Path, output: Path) -> str:
 def route_specific_head(source: str, page: Path, output: Path) -> str:
     professional_css = asset_href(source, page, output, "professional-v5.css")
     conversion_css = asset_href(source, page, output, "conversion-v1.css")
+    paid_nav_js = asset_href(source, page, output, "paid-nav-v1.js")
     head = (
         f'<link rel="stylesheet" href="{professional_css}?v=20260904-pro5">\n'
-        f'<link rel="stylesheet" href="{conversion_css}?v=20260904-funnel1">\n'
+        f'<link rel="stylesheet" href="{conversion_css}?v=20260904-funnel2">\n'
+        f'<script src="{paid_nav_js}?v=20260904-paidnav1" defer></script>\n'
     )
     if page.parent.name == "khuyen-nghi":
         css = asset_href(source, page, output, "recommendation-dense-v3.css")
@@ -278,6 +291,7 @@ def main() -> None:
         output / "assets" / "public-copy-v7.js",
         output / "assets" / "direct-ticker-nav-v1.js",
         output / "assets" / "home-core-v1.js",
+        output / "assets" / "paid-nav-v1.js",
     ]
     missing = [str(path) for path in required if not path.is_file()]
     if missing:

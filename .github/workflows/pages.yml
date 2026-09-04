@@ -75,7 +75,8 @@ jobs:
       - name: Apply production-facing UX guards
         env:
           STOCKRADAR_PRODUCT_EMAIL_READY: "0"
-          STOCKRADAR_CHECKOUT_READY: "1"
+          # Premium activation remains fail-closed until Decision Feed + email E2E are production-ready.
+          STOCKRADAR_CHECKOUT_READY: "0"
         run: |
           python scripts/inject_public_ux.py .pages-site
           python scripts/inject_home_radar_polish.py .pages-site
