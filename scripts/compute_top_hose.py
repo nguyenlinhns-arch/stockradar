@@ -10,17 +10,18 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from engine.stockradar.auto_pipeline import compute_top_from_bundle_auto
 from engine.stockradar.raw_pipeline import compute_top_from_bundle, write_pipeline_outputs
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Compute StockRadar Top HOSE strictly from validated raw inputs and internal StockRadar methodology."
+        description="Compute StockRadar Top HOSE from validated raw inputs using StockRadar-only calculations."
     )
     parser.add_argument("--bundle-dir", type=Path, required=True)
     parser.add_argument("--descriptor", type=Path, required=True)
-    parser.add_argument("--research", type=Path, required=True)
-    parser.add_argument("--valuation", type=Path, required=True)
+    parser.add_argument("--research", type=Path, help="Optional StockRadar-owned manual research override. Omit for automatic internal research.")
+    parser.add_argument("--valuation", type=Path, help="Optional StockRadar-owned manual valuation override. Omit for automatic internal assumptions.")
     parser.add_argument("--public-output", type=Path, required=True)
     parser.add_argument("--private-output", type=Path)
     parser.add_argument("--max-age-seconds", type=int, default=21_600)
@@ -38,16 +39,28 @@ def main() -> None:
     now = datetime.fromisoformat(args.now.replace("Z", "+00:00")) if args.now else None
     if now is not None and now.tzinfo is None:
         raise SystemExit("--now must include a timezone offset")
-    result = compute_top_from_bundle(
+    if bool(args.research) != bool(args.valuation):
+        raise SystemExit("--research and --valuation must be supplied together, or both omitted for automatic StockRadar mode")
+
+    common = dict(
         bundle_dir=args.bundle_dir,
         descriptor_path=args.descriptor,
-        research_path=args.research,
-        valuation_path=args.valuation,
         now=now,
         max_age_seconds=args.max_age_seconds,
         strongest_limit=args.strongest_limit,
         per_sector_limit=args.per_sector_limit,
     )
+    if args.research and args.valuation:
+        result = compute_top_from_bundle(
+            **common,
+            research_path=args.research,
+            valuation_path=args.valuation,
+        )
+        mode = "STOCKRADAR_MANUAL_INTERNAL"
+    else:
+        result = compute_top_from_bundle_auto(**common)
+        mode = "STOCKRADAR_AUTO_INTERNAL"
+
     write_pipeline_outputs(
         result,
         public_top_path=args.public_output,
@@ -56,7 +69,7 @@ def main() -> None:
     print(
         f"StockRadar Top HOSE computed: {len(result.computations)} valid HOSE tickers; "
         f"{len(result.top_hose.get('strongest', []))} strongest rows; "
-        f"benchmark={result.top_hose.get('benchmark_method')}"
+        f"benchmark={result.top_hose.get('benchmark_method')}; mode={mode}"
     )
 
 
