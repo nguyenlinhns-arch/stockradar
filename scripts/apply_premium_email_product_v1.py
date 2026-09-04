@@ -116,6 +116,38 @@ def transform_account(source: str) -> str:
         'Chỉ gửi khi có thay đổi hành động được xác nhận. Không đổi trạng thái → không tạo Action Alert riêng.',
         1,
     )
+
+    # Current product contract: Free receives transactional account email only.
+    source = source.replace(
+        'Free nhận bản rà soát cơ bản; Trial/Paid có thể nhận nội dung Premium và cảnh báo điểm mua/bán.',
+        'Báo cáo hằng ngày và cảnh báo hành động dành cho Trial/Paid; Free chỉ nhận email hệ thống cần thiết cho tài khoản.',
+    )
+    source = source.replace(
+        '<label class="email-choice"><input type="checkbox" name="daily_brief"><span><strong>Báo cáo StockRadar hằng ngày</strong><span>Bản rà soát thị trường cơ bản ở Free; nội dung sâu hơn ở Premium khi dữ liệu đủ điều kiện phát hành.</span></span></label>',
+        '<label class="email-choice"><input type="checkbox" name="daily_brief"><span><span class="email-choice-badge">Premium</span><strong>Báo cáo StockRadar hằng ngày</strong><span>Daily 09:00 ưu tiên watchlist, việc cần chú ý và bối cảnh thị trường khi dữ liệu đủ điều kiện phát hành.</span></span></label>',
+    )
+    source = source.replace(
+        'Cần email đã xác minh. Ở Free, công tắc này chỉ kích hoạt bản tin hằng ngày; cảnh báo mua/bán chỉ có hiệu lực khi tài khoản có quyền Premium.',
+        'Cần email đã xác minh và tài khoản Trial/Paid. Mỗi loại email có thể bật/tắt riêng; hệ thống delivery vẫn phải đủ điều kiện mới gửi.',
+    )
+    source = source.replace(
+        'pattern="[A-Za-z]{3}" placeholder="VD: MBB"',
+        'pattern="[A-Za-z0-9]{3}" placeholder="VD: MBB"',
+    )
+    source = source.replace(
+        'assets/account-preferences.js?v=20260903-personalization1',
+        'assets/account-preferences.js?v=20260904-paid2',
+    )
+    source = source.replace(
+        'assets/email-preferences.js?v=20260903-email2',
+        'assets/email-preferences.js?v=20260904-paid3',
+    )
+    if '<a href="hom-nay/">Hôm nay</a>' not in source:
+        source = source.replace(
+            '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">',
+            '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="hom-nay/">Hôm nay</a><a href="radar5/">',
+            1,
+        )
     return inject_css(source)
 
 
@@ -132,7 +164,7 @@ def main() -> None:
         source = path.read_text(encoding="utf-8")
         path.write_text(transform(source), encoding="utf-8")
 
-    print("Premium email product v1: PASS (promise → onboarding → delivery health/control)")
+    print("Premium email product v1: PASS (paid-only promise → onboarding → delivery health/control)")
 
 
 if __name__ == "__main__":
