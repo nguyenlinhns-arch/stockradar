@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# One-time migration trigger: 2026-09-04.
 from pathlib import Path
 
 
