@@ -31,10 +31,12 @@ jobs:
         run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5
 
       - name: Build fail-closed public data
-        run: python -m engine.cli build-public
+        run: |
+          python -m engine.cli build-public
+          python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
 
-      - name: Run regression suite
-        run: python scripts/run_ci_regression.py
+      - name: Run full regression suite
+        run: python -m unittest discover -s engine/tests -v
 
       - name: Build static Pages artifact
         env:
