@@ -30,12 +30,15 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
         self.assertLess(home.index("data-home-reco-table"), home.index("buyer-first-section"))
         self.assertEqual(home.count("<h1"), 1)
 
-    def test_homepage_public_seo_is_indexable(self):
+    def test_homepage_public_seo_is_opened_only_by_final_production_guard(self):
         home = self.read("website/index.html")
-        self.assertIn('name="robots" content="index,follow,max-image-preview:large"', home)
+        guard = self.read("scripts/enforce_ai_registration_ctas.py")
+        self.assertIn('name="robots" content="noindex,nofollow"', home)
         self.assertIn('rel="canonical" href="https://stockradar.vn/"', home)
         self.assertIn('property="og:title"', home)
-        self.assertNotIn('content="noindex,nofollow"', home)
+        self.assertIn('index,follow,max-image-preview:large', guard)
+        self.assertIn("enforce_homepage_seo", guard)
+        self.assertIn("Final public homepage is still noindex", guard)
 
     def test_workspace_data_renderer_is_fail_closed(self):
         js = self.read("website/assets/home-workspace-v2.js")
