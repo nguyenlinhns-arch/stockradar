@@ -38,6 +38,10 @@ function jsonResponse(body: unknown, status: number, origin: string | null, extr
   });
 }
 
+function validTicker(value: string): boolean {
+  return value.length === 3 && /^[A-Z0-9]{3}$/.test(value) && /[A-Z]/.test(value);
+}
+
 async function auditedJson(
   client: ServiceClient,
   userId: string,
@@ -113,7 +117,7 @@ Deno.serve(async (req: Request) => {
   const url = new URL(req.url);
   const ticker = (url.searchParams.get("ticker") || "").trim().toUpperCase();
   const horizon = (url.searchParams.get("horizon") || "SHORT_TERM").trim().toUpperCase();
-  if (!/^[A-Z]{3}$/.test(ticker)) {
+  if (!validTicker(ticker)) {
     return await auditedJson(
       serviceClient, user.id, startedAt, ticker, horizon,
       { status: "INVALID_REQUEST", reason: "INVALID_TICKER" },
