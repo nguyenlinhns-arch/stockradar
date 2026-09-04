@@ -58,7 +58,7 @@ class PublicMethodJargonGateTests(unittest.TestCase):
             for term in banned:
                 self.assertNotIn(term, transformed, f"{term} leaked in {relative}")
 
-    def test_public_transform_removes_analysis_word_from_core_pages(self):
+    def test_public_transform_removes_analysis_method_and_setup_words(self):
         pages = (
             "website/index.html",
             "website/radar5/index.html",
@@ -70,8 +70,9 @@ class PublicMethodJargonGateTests(unittest.TestCase):
             "website/phan-tich/index.html",
         )
         for relative in pages:
-            transformed = self.transform(relative)
-            self.assertNotIn("phân tích", transformed.casefold(), relative)
+            transformed = self.transform(relative).casefold()
+            for term in ("phân tích", "phương pháp", "setup"):
+                self.assertNotIn(term, transformed, f"{term} leaked in {relative}")
 
     def test_public_transform_keeps_action_outputs(self):
         page = self.transform("website/co-phieu/index.html")
@@ -89,7 +90,7 @@ class PublicMethodJargonGateTests(unittest.TestCase):
         radar = self.transform("website/radar5/index.html")
         for marker in (
             "CÁCH DÙNG RADAR",
-            "Nhìn trạng thái, không cần học phương pháp.",
+            "Chỉ cần nhìn trạng thái và hành động.",
             "1. Chọn mã",
             "2. Chọn khung",
             "3. Xem trạng thái",
@@ -100,7 +101,7 @@ class PublicMethodJargonGateTests(unittest.TestCase):
 
     def test_public_transform_removes_setup_language(self):
         recommendations = self.transform("website/khuyen-nghi/index.html")
-        self.assertNotIn("setup đạt chuẩn", recommendations)
+        self.assertNotIn("setup", recommendations.casefold())
         self.assertIn("điều kiện hành động đạt chuẩn", recommendations)
 
     def test_final_scrub_retires_analysis_route_and_rewrites_links(self):
@@ -121,6 +122,8 @@ class PublicMethodJargonGateTests(unittest.TestCase):
 
             self.assertFalse(legacy.exists())
             self.assertNotIn("phân tích", source.casefold())
+            self.assertNotIn("phương pháp", source.casefold())
+            self.assertNotIn("setup", source.casefold())
             self.assertNotIn("phan-tich/", source)
             self.assertIn("kiem-tra-co-phieu/", source)
 
