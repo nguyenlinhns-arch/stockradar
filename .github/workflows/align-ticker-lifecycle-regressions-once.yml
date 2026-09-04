@@ -35,7 +35,7 @@ jobs:
           git config user.name stockradar-bot
           git config user.email actions@users.noreply.github.com
           git add -A
-          git commit -m 'Align ticker universe tests with both publication stages'
+          git commit -m 'Align ticker universe tests with reference and fail-closed stages'
           git pull --rebase origin main
           git push origin HEAD:main
-# retry 2
+# retry 3
