@@ -26,7 +26,6 @@ def main() -> None:
     home = (output / "index.html").read_text(encoding="utf-8")
     plans = (output / "dang-ky" / "index.html").read_text(encoding="utf-8")
     signup = (output / "signup" / "index.html").read_text(encoding="utf-8")
-    email_confirm = (output / "xac-minh-email" / "index.html").read_text(encoding="utf-8")
     signup_client = (output / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
     checkout = (output / "thanh-toan" / "index.html").read_text(encoding="utf-8")
     account = (output / "tai-khoan" / "index.html").read_text(encoding="utf-8")
@@ -75,27 +74,34 @@ def main() -> None:
         "data-premium-email-onboarding",
         "premium-email-product-v1.css",
         "assets/signup-link-v1.js",
-        "data-signup-email-sent",
-        "gửi email xác minh",
-        "Không cần nhập mã OTP",
-    ), "signup tiers and email-link verification", errors)
+        "Tạo tài khoản Free",
+        "data-signup-existing-login",
+    ), "signup tiers and direct account creation", errors)
 
-    for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+    for forbidden in (
+        'data-auth-signup-otp-form',
+        'data-signup-email-sent',
+        'autocomplete="one-time-code"',
+        'Nhập mã OTP 6 số',
+        'Kiểm tra email để xác minh tài khoản',
+        'Đã xác minh? Đăng nhập',
+        'xac-minh-email/',
+        'gửi email xác minh',
+    ):
         if forbidden in signup:
-            errors.append(f"signup must not expose manual OTP input: {forbidden}")
+            errors.append(f"signup must not expose verification UI: {forbidden}")
 
     require(signup_client, (
         "/functions/v1/signup-link",
         "event.stopImmediatePropagation()",
+        "signInWithPassword",
         "thanh-toan/?plan=premium",
-        "data-signup-existing-login",
-    ), "signup email-link client", errors)
+        "window.location.replace(destinationFor(plan))",
+    ), "direct signup client", errors)
 
-    require(email_confirm, (
-        "assets/email-confirm-v1.js",
-        "data-email-confirm-status",
-        "Không cần nhập mã OTP",
-    ), "email confirmation landing", errors)
+    for forbidden in ('showEmailSent', 'data-signup-email-sent', 'sr_pending_signup_email'):
+        if forbidden in signup_client:
+            errors.append(f"direct signup client contains legacy verification flow: {forbidden}")
 
     require(checkout, (
         "StockRadar Premium",
