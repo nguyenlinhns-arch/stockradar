@@ -1,6 +1,11 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
-import { STOCKRADAR_SYSTEM_CORE, normalizeResearchContext, stockRadarMode } from "../_shared/stockradar-core.ts";
+import {
+  STOCKRADAR_SYSTEM_CORE,
+  deterministicStockRadarAnswer,
+  normalizeResearchContext,
+  stockRadarMode,
+} from "../_shared/stockradar-core.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://stockradar.vn",
@@ -105,10 +110,7 @@ Deno.serve(async (req: Request) => {
   const researchContext = researchResult.error ? null : normalizeResearchContext(researchResult.data as JsonObject | null);
   const mode = stockRadarMode(readyRows.length > 0, Boolean(researchContext));
 
-  const openAIKey = Deno.env.get("OPENAI_API_KEY")?.trim();
-  if (!openAIKey) return jsonResponse({ status: "AI_CONFIG_PENDING", tier: "GUEST", mode, ticker, horizon, answer: "StockRadar AI đã nối tới lõi phân tích nhưng lớp model production chưa được kích hoạt.", quota_consumed: false, quota: { limit: 3, remaining: null } }, 200, origin);
-
-  const guestHash = await sha256Hex(`stockradar-guest-v3|${guestId}`);
+  const guestHash = await sha256Hex(`stockradar-guest-v4|${guestId}`);
   const { data: quotaRaw, error: quotaError } = await serviceClient.rpc("consume_stockradar_guest_ai_quota", { p_guest_key_hash: guestHash });
   const quota = (quotaRaw || {}) as JsonObject;
   if (quotaError || !quotaRaw) return jsonResponse({ status: "SERVICE_UNAVAILABLE", reason: "GUEST_QUOTA_RPC_FAILED" }, 503, origin);
@@ -119,6 +121,43 @@ Deno.serve(async (req: Request) => {
   }
 
   const actionContext = readyRows.map((row) => normalizeReport(row.data as JsonObject));
+  const fallbackAnswer = deterministicStockRadarAnswer({
+    mode,
+    researchContext,
+    actionContext,
+    question: message,
+  });
+  const remainingNumber = Number(quota.remaining ?? Number.NaN);
+  const remaining = Number.isFinite(remainingNumber) ? remainingNumber : null;
+  const generatedTimes = actionContext.map((r) => String(r.generated_at || "")).filter(Boolean);
+  if (researchContext?.generated_at) generatedTimes.push(String(researchContext.generated_at));
+  generatedTimes.sort();
+  const snapshotIds = [...new Set([
+    ...actionContext.map((r) => String(r.snapshot_id || "")),
+    String(researchContext?.snapshot_id || ""),
+  ].filter(Boolean))];
+  const source = {
+    action_gate: readyRows.length ? "READY" : "PENDING",
+    research_ready: Boolean(researchContext),
+    snapshot_id: snapshotIds.length === 1 ? snapshotIds[0] : null,
+    snapshot_count: snapshotIds.length,
+    generated_at: generatedTimes.length ? generatedTimes[generatedTimes.length - 1] : null,
+    ready_horizons: readyRows.map((row) => row.horizon),
+  };
+  const quotaResponse = { limit: 3, remaining, reset_at: quota.reset_at || null, reset_timezone: quota.daily_reset_timezone || "Asia/Ho_Chi_Minh" };
+  const rateHeaders = { "X-RateLimit-Limit": "3", ...(remaining !== null ? { "X-RateLimit-Remaining": String(remaining) } : {}) };
+
+  // Research answers must remain available even when an external language model is
+  // unavailable. The deterministic StockRadar core is the primary fail-safe layer.
+  if (mode !== "ACTION_READY") {
+    return jsonResponse({ status: "READY", scope: "ticker", tier: "GUEST", mode, answer_engine: "STOCKRADAR_CORE", ticker, horizon, answer: fallbackAnswer, quota_consumed: true, source, quota: quotaResponse }, 200, origin, rateHeaders);
+  }
+
+  const openAIKey = Deno.env.get("OPENAI_API_KEY")?.trim();
+  if (!openAIKey) {
+    return jsonResponse({ status: "READY_FALLBACK", scope: "ticker", tier: "GUEST", mode, answer_engine: "STOCKRADAR_CORE", ticker, horizon, answer: fallbackAnswer, quota_consumed: true, source, quota: quotaResponse }, 200, origin, rateHeaders);
+  }
+
   const context = {
     RESPONSE_MODE: mode,
     ACCESS_TIER: "GUEST",
@@ -140,7 +179,7 @@ Deno.serve(async (req: Request) => {
       body: JSON.stringify({ model, instructions: STOCKRADAR_SYSTEM_CORE, input: JSON.stringify(context), max_output_tokens: 1000, store: false }),
     });
   } catch {
-    return jsonResponse({ status: "UPSTREAM_ERROR", reason: "OPENAI_NETWORK_ERROR", tier: "GUEST", mode, answer: "StockRadar AI tạm thời không phản hồi. Hãy thử lại sau." }, 502, origin);
+    return jsonResponse({ status: "READY_FALLBACK", reason: "OPENAI_NETWORK_ERROR", scope: "ticker", tier: "GUEST", mode, answer_engine: "STOCKRADAR_CORE", ticker, horizon, answer: fallbackAnswer, quota_consumed: true, source, quota: quotaResponse }, 200, origin, rateHeaders);
   }
 
   let payload: unknown = null;
@@ -148,37 +187,9 @@ Deno.serve(async (req: Request) => {
   if (!aiResponse.ok) {
     const code = providerErrorCode(payload);
     console.error("stock-ai-guest upstream", aiResponse.status, code);
-    return jsonResponse({ status: "UPSTREAM_ERROR", reason: `OPENAI_${aiResponse.status}_${code}`, provider_status: aiResponse.status, provider_code: code, tier: "GUEST", mode, answer: "Lớp AI tạm thời chưa thể phản hồi." }, 502, origin);
+    return jsonResponse({ status: "READY_FALLBACK", reason: `OPENAI_${aiResponse.status}_${code}`, scope: "ticker", tier: "GUEST", mode, answer_engine: "STOCKRADAR_CORE", ticker, horizon, answer: fallbackAnswer, quota_consumed: true, source, quota: quotaResponse }, 200, origin, rateHeaders);
   }
 
-  const answer = extractOpenAIText(payload) || "StockRadar AI chưa có nội dung để trả lời.";
-  const remainingNumber = Number(quota.remaining ?? Number.NaN);
-  const remaining = Number.isFinite(remainingNumber) ? remainingNumber : null;
-  const generatedTimes = actionContext.map((r) => String(r.generated_at || "")).filter(Boolean);
-  if (researchContext?.generated_at) generatedTimes.push(String(researchContext.generated_at));
-  generatedTimes.sort();
-  const snapshotIds = [...new Set([
-    ...actionContext.map((r) => String(r.snapshot_id || "")),
-    String(researchContext?.snapshot_id || ""),
-  ].filter(Boolean))];
-
-  return jsonResponse({
-    status: "READY",
-    scope: "ticker",
-    tier: "GUEST",
-    mode,
-    ticker,
-    horizon,
-    answer,
-    quota_consumed: true,
-    source: {
-      action_gate: readyRows.length ? "READY" : "PENDING",
-      research_ready: Boolean(researchContext),
-      snapshot_id: snapshotIds.length === 1 ? snapshotIds[0] : null,
-      snapshot_count: snapshotIds.length,
-      generated_at: generatedTimes.length ? generatedTimes[generatedTimes.length - 1] : null,
-      ready_horizons: readyRows.map((row) => row.horizon),
-    },
-    quota: { limit: 3, remaining, reset_at: quota.reset_at || null, reset_timezone: quota.daily_reset_timezone || "Asia/Ho_Chi_Minh" },
-  }, 200, origin, { "X-RateLimit-Limit": "3", ...(remaining !== null ? { "X-RateLimit-Remaining": String(remaining) } : {}) });
+  const answer = extractOpenAIText(payload) || fallbackAnswer;
+  return jsonResponse({ status: "READY", scope: "ticker", tier: "GUEST", mode, answer_engine: "MODEL_PLUS_STOCKRADAR_CORE", ticker, horizon, answer, quota_consumed: true, source, quota: quotaResponse }, 200, origin, rateHeaders);
 });
