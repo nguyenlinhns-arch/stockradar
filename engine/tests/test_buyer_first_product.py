@@ -73,15 +73,25 @@ class BuyerFirstProductTests(unittest.TestCase):
         ):
             self.assertIn(marker, page)
 
-    def test_premium_email_contract_is_decision_first_and_suppresses_noise(self) -> None:
+    def test_premium_email_contract_is_paid_decision_first_and_suppresses_noise(self) -> None:
         architecture = self.read("email/ARCHITECTURE.md")
         for marker in (
-            "What changed?", "New position?", "Existing holding?", "Action map", "Why now?",
-            "What would invalidate this?", "No material state change = no action alert",
-            "Buy Zone/current reference", "Stop/invalidation", "Risk/Reward",
+            "Free:",
+            "Trial/Paid",
+            "No material state change = no Action Alert",
+            "What changed?",
+            "Action map:",
+            "What invalidates this?",
+            "XEM TRẠNG THÁI MỚI NHẤT",
+            "final preflight",
+            "Idempotency-Key",
+            "List-Unsubscribe",
+            "ready_to_activate",
+            "sending_enabled=false",
         ):
             self.assertIn(marker, architecture)
-        self.assertIn("Methods such as 4M, CANSLIM, SEPA/VCP, VPA/RVOL", architecture)
+        for forbidden in ("4M", "CANSLIM", "SEPA/VCP", "VPA/RVOL", "Free/Trial/Paid"):
+            self.assertNotIn(forbidden, architecture)
 
     def test_buyer_first_css_is_responsive(self) -> None:
         css = self.read("website/assets/buyer-first-v1.css")
