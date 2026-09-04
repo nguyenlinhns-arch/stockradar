@@ -26,7 +26,7 @@ class BuyerReadinessTests(unittest.TestCase):
             same_snapshot=True,
             adjusted_basis_consistent=True,
             corporate_action_checked=True,
-            source="licensed-test-source",
+            source="licensed-raw-test-source",
         )
 
     def candidate(self, ticker, score, state=SetupState.READY):
@@ -59,6 +59,9 @@ class BuyerReadinessTests(unittest.TestCase):
         self.assertEqual([item["ticker"] for item in payload["strongest"]], ["AAA", "BBB"])
         self.assertEqual(payload["strongest"][0]["rank"], 1)
         self.assertEqual(payload["by_sector"][0]["items"][0]["sector_rank"], 1)
+        self.assertEqual(payload["computation"]["calculation_origin"], "STOCKRADAR_ENGINE")
+        self.assertFalse(payload["computation"]["external_scores_accepted"])
+        self.assertTrue(all(item["calculated_by"] == "STOCKRADAR_ENGINE" for item in payload["strongest"]))
 
     def test_reference_or_research_grade_can_never_publish_top_rows(self):
         payload = build_top_hose(
@@ -69,6 +72,7 @@ class BuyerReadinessTests(unittest.TestCase):
         self.assertFalse(payload["ranking_valid"])
         self.assertEqual(payload["strongest"], [])
         self.assertEqual(payload["by_sector"], [])
+        self.assertEqual(payload["computation"]["calculation_origin"], "STOCKRADAR_ENGINE")
 
     def test_public_top_contract_is_fail_closed(self):
         payload = json.loads((ROOT / "website/public/data/top-stocks.json").read_text(encoding="utf-8"))
@@ -76,6 +80,9 @@ class BuyerReadinessTests(unittest.TestCase):
         self.assertEqual(payload["strongest"], [])
         self.assertEqual(payload["by_sector"], [])
         self.assertEqual(payload["method_version"], "STOCKRADAR_SCORE_V1")
+        self.assertEqual(payload["computation"]["calculation_origin"], "STOCKRADAR_ENGINE")
+        self.assertEqual(payload["computation"]["external_input_role"], "RAW_INPUT_ONLY")
+        self.assertFalse(payload["computation"]["external_scores_accepted"])
 
     def test_buyer_surface_separates_top_hose_from_radar_review_list(self):
         client = (ROOT / "website/assets/buyer-readiness-v1.js").read_text(encoding="utf-8")
