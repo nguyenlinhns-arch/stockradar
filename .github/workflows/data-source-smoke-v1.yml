@@ -1,0 +1,82 @@
+name: Smoke raw Vietnam data source
+
+on:
+  push:
+    branches: [data-source-smoke-v1]
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: Install raw-data client
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install 'vnstock>=3.4,<4' pandas
+      - name: Fetch raw listing OHLCV and statements only
+        run: |
+          python - <<'PY'
+          import json
+          import pandas as pd
+          from vnstock import Listing, Quote, Finance, Company
+
+          def shape(df):
+              return list(getattr(df, 'shape', (0, 0)))
+          def cols(df):
+              return [str(c) for c in getattr(df, 'columns', [])]
+
+          listing = Listing(source='KBS')
+          hose = listing.symbols_by_exchange(exchange='HOSE')
+          if hasattr(hose, 'tolist') and not isinstance(hose, pd.DataFrame):
+              symbols = [str(x).upper() for x in hose.tolist()]
+          elif isinstance(hose, pd.DataFrame):
+              symbol_col = next((c for c in ('symbol','ticker','code') if c in hose.columns), None)
+              if symbol_col is None:
+                  raise RuntimeError(f'No symbol column in HOSE listing: {cols(hose)}')
+              symbols = [str(x).upper() for x in hose[symbol_col].dropna().tolist()]
+          else:
+              symbols = [str(x).upper() for x in list(hose)]
+          symbols = sorted({s for s in symbols if len(s)==3 and s.isalpha()})
+          if len(symbols) < 300:
+              raise RuntimeError(f'HOSE listing unexpectedly small: {len(symbols)}')
+
+          quote = Quote(source='KBS', symbol='HPG')
+          px = quote.history(start='2025-01-01', end='2026-09-04', interval='1D')
+          required_px = {'time','open','high','low','close','volume'}
+          if not required_px.issubset(set(map(str, px.columns))):
+              raise RuntimeError(f'OHLCV schema missing columns: {cols(px)}')
+          if len(px) < 250:
+              raise RuntimeError(f'OHLCV history too short: {len(px)}')
+
+          finance = Finance(source='KBS', symbol='HPG')
+          income = finance.income_statement(period='quarter')
+          balance = finance.balance_sheet(period='quarter')
+          cash = finance.cash_flow(period='quarter')
+          if min(len(income), len(balance), len(cash)) == 0:
+              raise RuntimeError('One or more raw statement tables are empty')
+
+          company = Company(source='KBS', symbol='HPG')
+          overview = company.overview()
+
+          print(json.dumps({
+              'provider_role': 'RAW_INPUT_ONLY',
+              'hose_symbol_count': len(symbols),
+              'ohlcv_shape': shape(px),
+              'ohlcv_columns': cols(px),
+              'income_shape': shape(income),
+              'income_columns': cols(income)[:30],
+              'balance_shape': shape(balance),
+              'balance_columns': cols(balance)[:30],
+              'cashflow_shape': shape(cash),
+              'cashflow_columns': cols(cash)[:30],
+              'overview_shape': shape(overview),
+              'overview_columns': cols(overview)[:30],
+          }, ensure_ascii=False, indent=2))
+          PY
