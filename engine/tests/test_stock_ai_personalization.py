@@ -31,8 +31,11 @@ class StockAiPersonalizationTests(unittest.TestCase):
     def test_browser_supports_ticker_and_portfolio_questions_without_secrets(self):
         source = CLIENT.read_text(encoding="utf-8")
         self.assertIn("portfolioIntent", source)
+        self.assertIn("tickerForMessage", source)
+        self.assertIn("if (portfolioIntent(text)) return '';", source)
         self.assertIn("requestScope", source)
         self.assertIn("Danh mục hôm nay", source)
+        self.assertIn("Hỏi StockRadar AI", source)
         self.assertIn("scope,", source)
         self.assertNotIn("OPENAI_API_KEY", source)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY", source)
