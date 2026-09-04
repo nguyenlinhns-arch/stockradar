@@ -28,15 +28,8 @@
     button.textContent = busy ? label : button.dataset.defaultLabel;
   }
 
-  function maskEmail(email) {
-    const [local, domain] = normalizeEmail(email).split('@');
-    if (!local || !domain) return email;
-    const visible = local.length <= 2 ? local.slice(0, 1) : local.slice(0, 2);
-    return `${visible}***@${domain}`;
-  }
-
   function destinationFor(plan) {
-    return new URL(plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/?verified=1', document.baseURI).toString();
+    return new URL(plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/', document.baseURI).toString();
   }
 
   function syncExistingLogin(form) {
@@ -46,18 +39,23 @@
     link.href = `dang-nhap/?next=${encodeURIComponent(next)}`;
   }
 
+  function authClient() {
+    const cfg = window.STOCKRADAR_AUTH_CONFIG || {};
+    if (!cfg.configured || !cfg.supabaseUrl || !cfg.supabasePublishableKey || !window.supabase?.createClient) return null;
+    return window.supabase.createClient(
+      String(cfg.supabaseUrl).replace(/\/$/, ''),
+      String(cfg.supabasePublishableKey),
+      { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'stockradar-auth' } },
+    );
+  }
+
   async function redirectExistingPremiumUser(form) {
     if (selectedPlan(form) !== 'premium') return false;
-    const cfg = window.STOCKRADAR_AUTH_CONFIG || {};
-    if (!cfg.configured || !cfg.supabaseUrl || !cfg.supabasePublishableKey || !window.supabase?.createClient) return false;
+    const client = authClient();
+    if (!client) return false;
     try {
-      const client = window.supabase.createClient(
-        String(cfg.supabaseUrl).replace(/\/$/, ''),
-        String(cfg.supabasePublishableKey),
-        { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'stockradar-auth' } },
-      );
       const { data } = await client.auth.getUser();
-      if (data?.user?.email_confirmed_at) {
+      if (data?.user) {
         window.location.replace(destinationFor('premium'));
         return true;
       }
@@ -65,27 +63,26 @@
     return false;
   }
 
-  function showEmailSent(form, panel, email, plan) {
-    form.hidden = true;
-    panel.hidden = false;
-    const address = panel.querySelector('[data-signup-email-sent-address]');
-    const title = panel.querySelector('[data-signup-email-sent-title]');
-    const copy = panel.querySelector('[data-signup-email-sent-copy]');
-    const login = panel.querySelector('[data-signup-email-open-login]');
-    if (address) address.textContent = maskEmail(email);
-    if (title) title.textContent = 'Kiểm tra email để xác minh tài khoản';
-    if (copy) {
-      copy.textContent = plan === 'premium'
-        ? 'Bấm nút “Xác minh email StockRadar” trong email. Xác minh xong hệ thống sẽ đưa bạn thẳng tới thanh toán Premium 199.000đ/30 ngày.'
-        : 'Bấm nút “Xác minh email StockRadar” trong email. Xác minh xong tài khoản Free sẽ được mở.';
+  async function signInCreatedAccount(client, email, password) {
+    let lastError = null;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      if (!error && data?.session) return data;
+      lastError = error || new Error('missing session');
+      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)));
     }
-    if (login) {
-      const next = encodeURIComponent(plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/');
-      login.href = `dang-nhap/?next=${next}`;
-    }
+    throw lastError || new Error('sign in failed');
   }
 
-  async function submitSignup(event, form, panel) {
+  function clearLegacyPendingSignup() {
+    try {
+      sessionStorage.removeItem('sr_pending_signup_plan');
+      sessionStorage.removeItem('sr_pending_signup_next');
+      sessionStorage.removeItem('sr_pending_signup_email');
+    } catch (_) {}
+  }
+
+  async function submitSignup(event, form) {
     event.preventDefault();
     event.stopImmediatePropagation();
 
@@ -102,12 +99,13 @@
     if (!terms) return setMessage(message, 'Cần đồng ý Điều khoản và Chính sách quyền riêng tư để tạo tài khoản.', 'error');
 
     const cfg = window.STOCKRADAR_AUTH_CONFIG || {};
-    if (!cfg.configured || !cfg.supabaseUrl || !cfg.supabasePublishableKey) {
+    const client = authClient();
+    if (!client || !cfg.supabaseUrl || !cfg.supabasePublishableKey) {
       return setMessage(message, 'Dịch vụ tạo tài khoản chưa sẵn sàng.', 'error');
     }
 
     setBusy(form, true, 'Đang tạo tài khoản…');
-    setMessage(message, 'Đang tạo tài khoản và gửi liên kết xác minh email…');
+    setMessage(message, 'Đang tạo tài khoản…');
 
     try {
       const response = await fetch(`${String(cfg.supabaseUrl).replace(/\/$/, '')}/functions/v1/signup-link`, {
@@ -135,26 +133,28 @@
       let data = {};
       try { data = await response.json(); } catch (_) {}
 
-      form.elements.password.value = '';
-      form.elements.password_confirm.value = '';
-
       if (!response.ok || data?.ok !== true) {
+        form.elements.password.value = '';
+        form.elements.password_confirm.value = '';
         const text = response.status === 409
-          ? 'Chưa thể tạo tài khoản mới. Nếu email này đã có tài khoản, hãy đăng nhập; nếu chưa, vui lòng thử lại.'
-          : 'Chưa thể gửi email xác minh. Vui lòng thử lại sau.';
+          ? 'Không thể tạo tài khoản mới. Nếu email này đã có tài khoản, hãy đăng nhập.'
+          : 'Chưa thể tạo tài khoản. Vui lòng thử lại sau.';
         return setMessage(message, text, 'error');
       }
 
-      try {
-        sessionStorage.setItem('sr_pending_signup_plan', plan);
-        sessionStorage.setItem('sr_pending_signup_next', destinationFor(plan));
-        sessionStorage.setItem('sr_pending_signup_email', email);
-      } catch (_) {}
-      showEmailSent(form, panel, email, plan);
+      setMessage(message, plan === 'premium'
+        ? 'Tạo tài khoản thành công. Đang mở thanh toán Premium…'
+        : 'Tạo tài khoản thành công. Đang mở tài khoản Free…', 'success');
+
+      await signInCreatedAccount(client, email, password);
+      form.elements.password.value = '';
+      form.elements.password_confirm.value = '';
+      clearLegacyPendingSignup();
+      window.location.replace(destinationFor(plan));
     } catch (_) {
       form.elements.password.value = '';
       form.elements.password_confirm.value = '';
-      setMessage(message, 'Không thể kết nối dịch vụ tạo tài khoản. Vui lòng thử lại.', 'error');
+      setMessage(message, 'Tài khoản có thể đã được tạo nhưng chưa thể tự đăng nhập. Hãy dùng nút Đăng nhập bên dưới.', 'error');
     } finally {
       setBusy(form, false);
     }
@@ -162,19 +162,13 @@
 
   function init() {
     const form = document.querySelector('[data-auth-signup-form]');
-    const panel = document.querySelector('[data-signup-email-sent]');
-    if (!form || !panel) return;
+    if (!form) return;
 
     document.querySelector('[data-auth-signup-otp-form]')?.remove();
+    document.querySelector('[data-signup-email-sent]')?.remove();
     syncExistingLogin(form);
 
-    form.addEventListener('submit', event => submitSignup(event, form, panel), true);
-
-    panel.querySelector('[data-signup-email-back]')?.addEventListener('click', () => {
-      panel.hidden = true;
-      form.hidden = false;
-      form.elements.email?.focus();
-    });
+    form.addEventListener('submit', event => submitSignup(event, form), true);
 
     form.querySelectorAll('input[name="selected_plan"]').forEach(input => {
       input.addEventListener('change', () => {
