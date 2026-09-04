@@ -97,10 +97,13 @@ def weighted_values(row, values):
 def build(args):
     fund=pd.read_csv(args.fundamental); profile=pd.read_csv(args.profile); status=pd.read_csv(args.status); scanner=pd.read_csv(args.scanner); val=pd.read_csv(args.valuation); financial=pd.read_csv(args.financial,compression='infer'); sector=pd.read_csv(args.sector); op=pd.read_csv(args.operational)
     if len(scanner)!=EXPECTED_HOSE or scanner.ticker.nunique()!=EXPECTED_HOSE: raise ValueError('scanner universe !=405')
+    required_val_cols=['fv_pe_bootstrap','fv_pb_bootstrap','fair_value_bootstrap_bear','fair_value_bootstrap_base','fair_value_bootstrap_bull','valuation_model_status']
+    missing_val_cols=[c for c in required_val_cols if c not in scanner.columns]
+    if missing_val_cols: raise ValueError('scanner missing canonical valuation columns: '+','.join(missing_val_cols))
     status['sector_v4']=status.apply(lambda r:SECTOR_OVERRIDES.get(str(r.ticker),r.sector),axis=1)
     a,m=build_annual(financial)
     cols_s=['ticker','sector_v4']; cols_p=['ticker','company_type','outstanding_shares_profile','audit_firm','institutional_ownership_profile_pct','foreign_ownership_profile_pct','top_shareholder_pct']
-    df=fund.merge(profile[cols_p],on='ticker',how='left').merge(status[cols_s],on='ticker',how='left').merge(scanner,on='ticker',how='left',suffixes=('','_scan')).merge(val[['ticker','fv_pe_bootstrap','fv_pb_bootstrap','fair_value_bootstrap_bear','fair_value_bootstrap_base','fair_value_bootstrap_bull','valuation_model_status']],on='ticker',how='left').merge(m,on='ticker',how='left').merge(sector.rename(columns={'sector':'sector_join_v4'})[['sector_join_v4','sector_strength_score','sector_regime']],left_on='sector_v4',right_on='sector_join_v4',how='left').drop(columns=['sector_join_v4']).merge(op[['ticker','market_score','market_regime','risk_score','intraday_5m_ready','data_quality_score']],on='ticker',how='left')
+    df=fund.merge(profile[cols_p],on='ticker',how='left').merge(status[cols_s],on='ticker',how='left').merge(scanner,on='ticker',how='left',suffixes=('','_scan')).merge(m,on='ticker',how='left').merge(sector.rename(columns={'sector':'sector_join_v4'})[['sector_join_v4','sector_strength_score','sector_regime']],left_on='sector_v4',right_on='sector_join_v4',how='left').drop(columns=['sector_join_v4']).merge(op[['ticker','market_score','market_regime','risk_score','intraday_5m_ready','data_quality_score']],on='ticker',how='left')
     df['business_bucket']=np.select([df.company_type.eq('Ngân hàng'),df.company_type.eq('Công ty chứng khoán'),df.company_type.eq('Công ty bảo hiểm'),df.sector_v4.eq('Bất động sản'),df.sector_v4.isin(CYCLE_SECTORS)],['BANK','SECURITIES','INSURANCE','REAL_ESTATE','CYCLICAL'],default='GENERAL')
     df['market_cap']=num(df.price)*num(df.outstanding_shares_profile)
     df['normalized_earnings_for_payback']=np.nan; df['payback_model']='UNAVAILABLE'
