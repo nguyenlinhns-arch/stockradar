@@ -1,11 +1,11 @@
-name: Repair scanner technical contract
+name: Repair scanner source-time fallback
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'scripts/repair_scanner_technical_contract_once.py'
+      - 'scripts/repair_scanner_source_time_once.py'
       - '.github/workflows/repair-scanner-technical-contract.yml'
 
 permissions:
@@ -16,12 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Patch producer contract
-        run: python scripts/repair_scanner_technical_contract_once.py
-      - name: Commit repaired producer
+      - name: Patch scanner source-time fallback
+        run: python scripts/repair_scanner_source_time_once.py
+      - name: Commit repaired scanner
         run: |
           git config user.name stockradar-bot
           git config user.email stockradar-bot@users.noreply.github.com
-          git add scripts/bootstrap_kbs_hose_data.py
-          git commit -m 'Fix technical feature contract for full-HOSE scanner'
-          git push
+          git add scripts/build_internal_scanner_feed_v2.py
+          if git diff --cached --quiet; then
+            echo 'Scanner fallback already repaired; nothing to commit.'
+          else
+            git commit -m 'Fix scanner fallback when source_time_ms is absent'
+            git push
+          fi
