@@ -6,7 +6,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class CheckoutSurfaceTests(unittest.TestCase):
-    def test_checkout_is_stockradar_branded_and_fail_closed(self):
+    def test_checkout_is_stockradar_branded_authenticated_and_fail_closed(self):
         page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
         client = (ROOT / "website" / "assets" / "checkout-v1.js").read_text(encoding="utf-8")
         styles = (ROOT / "website" / "assets" / "checkout-v1.css").read_text(encoding="utf-8")
@@ -14,37 +14,49 @@ class CheckoutSurfaceTests(unittest.TestCase):
         for marker in (
             'data-proposition="checkout"',
             "StockRadar Premium",
-            "VietQR / Chuyển khoản ngân hàng",
+            "VietQR",
             "199.000đ",
             "30 ngày",
             "Không tự gia hạn",
             "data-checkout-confirm",
             "data-checkout-account-email",
+            "data-checkout-qr-image",
+            "data-checkout-expiry",
+            "assets/auth-config.js",
             "assets/checkout-v1.css",
             "assets/checkout-v1.js",
         ):
             self.assertIn(marker, page)
 
-        self.assertIn("enabled: false", client)
-        self.assertIn("paymentReference", client)
-        self.assertIn("checkout.enabled", client)
-        self.assertIn("currentUser", client)
+        for marker in (
+            "create_my_checkout_request",
+            "confirm_my_checkout_request",
+            "get_my_checkout_request",
+            "payment_reference",
+            "checkout_enabled",
+            "currentUser",
+            "img.vietqr.io",
+            "setInterval(refreshRequest, 8000)",
+            "PAID",
+            "EXPIRED",
+        ):
+            self.assertIn(marker, client)
         self.assertNotIn("service_role", client.lower())
-        self.assertNotIn("secret", client.lower())
+        self.assertNotIn("sb_secret_", client.lower())
         self.assertIn("@media (max-width: 620px)", styles)
         self.assertIn("checkout-mobile-bar", styles)
+        self.assertIn(".checkout-qr img", styles)
 
-    def test_disabled_checkout_has_non_payment_premium_interest_fallback(self):
+    def test_checkout_keeps_non_payment_fallback_until_bank_runtime_is_enabled(self):
         page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
         email_client = (ROOT / "website" / "assets" / "email-interest.js").read_text(encoding="utf-8")
 
         for marker in (
-            "CỔNG THANH TOÁN CHƯA MỞ",
-            "Đăng ký ưu tiên Premium thay vì chờ",
+            "data-checkout-disabled-fallback",
+            "THANH TOÁN CHƯA ĐƯỢC KÍCH HOẠT",
             'data-email-interest-form',
             'name="event_alerts" type="checkbox" checked hidden',
             'name="privacy" type="checkbox" required',
-            "Báo tôi khi Premium mở thanh toán",
             "assets/email-interest.js",
             "assets/lead-v1.css",
             'data-next-href="signup/?plan=premium"',
