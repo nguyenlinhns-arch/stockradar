@@ -18,6 +18,7 @@ on:
       - 'scripts/patch_conversion_funnel_v4.py'
       - 'scripts/redesign_home_paid_intent_v1.py'
       - 'scripts/apply_premium_email_product_v1.py'
+      - 'scripts/apply_ai_first_premium_email.py'
       - 'scripts/strip_public_methods.py'
       - 'scripts/inject_ai_assistant.py'
       - 'scripts/verify*.py'
@@ -82,37 +83,32 @@ jobs:
           python scripts/link_premium_sample.py .pages-site
           python scripts/patch_conversion_funnel_v4.py .pages-site
           if grep -q 'data-stockradar-ai-center' .pages-site/index.html; then
-            echo 'Skip legacy paid-intent homepage redesign: AI-first homepage detected.'
+            echo 'AI-first homepage detected: preserve AI center and adapt Premium email surfaces.'
+            python scripts/apply_ai_first_premium_email.py .pages-site
           else
             python scripts/redesign_home_paid_intent_v1.py .pages-site
+            python scripts/apply_premium_email_product_v1.py .pages-site
           fi
-          python scripts/apply_premium_email_product_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
           python scripts/inject_ai_assistant.py .pages-site
 
       - name: Verify production auth artifact
         run: python scripts/verify_pages_auth.py .pages-site
 
-      - name: Verify production public surface
-        run: python scripts/verify_pages_public_surface_paid_home_v1.py .pages-site
-
-      - name: Verify buyer-ready product surface
-        run: python scripts/verify_buyer_readiness.py .pages-site
-
-      - name: Verify conversion-first buyer journey
-        run: python scripts/verify_conversion_paid_home_v1.py .pages-site
-
-      - name: Verify homepage paid intent
-        run: python scripts/verify_home_paid_intent_v1.py .pages-site
-
-      - name: Verify Premium email buyer experience
-        run: python scripts/verify_premium_email_product_v1.py .pages-site
-
-      - name: Verify measurable Premium funnel
-        run: python scripts/verify_conversion_funnel_v4.py .pages-site
-
-      - name: Verify StockRadar AI center
-        run: python scripts/verify_ai_assistant.py .pages-site
+      - name: Verify AI-first or legacy product contract
+        run: |
+          if grep -q 'data-stockradar-ai-center' .pages-site/index.html; then
+            python scripts/verify_ai_first_product.py .pages-site
+            python scripts/verify_ai_assistant.py .pages-site
+          else
+            python scripts/verify_pages_public_surface_paid_home_v1.py .pages-site
+            python scripts/verify_buyer_readiness.py .pages-site
+            python scripts/verify_conversion_paid_home_v1.py .pages-site
+            python scripts/verify_home_paid_intent_v1.py .pages-site
+            python scripts/verify_premium_email_product_v1.py .pages-site
+            python scripts/verify_conversion_funnel_v4.py .pages-site
+            python scripts/verify_ai_assistant.py .pages-site
+          fi
 
       - name: Install Chromium visual QA
         run: |
