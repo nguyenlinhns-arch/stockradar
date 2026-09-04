@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      - 'engine/tests/test_ai_registration_ctas.py'
       - 'engine/tests/test_stock_ai_personalization.py'
       - 'engine/tests/test_stock_ai_product_center.py'
       - 'engine/tests/test_buyer_readiness.py'
@@ -17,6 +18,7 @@ on:
       - 'scripts/redesign_home_value_block.py'
       - 'scripts/enforce_registration_plan_ctas.py'
       - 'scripts/enforce_checkout_public_bank_info.py'
+      - 'scripts/enforce_ai_registration_ctas.py'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
@@ -56,6 +58,7 @@ jobs:
       - name: Run stock lookup, checkout and AI regression suite
         run: |
           python -m unittest -v \
+            engine.tests.test_ai_registration_ctas \
             engine.tests.test_alphanumeric_ticker_compat \
             engine.tests.test_authenticated_stock_client_assets \
             engine.tests.test_buyer_readiness \
@@ -106,6 +109,7 @@ jobs:
           python scripts/inject_ai_assistant.py .pages-site
           python scripts/enforce_registration_plan_ctas.py .pages-site
           python scripts/enforce_checkout_public_bank_info.py .pages-site
+          python scripts/enforce_ai_registration_ctas.py .pages-site
 
       - name: Verify stock lookup, Premium and AI contracts
         run: |
