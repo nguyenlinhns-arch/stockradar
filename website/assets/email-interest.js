@@ -3,6 +3,8 @@
 
   const CONSENT_VERSION = '2026-09-03';
   const FALLBACK_SUPABASE_URL = 'https://xamviatbxufjlpiwhebb.supabase.co';
+  const LEAD_CAPTURED_KEY = 'sr_email_lead_captured';
+  const PENDING_LEAD_EMAIL_KEY = 'sr_pending_lead_email';
 
   function setMessage(target, message, kind = '') {
     if (!target) return;
@@ -20,20 +22,35 @@
     return /^[a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,}$/i.test(value);
   }
 
+  function attribution() {
+    const params = new URLSearchParams(window.location.search);
+    let referrerHost = '';
+    try { referrerHost = document.referrer ? new URL(document.referrer).hostname : ''; } catch (_) {}
+    return {
+      source_path: String(window.location.pathname || '/').slice(0, 256),
+      utm_source: String(params.get('utm_source') || '').slice(0, 120),
+      utm_campaign: String(params.get('utm_campaign') || '').slice(0, 160),
+      referrer_host: String(referrerHost || '').slice(0, 253),
+    };
+  }
+
+  function rememberLead(email) {
+    try { localStorage.setItem(LEAD_CAPTURED_KEY, '1'); } catch (_) {}
+    try { sessionStorage.setItem(PENDING_LEAD_EMAIL_KEY, email); } catch (_) {}
+  }
+
   function removeNextStep(form) {
     form.querySelector('[data-email-interest-next]')?.remove();
   }
 
-  function renderNextStep(form, email) {
+  function renderNextStep(form) {
     removeNextStep(form);
     const rawHref = String(form.dataset.nextHref || '').trim();
     if (!rawHref) return;
-    const url = new URL(rawHref, document.baseURI);
-    if (email) url.searchParams.set('email', email);
     const link = document.createElement('a');
     link.className = 'email-interest-next';
     link.dataset.emailInterestNext = '';
-    link.href = url.toString();
+    link.href = new URL(rawHref, document.baseURI).toString();
     link.textContent = String(form.dataset.nextLabel || 'Tiếp tục');
     const message = form.querySelector('[data-email-interest-message]');
     message?.insertAdjacentElement('afterend', link);
@@ -79,6 +96,7 @@
           privacy_accepted: true,
           consent_version: CONSENT_VERSION,
           company,
+          ...attribution(),
         }),
         signal: controller.signal,
         credentials: 'omit',
@@ -91,12 +109,13 @@
         throw new Error(payload.message || 'Chưa thể ghi nhận nhu cầu email lúc này.');
       }
 
+      rememberLead(email);
       setMessage(
         message,
         payload.message || 'Đã ghi nhận email ở trạng thái chờ xác minh. Bản tin 09:00 cần quyền Free trở lên; cảnh báo mua/bán cần quyền Premium.',
         'success'
       );
-      renderNextStep(form, email);
+      renderNextStep(form);
       form.querySelectorAll('input[type="checkbox"]').forEach(input => { input.checked = false; });
     } catch (error) {
       const text = error?.name === 'AbortError'
