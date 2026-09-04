@@ -19,7 +19,7 @@
 </head>
 <body data-proposition="paid-dashboard">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
-  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính"><a href="hom-nay/" aria-current="page">Hôm nay</a><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
+  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a><button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button><nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="hom-nay/" aria-current="page">Hôm nay</a><a href="radar5/">Radar</a><a href="kiem-tra-co-phieu/">Tra cứu mã</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a></nav></div></header>
 
   <main id="content">
     <section class="page-heading compact-heading"><div class="container page-heading-inner"><div><nav class="breadcrumbs" aria-label="Đường dẫn"><a href="./">Trang chủ</a><span>Hôm nay</span></nav><h1>Hôm nay</h1><p>Việc cần làm trước · mã đang sở hữu · mã theo dõi · thay đổi mới · trạng thái cảnh báo.</p></div><div class="page-heading-actions"><span class="data-pill" data-paid-tier-badge>TÀI KHOẢN</span><a class="button button-secondary button-small" href="tai-khoan/">Cài đặt</a></div></div></section>
@@ -47,7 +47,7 @@
         <div class="paid-dashboard-grid">
           <div class="paid-main-column">
             <section class="paid-panel" aria-labelledby="paid-actions-title">
-              <header><div><span class="panel-label">VIỆC CẦN LÀM</span><h2 id="paid-actions-title">Hành động ưu tiên</h2></div><div><small data-paid-decision-status>ĐANG KIỂM TRA</small><br><small>Snapshot: <b data-paid-snapshot>—</b></small></div></header>
+              <header><div><span class="panel-label">VIỆC CẦN LÀM</span><h2 id="paid-actions-title">Hành động ưu tiên</h2></div><div><small data-paid-decision-status>CHƯA CÓ TRẠNG THÁI</small><br><small>Snapshot: <b data-paid-snapshot>—</b></small></div></header>
               <div class="paid-action-list" data-paid-actions></div>
             </section>
 
@@ -57,7 +57,7 @@
             </section>
 
             <section class="paid-panel" aria-labelledby="paid-watch-title">
-              <header><div><span class="panel-label">WATCHLIST</span><h2 id="paid-watch-title">Mã đang chờ cơ hội</h2></div><small>Ưu tiên điểm mua sớm, breakout và thay đổi setup</small></header>
+              <header><div><span class="panel-label">WATCHLIST</span><h2 id="paid-watch-title">Mã đang chờ cơ hội</h2></div><small>Ưu tiên vùng hành động và thay đổi trạng thái</small></header>
               <div class="paid-stock-list" data-paid-watch-list></div>
             </section>
 
@@ -77,9 +77,9 @@
               <header><div><span class="panel-label">TRUY CẬP NHANH</span><h2 id="paid-shortcuts-title">Đi thẳng tới việc cần làm</h2></div></header>
               <div class="paid-quick-links">
                 <a href="kiem-tra-co-phieu/"><strong>Tra cứu một mã</strong><span>Mua mới / đang nắm giữ</span></a>
-                <a href="khuyen-nghi/"><strong>Khuyến nghị đang hiệu lực</strong><span>Buy Zone · Stop · Target</span></a>
+                <a href="khuyen-nghi/"><strong>Khuyến nghị đang hiệu lực</strong><span>Vùng mua · Stop · Target</span></a>
                 <a href="radar5/"><strong>Radar toàn HOSE</strong><span>Tìm cơ hội mới</span></a>
-                <a href="hieu-qua/"><strong>Hiệu quả</strong><span>Kiểm chứng track record</span></a>
+                <a href="hieu-qua/"><strong>Hiệu quả</strong><span>Kiểm chứng lịch sử</span></a>
                 <a href="tai-khoan/"><strong>Cài đặt tài khoản</strong><span>Watchlist · Email · Alert</span></a>
               </div>
             </section>
