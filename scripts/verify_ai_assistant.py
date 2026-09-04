@@ -81,20 +81,26 @@ def main() -> int:
                 "stock-ai",
                 "KHÁCH · 3 CÂU / NGÀY",
                 "FREE · 10 CÂU / NGÀY",
-                "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
+                "PREMIUM · AI KHÔNG GIỚI HẠN · ACTION ALERT",
                 "dang-ky/?plan=free",
-                "dang-ky/?plan=premium",
-                "Đăng ký Free",
-                "Xem gói Paid",
+                "thanh-toan/?plan=premium",
+                "Tạo tài khoản Free",
+                "Nâng Premium",
+                "currentAccountTier",
+                "storageKey: STORAGE_KEY",
             ),
             "Native AI browser product contract",
         )
-        for stale_ai_route in (
+        for stale in (
+            "PAID · AI KHÔNG GIỚI HẠN",
+            "TRIAL · AI",
+            "dang-ky/?plan=premium",
+            "Xem gói Paid",
             "signup/?plan=free",
             "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
         ):
-            if stale_ai_route in center_js:
-                raise SystemExit(f"Native AI CTA bypasses the plan selection surface: {stale_ai_route}")
+            if stale in center_js:
+                raise SystemExit(f"Native AI exposes stale buyer state/route: {stale}")
         require_markers(
             home,
             (
@@ -153,7 +159,7 @@ def main() -> int:
         if "sr-ai-nav-link" not in source:
             raise SystemExit(f"AI navigation missing from: {relative}")
 
-    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement; Premium registration continues to payment after plan selection")
+    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Premium unlimited/alert entitlement; signed-in Free upgrades directly to payment")
     return 0
 
 
