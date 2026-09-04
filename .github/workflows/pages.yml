@@ -53,6 +53,7 @@ jobs:
           python scripts/inject_home_radar_polish.py .pages-site
           python scripts/upgrade_home_radar_operational.py .pages-site
           python scripts/apply_buyer_readiness.py .pages-site
+          python scripts/redesign_home_value_block.py .pages-site
           python scripts/strip_public_methods.py .pages-site
 
       - name: Verify production auth artifact
