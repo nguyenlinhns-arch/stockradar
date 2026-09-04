@@ -46,7 +46,7 @@ def main() -> None:
         errors.append("homepage missing")
     else:
         source = home.read_text(encoding="utf-8")
-        for marker in ("buyer-readiness-v1.css", "buyer-readiness-v1.js", "checkoutReady:false", "emailDeliveryReady:false"):
+        for marker in ("buyer-readiness-v1.css", "buyer-readiness-v1.js", "checkoutReady:true", "emailDeliveryReady:false"):
             if marker not in source:
                 errors.append(f"homepage buyer marker missing: {marker}")
         for forbidden in (
@@ -58,15 +58,32 @@ def main() -> None:
             if forbidden.lower() in source.lower():
                 errors.append(f"inactive/misleading homepage promise remains: {forbidden}")
 
-    if (output / "thanh-toan").exists():
-        errors.append("checkout route published while checkoutReady=false")
+    checkout = output / "thanh-toan" / "index.html"
+    if not checkout.is_file():
+        errors.append("checkout route missing while checkoutReady=true")
+    else:
+        checkout_source = checkout.read_text(encoding="utf-8")
+        for marker in (
+            "VietQR",
+            "data-checkout-confirm",
+            "data-checkout-account-email",
+            "assets/checkout-v1.js",
+            "assets/auth-config.js",
+            "199.000đ",
+            "Không tự gia hạn",
+        ):
+            if marker not in checkout_source:
+                errors.append(f"checkout marker missing: {marker}")
 
+    checkout_links = 0
     for page in output.rglob("*.html"):
         source = page.read_text(encoding="utf-8")
         if "buyer-readiness-v1.js" not in source:
             errors.append(f"buyer runtime missing: {page.relative_to(output)}")
-        if "thanh-toan/?plan=premium" in source:
-            errors.append(f"dead checkout CTA remains: {page.relative_to(output)}")
+        checkout_links += source.count("thanh-toan/?plan=premium")
+
+    if checkout_links == 0:
+        errors.append("no Premium CTA routes to checkout while checkoutReady=true")
 
     buyer_js = output / "assets" / "buyer-readiness-v1.js"
     if not buyer_js.is_file():
@@ -83,13 +100,14 @@ def main() -> None:
             "Xếp hạng HOSE",
             "Buy Zone",
             "Risk/Reward",
+            "checkoutReady",
         ):
             if marker not in source:
                 errors.append(f"buyer product marker missing: {marker}")
 
     if errors:
         raise RuntimeError("Buyer-readiness verification failed:\n- " + "\n- ".join(errors))
-    print("StockRadar buyer-readiness verification: PASS")
+    print("StockRadar buyer-readiness verification: PASS (checkout route published; product email remains gated)")
 
 
 if __name__ == "__main__":
