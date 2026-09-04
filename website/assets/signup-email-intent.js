@@ -3,10 +3,19 @@
 
   const CONSENT_VERSION = '2026-09-03';
   const VALID_PLANS = new Set(['free', 'premium']);
+  const PENDING_LEAD_EMAIL_KEY = 'sr_pending_lead_email';
 
   function selectedPlan(form) {
     const value = String(form?.elements?.selected_plan?.value || 'free').trim().toLowerCase();
     return VALID_PLANS.has(value) ? value : 'free';
+  }
+
+  function pendingLeadEmail() {
+    try { return String(sessionStorage.getItem(PENDING_LEAD_EMAIL_KEY) || '').trim().toLowerCase(); } catch (_) { return ''; }
+  }
+
+  function clearPendingLeadEmail() {
+    try { sessionStorage.removeItem(PENDING_LEAD_EMAIL_KEY); } catch (_) {}
   }
 
   function formMetadata() {
@@ -36,13 +45,24 @@
 
     const params = new URLSearchParams(window.location.search);
     const requested = params.get('plan');
-    const presetEmail = String(params.get('email') || '').trim().toLowerCase();
+    const queryEmail = String(params.get('email') || '').trim().toLowerCase();
+    const presetEmail = queryEmail || pendingLeadEmail();
+
     if (requested && VALID_PLANS.has(requested.toLowerCase())) {
       const radio = form.querySelector(`input[name="selected_plan"][value="${requested.toLowerCase()}"]`);
       if (radio) radio.checked = true;
     }
     if (presetEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(presetEmail) && form.elements.email && !form.elements.email.value) {
       form.elements.email.value = presetEmail;
+    }
+
+    // Backward compatibility for older links that carried an email query param:
+    // prefill it, then immediately remove the PII from the visible URL/history entry.
+    if (queryEmail && window.history?.replaceState) {
+      params.delete('email');
+      const cleanQuery = params.toString();
+      const cleanUrl = `${window.location.pathname}${cleanQuery ? `?${cleanQuery}` : ''}${window.location.hash || ''}`;
+      window.history.replaceState(null, '', cleanUrl);
     }
 
     const render = () => {
@@ -81,7 +101,7 @@
         const metadata = formMetadata();
         if (!metadata) return originalSignUp(credentials);
         const originalOptions = credentials?.options || {};
-        return originalSignUp({
+        const result = await originalSignUp({
           ...credentials,
           options: {
             ...originalOptions,
@@ -91,6 +111,8 @@
             },
           },
         });
+        if (!result?.error) clearPendingLeadEmail();
+        return result;
       };
       patchedSignUp.__stockradarSignupPatched = true;
       client.auth.signUp = patchedSignUp;
