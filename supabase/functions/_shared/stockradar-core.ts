@@ -25,15 +25,14 @@ NGUYÊN TẮC QUYẾT ĐỊNH
 
 CHẾ ĐỘ DỮ LIỆU
 A) RESPONSE_MODE=ACTION_READY
-- ACTION_CONTEXT chứa report đã vượt Action/Data Gate.
+- ACTION_CONTEXT chứa report đã vượt kiểm tra phát hành.
 - Có thể đưa ra kết luận hành động, Buy Zone, Stop-loss, Target, Upside/Downside và Risk/Reward khi các trường tương ứng thực sự tồn tại trong ACTION_CONTEXT.
 - Không tự bịa số còn thiếu.
 
 B) RESPONSE_MODE=RESEARCH_ONLY
 - RESEARCH_CONTEXT chứa dữ liệu nghiên cứu StockRadar hiện có nhưng chưa được phát hành thành Action Report.
 - Được phép phân tích đầy đủ các dữ kiện hiện hữu trong RESEARCH_CONTEXT: giá, tăng trưởng, định giá, MA, Stage, RVOL, Pivot, VPA/SEPA và các chỉ số khác nếu có.
-- Phải gắn rõ kết luận là “Góc nhìn nghiên cứu — chưa phải khuyến nghị hành động đã xác nhận”.
-- Có thể nói: mạnh/yếu, WATCH, chưa đạt điểm mua, cần chờ xác nhận, đang chiết khấu hay định giá căng nếu dữ liệu hỗ trợ.
+- Có thể kết luận rõ “CHƯA MUA MỚI”, “THEO DÕI”, “ĐANG CÓ CẤU TRÚC TÍCH CỰC” hoặc tương đương nếu dữ liệu hỗ trợ.
 - Không phát hành Buy Zone, Stop-loss, Target hoặc lệnh MUA/BÁN chính thức nếu ACTION_CONTEXT chưa READY.
 - Không biến thiếu Action Report thành một câu từ chối máy móc; vẫn phải phân tích hữu ích trên dữ liệu nghiên cứu đang có.
 
@@ -46,10 +45,15 @@ DỮ LIỆU VÀ SUY LUẬN
 - Chỉ nêu con số lấy từ các context trên hoặc phép tính trực tiếp, minh bạch từ chính các con số đó.
 - Khi có giá vốn/tỷ trọng do người dùng tự nhập, chỉ được tính lãi/lỗ tương đối từ dữ liệu đó; không suy đoán NAV, số lượng hay phí/thuế.
 
-CÁCH TRẢ LỜI
-- Tiếng Việt, trực tiếp, rõ ràng, không diễn giải dài dòng.
-- Với một mã: Kết luận → Mua mới → Nếu đang nắm giữ → 4M/CANSLIM/định giá → SEPA/VPA/Stage → rủi ro/điều kiện thay đổi → dấu thời gian dữ liệu.
-- Với danh mục: Việc cần làm trước → mã đang sở hữu → watchlist → rủi ro tập trung → mã thiếu dữ liệu.
+CÁCH TRẢ LỜI — BẮT BUỘC
+- Tiếng Việt, trực tiếp, rõ ràng, ưu tiên quyết định trước; không viết kiểu báo cáo kỹ thuật dài dòng.
+- Không dùng ký hiệu Markdown như ** trong nội dung vì giao diện website hiển thị văn bản thuần.
+- Không dùng thuật ngữ nội bộ “Action Gate”, “Data Gate” trong câu trả lời cho người dùng. Hãy nói “tín hiệu hành động được xác nhận”, “dữ liệu đủ điều kiện phát hành” hoặc ngôn ngữ tự nhiên tương đương.
+- Với một mã, dòng đầu tiên phải là “KẾT LUẬN: ...” và trả lời thẳng câu hỏi mua/chờ/giữ/giảm nếu dữ liệu cho phép.
+- Sau kết luận, ưu tiên tối đa 6 khối ngắn theo thứ tự: “MUA MỚI:”, “NẾU ĐANG NẮM GIỮ:”, “VÌ SAO:”, “ĐỊNH GIÁ:”, “RỦI RO / ĐIỀU KIỆN ĐỔI:”, “DỮ LIỆU:”. Bỏ khối nào không có dữ liệu.
+- Với danh mục: “VIỆC CẦN LÀM TRƯỚC:” → mã đang sở hữu → watchlist → rủi ro tập trung → mã thiếu dữ liệu.
+- Mỗi khối chỉ giữ các dữ kiện có sức nặng quyết định; tránh lặp lại cùng một trạng thái bằng nhiều cách khác nhau.
+- Với RESEARCH_ONLY, ghi chú ở CUỐI: “Góc nhìn nghiên cứu — chưa phải tín hiệu hành động đã được xác nhận.”
 - Không ép phải có hành động nếu chưa có setup đủ chuẩn.`;
 
 export type StockRadarMode = "ACTION_READY" | "RESEARCH_ONLY" | "METHOD_ONLY";
@@ -92,7 +96,13 @@ function fmtPct(value: unknown, digits = 1): string {
 }
 
 function humanState(value: unknown): string {
-  return textValue(value).replaceAll("_", " ").replace(/\s+/g, " ").trim();
+  return textValue(value)
+    .replaceAll("_", " ")
+    .replace(/\s+/g, " ")
+    .replace(/\bWATCH\b/gi, "THEO DÕI")
+    .replace(/\bTHEO DOI\b/gi, "THEO DÕI")
+    .replace(/\bKHONG HANH DONG\b/gi, "CHƯA HÀNH ĐỘNG")
+    .trim();
 }
 
 export function normalizeResearchContext(raw: Record<string, unknown> | null | undefined): Record<string, unknown> | null {
@@ -151,21 +161,28 @@ function singleResearchAnswer(context: JsonObject, question = ""): string {
   const holdingState = humanState(analysis.holding_state_v5);
   const asOf = textValue(context.as_of_date) || textValue(objectValue(context.freshness).as_of_date);
 
+  const waiting = setup.includes("THEO DÕI") || newPositionState.includes("THEO DÕI") || newPositionState.includes("CHƯA HÀNH ĐỘNG");
   const lines: string[] = [];
-  lines.push(`Góc nhìn nghiên cứu — chưa phải khuyến nghị hành động đã xác nhận.`);
+  lines.push(waiting
+    ? `KẾT LUẬN: ${ticker} CHƯA MUA MỚI. Tiếp tục theo dõi và chờ cấu trúc giá/khối lượng xác nhận.`
+    : `KẾT LUẬN: ${ticker} chưa có tín hiệu hành động được xác nhận; dùng dữ liệu dưới đây để theo dõi setup tiếp theo.`);
 
-  const conclusionBits: string[] = [];
-  if (price !== null) conclusionBits.push(`giá ${fmtPrice(price)}`);
-  if (setup) conclusionBits.push(`setup ${setup}`);
-  if (radarStatus && radarStatus !== setup) conclusionBits.push(radarStatus);
-  lines.push(`**${ticker}:** ${conclusionBits.length ? conclusionBits.join(" · ") : "đã có dữ liệu nghiên cứu StockRadar"}.`);
+  const identityBits: string[] = [];
+  if (price !== null) identityBits.push(`giá ${fmtPrice(price)}`);
+  if (setup) identityBits.push(`setup ${setup}`);
+  if (radarStatus && radarStatus !== setup) identityBits.push(radarStatus);
+  if (identityBits.length) lines.push(`${ticker}: ${identityBits.join(" · ")}.`);
 
   const buyReasons: string[] = [];
-  if (newPositionState) buyReasons.push(`trạng thái mua mới: ${newPositionState}`);
+  if (newPositionState) buyReasons.push(`trạng thái ${newPositionState}`);
   if (pivot !== null && pivotDistance !== null) buyReasons.push(`pivot ${fmtPrice(pivot)}, hiện ${pivotDistance < 0 ? "dưới" : "trên"} khoảng ${fmtPct(Math.abs(pivotDistance), 1)}`);
   if (rvol !== null) buyReasons.push(`RVOL tiến độ ${fmtNumber(rvol, 2)}x`);
   if (technical.pocket_pivot_volume_pass !== undefined) buyReasons.push(`Pocket Pivot volume ${pocketPass ? "đạt" : "chưa đạt"}`);
-  if (buyReasons.length) lines.push(`**Mua mới:** ${buyReasons.join("; ")}.`);
+  if (buyReasons.length) lines.push(`MUA MỚI: ${buyReasons.join("; ")}.`);
+
+  if (holdingState) {
+    lines.push(`NẾU ĐANG NẮM GIỮ: trạng thái nghiên cứu ${holdingState}; chưa coi đây là tín hiệu bán/giảm chính thức nếu chưa có tín hiệu hành động được xác nhận.`);
+  }
 
   const trendBits: string[] = [];
   if (stage) trendBits.push(`Stage ${stage}`);
@@ -174,35 +191,31 @@ function singleResearchAnswer(context: JsonObject, question = ""): string {
   if (ma150 !== null) trendBits.push(`MA150 ${fmtPrice(ma150)}`);
   if (ma200 !== null) trendBits.push(`MA200 ${fmtPrice(ma200)}`);
   if (technical.ichimoku_state) trendBits.push(`Ichimoku ${humanState(technical.ichimoku_state)}`);
-  if (trendBits.length) lines.push(`**SEPA/VPA:** ${trendBits.join(" · ")}.`);
+  if (trendBits.length) lines.push(`VÌ SAO: ${trendBits.join(" · ")}.`);
 
   const fundamentalBits: string[] = [];
   if (roe !== null) fundamentalBits.push(`ROE ${fmtPct(roe, 1)}`);
-  if (revenueGrowth !== null) fundamentalBits.push(`tăng trưởng doanh thu ${fmtPct(revenueGrowth, 1)}`);
-  if (profitGrowth !== null) fundamentalBits.push(`tăng trưởng lợi nhuận ${fmtPct(profitGrowth, 1)}`);
+  if (revenueGrowth !== null) fundamentalBits.push(`doanh thu YoY ${fmtPct(revenueGrowth, 1)}`);
+  if (profitGrowth !== null) fundamentalBits.push(`lợi nhuận YoY ${fmtPct(profitGrowth, 1)}`);
   if (pe !== null) fundamentalBits.push(`P/E ${fmtNumber(pe, 2)}x`);
   if (pb !== null) fundamentalBits.push(`P/B ${fmtNumber(pb, 2)}x`);
-  if (fundamentalBits.length) lines.push(`**Cơ bản/định giá:** ${fundamentalBits.join(" · ")}.`);
 
   const valuationBits: string[] = [];
   if (fvBear !== null) valuationBits.push(`Bear ${fmtPrice(fvBear)}`);
   if (fvBase !== null) valuationBits.push(`Base ${fmtPrice(fvBase)}`);
   if (fvBull !== null) valuationBits.push(`Bull ${fmtPrice(fvBull)}`);
   if (upsideBase !== null) valuationBits.push(`upside nghiên cứu tới Base ${fmtPct(upsideBase, 1)}`);
-  if (valuationBits.length) lines.push(`**Fair Value nghiên cứu:** ${valuationBits.join(" · ")}. Đây là định giá nghiên cứu, không phải Target hành động.`);
-
-  const q = question.toLowerCase();
-  if (holdingState && /(đang giữ|nắm giữ|dang giu|nam giu|bán|ban|giữ|giu)/i.test(q)) {
-    lines.push(`**Nếu đang nắm giữ:** trạng thái nghiên cứu hiện tại là ${holdingState}; cần chờ Action Gate xác nhận trước khi coi đây là tín hiệu bán/giảm chính thức.`);
-  }
+  const valuationLine = [...fundamentalBits, ...valuationBits];
+  if (valuationLine.length) lines.push(`ĐỊNH GIÁ: ${valuationLine.join(" · ")}. Fair Value ở đây là định giá nghiên cứu, không phải Target hành động.`);
 
   const riskBits: string[] = [];
   if (analysis.decision_block_reasons_v5) riskBits.push(`điểm chặn: ${humanState(analysis.decision_block_reasons_v5).replaceAll("|", ", ")}`);
   if (analysis.sector_regime) riskBits.push(`ngành ${humanState(analysis.sector_regime)}`);
   if (analysis.market_regime) riskBits.push(`thị trường ${humanState(analysis.market_regime)}`);
-  if (riskBits.length) lines.push(`**Rủi ro/điều kiện:** ${riskBits.join("; ")}.`);
+  if (riskBits.length) lines.push(`RỦI RO / ĐIỀU KIỆN ĐỔI: ${riskBits.join("; ")}.`);
 
-  lines.push(`**Kết luận:** ${setup === "WATCH" || newPositionState.includes("THEO DOI") || newPositionState.includes("KHONG HANH DONG") ? "chưa có điểm mua hành động đã xác nhận; tiếp tục WATCH và chờ cấu trúc/volume xác nhận." : "dùng trạng thái trên như góc nhìn nghiên cứu và chờ Action Gate xác nhận trước khi hành động."}${asOf ? ` Dữ liệu: ${asOf}.` : ""}`);
+  if (asOf) lines.push(`DỮ LIỆU: ${asOf}.`);
+  lines.push(`Góc nhìn nghiên cứu — chưa phải tín hiệu hành động đã được xác nhận.`);
   return lines.join("\n\n");
 }
 
@@ -231,12 +244,12 @@ export function deterministicStockRadarAnswer(args: {
       const rvol = numberValue(technical.rvol_progress_adjusted ?? technical.rvol);
       return `- ${ticker}: ${price !== null ? fmtPrice(price) : "chưa có giá"}${setup ? ` · ${setup}` : ""}${stage ? ` · ${stage}` : ""}${rvol !== null ? ` · RVOL ${fmtNumber(rvol, 2)}x` : ""}`;
     });
-    return `Góc nhìn nghiên cứu — chưa phải khuyến nghị hành động đã xác nhận.\n\n${rows.join("\n")}\n\nChỉ chuyển sang lệnh MUA/BÁN, Buy Zone, Stop và Target chính thức khi Action Gate của từng mã được xác nhận.`;
+    return `VIỆC CẦN LÀM TRƯỚC: ưu tiên các mã có setup rõ và dữ liệu xác nhận mạnh hơn; chưa tự suy diễn thành lệnh mua/bán.\n\n${rows.join("\n")}\n\nGóc nhìn nghiên cứu — chỉ chuyển thành tín hiệu hành động khi từng mã đủ điều kiện phát hành.`;
   }
 
   if (args.mode === "ACTION_READY" && Array.isArray(args.actionContext) && args.actionContext.length) {
-    return `Dữ liệu Action của StockRadar đã READY nhưng lớp diễn giải AI đang tạm gián đoạn. Hãy dùng trực tiếp Action Report đã xác nhận trên StockRadar; hệ thống không tự tạo thêm Buy Zone, Stop hay Target ngoài các trường đã phát hành.`;
+    return `KẾT LUẬN: StockRadar đã có dữ liệu hành động đủ điều kiện phát hành nhưng lớp diễn giải AI đang tạm gián đoạn. Hãy dùng trực tiếp Action Report đã phát hành; hệ thống không tự tạo thêm Buy Zone, Stop hay Target ngoài các trường đã xác nhận.`;
   }
 
-  return `StockRadar chưa có đủ dữ liệu nghiên cứu cho mã này để kết luận hiện tại. Hệ thống sẽ kiểm tra theo 4M/Payback → CANSLIM → định giá Bear/Base/Bull → SEPA/VCP → VPA/Pocket Pivot → Stage/Ichimoku/Bollinger → dòng tiền và quản trị rủi ro; cần dữ liệu giá, volume, nền/pivot và cơ bản đủ mới để xác nhận.`;
+  return `KẾT LUẬN: chưa đủ dữ liệu nghiên cứu để kết luận hiện tại. Cần dữ liệu giá, khối lượng, nền/pivot và cơ bản đủ mới; StockRadar sẽ kiểm tra theo 4M/Payback → CANSLIM → định giá Bear/Base/Bull → SEPA/VCP → VPA/Pocket Pivot → Stage/Ichimoku/Bollinger → dòng tiền và quản trị rủi ro.`;
 }
