@@ -172,15 +172,18 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
             self.assertIn(marker, client)
         self.assertNotIn("service_role", client.lower())
 
-    def test_public_ticker_seed_is_fail_closed_until_full_hose_master_is_approved(self):
+    def test_reference_seed_is_non_publishable_and_pages_workflow_fail_closes_it(self):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
         self.assertEqual(payload["data_status"], "BLOCKED_DATA_GATE")
-        self.assertEqual(payload["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")
-        self.assertEqual(payload["selection_kind"], "NONE_FAIL_CLOSED")
-        self.assertEqual(payload["items"], [])
+        self.assertEqual(payload["public_scope"], "REFERENCE_ONLY")
+        self.assertFalse(payload["full_universe"])
         self.assertEqual(payload["internal_reference"]["record_count"], 405)
         self.assertEqual(payload["internal_reference"]["validated_count"], 405)
         self.assertFalse(payload["internal_reference"]["raw_publication_allowed"])
+        self.assertLess(len(payload["items"]), payload["internal_reference"]["record_count"])
+        workflow = self.read(".github/workflows/pages.yml")
+        self.assertIn("python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json", workflow)
+        self.assertLess(workflow.index("Run regression suite"), workflow.index("Fail-close public ticker seed before Pages build"))
 
     def test_registration_page_compares_free_daily_and_premium_intraday(self):
         register = self.read("website/dang-ky/index.html")
@@ -209,7 +212,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("data-radar-review-list", page)
         self.assertIn("Không dùng mã mẫu hoặc danh sách lựa chọn thủ công", page)
         self.assertIn("Radar và Khuyến nghị là hai lớp khác nhau", page)
-        self.assertNotIn("30 mã", page)
+        self.assertNotIn("Radar 30", page)
         self.assertNotIn("10 ngành · 3 mã", page)
         for ticker in ("ACB", "MBB", "HPG", "FPT", "VHM"):
             self.assertNotIn(f">{ticker}<", page)
