@@ -60,6 +60,11 @@ def valid_manifest():
             "source_terms_reviewed": True,
             "evidence_ref": "LEGAL-DATA-RIGHTS-2026-09",
         },
+        "compliance": {
+            "review_completed": True,
+            "public_recommendation_approved": True,
+            "evidence_ref": "LEGAL-COMPLIANCE-REVIEW-2026-09",
+        },
         "active_status": {
             "semantics_resolved": True,
             "market_status_checked": True,
@@ -80,6 +85,7 @@ class ProductionDataContractTests(unittest.TestCase):
         self.assertTrue(result.passed)
         self.assertEqual(result.failures, ())
         self.assertTrue(result.to_dict()["publication_allowed"])
+        self.assertTrue(result.to_dict()["compliance_required"])
         self.assertEqual(result.to_dict()["calculation_origin"], "STOCKRADAR_ENGINE")
 
     def test_rights_failure_blocks_publication(self):
@@ -88,6 +94,34 @@ class ProductionDataContractTests(unittest.TestCase):
         result = validate_production_manifest(payload, now=NOW)
         self.assertFalse(result.passed)
         self.assertIn("rights_redistribution_allowed_false", result.failures)
+
+    def test_missing_compliance_evidence_blocks_publication(self):
+        payload = valid_manifest()
+        del payload["compliance"]
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertFalse(result.passed)
+        self.assertIn("compliance_evidence_missing", result.failures)
+
+    def test_incomplete_compliance_review_blocks_publication(self):
+        payload = valid_manifest()
+        payload["compliance"]["review_completed"] = False
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertFalse(result.passed)
+        self.assertIn("compliance_review_completed_false", result.failures)
+
+    def test_unapproved_public_recommendations_block_publication(self):
+        payload = valid_manifest()
+        payload["compliance"]["public_recommendation_approved"] = False
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertFalse(result.passed)
+        self.assertIn("compliance_public_recommendation_approved_false", result.failures)
+
+    def test_compliance_evidence_reference_is_required(self):
+        payload = valid_manifest()
+        payload["compliance"]["evidence_ref"] = ""
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertFalse(result.passed)
+        self.assertIn("compliance_evidence_ref_missing", result.failures)
 
     def test_unresolved_active_status_blocks(self):
         payload = valid_manifest()
