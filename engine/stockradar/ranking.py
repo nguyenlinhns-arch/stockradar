@@ -70,7 +70,6 @@ def _is_eligible(candidate: Candidate) -> bool:
         and candidate.liquidity_pass
         and candidate.event_risk_pass
         and candidate.score_coverage_pct == 100
-        and not candidate.is_mock
     )
 
 
@@ -96,17 +95,13 @@ def build_top_hose(
     strongest_limit: int = 30,
     per_sector_limit: int = 3,
 ) -> dict[str, Any]:
-    """Build the buyer-facing HOSE ranking only from a complete decision-grade snapshot.
-
-    The function is deliberately fail-closed. Reference/watch universes, partial score
-    coverage and mock data can never become a public "Top mạnh nhất" ranking.
-    """
+    """Build buyer-facing HOSE rankings only from a complete decision-grade snapshot."""
 
     if strongest_limit <= 0 or per_sector_limit <= 0:
         raise ValueError("ranking limits must be positive")
 
     candidate_list = list(candidates)
-    ranked = rank_candidates(candidate_list)
+    ranked = [candidate for candidate in rank_candidates(candidate_list) if not candidate.is_mock]
     gate = full_universe_gate(snapshot)
     failures = list(gate.failures)
 
