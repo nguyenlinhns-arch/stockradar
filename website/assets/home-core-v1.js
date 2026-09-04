@@ -54,6 +54,22 @@
     return `${String(base).replace(/\/$/, '')}/functions/v1/email-interest`;
   }
 
+  function loadStockRadarAI() {
+    if (document.querySelector('script[data-stockradar-ai-loader]')) return;
+    if (!document.querySelector('link[data-stockradar-ai-style]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = new URL('assets/ai-assistant.css?v=20260904-ai1', document.baseURI).toString();
+      css.dataset.stockradarAiStyle = '';
+      document.head.append(css);
+    }
+    const script = document.createElement('script');
+    script.src = new URL('assets/ai-assistant.js?v=20260904-ai1', document.baseURI).toString();
+    script.async = true;
+    script.dataset.stockradarAiLoader = '';
+    document.head.append(script);
+  }
+
   function attribution() {
     const params = new URLSearchParams(window.location.search);
     let referrerHost = '';
@@ -276,6 +292,7 @@
   }
 
   function mount() {
+    loadStockRadarAI();
     mountNavigation();
     mountTickerSearch();
     mountEmailLead();
