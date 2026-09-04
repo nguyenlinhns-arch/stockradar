@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Lock final StockRadar registration and Premium payment flow after Pages transforms.
+"""Lock final StockRadar plan cards and email-link signup flow after Pages transforms.
 
 Commercial rule:
-- Free registration remains free and opens the account after email verification.
-- Premium registration is one continuous journey: choose Premium -> create account
-  -> verify email -> pay 199,000 VND -> activate only after verified payment.
-- Existing signed-in users who enter the Premium signup route go straight to
-  checkout instead of being forced through an "upgrade" detour.
+- Free: create account -> confirm by clicking the email link -> open Free account.
+- Premium: create account -> confirm by clicking the email link -> pay 199,000 VND.
+- Signup never asks the customer to copy a six-digit OTP into the website.
 """
 
 from __future__ import annotations
@@ -23,9 +21,6 @@ STYLE_LINK = (
     f'{STYLE_MARKER}>'
 )
 PREMIUM_SIGNUP_HREF = "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium"
-PREMIUM_LOGIN_HREF = "dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium"
-PREMIUM_CHECKOUT_PATH = "thanh-toan/?plan=premium"
-SIGNUP_FLOW_MARKER = "data-premium-signup-payment-flow-v1"
 
 
 def checkout_ready() -> bool:
@@ -44,15 +39,12 @@ def _replace_hero(source: str) -> str:
       <div class="plans-hero-inner">
         <span class="panel-label">GÓI DỊCH VỤ</span>
         <h1>Chọn Free hoặc đăng ký Premium</h1>
-        <p>Premium: tạo tài khoản → xác minh email → thanh toán 199.000đ/30 ngày. Không cần tạo Free rồi mới nâng cấp.</p>
+        <p>Premium: tạo tài khoản → bấm xác minh trong email → thanh toán 199.000đ/30 ngày. Không cần tạo Free rồi mới nâng cấp.</p>
       </div>
     </section>'''
     updated, count = re.subn(
-        r'<section class="plans-hero">.*?</section>',
-        hero,
-        source,
-        count=1,
-        flags=re.DOTALL,
+        r'<section class="plans-hero">.*?</section>', hero, source,
+        count=1, flags=re.DOTALL,
     )
     if count != 1:
         raise RuntimeError("Could not locate plans hero")
@@ -72,7 +64,7 @@ def premium_card() -> str:
     ribbon = 'ĐẦY ĐỦ TÍNH NĂNG' if ready else 'TẠM DỪNG KÍCH HOẠT MỚI'
     kicker = '199K / 30 NGÀY' if ready else 'PREMIUM · CHỜ PRODUCTION GATE'
     note = (
-        'Đăng ký Premium là một luồng liền mạch: tạo tài khoản, xác minh email rồi chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không tự gia hạn.'
+        'Tạo tài khoản, bấm xác minh trong email rồi chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không cần nhập OTP và không tự gia hạn.'
         if ready else
         'StockRadar đang tạm dừng nhận thanh toán Premium mới. Bạn vẫn có thể tạo tài khoản để ghi nhận nhu cầu Premium.'
     )
@@ -101,9 +93,7 @@ def enforce_plan_page(output: Path) -> Path:
     page = output / "dang-ky" / "index.html"
     if not page.exists():
         raise FileNotFoundError(page)
-
-    source = page.read_text(encoding="utf-8")
-    source = _replace_hero(source)
+    source = _replace_hero(page.read_text(encoding="utf-8"))
 
     free_card = '''<article class="plan-card" data-plan-free>
             <span class="plan-kicker">MIỄN PHÍ</span>
@@ -121,51 +111,26 @@ def enforce_plan_page(output: Path) -> Path:
             <a class="button button-secondary" href="signup/?plan=free" data-registration-plan="free">Đăng ký Free</a>
           </article>'''
 
-    source = _replace_card(
-        source,
-        r'<article class="plan-card" data-plan-free>.*?</article>',
-        free_card,
-        "Free",
-    )
+    source = _replace_card(source, r'<article class="plan-card" data-plan-free>.*?</article>', free_card, "Free")
     source = _replace_card(
         source,
         r'<article class="plan-card plan-card-premium[^\"]*"[^>]*data-plan-premium[^>]*>.*?</article>',
-        premium_card(),
-        "Premium",
+        premium_card(), "Premium",
     )
     source = _ensure_final_style(source)
 
-    required = (
-        'data-plan-free',
-        'data-plan-premium',
+    for marker in (
+        'data-plan-free', 'data-plan-premium',
         'href="signup/?plan=free" data-registration-plan="free">Đăng ký Free</a>',
-        'GÓI DỊCH VỤ',
-        '199.000đ',
-        '10 câu/ngày',
-        'Free không nhận Daily 09:00',
-        'plan-info-box',
-        STYLE_MARKER,
-    )
-    for marker in required:
+        'GÓI DỊCH VỤ', '199.000đ', '10 câu/ngày', 'plan-info-box', STYLE_MARKER,
+    ):
         if marker not in source:
             raise RuntimeError(f"Registration plan contract missing: {marker}")
 
     if checkout_ready():
-        for marker in (
-            f'href="{PREMIUM_SIGNUP_HREF}"',
-            '>Đăng ký & thanh toán</a>',
-            'không phải đăng ký Free trước',
-        ):
+        for marker in (f'href="{PREMIUM_SIGNUP_HREF}"', '>Đăng ký & thanh toán</a>', 'không phải đăng ký Free trước'):
             if marker not in source:
                 raise RuntimeError(f"Premium direct-payment CTA missing: {marker}")
-        for stale in ('Đăng ký nhận thông báo', 'TẠM DỪNG KÍCH HOẠT MỚI'):
-            if stale in source:
-                raise RuntimeError(f"Stale paused Premium CTA leaked into open checkout: {stale}")
-    else:
-        for marker in ('TẠM DỪNG KÍCH HOẠT MỚI', 'Đăng ký nhận thông báo', 'data-checkout-ready="false"'):
-            if marker not in source:
-                raise RuntimeError(f"Premium fail-closed plan marker missing: {marker}")
-
     if "Thanh toán / Nâng Premium" in source or ">Tạo tài khoản Premium</a>" in source:
         raise RuntimeError("Legacy Premium CTA leaked into final registration page")
     if source.count('data-registration-plan=') != 2:
@@ -175,145 +140,58 @@ def enforce_plan_page(output: Path) -> Path:
     return page
 
 
-def _premium_signup_inline_script() -> str:
-    return f'''<script {SIGNUP_FLOW_MARKER}>
-(() => {{
-  'use strict';
-  const checkoutPath = '{PREMIUM_CHECKOUT_PATH}';
-  const premiumLoginHref = '{PREMIUM_LOGIN_HREF}';
-  const params = new URLSearchParams(window.location.search);
-  let redirecting = false;
-
-  function selectedPlan() {{
-    const requested = String(params.get('plan') || '').trim().toLowerCase();
-    if (requested === 'premium' || requested === 'free') return requested;
-    const selected = String(document.querySelector('input[name="selected_plan"]:checked')?.value || 'free').trim().toLowerCase();
-    return selected === 'premium' ? 'premium' : 'free';
-  }}
-
-  function syncCopy() {{
-    const premium = selectedPlan() === 'premium';
-    const step = document.querySelector('[data-signup-final-step]');
-    if (step) step.innerHTML = premium ? '<b>3</b>Thanh toán Premium' : '<b>3</b>Mở tài khoản Free';
-
-    const otpSubmit = document.querySelector('[data-signup-otp-submit]');
-    if (otpSubmit) otpSubmit.textContent = premium ? 'Xác minh & sang thanh toán' : 'Xác minh & mở tài khoản';
-
-    const existingLogin = document.querySelector('[data-signup-existing-login]');
-    if (existingLogin) existingLogin.setAttribute('href', premium ? premiumLoginHref : 'dang-nhap/');
-
-    const summary = document.querySelector('[data-premium-flow-summary] span');
-    if (summary && premium) summary.textContent = 'Xác minh email xong sẽ chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không cần tạo Free rồi nâng cấp.';
-
-    const note = document.querySelector('[data-signup-otp-note]');
-    if (note && !note.classList.contains('error') && !note.classList.contains('success')) {{
-      note.textContent = premium
-        ? 'Sau khi OTP hợp lệ, StockRadar chuyển thẳng tới thanh toán Premium. Quyền Premium chỉ kích hoạt sau khi tiền được xác nhận.'
-        : 'Sau khi OTP hợp lệ, tài khoản Free được mở ngay.';
-    }}
-  }}
-
-  async function redirectExistingPremiumUser() {{
-    if (redirecting || selectedPlan() !== 'premium') return;
-    const cfg = window.STOCKRADAR_AUTH_CONFIG || {{}};
-    if (!cfg.configured || !cfg.supabaseUrl || !cfg.supabasePublishableKey || !window.supabase?.createClient) return;
-    try {{
-      const client = window.supabase.createClient(
-        String(cfg.supabaseUrl).replace(/\\/+$/, ''),
-        String(cfg.supabasePublishableKey),
-        {{ auth: {{ persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'stockradar-auth' }} }}
-      );
-      const {{ data }} = await client.auth.getUser();
-      if (data?.user?.email_confirmed_at) {{
-        redirecting = true;
-        window.location.replace(new URL(checkoutPath, document.baseURI).toString());
-      }}
-    }} catch (_) {{}}
-  }}
-
-  document.addEventListener('DOMContentLoaded', () => {{
-    syncCopy();
-    document.querySelectorAll('input[name="selected_plan"]').forEach((input) => {{
-      input.addEventListener('change', () => {{
-        syncCopy();
-        redirectExistingPremiumUser();
-      }});
-    }});
-    if (String(params.get('plan') || '').trim().toLowerCase() === 'premium') redirectExistingPremiumUser();
-  }}, {{ once: true }});
-}})();
-</script>'''
-
-
-def enforce_signup_payment_flow(output: Path) -> Path:
+def enforce_signup_email_link_flow(output: Path) -> Path:
     page = output / "signup" / "index.html"
-    if not page.exists():
-        raise FileNotFoundError(page)
+    confirm = output / "xac-minh-email" / "index.html"
+    signup_client = output / "assets" / "signup-link-v1.js"
+    confirm_client = output / "assets" / "email-confirm-v1.js"
+    for path in (page, confirm, signup_client, confirm_client):
+        if not path.exists():
+            raise FileNotFoundError(path)
 
     source = page.read_text(encoding="utf-8")
+    # Final transforms must never revive the removed manual OTP panel.
     source = re.sub(
-        r'<span class="auth-step"><b>3</b>.*?</span>',
-        '<span class="auth-step" data-signup-final-step><b>3</b>Thanh toán Premium / mở Free</span>',
-        source,
-        count=1,
-        flags=re.DOTALL,
+        r'\s*<form class="auth-form auth-otp-panel"[^>]*data-auth-signup-otp-form.*?</form>\s*',
+        "\n", source, flags=re.DOTALL,
     )
-    source = source.replace(
-        'Chọn gói trước, sau đó nhập thông tin tài khoản. Việc tạo tài khoản không tự phát sinh thanh toán.',
-        'Chọn gói trước rồi tạo tài khoản. Nếu chọn Premium, xác minh email xong sẽ chuyển thẳng sang thanh toán 199.000đ/30 ngày.',
-        1,
-    )
-    source = re.sub(
-        r'<div class="conversion-premium-summary" data-premium-flow-summary hidden>.*?</div>',
-        '<div class="conversion-premium-summary" data-premium-flow-summary hidden><strong>Bạn đang đăng ký StockRadar Premium · 199.000đ/30 ngày</strong><span>Xác minh email xong sẽ chuyển thẳng sang thanh toán. Không cần tạo Free rồi nâng cấp.</span></div>',
-        source,
-        count=1,
-        flags=re.DOTALL,
-    )
-    source = re.sub(
-        r'<button class="button button-primary" type="submit">Xác minh &amp; mở Tài khoản</button>',
-        '<button class="button button-primary" type="submit" data-signup-otp-submit>Xác minh &amp; tiếp tục</button>',
-        source,
-        count=1,
-    )
-    source = re.sub(
-        r'<p class="auth-message" data-auth-message aria-live="polite">Sau khi xác minh, Free dùng StockRadar AI 10 câu/ngày.*?</p>',
-        '<p class="auth-message" data-auth-message data-signup-otp-note aria-live="polite">Sau khi OTP hợp lệ, StockRadar sẽ tiếp tục theo đúng gói bạn đã chọn.</p>',
-        source,
-        count=1,
-        flags=re.DOTALL,
-    )
+    source = source.replace('EMAIL + PASSWORD + OTP', 'EMAIL + PASSWORD')
+    source = source.replace('Tạo tài khoản Premium & gửi mã xác minh', 'Tạo tài khoản Premium & gửi email xác minh')
+    source = source.replace('Tạo tài khoản Free & gửi mã xác minh', 'Tạo tài khoản Free & gửi email xác minh')
+
+    # Keep the existing-account path plan-aware without adding an upgrade detour.
     source = source.replace(
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>',
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/" data-signup-existing-login>Đăng nhập</a></p>',
         1,
     )
 
-    if SIGNUP_FLOW_MARKER not in source:
-        if "</body>" not in source:
-            raise RuntimeError("Signup page has no closing body tag")
-        source = source.replace("</body>", _premium_signup_inline_script() + "\n</body>", 1)
-
     required = (
-        'data-signup-final-step',
-        'data-signup-otp-submit',
+        'assets/signup-link-v1.js',
+        'data-signup-email-sent',
+        'gửi email xác minh',
+        'Không cần nhập mã OTP',
         'data-signup-existing-login',
-        SIGNUP_FLOW_MARKER,
-        PREMIUM_CHECKOUT_PATH,
-        PREMIUM_LOGIN_HREF,
-        'Xác minh email xong sẽ chuyển thẳng sang thanh toán',
-        'Không cần tạo Free rồi nâng cấp',
     )
     for marker in required:
         if marker not in source:
-            raise RuntimeError(f"Premium signup payment-flow contract missing: {marker}")
+            raise RuntimeError(f"Email-link signup contract missing: {marker}")
+
+    for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+        if forbidden in source:
+            raise RuntimeError(f"Manual signup OTP leaked into final artifact: {forbidden}")
+
+    confirm_source = confirm.read_text(encoding="utf-8")
+    for marker in ('assets/email-confirm-v1.js', 'Không cần nhập mã OTP', 'data-email-confirm-status'):
+        if marker not in confirm_source:
+            raise RuntimeError(f"Email confirmation route missing: {marker}")
 
     page.write_text(source, encoding="utf-8")
     return page
 
 
 def enforce(output: Path) -> tuple[Path, Path]:
-    return enforce_plan_page(output), enforce_signup_payment_flow(output)
+    return enforce_plan_page(output), enforce_signup_email_link_flow(output)
 
 
 def main() -> int:
@@ -322,7 +200,7 @@ def main() -> int:
     args = parser.parse_args()
     plans, signup = enforce(args.output)
     print(f"Locked registration plans (checkout_ready={checkout_ready()}): {plans}")
-    print(f"Locked Premium signup -> payment flow: {signup}")
+    print(f"Locked no-OTP email-link signup flow: {signup}")
     return 0
 
 
