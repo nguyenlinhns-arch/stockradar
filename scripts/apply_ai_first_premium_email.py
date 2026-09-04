@@ -6,7 +6,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-import scripts.apply_premium_email_product_v1 as legacy
+import apply_premium_email_product_v1 as legacy
 
 
 def parse_args() -> argparse.Namespace:
