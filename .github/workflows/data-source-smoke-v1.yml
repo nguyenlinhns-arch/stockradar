@@ -1,4 +1,4 @@
-name: Inspect raw VNDirect schema for internal-only adapter
+name: Inspect Vietnam raw reference schemas
 
 on:
   push:
@@ -10,44 +10,42 @@ permissions:
 jobs:
   smoke:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
       - name: Install client
-        run: python -m pip install requests
-      - name: Inspect raw stock and statement schemas
+        run: python -m pip install 'vnstock==4.0.7' 'pandas<3'
+      - name: Inspect raw HOSE industry and shares schemas
         run: |
           python - <<'PY'
-          import json, requests
-          UA={'User-Agent':'Mozilla/5.0 StockRadar internal raw-input probe','Accept':'application/json'}
-          base='https://api-finfo.vndirect.com.vn/v4'
-          def get(path, params):
-              r=requests.get(base+path,params=params,headers=UA,timeout=30); r.raise_for_status(); return r.json()
-          stock=get('/stocks',{'q':'code:HPG','size':'10'})
-          srows=stock.get('data') or []
-          if not srows: raise RuntimeError('HPG stock metadata empty')
-          stock_keys=sorted(srows[0].keys())
-          models={}
-          for mt in (1,2,3,101,102,103):
-              p=get('/financial_statements',{'q':f'code:HPG~reportType:ANNUAL~modelType:{mt}','sort':'fiscalDate:desc','size':'500','page':'1'})
-              rows=p.get('data') or []
-              models[str(mt)]={
-                  'rows':len(rows),
-                  'keys':sorted({str(k) for row in rows[:20] for k in row.keys()}),
-                  'item_codes':sorted({str(int(float(row['itemCode']))) for row in rows if row.get('itemCode') is not None})[:250],
-                  'periods':sorted({str(row.get('fiscalDate')) for row in rows if row.get('fiscalDate')},reverse=True)[:8],
+          import json
+          import pandas as pd
+          from vnstock import Reference
+
+          def pack(df, limit=8):
+              return {
+                  'shape': list(getattr(df,'shape',(0,0))),
+                  'columns': [str(c) for c in getattr(df,'columns',[])],
+                  'sample': df.head(limit).to_dict(orient='records') if isinstance(df,pd.DataFrame) else str(df)[:1000],
               }
-          fm={}
-          for mt in (1,2,3):
+
+          ref=Reference()
+          exchanges=ref.equity.list_by_exchange()
+          industries=ref.equity.list_by_industry()
+          companies={}
+          for ticker in ('HPG','MBB','SSI','FPT'):
               try:
-                  p=get('/financial_models',{'q':f'modelType:{mt}','size':'1000','page':'1'})
-                  rows=p.get('data') or []
-                  fm[str(mt)]={'rows':len(rows),'keys':sorted({str(k) for row in rows[:20] for k in row.keys()}),'sample':rows[:8]}
+                  info=ref.company(ticker).info()
+                  companies[ticker]=pack(info)
               except Exception as e:
-                  fm[str(mt)]={'error':str(e)}
-          safe_stock={k:srows[0].get(k) for k in stock_keys if any(x in k.lower() for x in ('code','floor','exchange','industry','share','company','name','type'))}
-          print(json.dumps({'role':'INTERNAL_ONLY_RAW_INPUT_SCHEMA_PROBE','stock_keys':stock_keys,'safe_stock_metadata':safe_stock,'statement_models':models,'financial_models':fm},ensure_ascii=False,indent=2,default=str))
+                  companies[ticker]={'error':str(e)}
+          print(json.dumps({
+              'role':'RAW_INPUT_ONLY_SCHEMA_PROBE',
+              'exchanges':pack(exchanges,12),
+              'industries':pack(industries,12),
+              'companies':companies,
+          },ensure_ascii=False,indent=2,default=str))
           PY
