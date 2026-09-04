@@ -44,6 +44,7 @@ REQUIRED_JS = {
     "header-notifications.js",
 }
 MAX_LOCAL_ASSET_BYTES = 190_000
+AI_CENTER_CACHE_VERSION = "20260905-ai5"
 
 
 def basename(ref: str) -> str:
@@ -85,6 +86,15 @@ def main() -> None:
         raise RuntimeError("Homepage missing from Pages artifact")
 
     source = page.read_text(encoding="utf-8")
+    source, ai_count = re.subn(
+        r'assets/ai-center\.js(?:\?[^"\']*)?',
+        f'assets/ai-center.js?v={AI_CENTER_CACHE_VERSION}',
+        source,
+        count=1,
+        flags=re.I,
+    )
+    if ai_count != 1:
+        raise RuntimeError("Homepage ai-center.js reference missing before cache normalization")
 
     for name in REMOVE_CSS:
         source = re.sub(
@@ -103,6 +113,8 @@ def main() -> None:
 
     page.write_text(source, encoding="utf-8")
     rendered = page.read_text(encoding="utf-8")
+    if f"assets/ai-center.js?v={AI_CENTER_CACHE_VERSION}" not in rendered:
+        raise RuntimeError("Homepage ai-center.js cache version was not normalized")
     css_refs = extract_css(rendered)
     js_refs = extract_js(rendered)
     css_names = {basename(ref) for ref in css_refs if not ref.startswith(("http://", "https://", "//"))}
