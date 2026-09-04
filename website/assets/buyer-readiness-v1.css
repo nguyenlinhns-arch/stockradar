@@ -1,0 +1,52 @@
+/* Buyer-readiness layer: decision-first StockRadar product surfaces. */
+.buyer-top-hose{margin:0;border-bottom:1px solid var(--line,#dce3e9);background:#fff}
+.buyer-top-title{padding:14px 16px 11px;display:flex;align-items:end;justify-content:space-between;gap:18px;background:linear-gradient(180deg,#fbfcfe,#fff);border-bottom:1px solid var(--line,#dce3e9)}
+.buyer-top-title>div>span{display:block;color:#c5222e;font-size:9px;font-weight:900;letter-spacing:.11em}
+.buyer-top-title h3{margin:3px 0 0;color:var(--navy,#0d2b49);font-size:19px;line-height:1.2;letter-spacing:-.015em}
+.buyer-top-title small{max-width:420px;color:var(--muted,#667585);font-size:9px;line-height:1.4;text-align:right}
+.buyer-top-tabs{display:flex;gap:0;border-bottom:1px solid var(--line,#dce3e9);background:#f7f9fb}
+.buyer-top-tabs button{min-height:38px;padding:0 17px;border:0;border-right:1px solid var(--line,#dce3e9);background:transparent;color:#53697c;font:inherit;font-size:10px;font-weight:900;cursor:pointer}
+.buyer-top-tabs button.is-active{background:#fff;color:var(--navy,#0d2b49);box-shadow:inset 0 -3px 0 var(--red,#cf2430)}
+.buyer-top-content{min-height:72px}
+.buyer-top-policy{min-height:76px;padding:16px;display:grid;grid-template-columns:190px 1fr;align-items:center;gap:16px;background:#fff}
+.buyer-top-policy strong{color:var(--navy,#0d2b49);font-size:12px}
+.buyer-top-policy span{color:var(--muted,#667585);font-size:10px;line-height:1.5}
+.buyer-top-table{display:grid}
+.buyer-top-row{min-height:42px;padding:0 14px;display:grid;grid-template-columns:42px 70px minmax(130px,1fr) 90px 135px;align-items:center;gap:8px;border-bottom:1px solid #edf1f4;color:#40566a;font-size:10px}
+.buyer-top-row:not(.buyer-top-head):hover{background:#f8fafc;text-decoration:none}
+.buyer-top-row b,.buyer-top-row strong{color:var(--navy,#0d2b49)}
+.buyer-top-row strong{font-size:12px}
+.buyer-top-row em{color:#0b7657;font-style:normal;font-weight:900}
+.buyer-top-row small{color:#456077;font-size:8px;font-weight:850}
+.buyer-top-head{min-height:32px;background:#f7f9fb;color:#71808e;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.05em}
+.buyer-sector-top{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+.buyer-sector-top section{border-right:1px solid var(--line,#dce3e9);border-bottom:1px solid var(--line,#dce3e9)}
+.buyer-sector-top section:nth-child(2n){border-right:0}
+.buyer-sector-top header{padding:8px 12px;background:#f8fafc;border-bottom:1px solid #edf1f4}
+.buyer-sector-top header strong{color:var(--navy,#0d2b49);font-size:10px}
+.buyer-sector-top section>div{display:grid}
+.buyer-sector-top a{min-height:36px;padding:0 12px;display:grid;grid-template-columns:35px 1fr auto;align-items:center;gap:8px;border-bottom:1px solid #edf1f4;font-size:9px}
+.buyer-sector-top a:last-child{border-bottom:0}
+.buyer-sector-top a:hover{background:#fafcfd;text-decoration:none}
+.buyer-sector-top a b{color:#7a8a98;font-size:8px}.buyer-sector-top a strong{color:var(--navy,#0d2b49);font-size:11px}.buyer-sector-top a span{color:#087353;font-weight:900}
+.home-radar-sector-list{border-top:1px solid var(--line,#dce3e9)}
+.buyer-start-card{display:flex!important;flex-direction:column!important;align-items:flex-start!important;justify-content:center!important;gap:4px!important}
+.buyer-start-card>span{color:#c5222e!important;font-size:9px!important;font-weight:900!important;letter-spacing:.08em!important}
+.buyer-start-card>strong{font-size:16px!important;color:var(--navy,#0d2b49)!important}
+.buyer-start-card>p{margin:2px 0 9px!important;color:var(--muted,#667585)!important;font-size:10px!important}
+.buyer-start-actions{display:flex;gap:7px;flex-wrap:wrap}.buyer-start-actions .button{min-height:36px!important;font-size:10px!important;padding:0 11px!important}
+
+.stock-decision-card{margin:0 0 14px;display:grid;grid-template-columns:minmax(180px,.55fr) minmax(260px,.85fr) minmax(0,1.6fr);background:#fff;border:1px solid var(--line,#dce3e9);border-top:4px solid var(--red,#cf2430);box-shadow:0 8px 24px rgba(18,43,68,.07);overflow:hidden}
+.decision-identity,.decision-thesis{padding:18px;border-right:1px solid var(--line,#dce3e9)}
+.decision-identity>span,.decision-thesis>span{display:block;color:#7a8997;font-size:8px;font-weight:900;letter-spacing:.09em;text-transform:uppercase}
+.decision-identity h1{margin:4px 0 1px;color:var(--navy,#0d2b49);font-size:34px;line-height:1}
+.decision-identity p{margin:5px 0 0;color:var(--muted,#667585);font-size:10px;line-height:1.4}
+.decision-thesis strong{display:block;margin-top:6px;color:var(--navy,#0d2b49);font-size:15px}
+.decision-thesis p{margin:5px 0 0;color:var(--muted,#667585);font-size:9px;line-height:1.45}
+.decision-metrics{display:grid;grid-template-columns:repeat(4,minmax(95px,1fr));align-content:stretch}
+.decision-metric{min-height:66px;padding:12px;border-right:1px solid #edf1f4;border-bottom:1px solid #edf1f4;display:flex;flex-direction:column;justify-content:center}
+.decision-metric:nth-child(4n){border-right:0}.decision-metric:nth-last-child(-n+4){border-bottom:0}
+.decision-metric span{color:#7b8995;font-size:8px;font-weight:850;text-transform:uppercase}.decision-metric strong{margin-top:3px;color:var(--navy,#0d2b49);font-size:14px;line-height:1.15}
+
+@media(max-width:980px){.stock-decision-card{grid-template-columns:1fr 1fr}.decision-metrics{grid-column:1/-1;border-top:1px solid var(--line,#dce3e9)}.decision-thesis{border-right:0}.buyer-top-title{display:block}.buyer-top-title small{display:block;margin-top:5px;text-align:left}.buyer-sector-top{grid-template-columns:1fr}.buyer-sector-top section{border-right:0}.buyer-top-row{grid-template-columns:34px 58px minmax(100px,1fr) 72px 95px}}
+@media(max-width:620px){.buyer-top-title{padding:12px}.buyer-top-title h3{font-size:16px}.buyer-top-tabs button{flex:1;padding:0 8px}.buyer-top-policy{grid-template-columns:1fr;gap:4px;padding:12px}.buyer-top-row{grid-template-columns:32px 55px 1fr 66px}.buyer-top-row>*:last-child{display:none}.stock-decision-card{grid-template-columns:1fr}.decision-identity,.decision-thesis{border-right:0;border-bottom:1px solid var(--line,#dce3e9);padding:14px}.decision-metrics{grid-template-columns:repeat(2,1fr);border-top:0}.decision-metric:nth-child(2n){border-right:0}.decision-metric:nth-last-child(-n+4){border-bottom:1px solid #edf1f4}.decision-metric:nth-last-child(-n+2){border-bottom:0}}

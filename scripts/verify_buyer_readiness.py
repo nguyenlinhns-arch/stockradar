@@ -1,0 +1,86 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+from pathlib import Path
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output", type=Path)
+    return parser.parse_args()
+
+
+def main() -> None:
+    output = parse_args().output.resolve()
+    errors: list[str] = []
+
+    top_path = output / "public" / "data" / "top-stocks.json"
+    if not top_path.is_file():
+        errors.append("top-stocks.json missing")
+    else:
+        payload = json.loads(top_path.read_text(encoding="utf-8"))
+        valid = payload.get("ranking_valid") is True
+        strongest = payload.get("strongest") or []
+        by_sector = payload.get("by_sector") or []
+        if valid and not strongest:
+            errors.append("valid Top HOSE ranking cannot be empty")
+        if not valid and (strongest or by_sector):
+            errors.append("invalid Top HOSE ranking must publish zero ranked rows")
+        if valid and payload.get("gate", {}).get("passed") is not True:
+            errors.append("ranking_valid requires passed gate")
+
+    home = output / "index.html"
+    if not home.is_file():
+        errors.append("homepage missing")
+    else:
+        source = home.read_text(encoding="utf-8")
+        for marker in ("buyer-readiness-v1.css", "buyer-readiness-v1.js", "checkoutReady:false", "emailDeliveryReady:false"):
+            if marker not in source:
+                errors.append(f"homepage buyer marker missing: {marker}")
+        for forbidden in (
+            "TOP CỔ PHIẾU KHUYẾN NGHỊ CỦA STOCKRADAR",
+            "Nhận email 09:00",
+            "Nhận bản tin 09:00 miễn phí",
+            "home-lead-form",
+        ):
+            if forbidden.lower() in source.lower():
+                errors.append(f"inactive/misleading homepage promise remains: {forbidden}")
+
+    if (output / "thanh-toan").exists():
+        errors.append("checkout route published while checkoutReady=false")
+
+    for page in output.rglob("*.html"):
+        source = page.read_text(encoding="utf-8")
+        if "buyer-readiness-v1.js" not in source:
+            errors.append(f"buyer runtime missing: {page.relative_to(output)}")
+        if "thanh-toan/?plan=premium" in source:
+            errors.append(f"dead checkout CTA remains: {page.relative_to(output)}")
+
+    buyer_js = output / "assets" / "buyer-readiness-v1.js"
+    if not buyer_js.is_file():
+        errors.append("buyer-readiness-v1.js missing")
+    else:
+        source = buyer_js.read_text(encoding="utf-8")
+        for marker in (
+            "Top cổ phiếu HOSE theo tiêu chí StockRadar.vn",
+            "Top mạnh nhất",
+            "Top theo ngành",
+            "Danh sách cổ phiếu theo Radar rà soát",
+            "DECISION CARD",
+            "StockRadar Score",
+            "Xếp hạng HOSE",
+            "Buy Zone",
+            "Risk/Reward",
+        ):
+            if marker not in source:
+                errors.append(f"buyer product marker missing: {marker}")
+
+    if errors:
+        raise RuntimeError("Buyer-readiness verification failed:\n- " + "\n- ".join(errors))
+    print("StockRadar buyer-readiness verification: PASS")
+
+
+if __name__ == "__main__":
+    main()
