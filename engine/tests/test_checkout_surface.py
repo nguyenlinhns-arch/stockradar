@@ -69,10 +69,13 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertNotIn("service_role", page.lower())
         self.assertNotIn("service_role", email_client.lower())
 
-    def test_premium_plan_routes_to_checkout(self):
+    def test_plan_page_has_separate_registration_ctas(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
-        self.assertIn('href="thanh-toan/?plan=premium"', plans)
-        self.assertIn("Thanh toán / Nâng Premium", plans)
+        self.assertIn('data-plan-free', plans)
+        self.assertIn('data-plan-premium', plans)
+        self.assertIn('href="signup/?plan=free">Đăng ký</a>', plans)
+        self.assertIn('href="signup/?plan=premium">Đăng ký</a>', plans)
+        self.assertNotIn("Thanh toán / Nâng Premium", plans)
 
 
 if __name__ == "__main__":
