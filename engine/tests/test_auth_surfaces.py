@@ -27,7 +27,7 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("terms_version: TERMS_VERSION", policy)
         self.assertIn("privacy_version: PRIVACY_VERSION", policy)
 
-    def test_public_email_flows_fail_closed_until_smtp_is_ready(self) -> None:
+    def test_transactional_auth_email_is_launched_with_fail_closed_gate_available(self) -> None:
         config = (WEBSITE / "assets" / "auth-config.js").read_text(encoding="utf-8")
         gate = (WEBSITE / "assets" / "auth-email-gate.js").read_text(encoding="utf-8")
         workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
@@ -39,7 +39,8 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("addEventListener('submit'", gate)
         self.assertIn("addEventListener('click'", gate)
         self.assertIn("stopImmediatePropagation", gate)
-        self.assertIn('STOCKRADAR_AUTH_EMAIL_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_AUTH_EMAIL_READY: "1"', workflow)
+        self.assertIn('STOCKRADAR_PRODUCT_EMAIL_READY: "0"', workflow)
 
     def test_unverified_users_can_resume_with_login_otp(self) -> None:
         login = (WEBSITE / "dang-nhap" / "index.html").read_text(encoding="utf-8")
