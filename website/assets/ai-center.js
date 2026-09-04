@@ -2,6 +2,7 @@
   'use strict';
 
   const config = window.STOCKRADAR_AUTH_CONFIG || {};
+  const STORAGE_KEY = 'stockradar-auth';
   const MAX_HISTORY = 6;
   const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO']);
   const state = { client: null, sending: false, history: [], tier: 'GUEST' };
@@ -46,6 +47,13 @@
     return value;
   }
 
+  function normalizeTier(value) {
+    const tier = String(value || '').trim().toUpperCase();
+    if (tier === 'PAID' || tier === 'TRIAL' || tier === 'PREMIUM') return 'PREMIUM';
+    if (tier === 'FREE') return 'FREE';
+    return 'GUEST';
+  }
+
   function loadSupabaseLibrary() {
     if (window.supabase?.createClient) return Promise.resolve();
     if (window.__stockradarSupabaseLoading) return window.__stockradarSupabaseLoading;
@@ -60,16 +68,49 @@
     return window.__stockradarSupabaseLoading;
   }
 
-  async function authSession() {
+  async function authClient() {
     if (!config.configured || !config.supabaseUrl || !config.supabasePublishableKey) return null;
     await loadSupabaseLibrary();
-    if (!state.client) {
-      state.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-      });
+    if (state.client) return state.client;
+    if (window.StockRadarAuthClient) {
+      state.client = window.StockRadarAuthClient;
+      return state.client;
     }
-    const { data } = await state.client.auth.getSession();
+    state.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: STORAGE_KEY,
+      }
+    });
+    window.StockRadarAuthClient = state.client;
+    return state.client;
+  }
+
+  async function authSession() {
+    const client = await authClient();
+    if (!client) return null;
+    const { data } = await client.auth.getSession();
     return data?.session || null;
+  }
+
+  async function currentAccountTier() {
+    const session = await authSession();
+    const user = session?.user;
+    if (!user) return { session: null, tier: 'GUEST' };
+
+    let tier = 'FREE';
+    try {
+      const { data: profile } = await state.client
+        .from('profiles')
+        .select('account_tier,account_status')
+        .eq('id', user.id)
+        .maybeSingle();
+      const active = String(profile?.account_status || '').toUpperCase() === 'ACTIVE';
+      if (active) tier = normalizeTier(profile?.account_tier) === 'PREMIUM' ? 'PREMIUM' : 'FREE';
+    } catch (_) {}
+    return { session, tier };
   }
 
   function addMessage(log, role, text, meta = '') {
@@ -100,16 +141,16 @@
     if (source.generated_at) {
       try { bits.push(`Dữ liệu ${new Date(source.generated_at).toLocaleString('vi-VN')}`); } catch (_) {}
     }
-    if (data?.tier === 'GUEST') bits.push(quota.remaining != null ? `Khách · còn ${quota.remaining}/3 câu hôm nay` : 'Khách · tối đa 3 câu/ngày');
-    else if (data?.tier === 'FREE') bits.push(quota.remaining != null ? `Free · còn ${quota.remaining}/10 câu hôm nay` : 'Free · tối đa 10 câu/ngày');
-    else if (data?.tier === 'PAID') bits.push('Paid · hỏi không giới hạn');
-    else if (data?.tier === 'TRIAL') bits.push('Trial');
+    const tier = normalizeTier(data?.tier);
+    if (tier === 'GUEST') bits.push(quota.remaining != null ? `Khách · còn ${quota.remaining}/3 câu hôm nay` : 'Khách · tối đa 3 câu/ngày');
+    else if (tier === 'FREE') bits.push(quota.remaining != null ? `Free · còn ${quota.remaining}/10 câu hôm nay` : 'Free · tối đa 10 câu/ngày');
+    else if (tier === 'PREMIUM') bits.push('Premium · hỏi không giới hạn');
     return bits.join(' · ');
   }
 
-  function updatePlan(status, data = null, signedIn = false) {
+  function updatePlan(status, data = null, fallbackTier = 'GUEST') {
     if (!status) return;
-    const tier = data?.tier || (signedIn ? 'ACCOUNT' : 'GUEST');
+    const tier = data?.tier ? normalizeTier(data.tier) : normalizeTier(fallbackTier);
     state.tier = tier;
     if (tier === 'GUEST') {
       const remaining = data?.quota?.remaining;
@@ -119,15 +160,9 @@
       const remaining = data?.quota?.remaining;
       status.textContent = remaining == null ? 'FREE · 10 CÂU / NGÀY' : `FREE · CÒN ${remaining}/10 CÂU HÔM NAY`;
       status.dataset.tier = 'free';
-    } else if (tier === 'PAID') {
-      status.textContent = 'PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT';
-      status.dataset.tier = 'paid';
-    } else if (tier === 'TRIAL') {
-      status.textContent = 'TRIAL · AI + QUYỀN THEO GÓI';
-      status.dataset.tier = 'trial';
     } else {
-      status.textContent = 'ĐÃ ĐĂNG NHẬP · QUYỀN THEO TÀI KHOẢN';
-      status.dataset.tier = 'account';
+      status.textContent = 'PREMIUM · AI KHÔNG GIỚI HẠN · ACTION ALERT';
+      status.dataset.tier = 'premium';
     }
   }
 
@@ -145,15 +180,16 @@
     send.textContent = 'Đang phân tích…';
 
     try {
-      let session = null;
-      try { session = await authSession(); } catch (_) {}
+      let account = { session: null, tier: 'GUEST' };
+      try { account = await currentAccountTier(); } catch (_) {}
+      const session = account.session;
       const ticker = explicitTicker(message);
       const horizon = horizonFromText(message);
       const authenticated = Boolean(session?.access_token);
+      updatePlan(status, null, account.tier);
 
       if (!authenticated && !ticker) {
         addAction(log, 'Khách chưa đăng nhập có thể hỏi trực tiếp một mã HOSE. Để hỏi về danh mục/watchlist hoặc nhận 10 câu/ngày, hãy tạo tài khoản Free.', 'dang-ky/?plan=free', 'Tạo tài khoản Free');
-        updatePlan(status, null, false);
         return;
       }
 
@@ -181,11 +217,12 @@
       addMessage(log, 'assistant', answer, sourceMeta(data));
       const warning = freshnessNotice(data);
       if (warning) addMessage(log, 'assistant', warning, 'Fail-closed · không dùng dữ liệu cũ để khuyến nghị');
-      updatePlan(status, data, authenticated);
+      updatePlan(status, data, account.tier);
 
       if (response.status === 429) {
-        if (data?.tier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục bằng tài khoản Free với 10 câu/ngày.', 'dang-ky/?plan=free', 'Đăng ký Free');
-        if (data?.tier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert qua email khi hệ thống đủ điều kiện phát hành, hãy mở Premium.', 'dang-ky/?plan=premium', 'Xem gói Paid');
+        const responseTier = normalizeTier(data?.tier || account.tier);
+        if (responseTier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục bằng tài khoản Free với 10 câu/ngày.', 'dang-ky/?plan=free', 'Đăng ký Free');
+        if (responseTier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert khi hệ thống đủ điều kiện phát hành, hãy nâng Premium.', 'thanh-toan/?plan=premium', 'Nâng Premium');
         return;
       }
 
@@ -211,13 +248,13 @@
     host.dataset.mounted = 'true';
 
     const top = node('div', 'sr-center-top');
-    const status = node('span', 'sr-center-plan', 'KHÁCH · 3 CÂU / NGÀY');
+    const status = node('span', 'sr-center-plan', 'ĐANG KIỂM TRA TÀI KHOẢN…');
     const privacy = node('span', 'sr-center-privacy', 'Không nhập mật khẩu · OTP · mã giao dịch');
     top.append(status, privacy);
 
     const log = node('div', 'sr-center-log');
     log.setAttribute('aria-live', 'polite');
-    addMessage(log, 'assistant', 'Tôi là StockRadar AI, dùng lõi 4M/Payback · CANSLIM · định giá · SEPA/VCP · VPA · Pocket Pivot. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết. Nếu dữ liệu chưa đủ mới/đủ chuẩn, tôi sẽ tự chuyển sang chế độ phương pháp thay vì dùng tín hiệu cũ.');
+    addMessage(log, 'assistant', 'Hỏi tôi về một mã HOSE hoặc danh mục của bạn. Tôi sẽ dùng dữ liệu StockRadar hiện có và nói rõ khi dữ liệu chưa đủ mới hoặc chưa đủ chuẩn để ra hành động.');
 
     const chips = node('div', 'sr-center-chips');
     ['FPT mua được chưa?', 'MWG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
@@ -237,7 +274,7 @@
     form.append(input, send);
 
     const foot = node('div', 'sr-center-foot');
-    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Paid:</strong> không giới hạn + email Action Alert khi hệ thống đủ điều kiện gửi</span>';
+    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Premium:</strong> không giới hạn + Action Alert theo quyền gói</span>';
     host.replaceChildren(top, log, chips, form, foot);
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
@@ -262,10 +299,21 @@
     });
 
     try {
-      const session = await authSession();
-      updatePlan(status, null, Boolean(session?.access_token));
+      const account = await currentAccountTier();
+      updatePlan(status, null, account.tier);
+      const client = await authClient();
+      client?.auth?.onAuthStateChange?.(() => {
+        setTimeout(async () => {
+          try {
+            const next = await currentAccountTier();
+            updatePlan(status, null, next.tier);
+          } catch (_) {
+            updatePlan(status, null, 'GUEST');
+          }
+        }, 0);
+      });
     } catch (_) {
-      updatePlan(status, null, false);
+      updatePlan(status, null, 'GUEST');
     }
   }
 
