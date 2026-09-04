@@ -9,6 +9,12 @@ const ALLOWED_ORIGINS = new Set([
   "http://127.0.0.1:8765",
 ]);
 
+const NON_PRODUCTION_ORIGINS = new Set([
+  "http://localhost:8000",
+  "http://localhost:8765",
+  "http://127.0.0.1:8765",
+]);
+
 const ALLOWED_EVENTS = new Set([
   "home_view",
   "ticker_lookup_submit",
@@ -61,6 +67,12 @@ Deno.serve(async (req: Request) => {
   }
   if (req.method !== "POST") {
     return json(origin, 405, { accepted: false });
+  }
+
+  // Local development and Chromium visual QA may exercise the funnel, but those
+  // requests must never pollute production conversion metrics.
+  if (NON_PRODUCTION_ORIGINS.has(origin)) {
+    return json(origin, 202, { accepted: true, recorded: false });
   }
 
   const contentType = req.headers.get("content-type") || "";
@@ -140,5 +152,5 @@ Deno.serve(async (req: Request) => {
     return json(origin, 503, { accepted: false });
   }
 
-  return json(origin, 202, { accepted: true });
+  return json(origin, 202, { accepted: true, recorded: true });
 });
