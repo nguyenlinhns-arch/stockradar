@@ -14,8 +14,8 @@ class AuthenticatedStockClientAssetTests(unittest.TestCase):
         self.assertIn("data-dynamic-stock-report", page)
         self.assertIn("data-premium-stock-report", page)
         self.assertIn("data-premium-gate-copy", page)
-        self.assertIn("Phân tích cơ bản", page)
-        self.assertIn("Phân tích chuyên sâu & kế hoạch hành động", page)
+        self.assertIn("Bối cảnh để tự đánh giá", page)
+        self.assertIn("Lớp quyết định & kế hoạch hành động", page)
 
     def test_client_requires_session_and_routes_ready_report_to_premium_column(self):
         source = (WEBSITE / "assets" / "stock-api-client.js").read_text(encoding="utf-8")
