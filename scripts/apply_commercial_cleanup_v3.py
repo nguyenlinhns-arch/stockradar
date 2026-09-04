@@ -3,6 +3,8 @@
 
 Removes residual explanatory copy from conversion-critical and dashboard routes while
 preserving functional forms, data hooks, billing/auth controls and action outputs.
+Also hardens login-to-home continuity, reconciles legacy/current Supabase browser
+storage keys, and normalizes AI answer copy for clearer decisions.
 """
 
 from __future__ import annotations
@@ -12,6 +14,83 @@ import re
 from pathlib import Path
 
 ROUTES = ("signup", "dang-ky", "thanh-toan", "hieu-qua", "tai-khoan", "hom-nay", "khuyen-nghi")
+RUNTIME_MARKER = "data-stockradar-runtime-v3"
+RUNTIME_SCRIPT = r'''<script data-stockradar-runtime-v3>
+(() => {
+  'use strict';
+  const primary = 'stockradar-auth';
+  const secondary = 'sb-xamviatbxufjlpiwhebb-auth-token';
+
+  function syncAuthStorage() {
+    try {
+      const current = localStorage.getItem(primary);
+      const legacy = localStorage.getItem(secondary);
+      if (current && current !== legacy) localStorage.setItem(secondary, current);
+      else if (!current && legacy) localStorage.setItem(primary, legacy);
+    } catch (_) {}
+  }
+
+  function normalizeAnswer(value) {
+    let text = String(value || '').trim();
+    if (!text) return text;
+    text = text
+      .replace(/\*\*/g, '')
+      .replace(/\bAction Gate\b/gi, 'xác nhận hành động')
+      .replace(/\bKHONG HANH DONG\b/gi, 'CHƯA HÀNH ĐỘNG')
+      .replace(/\bTHEO DOI\b/gi, 'THEO DÕI')
+      .replace(/\bWATCH\b/g, 'THEO DÕI')
+      .replace(/Kết luận:\s*chưa có điểm mua hành động đã xác nhận;\s*tiếp tục THEO DÕI và chờ cấu trúc\/volume xác nhận\.?/i,
+        'KẾT LUẬN: CHƯA MUA MỚI. Tiếp tục theo dõi và chờ cấu trúc giá/khối lượng xác nhận.')
+      .replace(/Kết luận:\s*dùng trạng thái trên như góc nhìn nghiên cứu và chờ xác nhận hành động xác nhận trước khi hành động\.?/i,
+        'KẾT LUẬN: CHƯA CÓ TÍN HIỆU HÀNH ĐỘNG ĐƯỢC XÁC NHẬN.')
+      .replace(/Kết luận:\s*dùng trạng thái trên như góc nhìn nghiên cứu và chờ xác nhận hành động trước khi hành động\.?/i,
+        'KẾT LUẬN: CHƯA CÓ TÍN HIỆU HÀNH ĐỘNG ĐƯỢC XÁC NHẬN.');
+
+    const parts = text.split(/\n{2,}/).map(item => item.trim()).filter(Boolean);
+    const conclusionIndex = parts.findIndex(item => /^KẾT LUẬN\s*:|^Kết luận\s*:/i.test(item));
+    if (conclusionIndex > 0) {
+      const [conclusion] = parts.splice(conclusionIndex, 1);
+      parts.unshift(conclusion);
+    }
+    const researchIndex = parts.findIndex((item, index) => index > 0 && /^Góc nhìn nghiên cứu/i.test(item));
+    if (researchIndex > 0) {
+      const [note] = parts.splice(researchIndex, 1);
+      parts.push(`Ghi chú: ${note}`);
+    }
+    return parts.join('\n\n');
+  }
+
+  function normalizeBubbles(root) {
+    root.querySelectorAll('.sr-center-assistant .sr-center-bubble, .sr-ai-assistant .sr-ai-bubble').forEach(bubble => {
+      if (bubble.dataset.stockradarNormalized === '1') return;
+      const before = bubble.textContent || '';
+      const after = normalizeAnswer(before);
+      if (after && after !== before) bubble.textContent = after;
+      bubble.dataset.stockradarNormalized = '1';
+    });
+  }
+
+  syncAuthStorage();
+  const start = () => {
+    syncAuthStorage();
+    normalizeBubbles(document);
+    if (document.body) {
+      new MutationObserver(records => {
+        for (const record of records) {
+          for (const added of record.addedNodes) {
+            if (added.nodeType !== 1) continue;
+            const root = added.matches?.('.sr-center-message,.sr-ai-message') ? (added.parentElement || added) : added;
+            normalizeBubbles(root);
+          }
+        }
+      }).observe(document.body, { childList: true, subtree: true });
+    }
+    window.addEventListener('pageshow', syncAuthStorage);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
+</script>'''
 
 
 def read(path: Path) -> str:
@@ -103,7 +182,6 @@ def cleanup_account(source: str) -> str:
     for before, after in replacements:
         source = source.replace(before, after)
 
-    # Keep the email card operational: status + choices + save action, without implementation commentary.
     source = re.sub(
         r'<div class="auth-security-note"><strong>Quyền email:</strong>\s*<span data-email-pref-eligibility>.*?</span>.*?</div>',
         '<div class="auth-security-note"><strong>Quyền email:</strong> <span data-email-pref-eligibility>Đang kiểm tra…</span></div>',
@@ -126,6 +204,29 @@ def cleanup_today(source: str) -> str:
 def cleanup_recommendations(source: str) -> str:
     source = source.replace("Tín hiệu hành động đã được StockRadar phát hành.", "Tín hiệu đã phát hành.")
     return source
+
+
+def force_login_home(output: Path) -> None:
+    page = output / "dang-nhap" / "index.html"
+    source = read(page)
+    source, count = re.subn(
+        r"if\s*\(!url\.searchParams\.has\('next'\)\)\s*\{\s*url\.searchParams\.set\('next',\s*'hom-nay/'\);\s*history\.replaceState\(null,\s*'',\s*url\);\s*\}",
+        "url.searchParams.set('next', new URL('', document.baseURI).toString());\n      history.replaceState(null, '', url);",
+        source,
+        count=1,
+        flags=re.S,
+    )
+    if count != 1:
+        raise RuntimeError("Login redirect block not found")
+    page.write_text(source, encoding="utf-8")
+
+
+def inject_runtime(output: Path) -> None:
+    for page in output.rglob("*.html"):
+        source = page.read_text(encoding="utf-8")
+        if RUNTIME_MARKER in source or "</head>" not in source:
+            continue
+        page.write_text(source.replace("</head>", f"{RUNTIME_SCRIPT}\n</head>", 1), encoding="utf-8")
 
 
 def process(output: Path, route: str) -> None:
@@ -174,7 +275,20 @@ def verify(output: Path) -> None:
         for marker in markers:
             if marker not in source:
                 raise RuntimeError(f"Functional marker missing after cleanup: {route}: {marker}")
-    print("Commercial cleanup v3: PASS (residual explanation removed; functional hooks preserved)")
+
+    login = read(output / "dang-nhap" / "index.html")
+    if "url.searchParams.set('next', new URL('', document.baseURI).toString())" not in login:
+        raise RuntimeError("Successful login is not forced back to the homepage")
+    if "url.searchParams.set('next', 'hom-nay/')" in login:
+        raise RuntimeError("Legacy login redirect to hom-nay survived")
+
+    home = read(output / "index.html")
+    if RUNTIME_MARKER not in home or "stockradar-auth" not in home or "sb-xamviatbxufjlpiwhebb-auth-token" not in home:
+        raise RuntimeError("Homepage auth continuity bridge missing")
+    if "normalizeAnswer" not in home or "KẾT LUẬN: CHƯA MUA MỚI" not in home:
+        raise RuntimeError("Homepage AI clarity normalizer missing")
+
+    print("Commercial cleanup v3: PASS (copy cleanup + auth continuity + AI clarity hardening)")
 
 
 def main() -> None:
@@ -184,6 +298,8 @@ def main() -> None:
     output = args.output.resolve()
     for route in ROUTES:
         process(output, route)
+    force_login_home(output)
+    inject_runtime(output)
     verify(output)
 
 
