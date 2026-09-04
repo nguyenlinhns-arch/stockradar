@@ -253,7 +253,7 @@ class StaticAssetTests(unittest.TestCase):
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
         for horizon in ("Ngắn hạn", "Trung hạn", "Dài hạn", "Tích sản"):
             self.assertIn(horizon, homepage)
-        self.assertIn("BẢNG ĐIỀU HÀNH", homepage)
+        self.assertIn("RA QUYẾT ĐỊNH TRÊN HOSE", homepage)
         self.assertIn('content="PRODUCTION"', homepage)
         self.assertIn("Free và Premium có gì?", homepage)
         self.assertIn("Radar 30", homepage)
