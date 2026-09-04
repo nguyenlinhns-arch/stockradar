@@ -33,14 +33,14 @@
       <div class="account-upgrade-inner">
         <div>
           <span class="account-upgrade-kicker">${trial ? 'TRIAL → PREMIUM' : 'FREE → PREMIUM'}</span>
-          <h2>${trial ? 'Giữ quyền cảnh báo sau khi Trial kết thúc' : 'Nâng Premium khi bạn cần hành động trong phiên'}</h2>
+          <h2>${trial ? 'Giữ quyền cảnh báo sau khi Trial kết thúc' : 'Mở báo cáo và cảnh báo dành cho Premium'}</h2>
           <p>${trial
-            ? 'Premium tiếp tục các quyền phân tích sâu và cảnh báo mua/bán sau thời gian Trial.'
-            : 'Free đã có bản rà soát 09:00. Premium bổ sung phần đáng trả phí nhất: kế hoạch giao dịch và cảnh báo hành động trong phiên.'}</p>
+            ? 'Premium tiếp tục quyền Daily 09:00, kế hoạch giao dịch và Action Alert sau thời gian Trial.'
+            : 'Free dùng các chức năng công khai và email hệ thống của tài khoản. Premium mở phần tạo giá trị hằng ngày: báo cáo 09:00, kế hoạch giao dịch và cảnh báo hành động trong phiên.'}</p>
           <div class="account-upgrade-benefits">
+            <span>Daily 09:00 · Watchlist trước</span>
             <span>Buy Zone · Stop · Target · R/R</span>
-            <span>10:30 · 11:15 · 13:30 · 14:15</span>
-            <span>Khoảng 20 mã theo dõi</span>
+            <span>Action Alert · khoảng 20 mã theo dõi</span>
           </div>
         </div>
         <div class="account-upgrade-actions">
