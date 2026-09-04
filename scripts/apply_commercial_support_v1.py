@@ -117,8 +117,16 @@ def verify(output: Path) -> None:
     for route, source in pages.items():
         if MARKER not in source:
             raise RuntimeError(f"Commercial support bundle missing: {route}")
-        if "Tra cứu mã</a>" in source or "Gói dịch vụ</a>" in source:
-            raise RuntimeError(f"Legacy nav survived: {route}")
+        nav_match = re.search(r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>', source, flags=re.I | re.S)
+        if not nav_match:
+            raise RuntimeError(f"Primary nav missing: {route}")
+        nav_html = nav_match.group(0)
+        for legacy_label in ("Tra cứu mã", "Gói dịch vụ", "Theo ngành", "Thay đổi"):
+            if legacy_label in nav_html:
+                raise RuntimeError(f"Legacy nav label survived on {route}: {legacy_label}")
+        for required_label in (">AI<", ">Hôm nay<", ">Radar<", ">Khuyến nghị<", ">Hiệu quả<"):
+            if required_label not in nav_html:
+                raise RuntimeError(f"Commercial nav label missing on {route}: {required_label}")
     newsletter = pages["nhan-ban-tin"]
     for marker in ("data-email-interest-form", "daily_brief", "event_alerts", "privacy"):
         if marker not in newsletter:
