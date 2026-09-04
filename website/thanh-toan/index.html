@@ -4,7 +4,10 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Thanh toán StockRadar Premium 199.000đ/30 ngày bằng VietQR/chuyển khoản, mã giao dịch riêng và kích hoạt sau khi quản trị xác nhận thanh toán qua email.">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="description" content="Thanh toán StockRadar Premium 199.000đ/30 ngày bằng VietQR/chuyển khoản VPBank, mã giao dịch riêng và kích hoạt sau khi quản trị xác nhận thanh toán qua email.">
   <title>Thanh toán Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-checkout3">
@@ -14,7 +17,7 @@
   <script src="assets/auth-config.js?v=20260904-checkout3" defer></script>
   <script src="assets/app.js?v=20260904-checkout3" defer></script>
   <script src="assets/email-interest.js?v=20260904-privacy1" defer></script>
-  <script src="assets/checkout-v1.js?v=20260904-checkout4" defer></script>
+  <script src="assets/checkout-v1.js?v=20260904-checkout5" defer></script>
 </head>
 <body data-proposition="checkout">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -31,7 +34,7 @@
       <div class="checkout-hero-inner">
         <span class="checkout-eyebrow">STOCKRADAR PREMIUM · 30 NGÀY</span>
         <h1>Thanh toán một lần.<br>Kích hoạt đúng 30 ngày Premium.</h1>
-        <p>Giá sáng lập 199.000đ/30 ngày. Không tự gia hạn. Mỗi yêu cầu thanh toán có mã chuyển khoản riêng; Premium chỉ kích hoạt sau khi giao dịch được kiểm tra và quản trị xác nhận qua email.</p>
+        <p>Giá 199.000đ/30 ngày. Không tự gia hạn. Tài khoản nhận tiền chính thức là VPBank · 0934389822 · NGUYỄN TỬ LINH. Sau khi đăng nhập, hệ thống tạo mã chuyển khoản riêng cho đúng tài khoản Premium.</p>
         <div class="checkout-steps" aria-label="Quy trình thanh toán">
           <span class="checkout-step"><b>1</b>Tài khoản</span>
           <span class="checkout-step is-active"><b>2</b>Thanh toán</span>
@@ -45,8 +48,8 @@
         <article class="checkout-card" id="payment">
           <header class="checkout-card-head">
             <span class="checkout-section-label">VIETQR / CHUYỂN KHOẢN</span>
-            <h2>Thông tin thanh toán của riêng tài khoản này</h2>
-            <p>Đăng nhập để hệ thống cấp số tiền, mã giao dịch và thời hạn thanh toán. Không dùng lại nội dung chuyển khoản của giao dịch cũ.</p>
+            <h2>Thông tin thanh toán StockRadar Premium</h2>
+            <p>Tài khoản nhận tiền chính thức: <strong>VPBank · 0934389822 · NGUYỄN TỬ LINH</strong>. Đăng nhập để hệ thống tạo nội dung chuyển khoản riêng, QR và thời hạn thanh toán cho đúng tài khoản.</p>
           </header>
 
           <div class="checkout-methods">
@@ -55,18 +58,18 @@
               <div class="checkout-payment-body">
                 <div class="checkout-qr" aria-label="Mã VietQR">
                   <img data-checkout-qr-image hidden alt="" referrerpolicy="no-referrer">
-                  <div data-checkout-qr-placeholder><div class="checkout-qr-icon">QR</div><strong>VietQR</strong><span>Đăng nhập và tạo yêu cầu thanh toán để hiển thị QR.</span></div>
+                  <div data-checkout-qr-placeholder><div class="checkout-qr-icon">QR</div><strong>VietQR</strong><span>Đăng nhập để hệ thống tạo QR kèm nội dung chuyển khoản riêng.</span></div>
                 </div>
                 <div>
                   <div class="checkout-bank-list">
-                    <div class="checkout-bank-row"><span>Ngân hàng</span><strong data-checkout-bank>—</strong></div>
-                    <div class="checkout-bank-row"><span>Số tài khoản</span><strong data-checkout-account-number>—</strong><button class="checkout-copy" type="button" data-copy-account data-copy-value="" disabled>Sao chép</button></div>
-                    <div class="checkout-bank-row"><span>Chủ tài khoản</span><strong data-checkout-account-name>—</strong></div>
+                    <div class="checkout-bank-row"><span>Ngân hàng</span><strong data-checkout-bank>VPBank</strong></div>
+                    <div class="checkout-bank-row"><span>Số tài khoản</span><strong data-checkout-account-number>0934389822</strong><button class="checkout-copy" type="button" data-copy-account data-copy-value="0934389822">Sao chép</button></div>
+                    <div class="checkout-bank-row"><span>Chủ tài khoản</span><strong data-checkout-account-name>NGUYỄN TỬ LINH</strong></div>
                     <div class="checkout-bank-row"><span>Số tiền</span><strong data-checkout-amount>199.000đ</strong></div>
                     <div class="checkout-bank-row"><span>Nội dung chuyển khoản</span><strong data-checkout-reference>—</strong><button class="checkout-copy" type="button" data-copy-reference data-copy-value="" disabled>Sao chép</button></div>
                     <div class="checkout-bank-row"><span>Mã còn hiệu lực</span><strong data-checkout-expiry>—</strong><small data-checkout-expiry-at>—</small></div>
                   </div>
-                  <div class="checkout-warning"><strong>Quan trọng:</strong> chuyển đúng số tiền và đúng nội dung hiển thị trên trang này. Bấm “Tôi đã chuyển khoản” chỉ gửi yêu cầu xác nhận tới email quản trị StockRadar, không tự cấp Premium.</div>
+                  <div class="checkout-warning"><strong>Quan trọng:</strong> chỉ chuyển tiền sau khi đăng nhập và hệ thống đã tạo <strong>nội dung chuyển khoản SR riêng</strong>. Chuyển đúng 199.000đ và đúng nội dung hiển thị để đối soát chính xác.</div>
                 </div>
               </div>
             </section>
@@ -75,24 +78,15 @@
               <h3>Sau khi đã chuyển khoản</h3>
               <p>Bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị. Sau khi tiền thực nhận được kiểm tra và xác nhận, tài khoản tự chuyển sang Premium, cộng đúng 30 ngày và gửi email kết quả cho khách hàng.</p>
               <button class="checkout-primary" type="button" data-checkout-confirm disabled>Tôi đã chuyển khoản · Gửi xác nhận</button>
-              <div class="checkout-state is-warn" data-checkout-state aria-live="polite">Đang kiểm tra tài khoản và trạng thái thanh toán…</div>
-              <a class="checkout-secondary-link" href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-login>Đăng nhập để thanh toán</a>
+              <div class="checkout-state is-warn" data-checkout-state aria-live="polite">VPBank 0934389822 · NGUYỄN TỬ LINH là tài khoản nhận tiền chính thức. Đăng nhập để tạo mã thanh toán riêng.</div>
+              <a class="checkout-secondary-link" href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-login>Đăng nhập để tạo mã thanh toán</a>
             </section>
           </div>
 
-          <section class="checkout-confirm" data-checkout-disabled-fallback>
-            <span class="checkout-section-label">THANH TOÁN CHƯA ĐƯỢC KÍCH HOẠT</span>
-            <h3>Luồng thanh toán đã sẵn sàng, nhưng chưa có tài khoản nhận tiền production</h3>
-            <p>StockRadar chỉ mở nút chuyển khoản khi backend đã có ngân hàng, số tài khoản, chủ tài khoản và quy trình xác nhận thanh toán. Trong thời gian đó bạn có thể tạo tài khoản Premium để sẵn sàng nâng cấp.</p>
-            <form class="lead-form email-interest-form" data-email-interest-form data-next-href="signup/?plan=premium" data-next-label="Tạo tài khoản Premium" novalidate>
-              <div class="lead-field"><label for="checkout-interest-email">Email</label><input id="checkout-interest-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
-              <input name="daily_brief" type="checkbox" hidden aria-hidden="true" tabindex="-1">
-              <input name="event_alerts" type="checkbox" checked hidden aria-hidden="true" tabindex="-1">
-              <label class="lead-check"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và nhu cầu Premium theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-04.</span></label>
-              <div class="lead-honeypot" aria-hidden="true"><label for="checkout-interest-company">Công ty</label><input id="checkout-interest-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
-              <button class="lead-submit" type="submit">Tạo tài khoản / ghi nhận nhu cầu Premium</button>
-              <p class="email-interest-message" data-email-interest-message aria-live="polite">Không thu phí và không tự kích hoạt Premium khi chưa có giao dịch được xác minh.</p>
-            </form>
+          <section class="checkout-confirm" data-checkout-disabled-fallback hidden>
+            <span class="checkout-section-label">KHÔNG TẠO ĐƯỢC MÃ GIAO DỊCH</span>
+            <h3>Tài khoản nhận tiền vẫn là VPBank 0934389822</h3>
+            <p>Nếu hệ thống tạm thời chưa tạo được mã SR riêng, không chuyển khoản cho đến khi mã được hiển thị. Điều này giúp StockRadar đối soát đúng tài khoản Premium.</p>
           </section>
         </article>
 
@@ -110,15 +104,15 @@
             </ul>
             <div class="checkout-total"><div class="checkout-total-row"><span>Gói</span><strong>Premium 30 ngày</strong></div><div class="checkout-total-row"><span>Tự gia hạn</span><strong>Không</strong></div><div class="checkout-total-row is-total"><span>Tổng thanh toán</span><strong data-checkout-amount>199.000đ</strong></div></div>
             <div class="checkout-account"><span>Tài khoản nhận Premium</span><strong data-checkout-account-email>Chưa đăng nhập</strong></div>
-            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> chỉ sau khi quản trị xác nhận tiền thực nhận qua email.</span></div><div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> nếu còn Premium, 30 ngày mới được cộng tiếp từ ngày hết hạn hiện tại.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free, không xóa tài khoản, watchlist hay lịch sử.</span></div></div>
+            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Tài khoản nhận tiền:</b> VPBank · 0934389822 · NGUYỄN TỬ LINH.</span></div><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> chỉ sau khi quản trị xác nhận tiền thực nhận qua email.</span></div><div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> nếu còn Premium, 30 ngày mới được cộng tiếp từ ngày hết hạn hiện tại.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free, không xóa tài khoản, watchlist hay lịch sử.</span></div></div>
           </div>
         </aside>
       </div>
 
-      <div class="checkout-help"><article><strong>1 · Tạo mã riêng</strong><span>Mỗi yêu cầu có mã chuyển khoản riêng, giới hạn thời gian và gắn với đúng tài khoản đăng nhập.</span></article><article><strong>2 · Xác nhận qua email quản trị</strong><span>Nút của khách chỉ gửi yêu cầu; mở link email cũng chưa cấp quyền. Quản trị phải kiểm tra tiền và bấm xác nhận cuối.</span></article><article><strong>3 · Cộng đúng 30 ngày</strong><span>Quyền Premium được cộng nối tiếp nếu tài khoản đang còn hạn và khách nhận email xác nhận kết quả.</span></article></div>
+      <div class="checkout-help"><article><strong>1 · Đăng nhập</strong><span>Ngân hàng và số tài khoản hiển thị công khai; mã SR và QR chỉ tạo sau khi đăng nhập.</span></article><article><strong>2 · Chuyển đúng nội dung</strong><span>Dùng đúng mã SR hệ thống cấp riêng để giao dịch gắn với đúng tài khoản Premium.</span></article><article><strong>3 · Xác nhận và kích hoạt</strong><span>Sau khi chuyển khoản, gửi yêu cầu xác nhận; Premium chỉ kích hoạt khi quản trị kiểm tra tiền thực nhận.</span></article></div>
     </section>
   </main>
-  <div class="checkout-mobile-bar"><a href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-mobile-action>Đăng nhập để thanh toán</a></div>
+  <div class="checkout-mobile-bar"><a href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-mobile-action>Đăng nhập để tạo mã thanh toán</a></div>
   <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-ky/">So sánh gói</a></div></div><p class="disclaimer">Thanh toán không đồng nghĩa cam kết lợi nhuận. StockRadar là công cụ nghiên cứu và sàng lọc; quyết định đầu tư thuộc người dùng.</p></div></footer>
 </body>
 </html>
