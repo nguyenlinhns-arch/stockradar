@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 
-HEAD = '''<link rel="stylesheet" href="assets/ai-assistant.css?v=20260904-ai2">\n<script src="assets/auth-state-v2.js?v=20260905-authstate2" defer></script>\n<script src="assets/ai-assistant.js?v=20260904-ai2" defer></script>\n'''
+HEAD = '''<link rel="stylesheet" href="assets/ai-assistant.css?v=20260904-ai2">\n<script src="assets/auth-state-v2.js?v=20260905-authstate3" defer></script>\n<script src="assets/ai-assistant.js?v=20260904-ai2" defer></script>\n'''
 SKIP_TOP_ROUTES = {
     "signup",
     "dang-ky",
