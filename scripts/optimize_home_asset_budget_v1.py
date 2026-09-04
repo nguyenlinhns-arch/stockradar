@@ -43,7 +43,9 @@ REQUIRED_JS = {
     "commercial-v1.js",
     "header-notifications.js",
 }
-MAX_LOCAL_ASSET_BYTES = 190_000
+# Account-aware AI added session/tier synchronization without adding a new asset.
+# Keep the budget tight, with a small reviewed allowance for that runtime logic.
+MAX_LOCAL_ASSET_BYTES = 192_000
 AI_CENTER_CACHE_VERSION = "20260905-ai5"
 
 
