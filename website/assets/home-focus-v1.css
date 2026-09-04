@@ -7,7 +7,8 @@
 .app-home .header-register-cta{border:1px solid var(--red);background:var(--red);color:#fff}
 .app-home .header-register-cta:hover{border-color:#b71e29;background:#b71e29;color:#fff}
 .app-home .home-focus-section{padding:10px 0}
-.app-home .home-focus-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,.55fr);gap:12px;align-items:start}
+.app-home .home-focus-grid{display:grid;grid-template-columns:1fr;gap:12px;align-items:start}
+.app-home .home-quick-panel{display:none!important}
 .app-home .home-focus-panel{background:#fff;border:1px solid var(--line);box-shadow:0 3px 12px rgba(18,43,68,.04)}
 .app-home .home-focus-head{min-height:58px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}
 .app-home .home-focus-head h2{margin:2px 0 0;color:var(--navy);font-size:18px;line-height:1.2}
