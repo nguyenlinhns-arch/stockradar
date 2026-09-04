@@ -1,8 +1,24 @@
 {
-  "schema_version": "3.0",
+  "schema_version": "3.1",
   "ranking_valid": false,
   "method_version": "STOCKRADAR_SCORE_V1",
   "data_status": "BLOCKED_DATA_GATE",
+  "computation": {
+    "calculation_origin": "STOCKRADAR_ENGINE",
+    "calculation_policy_version": "1.0",
+    "external_input_role": "RAW_INPUT_ONLY",
+    "external_scores_accepted": false,
+    "method_stack": [
+      "4M_PAYBACK",
+      "CANSLIM",
+      "VALUATION",
+      "SEPA_VCP_STAGE",
+      "VPA",
+      "POCKET_PIVOT_EARLY_MOMENTUM",
+      "ICHIMOKU_BOLLINGER_TRENDLINE",
+      "RISK_REWARD"
+    ]
+  },
   "snapshot": {
     "snapshot_id": "hose-universe-2026-09-02-065632-vn",
     "as_of": "2026-09-02T06:56:32+07:00",
