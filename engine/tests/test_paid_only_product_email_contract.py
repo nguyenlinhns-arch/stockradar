@@ -10,7 +10,7 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         return (ROOT / relative).read_text(encoding="utf-8")
 
     def test_latest_entitlement_migration_requires_trial_or_paid(self):
-        migration = self.read("supabase/migrations/20260904104050_enforce_paid_only_product_email.sql").lower()
+        migration = self.read("supabase/migrations/20260904110500_assert_paid_only_product_email.sql").lower()
         self.assertIn("tier not in ('trial','paid')", migration)
         self.assertIn("prof.account_tier in ('trial','paid')", migration)
         self.assertIn("daily_brief_content_tier", migration)
@@ -18,6 +18,7 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         self.assertNotIn("then 'free'", migration)
         self.assertIn("update public.product_email_preferences", migration)
         self.assertIn("prof.account_tier not in ('trial','paid')", migration)
+        self.assertIn("revoke all on private.product_email_eligibility", migration)
 
     def test_free_client_cannot_enable_product_email(self):
         client = self.read("website/assets/email-preferences.js")
@@ -46,6 +47,22 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         self.assertNotIn("Có · bản cơ bản", plans)
         self.assertNotIn("Free: bản rà soát 09:00", plans)
 
+    def test_homepage_does_not_sell_product_email_as_free(self):
+        home = self.read("website/index.html")
+        self.assertIn("PREMIUM · EMAIL 09:00", home)
+        self.assertIn("Daily 09:00 Premium", home)
+        self.assertIn("Không bao gồm Daily 09:00 hoặc Action Alert", home)
+        self.assertNotIn("FREE · EMAIL 09:00", home)
+        self.assertNotIn("Nhận bản tin 09:00 miễn phí", home)
+        self.assertNotIn("Nhận bản rà soát thị trường mỗi sáng", home)
+
+    def test_home_lead_routes_interest_to_premium_signup(self):
+        client = self.read("website/assets/home-core-v1.js")
+        self.assertIn("url.searchParams.set('plan', 'premium')", client)
+        self.assertIn("Đã ghi nhận nhu cầu Premium", client)
+        self.assertIn("không kích hoạt gửi email hoặc thanh toán", client)
+        self.assertNotIn("Hoàn tất tạo tài khoản Free để kích hoạt bản tin 09:00", client)
+
     def test_pages_transform_corrects_legacy_signup_copy_before_publish(self):
         transformer = self.read("scripts/apply_premium_email_product_v1.py")
         self.assertIn("Free để tra cứu.<br>Premium để nhận lớp quyết định.", transformer)
@@ -54,6 +71,17 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         self.assertIn("assets/signup-email-intent.js?v=20260904-paid2", transformer)
         self.assertIn("FREE + PREMIUM", transformer)
         self.assertIn("PREMIUM", transformer)
+
+    def test_fast_pages_deploy_cannot_bypass_premium_contract_checks(self):
+        workflow = self.read(".github/workflows/pages-fast-hotfix.yml")
+        for verifier in (
+            "verify_conversion_paid_home_v1.py",
+            "verify_home_paid_intent_v1.py",
+            "verify_premium_email_product_v1.py",
+            "verify_conversion_funnel_v4.py",
+            "verify_paid_only_home_email_v1.py",
+        ):
+            self.assertIn(verifier, workflow)
 
 
 if __name__ == "__main__":
