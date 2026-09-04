@@ -5,6 +5,10 @@ on:
     branches: [main]
     paths:
       - 'website/**'
+      - 'engine/tests/test_stock_ai_personalization.py'
+      - 'engine/tests/test_stock_ai_product_center.py'
+      - 'scripts/inject_ai_assistant.py'
+      - 'scripts/verify_ai_assistant.py'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
@@ -38,7 +42,7 @@ jobs:
       - name: Build fail-closed public data
         run: python -m engine.cli build-public
 
-      - name: Run stock lookup regression suite
+      - name: Run stock lookup and AI regression suite
         run: |
           python -m unittest -v \
             engine.tests.test_alphanumeric_ticker_compat \
@@ -51,6 +55,8 @@ jobs:
             engine.tests.test_route_scoped_auth_bundle \
             engine.tests.test_static_assets \
             engine.tests.test_static_radar_ticker_pages \
+            engine.tests.test_stock_ai_personalization \
+            engine.tests.test_stock_ai_product_center \
             engine.tests.test_stock_api_gateway_contract \
             engine.tests.test_stock_page_context
 
@@ -81,8 +87,9 @@ jobs:
           python scripts/redesign_home_paid_intent_v1.py .pages-site
           python scripts/apply_premium_email_product_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
+          python scripts/inject_ai_assistant.py .pages-site
 
-      - name: Verify stock lookup and Premium contracts
+      - name: Verify stock lookup, Premium and AI contracts
         run: |
           python scripts/verify_pages_auth.py .pages-site
           python scripts/verify_pages_public_surface_paid_home_v1.py .pages-site
@@ -92,6 +99,7 @@ jobs:
           python scripts/verify_premium_email_product_v1.py .pages-site
           python scripts/verify_conversion_funnel_v4.py .pages-site
           python scripts/verify_paid_only_home_email_v1.py .pages-site
+          python scripts/verify_ai_assistant.py .pages-site
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
