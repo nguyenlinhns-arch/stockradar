@@ -1,7 +1,9 @@
 (() => {
   'use strict';
 
-  const CONSENT_VERSION = '2026-09-03';
+  const TERMS_VERSION = '2026-09-03';
+  const PRIVACY_VERSION = '2026-09-04';
+  const PRODUCT_EMAIL_CONSENT_VERSION = '2026-09-04';
   const VALID_PLANS = new Set(['free', 'premium']);
   const PENDING_LEAD_EMAIL_KEY = 'sr_pending_lead_email';
 
@@ -29,11 +31,11 @@
     return {
       selected_plan_interest: selectedPlan(form),
       terms_accepted: termsAccepted,
-      terms_version: CONSENT_VERSION,
+      terms_version: TERMS_VERSION,
       privacy_accepted: termsAccepted,
-      privacy_version: CONSENT_VERSION,
+      privacy_version: PRIVACY_VERSION,
       product_email_consent: dailyBrief || eventAlerts,
-      product_email_consent_version: CONSENT_VERSION,
+      product_email_consent_version: PRODUCT_EMAIL_CONSENT_VERSION,
       product_email_daily_brief: dailyBrief,
       product_email_event_alerts: eventAlerts,
     };
@@ -56,8 +58,6 @@
       form.elements.email.value = presetEmail;
     }
 
-    // Backward compatibility for older links that carried an email query param:
-    // prefill it, then immediately remove the PII from the visible URL/history entry.
     if (queryEmail && window.history?.replaceState) {
       params.delete('email');
       const cleanQuery = params.toString();
