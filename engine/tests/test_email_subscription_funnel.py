@@ -25,7 +25,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("PREMIUM", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
-    def test_signup_auth_metadata_carries_legal_product_email_and_prefilled_lead(self):
+    def test_signup_auth_metadata_and_session_prefill_avoid_url_pii(self):
         client = self.read("website/assets/signup-email-intent.js")
         for key in (
             "terms_accepted", "terms_version", "privacy_accepted", "privacy_version",
@@ -33,8 +33,12 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
             "product_email_daily_brief", "product_email_event_alerts",
         ):
             self.assertIn(key, client)
-        self.assertIn("params.get('email')", client)
+        self.assertIn("sr_pending_lead_email", client)
+        self.assertIn("pendingLeadEmail()", client)
         self.assertIn("form.elements.email.value = presetEmail", client)
+        self.assertIn("params.delete('email')", client)
+        self.assertIn("window.history.replaceState", client)
+        self.assertIn("clearPendingLeadEmail()", client)
 
     def test_account_exposes_free_daily_and_premium_alert_controls(self):
         account = self.read("website/tai-khoan/index.html")
@@ -127,6 +131,17 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("Chưa phát hành", home)
         self.assertNotIn("Chưa sẵn sàng", home)
 
+    def test_home_and_global_conversion_state_skip_repeated_lead_cta(self):
+        home_core = self.read("website/assets/home-core-v1.js")
+        conversion_state = self.read("website/assets/conversion-state-v1.js")
+        for source in (home_core, conversion_state):
+            self.assertIn("sr_email_lead_captured", source)
+            self.assertIn("emailDeliveryReady", source)
+        self.assertIn("sr_pending_lead_email", home_core)
+        self.assertIn("Hoàn tất Free", home_core)
+        self.assertIn("data-conversion-free-lead", conversion_state)
+        self.assertIn("Hoàn tất tài khoản Free", conversion_state)
+
     def test_email_lead_landing_captures_interest_then_routes_to_free_signup(self):
         page = self.read("website/nhan-ban-tin/index.html")
         client = self.read("website/assets/email-interest.js")
@@ -140,6 +155,25 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn('href="thanh-toan/?plan=premium"', page)
         self.assertIn("renderNextStep", client)
         self.assertIn("data-email-interest-next", client)
+        self.assertIn("sr_pending_lead_email", client)
+        self.assertIn("sessionStorage.setItem", client)
+        self.assertNotIn("url.searchParams.set('email'", client)
+
+    def test_email_lead_attribution_records_first_and_last_touch_without_public_access(self):
+        migration = self.read("supabase/migrations/20260904004118_add_email_lead_attribution_v2.sql").lower()
+        edge = self.read("supabase/functions/email-interest/index.ts")
+        client = self.read("website/assets/email-interest.js")
+        for marker in (
+            "first_source_path", "last_source_path", "first_utm_source", "last_utm_source",
+            "first_utm_campaign", "last_utm_campaign", "first_referrer_host", "last_referrer_host",
+            "capture_email_subscription_interest_v2", "to service_role",
+        ):
+            self.assertIn(marker, migration)
+        self.assertIn("capture_email_subscription_interest_v2", edge)
+        for marker in ("source_path", "utm_source", "utm_campaign", "referrer_host"):
+            self.assertIn(marker, edge)
+            self.assertIn(marker, client)
+        self.assertNotIn("service_role", client.lower())
 
     def test_radar_review_payload_is_30_tickers_10_sectors_3_each(self):
         payload = json.loads(self.read("website/public/data/ticker-universe.json"))
@@ -198,15 +232,16 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("to service_role", migration)
         self.assertIn("never authorizes delivery", migration)
 
-    def test_public_interest_edge_has_origin_honeypot_and_rate_limit_contract(self):
+    def test_public_interest_edge_has_origin_honeypot_rate_limit_and_v2_attribution(self):
         edge = self.read("supabase/functions/email-interest/index.ts")
         self.assertIn("ALLOWED_ORIGINS", edge)
         self.assertIn("payload.company", edge)
-        self.assertIn("capture_email_subscription_interest", edge)
+        self.assertIn("capture_email_subscription_interest_v2", edge)
         self.assertIn("rate limit exceeded", edge)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY", edge)
         self.assertIn("PENDING_VERIFICATION", edge)
-        self.assertIn("StockRadar chưa gửi báo cáo hoặc cảnh báo", edge)
+        self.assertIn("Hoàn tất tạo tài khoản Free", edge)
+        self.assertIn("stockradar-email-interest-v2", edge)
 
     def test_privacy_page_discloses_pending_interest_retention(self):
         privacy = self.read("website/quyen-rieng-tu/index.html")
