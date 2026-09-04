@@ -184,7 +184,7 @@
       const confirmable = enabled && request.status === 'PENDING';
       confirm.disabled = !confirmable;
       confirm.textContent = request?.status === 'USER_CONFIRMED'
-        ? 'Đã gửi xác nhận · Đang chờ đối soát'
+        ? 'Đã gửi · Chờ xác nhận qua email'
         : request?.status === 'PAID'
           ? 'Premium đã được kích hoạt'
           : 'Tôi đã chuyển khoản · Gửi xác nhận';
@@ -194,11 +194,11 @@
 
     if (!enabled) return;
     if (request.status === 'PENDING') {
-      setState(`Mã thanh toán ${request.payment_reference} đã được cấp riêng cho tài khoản này. Chuyển đúng số tiền và nội dung trước khi mã hết hạn.`, 'ok');
+      setState(`Mã thanh toán ${request.payment_reference} đã được cấp riêng cho tài khoản này. Sau khi chuyển khoản, bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị.`, 'ok');
     } else if (request.status === 'USER_CONFIRMED') {
-      setState('Đã nhận xác nhận chuyển khoản. StockRadar đang chờ đối soát trước khi kích hoạt Premium.', 'warn');
+      setState('Yêu cầu xác nhận đã được gửi tới email quản trị StockRadar. Premium chỉ được kích hoạt sau khi thanh toán được kiểm tra và xác nhận.', 'warn');
     } else if (request.status === 'PAID') {
-      setState(`Thanh toán đã được xác minh. Premium đang hoạt động${request.paid_until ? ` đến ${formatDateTime(request.paid_until)}` : ''}.`, 'ok');
+      setState(`Thanh toán đã được xác minh. Premium đang hoạt động${request.paid_until ? ` đến ${formatDateTime(request.paid_until)}` : ''}. Email xác nhận kích hoạt cũng được gửi tới tài khoản của bạn.`, 'ok');
       stopPolling();
       stopCountdown();
       const mobile = document.querySelector('[data-checkout-mobile-action]');
