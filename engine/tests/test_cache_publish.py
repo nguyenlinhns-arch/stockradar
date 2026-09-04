@@ -66,6 +66,11 @@ def manifest_payload():
             "source_terms_reviewed": True,
             "evidence_ref": "CONTRACT-001",
         },
+        "compliance": {
+            "review_completed": True,
+            "public_recommendation_approved": True,
+            "evidence_ref": "COMPLIANCE-001",
+        },
         "active_status": {
             "semantics_resolved": True,
             "market_status_checked": True,
