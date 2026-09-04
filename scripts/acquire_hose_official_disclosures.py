@@ -26,9 +26,10 @@ KEYWORDS = {
     "MA_CONSOLIDATION": ("sáp nhập", "mua lại", "m&a", "thoái vốn", "chuyển nhượng", "thâu tóm"),
     "MAJOR_CONTRACT": ("trúng thầu", "hợp đồng", "đơn hàng", "gói thầu"),
     "POLICY_INDUSTRY": ("chính sách", "nghị định", "thuế", "hạn ngạch", "quota", "điều chỉnh giá"),
-    "CAPITAL_ACTION": ("cổ tức", "phát hành", "quyền mua", "esop", "chia cổ phiếu", "thưởng cổ phiếu", "ngày đăng ký cuối cùng"),
+    "INSIDER": ("người nội bộ", "người có liên quan", "giao dịch cổ phiếu", "giao dịch quyền mua"),
+    "CAPITAL_ACTION": ("cổ tức", "phát hành", "chào bán", "quyền mua", "esop", "chia cổ phiếu", "thưởng cổ phiếu", "ngày đăng ký cuối cùng", "ngày đkcc"),
+    "LISTING_STATUS": ("hủy niêm yết", "tạm ngừng giao dịch", "đình chỉ giao dịch", "thay đổi niêm yết", "thay đổi đăng ký niêm yết", "niêm yết bổ sung", "tình trạng chứng khoán"),
     "GOVERNANCE": ("bổ nhiệm", "miễn nhiệm", "chủ tịch", "tổng giám đốc", "hđqt", "đhđcđ", "đại hội đồng cổ đông"),
-    "LISTING_STATUS": ("hủy niêm yết", "tạm ngừng giao dịch", "đình chỉ giao dịch", "thay đổi niêm yết", "niêm yết bổ sung"),
 }
 
 
