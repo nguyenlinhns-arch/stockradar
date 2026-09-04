@@ -235,3 +235,5 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+# Regression trigger after Domain V4 canonical valuation-column repair.
