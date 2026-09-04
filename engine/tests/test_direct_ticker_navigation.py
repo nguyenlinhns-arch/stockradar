@@ -17,7 +17,7 @@ class DirectTickerNavigationTests(unittest.TestCase):
             "phan-tich",
         ):
             self.assertIn(marker, source)
-        self.assertIn("/^[A-Z]{3}$/", source)
+        self.assertIn("/^(?=.*[A-Z])[A-Z0-9]{3}$/", source)
         self.assertIn("setTimeout(() => navigate(ticker), 0)", source)
 
     def test_pages_injector_loads_direct_navigation(self):
