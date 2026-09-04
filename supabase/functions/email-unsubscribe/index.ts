@@ -1,5 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
+type AdminCredential = { key: string; legacy: boolean };
+function adminCredential(): AdminCredential {
+  try {
+    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    const current = String(keys?.default || "").trim();
+    if (current.startsWith("sb_secret_")) return { key: current, legacy: false };
+  } catch (_) {}
+  return { key: String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim(), legacy: true };
+}
+function adminHeaders(admin: AdminCredential) {
+  const value: Record<string,string> = { apikey: admin.key, "content-type":"application/json", accept:"application/json" };
+  if (admin.legacy) value.authorization = `Bearer ${admin.key}`;
+  return value;
+}
+
 function headers(contentType: string) {
   return {
     "Content-Type": contentType,
@@ -15,10 +30,10 @@ function page(title: string, message: string, token: string, showButton: boolean
   <body style="margin:0;background:#f3f6f9;font-family:Arial,sans-serif;color:#0f172a"><main style="max-width:620px;margin:50px auto;padding:0 16px"><section style="background:#fff;border:1px solid #dbe4ee;border-radius:16px;padding:28px"><strong style="font-size:20px">STOCKRADAR</strong><h1 style="font-size:25px;margin:18px 0 10px">${title}</h1><p style="line-height:1.65;color:#475569">${message}</p>${showButton ? `<form method="post" action="?token=${safeToken}"><input type="hidden" name="List-Unsubscribe" value="One-Click"><button type="submit" style="border:0;border-radius:9px;background:#0b1f33;color:#fff;font-weight:700;padding:12px 18px;cursor:pointer">Xác nhận ngừng nhận</button></form>` : ""}<p style="font-size:13px;color:#64748b;margin-top:22px">Liên kết chỉ áp dụng cho phạm vi email ghi trong token, kể cả trường hợp “Ngừng toàn bộ email nội dung”. Việc ngừng email không xóa tài khoản. Bạn vẫn có thể quản lý từng loại email trong My StockRadar nếu còn đăng nhập.</p></section></main></body></html>`;
 }
 
-async function applyToken(supabaseUrl: string, serviceRole: string, token: string) {
+async function applyToken(supabaseUrl: string, admin: AdminCredential, token: string) {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/apply_stockradar_unsubscribe_v1`, {
     method: "POST",
-    headers: { apikey: serviceRole, authorization: `Bearer ${serviceRole}`, "content-type": "application/json", accept: "application/json" },
+    headers: adminHeaders(admin),
     body: JSON.stringify({ p_token: token }),
   });
   if (!response.ok) throw new Error(`unsubscribe rpc ${response.status}`);
@@ -28,8 +43,8 @@ async function applyToken(supabaseUrl: string, serviceRole: string, token: strin
 Deno.serve(async (req: Request) => {
   if (req.method !== "GET" && req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
-  if (!supabaseUrl || !serviceRole) return new Response("Service unavailable", { status: 503, headers: headers("text/plain; charset=utf-8") });
+  const admin = adminCredential();
+  if (!supabaseUrl || !admin.key) return new Response("Service unavailable", { status: 503, headers: headers("text/plain; charset=utf-8") });
 
   const url = new URL(req.url);
   const token = String(url.searchParams.get("token") || "").trim().toLowerCase();
@@ -42,7 +57,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const result = await applyToken(supabaseUrl, serviceRole, token);
+    const result = await applyToken(supabaseUrl, admin, token);
     const status = String(result?.status || "");
     if (status === "UNSUBSCRIBED") {
       const scope = String(result?.scope || "EMAIL");
