@@ -67,13 +67,16 @@ jobs:
         run: python scripts/verify_pages_auth.py .pages-site
 
       - name: Verify production public surface
-        run: python scripts/verify_pages_public_surface.py .pages-site
+        run: python scripts/verify_pages_public_surface_paid_home_v1.py .pages-site
 
       - name: Verify buyer-ready product surface
         run: python scripts/verify_buyer_readiness.py .pages-site
 
       - name: Verify conversion-first buyer journey
-        run: python scripts/verify_conversion_v3.py .pages-site
+        run: python scripts/verify_conversion_paid_home_v1.py .pages-site
+
+      - name: Verify homepage paid intent
+        run: python scripts/verify_home_paid_intent_v1.py .pages-site
 
       - name: Verify measurable Premium funnel
         run: python scripts/verify_conversion_funnel_v4.py .pages-site
