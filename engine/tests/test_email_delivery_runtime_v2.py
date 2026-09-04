@@ -30,10 +30,14 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
         self.assertIn("to service_role", sql)
         self.assertNotIn("grant execute on function public.claim_stockradar_email_outbox_v1(integer) to authenticated", sql)
 
-    def test_worker_is_service_role_only_and_provider_fail_closed(self) -> None:
+    def test_worker_requires_internal_service_auth_and_provider_is_fail_closed(self) -> None:
         source = self.read("supabase/functions/email-worker/index.ts")
         for marker in (
-            'req.headers.get("authorization") !== `Bearer ${service}`',
+            'req.headers.get("authorization") === `Bearer ${service}`',
+            'req.headers.get("x-stockradar-scheduler")',
+            "verify_stockradar_email_scheduler_token_v1",
+            "sha256Hex(schedulerToken)",
+            'return valid === true',
             "PROVIDER_NOT_CONFIGURED",
             "RESEND_API_KEY",
             "STOCKRADAR_EMAIL_FROM",
@@ -51,6 +55,7 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             self.assertIn(marker, source)
         self.assertNotIn("re_xxxxxxxxx", source)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY =", source)
+        self.assertLess(source.index("authorizedServiceRequest"), source.index("PROVIDER_NOT_CONFIGURED"))
         self.assertLess(
             source.index("preflight_stockradar_email_outbox_v1"),
             source.index("issue_stockradar_unsubscribe_token_v1"),
