@@ -51,14 +51,14 @@ jobs:
       - name: Install Python runtime dependencies
         run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5
 
-      - name: Build fail-closed public data
+      - name: Build public data
         run: python -m engine.cli build-public
+
+      - name: Fail-close public ticker seed before tests and Pages build
+        run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
 
       - name: Run regression suite
         run: python -m unittest discover -s engine/tests -v
-
-      - name: Fail-close public ticker seed before Pages build
-        run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
 
       - name: Build static Pages artifact
         env:
