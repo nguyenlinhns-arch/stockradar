@@ -4,14 +4,15 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Tạo tài khoản StockRadar Free hoặc Premium. Free dùng StockRadar AI 10 câu/ngày; Premium hỏi AI không giới hạn và có quyền nhận báo cáo/cảnh báo qua email khi hệ thống gửi đã sẵn sàng.">
+  <meta name="description" content="Tạo tài khoản StockRadar Free hoặc Premium. Xác minh bằng liên kết email; không cần nhập OTP trên website.">
   <title>Tạo tài khoản Free hoặc Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-email1">
   <link rel="stylesheet" href="assets/email-preferences.css?v=20260904-email1">
   <link rel="stylesheet" href="assets/plans-v1.css?v=20260904-plans1">
   <script src="assets/app.js?v=20260903-auth3" defer></script>
-  <script src="assets/signup-email-intent.js?v=20260904-privacy1" defer></script>
+  <script src="assets/signup-email-intent.js?v=20260904-link1" defer></script>
+  <script src="assets/signup-link-v1.js?v=20260904-link1" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -24,18 +25,18 @@
         <p>StockRadar AI là trung tâm của sản phẩm. Free mở 10 câu AI mỗi ngày; Premium mở AI không giới hạn, lớp quyết định, watchlist cá nhân và quyền nhận báo cáo/cảnh báo qua email khi hệ thống gửi production đã sẵn sàng.</p>
         <div class="auth-stepper" aria-label="Quy trình đăng ký">
           <span class="auth-step is-active"><b>1</b>Chọn gói + tài khoản</span>
-          <span class="auth-step"><b>2</b>Xác minh email</span>
-          <span class="auth-step"><b>3</b>Cấu hình watchlist &amp; email</span>
+          <span class="auth-step"><b>2</b>Bấm xác minh trong email</span>
+          <span class="auth-step"><b>3</b>Thanh toán Premium / mở Free</span>
         </div>
         <ul class="auth-benefits">
-          <li><strong>Free:</strong> 0đ, StockRadar AI <strong>10 câu/ngày</strong>, dùng các tính năng công khai. <strong>Free chỉ nhận email hệ thống cần thiết</strong> như xác minh, bảo mật, thanh toán/gia hạn hoặc thông báo tài khoản; không nhận Daily 09:00 hoặc Action Alert.</li>
-          <li><strong>Premium trả phí:</strong> StockRadar AI <strong>không giới hạn</strong> + MUA/CHỜ, GIỮ/TĂNG/GIẢM/BÁN, Vùng mua/Stop/Target, báo cáo 09:00 theo watchlist và <strong>Action Alert trong phiên</strong> tại 10:30, 11:15, 13:30, 14:15 khi có thay đổi đủ điều kiện.</li>
-          <li>OTP tại đây chỉ xác minh tài khoản StockRadar, không liên quan OTP môi giới hoặc ngân hàng.</li>
+          <li><strong>Free:</strong> 0đ, StockRadar AI <strong>10 câu/ngày</strong>, dùng các tính năng công khai. Free chỉ nhận email hệ thống cần thiết như xác minh và bảo mật tài khoản.</li>
+          <li><strong>Premium trả phí:</strong> StockRadar AI <strong>không giới hạn</strong> + MUA/CHỜ, GIỮ/TĂNG/GIẢM/BÁN, Vùng mua/Stop/Target, báo cáo 09:00 theo watchlist và <strong>Action Alert trong phiên</strong> khi có thay đổi đủ điều kiện.</li>
+          <li>Xác minh tài khoản bằng nút trong email StockRadar. <strong>Không cần nhập mã OTP trên website.</strong></li>
         </ul>
         <a class="text-link" href="dang-ky/">← Xem lại bảng so sánh Free / Premium</a>
       </section>
       <section class="auth-card" aria-labelledby="signup-title">
-        <div class="auth-card-header"><span class="auth-config-pill">EMAIL + PASSWORD + OTP</span><h2 id="signup-title">Tạo tài khoản <span data-signup-plan-name>Free</span></h2><p>Chọn gói trước, sau đó nhập thông tin tài khoản. Việc tạo tài khoản không tự phát sinh thanh toán.</p></div>
+        <div class="auth-card-header"><span class="auth-config-pill">EMAIL + PASSWORD</span><h2 id="signup-title">Tạo tài khoản <span data-signup-plan-name>Free</span></h2><p>Nhập thông tin tài khoản. StockRadar sẽ gửi một nút xác minh vào email; không cần nhập mã OTP.</p></div>
         <form class="auth-form" data-auth-signup-form novalidate>
           <fieldset class="signup-plan-selector">
             <legend>Gói bạn muốn đăng ký</legend>
@@ -58,23 +59,23 @@
             <p class="signup-email-note">Không mục email nội dung nào được chọn sẵn. Các lựa chọn chỉ có hiệu lực khi tài khoản Trial/Paid đang hoạt động, email đã xác minh, có đồng ý nhận hiện hành và hệ thống gửi production đã được kích hoạt.</p>
           </fieldset>
 
-          <button class="button button-primary" type="submit" data-signup-submit-label>Tạo tài khoản Free &amp; gửi mã xác minh</button>
-          <p class="auth-message" data-auth-message aria-live="polite">Mật khẩu và OTP không được đưa vào analytics hoặc dữ liệu thị trường.</p>
+          <button class="button button-primary" type="submit" data-signup-submit-label>Tạo tài khoản Free &amp; gửi email xác minh</button>
+          <p class="auth-message" data-auth-message aria-live="polite">Mật khẩu không được đưa vào analytics hoặc dữ liệu thị trường.</p>
         </form>
 
-        <form class="auth-form auth-otp-panel" data-auth-signup-otp-form novalidate hidden>
-          <div class="auth-otp-heading"><span class="auth-otp-icon" aria-hidden="true">#</span><div><strong>Nhập mã OTP 6 số</strong><span>Mã đã gửi tới <b data-auth-otp-email>—</b></span></div></div>
-          <div class="auth-field"><label for="signup-otp">Mã xác minh</label><input class="auth-otp-input" id="signup-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" aria-describedby="signup-otp-help"><small id="signup-otp-help">Chỉ nhập 6 chữ số từ email StockRadar.</small></div>
-          <button class="button button-primary" type="submit">Xác minh &amp; mở Tài khoản</button>
-          <div class="auth-otp-actions"><button type="button" class="auth-link-button" data-auth-otp-resend>Gửi lại mã</button><button type="button" class="auth-link-button" data-auth-otp-change>Đổi email</button></div>
-          <p class="auth-message" data-auth-message aria-live="polite">Sau khi xác minh, Free dùng StockRadar AI 10 câu/ngày và chỉ nhận email hệ thống; email nội dung chỉ có hiệu lực khi tài khoản có quyền Trial/Paid và đáp ứng đủ điều kiện gửi.</p>
-        </form>
+        <div class="auth-form auth-otp-panel" data-signup-email-sent hidden>
+          <div class="auth-otp-heading"><span class="auth-otp-icon" aria-hidden="true">✓</span><div><strong data-signup-email-sent-title>Kiểm tra email để xác minh tài khoản</strong><span>Đã gửi tới <b data-signup-email-sent-address>—</b></span></div></div>
+          <p data-signup-email-sent-copy>Trong email StockRadar, bấm nút “Xác minh email StockRadar”. Không cần nhập mã OTP.</p>
+          <a class="button button-primary" href="dang-nhap/" data-signup-email-open-login>Đã xác minh? Đăng nhập</a>
+          <div class="auth-otp-actions"><button type="button" class="auth-link-button" data-signup-email-back>Đổi email</button></div>
+          <p class="auth-message success" aria-live="polite">Email xác minh đã được gửi. Kiểm tra cả Inbox và Spam.</p>
+        </div>
 
         <p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>
-        <div class="auth-security-note"><strong>Bảo mật:</strong> không nhập OTP tài khoản chứng khoán, OTP ngân hàng hoặc mã giao dịch vào StockRadar.</div>
+        <div class="auth-security-note"><strong>Bảo mật:</strong> StockRadar không yêu cầu OTP ngân hàng, OTP tài khoản chứng khoán hoặc mã giao dịch.</div>
       </section>
     </div>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-nhap/">Đăng nhập</a></div></div><p class="disclaimer">Premium 199.000đ/30 ngày, không tự gia hạn. Thanh toán chỉ mở khi cổng thanh toán production được kích hoạt và người dùng chủ động xác nhận.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-nhap/">Đăng nhập</a></div></div><p class="disclaimer">Premium 199.000đ/30 ngày, không tự gia hạn. Thanh toán chỉ được kích hoạt sau khi người dùng xác minh email và giao dịch được xác nhận.</p></div></footer>
 </body>
 </html>
