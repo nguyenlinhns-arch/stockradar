@@ -18,7 +18,7 @@ class BuyerFirstProductTests(unittest.TestCase):
         self.assertIn("Đang cầm thì làm gì?", home)
         self.assertIn("Hành động ở giá nào?", home)
         self.assertIn("Khi nào cần đổi quyết định?", home)
-        self.assertIn("Không đủ chuẩn → không ép mua", home)
+        self.assertIn("không đủ chuẩn thì <strong>KHÔNG HÀNH ĐỘNG</strong>", home)
         self.assertIn("Trả phí cho lớp quyết định", home)
         self.assertIn("4M · CANSLIM · Payback", home)
 
@@ -64,7 +64,7 @@ class BuyerFirstProductTests(unittest.TestCase):
             "Buy Zone", "Stop / vô hiệu", "Target", "Risk/Reward", "Trạng thái vòng đời",
         ):
             self.assertIn(field, page)
-        self.assertIn("0 tín hiệu là một kết quả hợp lệ", page)
+        self.assertIn("0 tín hiệu là kết quả hợp lệ", page)
 
     def test_performance_page_proves_value_without_win_rate_cherry_pick(self) -> None:
         page = self.read("website/hieu-qua/index.html")
