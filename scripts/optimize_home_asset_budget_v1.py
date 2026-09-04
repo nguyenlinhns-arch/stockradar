@@ -34,6 +34,7 @@ REQUIRED_CSS = {
 }
 REQUIRED_JS = {
     "auth-config.js",
+    "auth-state-v2.js",
     "ai-center.js",
     "home-workspace-v2.js",
     "paid-nav-v1.js",
@@ -119,12 +120,20 @@ def main() -> None:
     if survived_css or survived_js:
         raise RuntimeError(f"Legacy homepage assets survived: css={sorted(survived_css)}, js={sorted(survived_js)}")
 
+    # Exact allowlists: a new homepage asset must be deliberately reviewed before it can ship.
+    extra_css = css_names - REQUIRED_CSS
+    extra_js = js_names - REQUIRED_JS
+    if extra_css:
+        raise RuntimeError(f"Unreviewed homepage CSS detected: {sorted(extra_css)}")
+    if extra_js:
+        raise RuntimeError(f"Unreviewed homepage JS detected: {sorted(extra_js)}")
+
     local_css_count = len(css_names)
     local_js_count = len(js_names)
-    if local_css_count > 7:
-        raise RuntimeError(f"Homepage CSS budget exceeded: {local_css_count} local stylesheets")
-    if local_js_count > 8:
-        raise RuntimeError(f"Homepage JS budget exceeded: {local_js_count} local scripts")
+    if local_css_count != len(REQUIRED_CSS):
+        raise RuntimeError(f"Homepage CSS allowlist mismatch: {local_css_count} != {len(REQUIRED_CSS)}")
+    if local_js_count != len(REQUIRED_JS):
+        raise RuntimeError(f"Homepage JS allowlist mismatch: {local_js_count} != {len(REQUIRED_JS)}")
 
     total_bytes = local_asset_size(output, css_refs) + local_asset_size(output, js_refs)
     if total_bytes > MAX_LOCAL_ASSET_BYTES:
@@ -132,7 +141,7 @@ def main() -> None:
 
     print(
         "Homepage asset budget: PASS "
-        f"({local_css_count} CSS + {local_js_count} JS; {total_bytes} local bytes; legacy layers pruned)"
+        f"({local_css_count} CSS + {local_js_count} JS; {total_bytes} local bytes; exact allowlist; legacy layers pruned)"
     )
 
 
