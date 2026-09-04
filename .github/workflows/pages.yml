@@ -19,6 +19,7 @@ on:
       - 'scripts/redesign_home_paid_intent_v1.py'
       - 'scripts/apply_premium_email_product_v1.py'
       - 'scripts/strip_public_methods.py'
+      - 'scripts/inject_ai_assistant.py'
       - 'scripts/verify*.py'
       - 'package.json'
       - 'package-lock.json'
@@ -83,6 +84,7 @@ jobs:
           python scripts/redesign_home_paid_intent_v1.py .pages-site
           python scripts/apply_premium_email_product_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
+          python scripts/inject_ai_assistant.py .pages-site
 
       - name: Verify production auth artifact
         run: python scripts/verify_pages_auth.py .pages-site
@@ -104,6 +106,9 @@ jobs:
 
       - name: Verify measurable Premium funnel
         run: python scripts/verify_conversion_funnel_v4.py .pages-site
+
+      - name: Verify StockRadar AI center
+        run: python scripts/verify_ai_assistant.py .pages-site
 
       - name: Install Chromium visual QA
         run: |
