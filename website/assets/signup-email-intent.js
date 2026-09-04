@@ -1,6 +1,9 @@
 (() => {
   'use strict';
 
+  const TERMS_VERSION = '2026-09-03';
+  const PRIVACY_VERSION = '2026-09-04';
+  const PRODUCT_EMAIL_CONSENT_VERSION = '2026-09-04';
   const VALID_PLANS = new Set(['free', 'premium']);
   const PENDING_LEAD_EMAIL_KEY = 'sr_pending_lead_email';
 
@@ -11,6 +14,31 @@
 
   function pendingLeadEmail() {
     try { return String(sessionStorage.getItem(PENDING_LEAD_EMAIL_KEY) || '').trim().toLowerCase(); } catch (_) { return ''; }
+  }
+
+  function clearPendingLeadEmail() {
+    try { sessionStorage.removeItem(PENDING_LEAD_EMAIL_KEY); } catch (_) {}
+  }
+
+  function formMetadata() {
+    const form = document.querySelector('[data-auth-signup-form]');
+    if (!form) return null;
+    const plan = selectedPlan(form);
+    const premiumIntent = plan === 'premium';
+    const dailyBrief = Boolean(premiumIntent && form.elements.email_daily_brief?.checked);
+    const eventAlerts = Boolean(premiumIntent && form.elements.email_event_alerts?.checked);
+    const termsAccepted = Boolean(form.elements.terms?.checked);
+    return {
+      selected_plan_interest: plan,
+      terms_accepted: termsAccepted,
+      terms_version: TERMS_VERSION,
+      privacy_accepted: termsAccepted,
+      privacy_version: PRIVACY_VERSION,
+      product_email_consent: premiumIntent && (dailyBrief || eventAlerts),
+      product_email_consent_version: PRODUCT_EMAIL_CONSENT_VERSION,
+      product_email_daily_brief: dailyBrief,
+      product_email_event_alerts: eventAlerts,
+    };
   }
 
   function syncPlanUi() {
@@ -45,6 +73,7 @@
 
     if (presetEmail && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(presetEmail) && form.elements.email && !form.elements.email.value) {
       form.elements.email.value = presetEmail;
+      clearPendingLeadEmail();
     }
 
     if (queryEmail && window.history?.replaceState) {
@@ -67,7 +96,7 @@
       if (note) {
         note.textContent = premium
           ? 'Premium mở StockRadar AI không giới hạn, Daily 09:00, kế hoạch giao dịch và Action Alert trong phiên khi dữ liệu đủ chuẩn. Giá 199.000đ/30 ngày.'
-          : 'Free có phí 0đ, StockRadar AI 10 câu/ngày và dùng các chức năng công khai. Báo cáo hằng ngày và Action Alert thuộc Premium.';
+          : 'Free có phí 0đ, StockRadar AI 10 câu/ngày và email hệ thống cần thiết cho tài khoản. Báo cáo hằng ngày và Action Alert thuộc Premium.';
       }
       [daily, alerts].forEach(input => {
         if (!input) return;
@@ -83,5 +112,6 @@
     render();
   }
 
+  window.STOCKRADAR_SIGNUP_METADATA = formMetadata;
   document.addEventListener('DOMContentLoaded', syncPlanUi, { once: true });
 })();
