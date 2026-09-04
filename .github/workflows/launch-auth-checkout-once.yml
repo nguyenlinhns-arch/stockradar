@@ -1,0 +1,51 @@
+name: Launch auth and checkout once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/launch-auth-checkout-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Refresh current main
+        run: git pull --ff-only origin main
+
+      - name: Enable transactional auth and publish fail-closed checkout
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          for relative in (
+              '.github/workflows/pages.yml',
+              '.github/workflows/pages-fast-hotfix.yml',
+          ):
+              path = Path(relative)
+              text = path.read_text(encoding='utf-8')
+              text = text.replace('STOCKRADAR_AUTH_EMAIL_READY: "0"', 'STOCKRADAR_AUTH_EMAIL_READY: "1"')
+              text = text.replace('STOCKRADAR_CHECKOUT_READY: "0"', 'STOCKRADAR_CHECKOUT_READY: "1"')
+              path.write_text(text, encoding='utf-8')
+
+          Path('.github/workflows/launch-auth-checkout-once.yml').unlink()
+          PY
+
+      - name: Commit launch flags
+        run: |
+          set -euo pipefail
+          git config user.name "stockradar-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Launch transactional auth and Premium checkout route"
+          git pull --rebase origin main
+          git push origin HEAD:main
