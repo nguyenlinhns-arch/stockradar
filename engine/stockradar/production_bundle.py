@@ -159,12 +159,15 @@ def build_manifest_from_descriptor(
 
     snapshot_raw = descriptor.get("snapshot")
     rights_raw = descriptor.get("rights")
+    compliance_raw = descriptor.get("compliance")
     active_status_raw = descriptor.get("active_status")
     dataset_specs = descriptor.get("datasets")
     if not isinstance(snapshot_raw, Mapping):
         raise ProductionBundleError("snapshot object is required")
     if not isinstance(rights_raw, Mapping):
         raise ProductionBundleError("rights object is required")
+    if not isinstance(compliance_raw, Mapping):
+        raise ProductionBundleError("compliance object is required")
     if not isinstance(active_status_raw, Mapping):
         raise ProductionBundleError("active_status object is required")
     if not isinstance(dataset_specs, Mapping):
@@ -233,6 +236,7 @@ def build_manifest_from_descriptor(
         "contract_version": CONTRACT_VERSION,
         "snapshot": snapshot,
         "rights": dict(rights_raw),
+        "compliance": dict(compliance_raw),
         "active_status": dict(active_status_raw),
         "computation": computation_provenance(),
         "datasets": datasets,
