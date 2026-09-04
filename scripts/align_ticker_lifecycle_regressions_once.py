@@ -13,6 +13,13 @@ def replace_once(relative: str, old: str, new: str) -> None:
 
 replace_once(
     "engine/tests/test_email_subscription_funnel.py",
+    '        self.assertIn("Free chỉ nhận email hệ thống", signup)\n',
+    '        self.assertIn("Free có 10 câu StockRadar AI/ngày", signup)\n'
+    '        self.assertIn("chỉ nhận email hệ thống", signup)\n',
+)
+
+replace_once(
+    "engine/tests/test_email_subscription_funnel.py",
     '        self.assertEqual(payload["public_scope"], "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED")\n'
     '        self.assertEqual(payload["items"], [])\n',
     '        self.assertIn(payload["public_scope"], {"REFERENCE_ONLY", "FAIL_CLOSED_NO_PUBLIC_TICKER_SEED"})\n'
