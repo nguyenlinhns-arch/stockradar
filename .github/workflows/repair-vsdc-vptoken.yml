@@ -1,0 +1,33 @@
+name: Repair VSDC VPToken collector
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/repair_vsdc_vptoken_once.py'
+      - '.github/workflows/repair-vsdc-vptoken.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Apply narrow VPToken repair
+        run: python scripts/repair_vsdc_vptoken_once.py
+      - name: Commit repaired collector
+        run: |
+          git config user.name stockradar-bot
+          git config user.email stockradar-bot@users.noreply.github.com
+          git add scripts/acquire_vsdc_corporate_actions.py
+          if git diff --cached --quiet; then
+            echo 'VSDC collector already repaired; nothing to commit.'
+          else
+            git commit -m 'Fix VSDC pagination with VPToken session state'
+            git push
+          fi
