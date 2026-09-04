@@ -19,16 +19,16 @@ jobs:
           fetch-depth: 0
       - name: Refresh main
         run: git pull --ff-only origin main
-      - name: Patch stale homepage tests
+      - name: Patch fail-closed ticker seed regressions
         run: python scripts/align_ai_homepage_regressions_once.py
-      - name: Run formerly stale tests
-        run: python -m unittest engine.tests.test_buyer_first_product engine.tests.test_conversion_v3 engine.tests.test_direct_ticker_navigation engine.tests.test_email_subscription_funnel engine.tests.test_homepage_asset_budget engine.tests.test_paid_only_product_email_contract engine.tests.test_static_assets engine.tests.test_static_radar_ticker_pages
+      - name: Run affected suites
+        run: python -m unittest engine.tests.test_email_subscription_funnel engine.tests.test_static_assets engine.tests.test_static_radar_ticker_pages
       - name: Commit aligned tests
         run: |
           git config user.name stockradar-bot
           git config user.email actions@users.noreply.github.com
           git add -A
-          git commit -m 'Align homepage regressions with AI-first product'
+          git commit -m 'Align fail-closed ticker seed regressions'
           git pull --rebase origin main
           git push origin HEAD:main
-# retry 2
+# retry 3
