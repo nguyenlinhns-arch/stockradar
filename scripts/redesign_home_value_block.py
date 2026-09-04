@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Replace the verbose buyer block with a compact decision-first homepage module."""
+"""Replace the verbose legacy buyer block when it still exists.
+
+The AI-first homepage no longer contains that legacy block, so production builds
+must treat its absence as an intentional no-op rather than a deployment error.
+"""
 
 from __future__ import annotations
 
@@ -65,8 +69,13 @@ def main() -> None:
         flags=re.IGNORECASE | re.DOTALL,
     )
     source, count = pattern.subn(NEW_BLOCK, source, count=1)
-    if count != 1:
-        raise RuntimeError(f"Expected exactly one legacy buyer block, replaced {count}")
+
+    if count == 0:
+        ai_first = "data-stockradar-ai-center" in source or "home-ai-center-v1.css" in source
+        if ai_first:
+            print("Homepage decision block v2: SKIP (AI-first homepage has no legacy buyer block)")
+            return
+        raise RuntimeError("Expected one legacy buyer block or an AI-first homepage, found neither")
 
     css_tag = '<link rel="stylesheet" href="assets/home-decision-v2.css?v=20260904-decision2">\n'
     if "home-decision-v2.css" not in source:
