@@ -7,6 +7,7 @@ import math
 import os
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Protocol, Sequence
+from .ticker_symbol import is_valid_hose_ticker
 
 
 DATACORE_RAW_FUNDAMENTALS_VERSION = "STOCKRADAR_DATACORE_RAW_FUNDAMENTALS_V1"
@@ -147,7 +148,7 @@ def _lookup(row: Mapping[str, object], field: str) -> object | None:
 
 def _ticker(value: object) -> str:
     ticker = str(value or "").strip().upper()
-    if len(ticker) != 3 or not ticker.isalpha() or not ticker.isascii():
+    if not is_valid_hose_ticker(ticker):
         raise DataCoreRawFundamentalsError(f"invalid listed-company ticker: {ticker!r}")
     return ticker
 
