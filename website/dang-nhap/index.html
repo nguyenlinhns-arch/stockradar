@@ -40,7 +40,7 @@
     (() => {
       const url = new URL(location.href);
       if (!url.searchParams.has('next')) {
-        url.searchParams.set('next', 'hom-nay/');
+        url.searchParams.set('next', '../');
         history.replaceState(null, '', url);
       }
     })();

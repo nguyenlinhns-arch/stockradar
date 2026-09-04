@@ -11,6 +11,7 @@ import sys
 from pathlib import Path
 
 
+AUTH_BRIDGE_HEAD = '<script src="assets/auth-storage-bridge-v1.js?v=20260905-auth1" defer></script>\n'
 HEAD = '''<link rel="stylesheet" href="assets/ai-assistant.css?v=20260904-ai2">\n<script src="assets/auth-state-v2.js?v=20260905-authstate3" defer></script>\n<script src="assets/ai-assistant.js?v=20260904-ai2" defer></script>\n'''
 SKIP_TOP_ROUTES = {
     "signup",
@@ -107,6 +108,7 @@ def main() -> int:
     if not output.is_dir():
         raise SystemExit(f"Pages output not found: {output}")
     for asset in (
+        output / "assets" / "auth-storage-bridge-v1.js",
         output / "assets" / "auth-state-v2.js",
         output / "assets" / "ai-assistant.js",
         output / "assets" / "ai-assistant.css",
@@ -123,6 +125,10 @@ def main() -> int:
         source = inject_nav(source)
         if relative == Path("index.html"):
             source = transform_home(source)
+        if "assets/auth-storage-bridge-v1.js" not in source:
+            if "</head>" not in source:
+                raise SystemExit(f"HTML page has no closing head tag: {relative}")
+            source = source.replace("</head>", AUTH_BRIDGE_HEAD + "</head>", 1)
         if "assets/ai-assistant.js" not in source:
             if "</head>" not in source:
                 raise SystemExit(f"HTML page has no closing head tag: {relative}")
