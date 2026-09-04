@@ -6,11 +6,30 @@ const esc = (v: unknown) => String(v ?? "").replaceAll("&","&amp;").replaceAll("
 const fmt = (v: unknown) => v === null || v === undefined || v === "" ? "—" : Array.isArray(v) ? v.join(" · ") : String(v);
 const joinUrl = (base: string, path: string) => `${base.replace(/\/$/,"")}/${path.replace(/^\//,"")}`;
 
+async function sha256Hex(value: string) {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2,"0")).join("");
+}
+
 async function rpc(base: string, key: string, name: string, body: Record<string, unknown>) {
   const res = await fetch(`${base}/rest/v1/rpc/${name}`, { method:"POST", headers:{ apikey:key, authorization:`Bearer ${key}`, "content-type":"application/json", accept:"application/json" }, body:JSON.stringify(body) });
   const text = await res.text();
   if (!res.ok) throw new Error(`${name}:${res.status}:${text.slice(0,240)}`);
   return text ? JSON.parse(text) : null;
+}
+
+async function authorizedServiceRequest(req: Request, supabase: string, service: string) {
+  if (req.headers.get("authorization") === `Bearer ${service}`) return true;
+  const schedulerToken = String(req.headers.get("x-stockradar-scheduler") || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(schedulerToken)) return false;
+  try {
+    const valid = await rpc(supabase, service, "verify_stockradar_email_scheduler_token_v1", {
+      p_token_hash: await sha256Hex(schedulerToken),
+    });
+    return valid === true;
+  } catch (_) {
+    return false;
+  }
 }
 
 function shell(preheader: string, body: string, unsub: string, allUnsub: string) {
@@ -47,7 +66,10 @@ Deno.serve(async (req: Request) => {
   const replyTo = Deno.env.get("STOCKRADAR_EMAIL_REPLY_TO") || "";
   const website = Deno.env.get("STOCKRADAR_PUBLIC_BASE_URL") || "https://stockradar.vn";
   const functionsBase = Deno.env.get("STOCKRADAR_FUNCTIONS_BASE_URL") || `${supabase.replace(/\/$/,"")}/functions/v1`;
-  if (!supabase || !service || req.headers.get("authorization") !== `Bearer ${service}`) return new Response(JSON.stringify({ok:false,reason:"UNAUTHORIZED"}),{status:401,headers:{"content-type":"application/json"}});
+
+  if (!supabase || !service || !(await authorizedServiceRequest(req, supabase, service))) {
+    return new Response(JSON.stringify({ok:false,reason:"UNAUTHORIZED"}),{status:401,headers:{"content-type":"application/json"}});
+  }
   if (!resend || !from) return new Response(JSON.stringify({ok:false,reason:"PROVIDER_NOT_CONFIGURED"}),{status:503,headers:{"content-type":"application/json"}});
 
   let limit=20; try { const b=await req.json(); limit=Math.min(50,Math.max(1,Number(b?.limit||20))); } catch(_){}
