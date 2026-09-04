@@ -18,11 +18,12 @@ class HomepageAssetBudgetTests(unittest.TestCase):
         self.assertIn('"home-core-v1.js"', source)
         self.assertIn("if is_homepage(page, output):", source)
 
-    def test_home_core_owns_navigation_search_and_plan_registration(self):
+    def test_home_core_owns_navigation_search_email_lead_and_plan_routes(self):
         source = (ROOT / "website" / "assets" / "home-core-v1.js").read_text(encoding="utf-8")
         for marker in (
-            "mountNavigation", "mountTickerSearch", "mountRegistration",
-            "emailDeliveryReady", "registrationUrl", "dang-ky/", "So sánh gói", "window.location.assign",
+            "mountNavigation", "mountTickerSearch", "mountEmailLead", "mountRegistration",
+            "emailDeliveryReady", "registrationUrl", "leadUrl", "premiumUrl",
+            "nhan-ban-tin/", "thanh-toan/?plan=premium", "emailInterestEndpoint", "window.location.assign",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("đang hoàn thiện", source.lower())
@@ -43,14 +44,18 @@ class HomepageAssetBudgetTests(unittest.TestCase):
                 "assets/app.js", "home-dashboard.css", "site-v4.css",
             ):
                 self.assertNotIn(heavy, home)
-            for essential in ("home-core-v1.js", "mobile-touch-v1.css"):
+            for essential in ("home-core-v1.js", "mobile-touch-v1.css", "home-conversion-v2.css"):
                 self.assertIn(essential, home)
+            self.assertIn("data-home-email-form", home)
+            self.assertIn("Nhận email 09:00", home)
 
             for full in (
                 "assets/app.js", "public-ux.css", "public-ux.js", "public-fallbacks-v4.js",
                 "direct-ticker-nav-v1.js", "auth-production-gate.js", "header-auth-dedupe-v6.js", "public-copy-v7.js",
+                "conversion-v1.css",
             ):
                 self.assertIn(full, radar)
+            self.assertIn("data-conversion-rail", radar)
 
 
 if __name__ == "__main__":
