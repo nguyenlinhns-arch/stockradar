@@ -1,0 +1,84 @@
+from pathlib import Path
+import unittest
+
+
+ROOT = Path(__file__).resolve().parents[2]
+
+
+class HomeWorkspaceV2Tests(unittest.TestCase):
+    def read(self, path: str) -> str:
+        return (ROOT / path).read_text(encoding="utf-8")
+
+    def test_homepage_is_ai_workspace_not_long_saas_landing(self):
+        home = self.read("website/index.html")
+        for marker in (
+            "home-workspace",
+            "workspace-grid",
+            "data-stockradar-ai-center",
+            "today-card",
+            "data-today-actions",
+            "data-home-reco-table",
+            "TOP CỔ PHIẾU",
+            "KHUYẾN NGHỊ",
+            "CỦA STOCKRADAR",
+            "buyer-first-section",
+            "proof-grid",
+            "plan-row",
+        ):
+            self.assertIn(marker, home)
+        self.assertLess(home.index("data-stockradar-ai-center"), home.index("data-home-reco-table"))
+        self.assertLess(home.index("data-home-reco-table"), home.index("buyer-first-section"))
+        self.assertEqual(home.count("<h1"), 1)
+
+    def test_homepage_public_seo_is_indexable(self):
+        home = self.read("website/index.html")
+        self.assertIn('name="robots" content="index,follow,max-image-preview:large"', home)
+        self.assertIn('rel="canonical" href="https://stockradar.vn/"', home)
+        self.assertIn('property="og:title"', home)
+        self.assertNotIn('content="noindex,nofollow"', home)
+
+    def test_workspace_data_renderer_is_fail_closed(self):
+        js = self.read("website/assets/home-workspace-v2.js")
+        for marker in (
+            "public/data/radar.json",
+            "public/data/recommendations.json",
+            "public/data/today-changes.json",
+            "isBlocked",
+            "table.hidden = true",
+            "Chưa có cổ phiếu đạt điều kiện phát hành",
+            "performance_summary",
+            "normalizeHeaderActions",
+            "dang-ky/?plan=free",
+        ):
+            self.assertIn(marker, js)
+        for forbidden in ("Math.random", "demoTicker", "fakePrice"):
+            self.assertNotIn(forbidden, js)
+
+    def test_workspace_css_is_dense_and_responsive(self):
+        css = self.read("website/assets/home-workspace-v2.css")
+        for marker in (
+            ".home-market-bar",
+            ".workspace-grid",
+            ".workspace-main",
+            ".today-card",
+            ".reco-table",
+            ".decision-strip",
+            ".proof-grid",
+            ".plan-row",
+            "@media(max-width:980px)",
+            "@media(max-width:720px)",
+            "@media(max-width:520px)",
+        ):
+            self.assertIn(marker, css)
+
+    def test_homepage_simplifies_ai_opening_message_after_mount(self):
+        js = self.read("website/assets/home-workspace-v2.js")
+        self.assertIn("normalizeAiOpeningMessage", js)
+        self.assertIn("Tôi là StockRadar AI. Nhập một mã HOSE", js)
+        self.assertIn("nếu dữ liệu chưa đủ chuẩn", js)
+        self.assertNotIn("4M/Payback · CANSLIM", js)
+        self.assertNotIn("SEPA/VCP", js)
+
+
+if __name__ == "__main__":
+    unittest.main()
