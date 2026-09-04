@@ -9,7 +9,12 @@ on:
     branches: [main]
     paths:
       - 'scripts/prepare_research_pipeline_inputs_v7.py'
+      - 'scripts/build_operational_radar_v3.py'
+      - 'scripts/build_domain_fundamental_valuation_v4.py'
+      - 'scripts/build_supply_institutional_v1.py'
       - 'scripts/build_catalyst_layer_v3.py'
+      - 'scripts/build_decision_layer_v5.py'
+      - 'scripts/build_unified_radar_v6.py'
       - 'scripts/build_unified_radar_v7.py'
       - '.github/workflows/research-decision-v7.yml'
 
@@ -126,6 +131,8 @@ jobs:
                   'source_ready': False,
                   'source_coverage_ratio': 0.0,
                   'row_count': 0,
+                  'pagination_complete': False,
+                  'days_pagination_incomplete': 0,
                   'reason': 'AUTHORITATIVE_VSDC_ARTIFACT_UNAVAILABLE_OR_FAILED',
               }
           else:
@@ -134,13 +141,24 @@ jobs:
               fetched = int(raw.get('days_fetched') or 0)
               rows = int(raw.get('row_count') or 0)
               ratio = fetched / requested
+              pagination_complete = bool(raw.get('pagination_complete') is True)
+              incomplete = int(raw.get('days_pagination_incomplete') or 0)
+              source_ready = bool(
+                  raw.get('source_ready') is True
+                  and ratio >= 0.98
+                  and rows > 0
+                  and pagination_complete
+                  and incomplete == 0
+              )
               payload = {
-                  'source_ready': bool(ratio >= 0.98 and rows > 0),
+                  'source_ready': source_ready,
                   'source_coverage_ratio': ratio,
                   'row_count': rows,
                   'days_requested': requested,
                   'days_fetched': fetched,
-                  'reason': 'PASS' if ratio >= 0.98 and rows > 0 else 'AUTHORITATIVE_VSDC_QUALITY_GATE_FAILED',
+                  'pagination_complete': pagination_complete,
+                  'days_pagination_incomplete': incomplete,
+                  'reason': 'PASS' if source_ready else 'AUTHORITATIVE_VSDC_QUALITY_GATE_FAILED',
               }
           Path('artifacts/research-v7/authoritative_ca_coverage_v7.json').write_text(
               json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8'
@@ -254,12 +272,18 @@ jobs:
           set -euo pipefail
           as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
           sla_file="$(ls artifacts/scanner/scanner/stockradar_intraday_sla_v1.json | head -n 1)"
+          ca_gate_file="$(find artifacts/vsdc -name 'corporate_action_gate_v2_405.csv' -print -quit || true)"
+          if [ -z "$ca_gate_file" ]; then
+            echo 'Authoritative 405-ticker corporate-action gate artifact is missing.' >&2
+            exit 1
+          fi
           python scripts/build_unified_radar_v7.py \
             --unified-v6 artifacts/research-v7/unified_v6.csv \
             --catalyst-v2 artifacts/research-v7/catalyst_v3.csv \
             --news-ca-candidates artifacts/reference/corporate_action_candidates_from_news_v2.csv \
             --sla "$sla_file" \
             --authoritative-ca-coverage artifacts/research-v7/authoritative_ca_coverage_v7.json \
+            --corporate-action-gate "$ca_gate_file" \
             --as-of "$as_of" \
             --output artifacts/research-v7/unified_v7.csv \
             --manifest artifacts/research-v7/unified_v7_manifest.json
@@ -285,6 +309,9 @@ jobs:
           if manifest.get('public_action_allowed') is not False:
               failures.append('MANIFEST_PUBLIC_GATE_MUST_REMAIN_FALSE')
           authoritative = bool(manifest.get('authoritative_corporate_action_source_ready'))
+          gate_counts = manifest.get('corporate_action_gate_counts') or {}
+          if sum(int(v) for v in gate_counts.values()) != 405:
+              failures.append('CORPORATE_ACTION_GATE_NOT_405')
           if not authoritative and df['execution_ready_internal_v7'].fillna(False).astype(bool).any():
               failures.append('EXECUTION_READY_WITHOUT_AUTHORITATIVE_EVENTS')
           if catalyst_manifest.get('catalyst_alpha_weight_allowed') is not False:
@@ -299,6 +326,7 @@ jobs:
               'decision_candidates': manifest.get('decision_candidates'),
               'execution_ready_internal': manifest.get('execution_ready_internal'),
               'authoritative_corporate_action_source_ready': authoritative,
+              'corporate_action_gate_counts': gate_counts,
               'official_hose_catalyst_source_ready': catalyst_manifest.get('official_hose_source_ready'),
               'official_hose_catalyst_tickers_90d': catalyst_manifest.get('tickers_with_official_90d_items'),
               'public_action_allowed': False,
