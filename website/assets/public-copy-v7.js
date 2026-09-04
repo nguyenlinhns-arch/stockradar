@@ -27,13 +27,25 @@
     ['Radar chưa phát hành thứ hạng khi nguồn giá chưa đạt điều kiện; danh sách tham chiếu vẫn được hiển thị cụ thể.', 'Radar rà soát danh sách cổ phiếu cân bằng theo ngành và cập nhật trạng thái theo dữ liệu đạt chuẩn.'],
     ['Chưa có cảnh báo hành động được phát hành ở dữ liệu công khai hiện tại.', 'Không có cảnh báo hành động tại dữ liệu công khai hiện tại.'],
     ['Khi chưa có khuyến nghị đã đóng, tỷ lệ thắng và lợi nhuận trung bình được để trống thay vì ước đoán.', 'Khi không có khuyến nghị đã đóng, tỷ lệ thắng và lợi nhuận trung bình được để trống thay vì ước đoán.'],
-    ['Free: bản tin thị trường · Premium: TOP 30, phân tích chuyên sâu và cảnh báo hành động.', 'Free: tra cứu & nội dung công khai · Premium: báo cáo hằng ngày + cảnh báo hành động.'],
+    ['Free: bản tin thị trường · Premium: TOP 30, phân tích chuyên sâu và cảnh báo hành động.', 'Free: tra cứu & nội dung công khai · Premium: quyết định chi tiết và cảnh báo hành động.'],
     ['Free: nhận bản rà soát thị trường cơ bản hằng ngày sau khi xác minh email và đồng ý nhận.', 'Free: tra cứu cổ phiếu và sử dụng nội dung công khai; chỉ nhận email hệ thống cần thiết cho tài khoản.'],
     ['Báo cáo StockRadar hằng ngày — bản rà soát thị trường cơ bản cho Free; nội dung sâu hơn khi tài khoản có quyền Premium.', 'Báo cáo StockRadar hằng ngày — dành cho tài khoản Premium; Free không nhận email báo cáo hằng ngày.'],
     ['Sau khi xác minh, bản tin Free đã đăng ký có thể được bật; cảnh báo mua/bán vẫn tuân theo quyền Premium.', 'Sau khi xác minh, tài khoản Free có thể dùng các tính năng công khai; email báo cáo và cảnh báo chỉ kích hoạt theo quyền Premium.'],
     ['Free nhận bản rà soát cơ bản; Trial/Paid có thể nhận nội dung Premium và cảnh báo điểm mua/bán.', 'Free không nhận email nội dung; Trial/Paid có thể nhận báo cáo Premium và cảnh báo điểm mua/bán.'],
     ['Bản rà soát thị trường cơ bản ở Free; nội dung sâu hơn ở Premium khi dữ liệu đủ điều kiện phát hành.', 'Báo cáo hằng ngày thuộc Premium và chỉ gửi khi dữ liệu, quyền tài khoản và điều kiện phát hành đạt chuẩn.'],
-    ['Ở Free, công tắc này chỉ kích hoạt bản tin hằng ngày; cảnh báo mua/bán chỉ có hiệu lực khi tài khoản có quyền Premium.', 'Công tắc gửi email nội dung chỉ bật cho Trial/Paid; Free chỉ lưu nhu cầu Premium.']
+    ['Ở Free, công tắc này chỉ kích hoạt bản tin hằng ngày; cảnh báo mua/bán chỉ có hiệu lực khi tài khoản có quyền Premium.', 'Công tắc gửi email nội dung chỉ bật cho Trial/Paid; Free chỉ lưu nhu cầu Premium.'],
+    ['phân tích chuyên sâu', 'quyết định chi tiết'],
+    ['Phân tích chuyên sâu', 'Quyết định chi tiết'],
+    ['phân tích sâu', 'quyết định chi tiết'],
+    ['Phân tích sâu', 'Quyết định chi tiết'],
+    ['phân tích công khai', 'dữ liệu công khai'],
+    ['Phân tích công khai', 'Dữ liệu công khai'],
+    ['phân tích', 'tra cứu'],
+    ['Phân tích', 'Tra cứu'],
+    ['setup', 'trạng thái'],
+    ['Setup', 'Trạng thái'],
+    ['phương pháp', 'cách dùng'],
+    ['Phương pháp', 'Cách dùng']
   ];
 
   function normalizeText(value) {
@@ -150,7 +162,7 @@
       const description = register.querySelector('span');
       const action = register.querySelector('a');
       if (heading) heading.textContent = 'StockRadar Premium';
-      if (description) description.textContent = 'Free: tra cứu & phân tích công khai · Premium: báo cáo sâu, email hằng ngày và cảnh báo hành động.';
+      if (description) description.textContent = 'Free: tra cứu & dữ liệu công khai · Premium: quyết định chi tiết, email hằng ngày và cảnh báo hành động.';
       if (action) {
         action.textContent = emailDeliveryReady() ? 'Đăng ký' : 'Đăng ký quan tâm';
         action.href = signupHref();
@@ -184,11 +196,11 @@
       const secondLabel = summary[1]?.querySelector('span');
       const secondNote = summary[1]?.querySelector('small');
       if (firstLabel) firstLabel.textContent = 'Tín hiệu hành động';
-      if (firstNote) firstNote.textContent = 'Chỉ hiển thị khi setup đạt chuẩn hành động.';
+      if (firstNote) firstNote.textContent = 'Chỉ hiển thị khi điều kiện hành động đạt chuẩn.';
       if (secondLabel) secondLabel.textContent = 'Danh sách cổ phiếu theo Radar rà soát';
       if (secondNote) secondNote.textContent = '30 mã HOSE · 10 ngành · 3 mã mỗi ngành.';
       const watchNote = recommendation.querySelector('.home-watch-note');
-      if (watchNote) watchNote.textContent = 'Khi có tín hiệu: Setup · Buy Zone · Tỷ trọng · Stop · Target · Upside/Downside · R:R.';
+      if (watchNote) watchNote.textContent = 'Khi có tín hiệu: Trạng thái · Buy Zone · Tỷ trọng · Stop · Target · Upside/Downside · R:R.';
     }
 
     const sectorDescription = document.querySelector('.home-sector-panel .home-panel-head p');
@@ -198,7 +210,7 @@
     if (mobileBar) {
       const label = mobileBar.querySelector('span');
       const action = mobileBar.querySelector('a');
-      if (label) label.textContent = 'Premium: phân tích sâu + email + cảnh báo hành động';
+      if (label) label.textContent = 'Premium: quyết định chi tiết + email + cảnh báo hành động';
       if (action) {
         action.textContent = emailDeliveryReady() ? 'Đăng ký' : 'Quan tâm';
         action.href = signupHref();
