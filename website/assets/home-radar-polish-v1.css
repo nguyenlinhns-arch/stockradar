@@ -1,0 +1,52 @@
+/* Premium polish for the homepage Radar summary block. */
+.app-home .home-focus-section{padding:14px 0 16px}
+.app-home .home-focus-panel{overflow:hidden;border:1px solid #d8e2ea;border-radius:18px;background:#fff;box-shadow:0 14px 34px rgba(17,39,61,.08)}
+.app-home .home-focus-head{min-height:108px;padding:22px 24px;align-items:flex-start;border-bottom:1px solid #e1e8ee;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%)}
+.app-home .home-focus-head>div{min-width:0;max-width:calc(100% - 150px)}
+.app-home .home-focus-head .panel-label{color:#0b5aa6;font-size:9px;font-weight:900;letter-spacing:.12em}
+.app-home .home-focus-head h2{margin:5px 0 0;color:#082b4c;font-size:24px;line-height:1.16;font-weight:900;letter-spacing:-.02em}
+.app-home .home-focus-head p{margin:6px 0 0;max-width:780px;color:#657b8e;font-size:11px;line-height:1.45}
+.app-home .home-focus-head .button{min-height:44px;padding:0 18px;border:1px solid #b9cad8;border-radius:10px;background:#fff;color:#082b4c;box-shadow:0 3px 10px rgba(17,39,61,.04);font-size:11px;font-weight:900;white-space:nowrap}
+.app-home .home-focus-head .button:hover{border-color:#7797af;background:#f6f9fb;color:#082b4c;text-decoration:none}
+
+.app-home .home-signal-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;padding:18px 24px 20px;border-bottom:1px solid #e1e8ee;background:#f5f8fb}
+.app-home .home-signal-summary>div{position:relative;min-width:0;min-height:132px;overflow:hidden;padding:18px 20px 17px;border:1px solid #dce5ec;border-radius:14px;background:linear-gradient(180deg,#ffffff 0%,#fbfdff 100%);box-shadow:0 6px 16px rgba(21,47,72,.055)}
+.app-home .home-signal-summary>div:first-child{border-right:1px solid #dce5ec}
+.app-home .home-signal-summary>div::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#0b5aa6}
+.app-home .home-signal-summary>div:nth-child(2)::before{background:#c8293b}
+.app-home .home-signal-summary>div::after{content:"";position:absolute;right:-42px;top:-48px;width:132px;height:132px;border-radius:50%;background:rgba(11,90,166,.045);pointer-events:none}
+.app-home .home-signal-summary>div:nth-child(2)::after{background:rgba(200,41,59,.04)}
+.app-home .home-signal-summary span,.app-home .home-signal-summary strong,.app-home .home-signal-summary small{position:relative;z-index:1;display:block}
+.app-home .home-signal-summary span{color:#49677f;font-size:9px;font-weight:900;letter-spacing:.11em;text-transform:uppercase}
+.app-home .home-signal-summary strong{margin-top:7px;color:#082b4c;font-size:26px;line-height:1.12;font-weight:900;letter-spacing:-.025em}
+.app-home .home-signal-summary small{margin-top:11px;max-width:96%;color:#63798b;font-size:11px;line-height:1.5}
+
+.app-home .home-radar-sector-list{background:#fff}
+.app-home .home-radar-sector-row{padding-left:18px;padding-right:18px}
+.app-home .home-radar-note{padding:11px 18px;background:#fafcfe}
+
+@media(max-width:760px){
+  .app-home .home-focus-panel{border-radius:14px}
+  .app-home .home-focus-head{min-height:0;padding:18px}
+  .app-home .home-focus-head>div{max-width:calc(100% - 128px)}
+  .app-home .home-focus-head h2{font-size:21px}
+  .app-home .home-focus-head p{font-size:10px}
+  .app-home .home-focus-head .button{min-height:40px;padding:0 14px}
+  .app-home .home-signal-summary{gap:10px;padding:14px 18px 16px}
+  .app-home .home-signal-summary>div{min-height:120px;padding:16px}
+  .app-home .home-signal-summary strong{font-size:23px}
+  .app-home .home-signal-summary small{font-size:10px}
+}
+
+@media(max-width:560px){
+  .app-home .home-focus-section{padding:10px 0 12px}
+  .app-home .home-focus-head{display:block;padding:16px}
+  .app-home .home-focus-head>div{max-width:none}
+  .app-home .home-focus-head h2{font-size:19px;line-height:1.2}
+  .app-home .home-focus-head .button{width:100%;margin-top:12px}
+  .app-home .home-signal-summary{grid-template-columns:1fr;padding:12px;gap:10px}
+  .app-home .home-signal-summary>div{min-height:0;padding:15px 16px}
+  .app-home .home-signal-summary strong{font-size:22px}
+  .app-home .home-radar-sector-row{padding-left:12px;padding-right:12px}
+  .app-home .home-radar-note{padding:10px 12px}
+}
