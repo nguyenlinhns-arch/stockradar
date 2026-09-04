@@ -26,3 +26,5 @@ text = text.replace(validation_anchor, validation, 1)
 text = text.replace(old, new, 1)
 TARGET.write_text(text, encoding="utf-8")
 print("removed duplicate valuation merge and asserted canonical scanner valuation columns")
+
+# Trigger marker: exact canonical valuation-field collision repair.
