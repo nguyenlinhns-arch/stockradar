@@ -80,12 +80,12 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertNotIn("service_role", guard.lower())
         self.assertNotIn("sb_secret_", guard.lower())
 
-    def test_premium_registration_routes_directly_to_payment_without_signup_otp(self):
+    def test_premium_registration_routes_directly_to_payment_without_verification(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
         signup = (ROOT / "website" / "signup" / "index.html").read_text(encoding="utf-8")
         signup_client = (ROOT / "website" / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
-        confirm = (ROOT / "website" / "xac-minh-email" / "index.html").read_text(encoding="utf-8")
         registration_guard = (ROOT / "scripts" / "enforce_registration_plan_ctas.py").read_text(encoding="utf-8")
+        function = (ROOT / "supabase" / "functions" / "signup-link" / "index.ts").read_text(encoding="utf-8")
 
         self.assertIn('data-plan-free', plans)
         self.assertIn('data-plan-premium', plans)
@@ -93,12 +93,14 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertIn('Đăng ký & thanh toán', registration_guard)
         self.assertIn('không phải đăng ký Free trước', registration_guard)
         self.assertIn('assets/signup-link-v1.js', signup)
-        self.assertIn('data-signup-email-sent', signup)
+        self.assertNotIn('data-signup-email-sent', signup)
         self.assertNotIn('data-auth-signup-otp-form', signup)
-        self.assertNotIn('autocomplete="one-time-code"', signup)
+        self.assertNotIn('xac-minh-email/', signup)
         self.assertIn("'thanh-toan/?plan=premium'", signup_client)
+        self.assertIn('signInWithPassword', signup_client)
         self.assertIn('data-signup-existing-login', registration_guard)
-        self.assertIn('assets/email-confirm-v1.js', confirm)
+        self.assertIn('auth.admin.createUser', function)
+        self.assertIn('email_confirm: true', function)
         self.assertIn('Legacy Premium CTA leaked into final registration page', registration_guard)
 
 
