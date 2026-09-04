@@ -17,10 +17,10 @@ def promote_known_title(source: str, title: str) -> tuple[str, int]:
     """Promote the known auth-card title without depending on its wrapper tag/class."""
     title_pattern = re.escape(title)
     pattern = re.compile(
-        rf'<h2\b([^>]*)>\s*{title_pattern}\s*</h2>',
+        rf'<h2\b([^>]*)>\s*({title_pattern}(?:\s+(?:Free|Premium))?)\s*</h2>',
         flags=re.I | re.S,
     )
-    return pattern.subn(lambda m: f'<h1{m.group(1)}>{title}</h1>', source, count=1)
+    return pattern.subn(lambda m: f'<h1{m.group(1)}>{m.group(2).strip()}</h1>', source, count=1)
 
 
 def promote_first_auth_card_h2(source: str) -> tuple[str, int]:
@@ -45,6 +45,17 @@ def promote_first_auth_card_h2(source: str) -> tuple[str, int]:
         return source, 0
     start, end = card_match.span()
     return source[:start] + promoted + source[end:], 1
+
+
+def valid_title(route: str, visible: str, expected: str) -> bool:
+    normalized = re.sub(r'\s+', ' ', visible).strip().lower()
+    expected_normalized = expected.lower()
+    if route == "signup":
+        return normalized == expected_normalized or normalized in {
+            f"{expected_normalized} free",
+            f"{expected_normalized} premium",
+        }
+    return normalized == expected_normalized
 
 
 def main() -> None:
@@ -76,7 +87,7 @@ def main() -> None:
         if len(h1_tags) != 1:
             raise RuntimeError(f"Expected exactly one h1 on {route}, found {len(h1_tags)}")
         visible = re.sub(r'<[^>]+>', '', h1_tags[0]).strip()
-        if visible.lower() != title.lower():
+        if not valid_title(route, visible, title):
             raise RuntimeError(f"Unexpected h1 on {route}: {visible!r}")
 
     print("Commercial auth headings: PASS (one semantic h1 per auth page)")
