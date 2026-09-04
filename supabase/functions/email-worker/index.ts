@@ -55,12 +55,14 @@ Deno.serve(async (req: Request) => {
   try { claimed=await rpc(supabase,service,"claim_stockradar_email_outbox_v1",{p_limit:limit}) || []; }
   catch(e){ console.error("email-worker claim failed",String(e)); return new Response(JSON.stringify({ok:false,reason:"CLAIM_FAILED"}),{status:503,headers:{"content-type":"application/json"}}); }
 
-  let sent=0,failed=0;
+  let sent=0,failed=0,suppressed=0;
   for (const item of claimed) {
     const outboxId=String(item.outbox_id||""), userId=String(item.user_id||""), kind=String(item.email_kind||"").toUpperCase(), recipient=String(item.recipient_email||""), idem=String(item.idempotency_key||"");
     const payload=item.payload && typeof item.payload === "object" ? item.payload as Record<string, unknown> : {};
     if(!outboxId||!userId||!recipient||!KINDS.has(kind)){ failed++; try{await rpc(supabase,service,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SUPPRESSED",p_error:"INVALID_CLAIM"});}catch(_){} continue; }
     try {
+      const preflight=await rpc(supabase,service,"preflight_stockradar_email_outbox_v1",{p_outbox_id:outboxId});
+      if(!preflight?.allowed){ suppressed++; continue; }
       const kindToken=await rpc(supabase,service,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:kind,p_ttl_days:90});
       const allToken=await rpc(supabase,service,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:"ALL",p_ttl_days:90});
       const unsub=joinUrl(functionsBase,`email-unsubscribe?token=${encodeURIComponent(String(kindToken))}`);
@@ -73,5 +75,5 @@ Deno.serve(async (req: Request) => {
       await rpc(supabase,service,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SENT",p_provider_message_id:result.id,p_error:null}); sent++;
     } catch(e) { failed++; console.error("email-worker send failed",outboxId,String(e).slice(0,240)); try{await rpc(supabase,service,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"FAILED",p_provider_message_id:null,p_error:String(e).slice(0,900)});}catch(_){} }
   }
-  return new Response(JSON.stringify({ok:true,claimed:claimed.length,sent,failed}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store"}});
+  return new Response(JSON.stringify({ok:true,claimed:claimed.length,sent,failed,suppressed}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store"}});
 });
