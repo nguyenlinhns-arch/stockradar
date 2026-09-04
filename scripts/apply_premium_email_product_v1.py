@@ -1,0 +1,139 @@
+#!/usr/bin/env python3
+"""Apply buyer-facing Premium email product surfaces without opening delivery gates."""
+
+from __future__ import annotations
+
+import argparse
+import re
+from pathlib import Path
+
+
+CSS_TAG = '<link rel="stylesheet" href="assets/premium-email-product-v1.css?v=20260904-emailprod1" data-premium-email-product-v1>\n'
+
+HOME_EMAIL_BLOCK = '''<div class="home-premium-email-v1" data-premium-email-product-v1>
+              <span class="panel-label">EMAIL LÀ CÁCH PREMIUM GIAO GIÁ TRỊ</span>
+              <h3>Không cần mở StockRadar liên tục.</h3>
+              <p>StockRadar được thiết kế để đưa thay đổi đáng chú ý của đúng các mã bạn theo dõi tới email, thay vì bắt bạn tự kiểm tra lại từng mã nhiều lần trong ngày.</p>
+              <div class="home-premium-email-steps">
+                <div class="home-premium-email-step"><strong>09:00 · Watchlist trước</strong><span>Biết mã nào của bạn cần chú ý; thị trường chỉ là phần bối cảnh sau đó.</span></div>
+                <div class="home-premium-email-step"><strong>Trong phiên · Chỉ khi đổi trạng thái</strong><span>CHỜ → MUA, GIỮ → GIẢM/BÁN hoặc thay đổi quan trọng khác mới tạo Action Alert.</span></div>
+                <div class="home-premium-email-step"><strong>Không đổi · Không spam</strong><span>Không có thay đổi đủ mức hành động thì không tạo email cảnh báo riêng chỉ để tăng số lượng.</span></div>
+              </div>
+              <span class="home-premium-email-rule">Email chỉ được gửi khi tài khoản, consent, quyền gói và hệ thống delivery đều đủ điều kiện.</span>
+            </div>'''
+
+SIGNUP_BLOCK = '''<div class="premium-email-onboarding-v1" data-premium-email-onboarding>
+          <span class="panel-label">KÍCH HOẠT GIÁ TRỊ PREMIUM</span>
+          <h3>Để StockRadar canh mã thay bạn.</h3>
+          <p>Sau khi tài khoản được xác minh, hãy thêm watchlist và bật email cho đúng loại thông tin bạn muốn nhận. Không mục email nào được tự chọn thay bạn.</p>
+          <div class="premium-email-onboarding-steps">
+            <span><b>1.</b> Xác minh email StockRadar.</span>
+            <span><b>2.</b> Thêm mã, khung đầu tư và đánh dấu mã đang sở hữu.</span>
+            <span><b>3.</b> Bật Action Alert cho những mã thực sự cần StockRadar theo dõi.</span>
+          </div>
+        </div>'''
+
+HEALTH_BLOCK = '''<section class="premium-email-health-v1" data-premium-email-health aria-labelledby="premium-email-health-title">
+          <article class="premium-email-health-card">
+            <header class="premium-email-health-head"><div><span class="panel-label">SỨC KHỎE EMAIL PREMIUM</span><h2 id="premium-email-health-title">StockRadar có đang canh email cho bạn không?</h2><p>Kiểm tra nhanh cấu hình theo dõi và lần giao email gần nhất của chính tài khoản này.</p></div><strong data-email-health-system>Đang kiểm tra…</strong></header>
+            <div class="premium-email-health-grid">
+              <div><span>Gói / tài khoản</span><strong data-email-health-tier>—</strong></div>
+              <div><span>Daily 09:00</span><strong data-email-health-daily>—</strong></div>
+              <div><span>Action Alert</span><strong data-email-health-alerts>—</strong></div>
+              <div><span>Watchlist</span><strong data-email-health-watchlist>—</strong></div>
+              <div><span>Mã bật cảnh báo</span><strong data-email-health-tickers>—</strong></div>
+              <div><span>Email gần nhất</span><strong data-email-health-last>—</strong></div>
+            </div>
+            <p class="premium-email-health-note" data-email-health-note>Chỉ hiển thị metadata vận hành của chính tài khoản; không hiển thị provider secret hoặc nội dung email.</p>
+          </article>
+        </section>'''
+
+OPTIONAL_CHOICES = '''
+                <label class="email-choice is-optional-premium"><input type="checkbox" name="post_session_digest"><span><span class="email-choice-badge">Premium · tùy chọn</span><strong>Tóm tắt cuối phiên</strong><span>Gom các thay đổi mới/đóng/hết hiệu lực sau phiên. Không cần bật nếu bạn chỉ muốn Daily và Action Alert.</span></span></label>
+                <label class="email-choice is-optional-premium"><input type="checkbox" name="weekly_report"><span><span class="email-choice-badge">Premium · tùy chọn</span><strong>Tổng kết tuần</strong><span>Xem lại thay đổi trạng thái và lịch sử đã ghi nhận trong tuần; có thể tắt riêng mà không ảnh hưởng Action Alert.</span></span></label>'''
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("output", type=Path)
+    return parser.parse_args()
+
+
+def inject_css(source: str) -> str:
+    if "premium-email-product-v1.css" in source:
+        return source
+    if "</head>" not in source:
+        return source
+    return source.replace("</head>", CSS_TAG + "</head>", 1)
+
+
+def transform_home(source: str) -> str:
+    marker = '          </div>\n          <aside class="home-premium-buybox">'
+    if HOME_EMAIL_BLOCK not in source:
+        if marker not in source:
+            raise RuntimeError("Premium homepage buybox marker missing")
+        source = source.replace(marker, f"            {HOME_EMAIL_BLOCK}\n          </div>\n          <aside class=\"home-premium-buybox\">", 1)
+    source = source.replace(
+        '>Theo dõi mã của tôi</a>',
+        '>Theo dõi mã &amp; nhận email</a>',
+        1,
+    )
+    return inject_css(source)
+
+
+def transform_signup(source: str) -> str:
+    if SIGNUP_BLOCK not in source:
+        marker = '<div class="conversion-premium-summary"'
+        pos = source.find(marker)
+        if pos < 0:
+            marker = '<form class="auth-form" data-auth-signup-form'
+            pos = source.find(marker)
+        if pos < 0:
+            raise RuntimeError("Signup form marker missing")
+        source = source[:pos] + SIGNUP_BLOCK + "\n        " + source[pos:]
+    return inject_css(source)
+
+
+def transform_account(source: str) -> str:
+    if HEALTH_BLOCK not in source:
+        marker = '<section class="account-email-center" data-product-email-preferences'
+        pos = source.find(marker)
+        if pos < 0:
+            raise RuntimeError("Account email center marker missing")
+        source = source[:pos] + HEALTH_BLOCK + "\n\n        " + source[pos:]
+
+    choice_pattern = re.compile(
+        r'(<div class="email-choice-list">.*?<label class="email-choice"><input type="checkbox" name="event_alerts".*?</label>)(\s*</div>)',
+        flags=re.DOTALL,
+    )
+    if 'name="post_session_digest"' not in source:
+        source, count = choice_pattern.subn(r"\1" + OPTIONAL_CHOICES + r"\2", source, count=1)
+        if count != 1:
+            raise RuntimeError("Account email choices marker missing")
+
+    source = source.replace(
+        'Gửi khi có hành động được xác nhận: đạt điểm mua, nhồi lệnh, hạ tỷ trọng, cắt lỗ/bán hoặc thay đổi trạng thái quan trọng.',
+        'Chỉ gửi khi có thay đổi hành động được xác nhận. Không đổi trạng thái → không tạo Action Alert riêng.',
+        1,
+    )
+    return inject_css(source)
+
+
+def main() -> None:
+    output = parse_args().output.resolve()
+    routes = {
+        output / "index.html": transform_home,
+        output / "signup" / "index.html": transform_signup,
+        output / "tai-khoan" / "index.html": transform_account,
+    }
+    for path, transform in routes.items():
+        if not path.is_file():
+            raise RuntimeError(f"Premium email product route missing: {path}")
+        source = path.read_text(encoding="utf-8")
+        path.write_text(transform(source), encoding="utf-8")
+
+    print("Premium email product v1: PASS (promise → onboarding → delivery health/control)")
+
+
+if __name__ == "__main__":
+    main()
