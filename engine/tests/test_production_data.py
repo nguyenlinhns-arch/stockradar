@@ -13,13 +13,15 @@ def valid_manifest():
     snapshot_id = "hose-production-2026-09-03-104500-vn"
     timestamp = "2026-09-03T10:45:00+07:00"
 
-    def dataset(row_count, covered_tickers=None):
+    def dataset(row_count, columns, covered_tickers=None):
         value = {
             "present": True,
             "snapshot_id": snapshot_id,
             "as_of": timestamp,
             "sha256": CHECKSUM,
             "row_count": row_count,
+            "input_role": "RAW_INPUT_ONLY",
+            "columns": columns,
         }
         if covered_tickers is not None:
             value["covered_tickers"] = covered_tickers
@@ -27,6 +29,13 @@ def valid_manifest():
 
     return {
         "contract_version": "1.0",
+        "computation": {
+            "calculation_origin": "STOCKRADAR_ENGINE",
+            "calculation_policy_version": "1.0",
+            "external_input_role": "RAW_INPUT_ONLY",
+            "external_scores_accepted": False,
+            "method_stack": ["4M_PAYBACK", "CANSLIM", "VALUATION", "SEPA_VCP_STAGE", "VPA"],
+        },
         "snapshot": {
             "snapshot_id": snapshot_id,
             "as_of": timestamp,
@@ -42,7 +51,7 @@ def valid_manifest():
             "same_snapshot": True,
             "adjusted_basis_consistent": True,
             "corporate_action_checked": True,
-            "source": "LICENSED_PROVIDER",
+            "source": "LICENSED_PROVIDER_RAW_INPUT",
             "exclusion_log": [],
         },
         "rights": {
@@ -56,11 +65,11 @@ def valid_manifest():
             "market_status_checked": True,
         },
         "datasets": {
-            "security_master": dataset(405, 405),
-            "ohlcv": dataset(405 * 250, 405),
-            "fundamentals": dataset(405, 405),
-            "corporate_actions": dataset(0),
-            "events": dataset(0),
+            "security_master": dataset(405, ["ticker", "name", "exchange"], 405),
+            "ohlcv": dataset(405 * 250, ["ticker", "date", "open", "high", "low", "close", "volume"], 405),
+            "fundamentals": dataset(405, ["ticker", "period", "revenue", "net_income", "total_assets", "equity", "operating_cash_flow", "capex", "shares_outstanding"], 405),
+            "corporate_actions": dataset(0, ["event_id", "ticker", "event_type", "effective_date"]),
+            "events": dataset(0, ["event_id", "ticker", "event_type", "event_date"]),
         },
     }
 
@@ -71,6 +80,7 @@ class ProductionDataContractTests(unittest.TestCase):
         self.assertTrue(result.passed)
         self.assertEqual(result.failures, ())
         self.assertTrue(result.to_dict()["publication_allowed"])
+        self.assertEqual(result.to_dict()["calculation_origin"], "STOCKRADAR_ENGINE")
 
     def test_rights_failure_blocks_publication(self):
         payload = valid_manifest()
@@ -130,6 +140,26 @@ class ProductionDataContractTests(unittest.TestCase):
         payload["datasets"]["events"]["snapshot_id"] = "different-snapshot"
         result = validate_production_manifest(payload, now=NOW)
         self.assertIn("dataset_snapshot_mismatch:events", result.failures)
+
+    def test_external_scores_or_metrics_are_rejected(self):
+        payload = valid_manifest()
+        payload["datasets"]["fundamentals"]["columns"].extend(["roe", "pe", "fair_value"])
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertIn("external_derived_field_forbidden:fundamentals:roe", result.failures)
+        self.assertIn("external_derived_field_forbidden:fundamentals:pe", result.failures)
+        self.assertIn("external_derived_field_forbidden:fundamentals:fair_value", result.failures)
+
+    def test_non_stockradar_calculation_origin_is_rejected(self):
+        payload = valid_manifest()
+        payload["computation"]["calculation_origin"] = "EXTERNAL_PROVIDER"
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertIn("calculation_origin_not_stockradar", result.failures)
+
+    def test_external_score_acceptance_must_remain_false(self):
+        payload = valid_manifest()
+        payload["computation"]["external_scores_accepted"] = True
+        result = validate_production_manifest(payload, now=NOW)
+        self.assertIn("external_scores_must_be_rejected", result.failures)
 
 
 if __name__ == "__main__":

@@ -6,6 +6,12 @@ import json
 from pathlib import Path
 from typing import Any, Mapping
 
+from .input_policy import (
+    CALCULATION_ORIGIN,
+    CALCULATION_POLICY_VERSION,
+    EXTERNAL_INPUT_ROLE,
+    is_derived_field,
+)
 from .models import UniverseSnapshot
 from .ranking import full_universe_gate
 
@@ -54,6 +60,7 @@ class ProductionDataGateResult:
             "coverage_pct": self.coverage_pct,
             "required_datasets": list(self.required_datasets),
             "contract_version": CONTRACT_VERSION,
+            "calculation_origin": CALCULATION_ORIGIN,
         }
 
 
@@ -122,6 +129,19 @@ def validate_production_manifest(
     for path in _sensitive_paths(payload):
         failures.append(f"secret_material_forbidden:{path}")
 
+    computation = payload.get("computation")
+    if not isinstance(computation, Mapping):
+        failures.append("computation_provenance_missing")
+    else:
+        if str(computation.get("calculation_origin") or "").strip() != CALCULATION_ORIGIN:
+            failures.append("calculation_origin_not_stockradar")
+        if str(computation.get("calculation_policy_version") or "").strip() != CALCULATION_POLICY_VERSION:
+            failures.append("calculation_policy_version_invalid")
+        if str(computation.get("external_input_role") or "").strip() != EXTERNAL_INPUT_ROLE:
+            failures.append("external_input_role_not_raw_only")
+        if computation.get("external_scores_accepted") is not False:
+            failures.append("external_scores_must_be_rejected")
+
     raw_snapshot = payload.get("snapshot")
     snapshot: UniverseSnapshot | None = None
     if not isinstance(raw_snapshot, Mapping):
@@ -182,6 +202,17 @@ def validate_production_manifest(
         if not isinstance(raw_dataset, Mapping) or raw_dataset.get("present") is not True:
             failures.append(f"dataset_missing:{name}")
             continue
+
+        if str(raw_dataset.get("input_role") or "").strip() != EXTERNAL_INPUT_ROLE:
+            failures.append(f"dataset_not_raw_input:{name}")
+
+        columns = raw_dataset.get("columns")
+        if not isinstance(columns, list) or not columns:
+            failures.append(f"dataset_columns_missing:{name}")
+        else:
+            for column in columns:
+                if is_derived_field(column):
+                    failures.append(f"external_derived_field_forbidden:{name}:{column}")
 
         dataset_snapshot_id = str(raw_dataset.get("snapshot_id", "")).strip()
         if snapshot is not None and dataset_snapshot_id != snapshot.snapshot_id:

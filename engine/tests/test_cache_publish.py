@@ -19,13 +19,15 @@ CHECKSUM = "a" * 64
 
 
 def manifest_payload():
-    def dataset(rows, covered=None):
+    def dataset(rows, columns, covered=None):
         result = {
             "present": True,
             "snapshot_id": SNAPSHOT_ID,
             "as_of": TIMESTAMP,
             "sha256": CHECKSUM,
             "row_count": rows,
+            "input_role": "RAW_INPUT_ONLY",
+            "columns": columns,
         }
         if covered is not None:
             result["covered_tickers"] = covered
@@ -33,6 +35,13 @@ def manifest_payload():
 
     return {
         "contract_version": "1.0",
+        "computation": {
+            "calculation_origin": "STOCKRADAR_ENGINE",
+            "calculation_policy_version": "1.0",
+            "external_input_role": "RAW_INPUT_ONLY",
+            "external_scores_accepted": False,
+            "method_stack": ["4M_PAYBACK", "CANSLIM", "VALUATION", "SEPA_VCP_STAGE", "VPA"],
+        },
         "snapshot": {
             "snapshot_id": SNAPSHOT_ID,
             "as_of": TIMESTAMP,
@@ -48,7 +57,7 @@ def manifest_payload():
             "same_snapshot": True,
             "adjusted_basis_consistent": True,
             "corporate_action_checked": True,
-            "source": "LICENSED_PROVIDER",
+            "source": "LICENSED_PROVIDER_RAW_INPUT",
             "exclusion_log": [],
         },
         "rights": {
@@ -62,11 +71,11 @@ def manifest_payload():
             "market_status_checked": True,
         },
         "datasets": {
-            "security_master": dataset(3, 3),
-            "ohlcv": dataset(750, 3),
-            "fundamentals": dataset(3, 3),
-            "corporate_actions": dataset(0),
-            "events": dataset(0),
+            "security_master": dataset(3, ["ticker", "name", "exchange"], 3),
+            "ohlcv": dataset(750, ["ticker", "date", "open", "high", "low", "close", "volume"], 3),
+            "fundamentals": dataset(3, ["ticker", "period", "revenue", "net_income", "total_assets", "equity", "operating_cash_flow", "capex", "shares_outstanding"], 3),
+            "corporate_actions": dataset(0, ["event_id", "ticker", "event_type", "effective_date"]),
+            "events": dataset(0, ["event_id", "ticker", "event_type", "event_date"]),
         },
     }
 
@@ -84,6 +93,7 @@ def report_payload(ticker, horizon, score, price):
         "probability_calibrated": False,
         "thesis": ["Fundamental và cấu trúc giá cùng khung."],
         "risks": ["Luận điểm vô hiệu nếu cấu trúc kỹ thuật bị phá vỡ."],
+        "calculated_by": "STOCKRADAR_ENGINE",
     }
 
 

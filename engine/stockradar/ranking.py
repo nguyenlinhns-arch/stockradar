@@ -4,6 +4,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping
 
+from .input_policy import computation_provenance
 from .models import Candidate, DataGrade, SetupState, UniverseSnapshot
 from .state_machine import validate_transition
 
@@ -95,7 +96,7 @@ def build_top_hose(
     strongest_limit: int = 30,
     per_sector_limit: int = 3,
 ) -> dict[str, Any]:
-    """Build buyer-facing HOSE rankings only from a complete decision-grade snapshot."""
+    """Build buyer-facing HOSE rankings only from StockRadar-computed candidates."""
 
     if strongest_limit <= 0 or per_sector_limit <= 0:
         raise ValueError("ranking limits must be positive")
@@ -104,6 +105,7 @@ def build_top_hose(
     ranked = [candidate for candidate in rank_candidates(candidate_list) if not candidate.is_mock]
     gate = full_universe_gate(snapshot)
     failures = list(gate.failures)
+    provenance = computation_provenance()
 
     eligible_with_sector: list[Candidate] = []
     missing_sector: list[str] = []
@@ -119,9 +121,10 @@ def build_top_hose(
     ranking_valid = gate.passed and not missing_sector and bool(eligible_with_sector)
     if not ranking_valid:
         return {
-            "schema_version": "3.0",
+            "schema_version": "3.1",
             "ranking_valid": False,
             "method_version": "STOCKRADAR_SCORE_V1",
+            "computation": provenance,
             "snapshot": snapshot.to_dict(),
             "gate": {"passed": False, "failures": failures},
             "market_regime": "UNKNOWN",
@@ -146,6 +149,7 @@ def build_top_hose(
             "distance_to_pivot_pct": candidate.distance_to_pivot_pct,
             "extension_pct": candidate.extension_pct,
             "reason": candidate.reason,
+            "calculated_by": "STOCKRADAR_ENGINE",
         }
 
     grouped: dict[str, list[Candidate]] = defaultdict(list)
@@ -162,9 +166,10 @@ def build_top_hose(
 
     strongest = [public_item(candidate) for candidate in eligible_with_sector[:strongest_limit]]
     return {
-        "schema_version": "3.0",
+        "schema_version": "3.1",
         "ranking_valid": True,
         "method_version": "STOCKRADAR_SCORE_V1",
+        "computation": provenance,
         "snapshot": snapshot.to_dict(),
         "gate": {"passed": True, "failures": []},
         "market_regime": eligible_with_sector[0].market_regime.value,
