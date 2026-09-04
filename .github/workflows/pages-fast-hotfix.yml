@@ -19,6 +19,7 @@ on:
       - 'scripts/enforce_registration_plan_ctas.py'
       - 'scripts/enforce_checkout_public_bank_info.py'
       - 'scripts/enforce_ai_registration_ctas.py'
+      - 'scripts/normalize_commercial_pricing.py'
       - 'scripts/apply_commercial_surface_v1.py'
       - 'scripts/apply_commercial_surface_v2.py'
       - '.github/workflows/pages-fast-hotfix.yml'
@@ -129,6 +130,7 @@ jobs:
           ! grep -q 'Premium tạm dừng kích hoạt mới' .pages-site/thanh-toan/index.html
       - name: Apply final commercial surface
         run: |
+          python scripts/normalize_commercial_pricing.py .pages-site
           python scripts/apply_commercial_surface_v1.py .pages-site
           python scripts/apply_commercial_surface_v2.py .pages-site
       - name: Configure GitHub Pages
