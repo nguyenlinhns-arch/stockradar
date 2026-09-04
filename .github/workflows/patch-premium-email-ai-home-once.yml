@@ -1,0 +1,33 @@
+name: Patch Premium email AI home once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-premium-email-ai-home-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Refresh main
+        run: git pull --ff-only origin main
+      - name: Patch AI-first homepage compatibility
+        run: python scripts/patch_premium_email_ai_home_once.py
+      - name: Verify source marker
+        run: grep -q 'data-stockradar-ai-center' scripts/apply_premium_email_product_v1.py
+      - name: Commit compatibility patch
+        run: |
+          git config user.name stockradar-bot
+          git config user.email actions@users.noreply.github.com
+          git add -A
+          git commit -m 'Make Premium email transform AI-first compatible'
+          git pull --rebase origin main
+          git push origin HEAD:main
