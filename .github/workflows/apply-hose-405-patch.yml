@@ -1,0 +1,32 @@
+name: Apply HOSE 405 Patch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/patch_hose_405_alphanumeric.py'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch collector and engine
+        run: python scripts/patch_hose_405_alphanumeric.py
+      - name: Validate Python
+        run: |
+          python -m py_compile scripts/bootstrap_kbs_hose_data.py
+          python -m py_compile engine/stockradar/raw_pipeline.py
+      - name: Commit patch
+        run: |
+          git config user.name "StockRadar Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add scripts/bootstrap_kbs_hose_data.py engine/stockradar/raw_pipeline.py
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix full HOSE alphanumeric ticker coverage"
+          git push origin HEAD:main
