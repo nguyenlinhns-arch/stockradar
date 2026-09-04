@@ -75,8 +75,8 @@ jobs:
       - name: Apply production-facing UX guards
         env:
           STOCKRADAR_PRODUCT_EMAIL_READY: "0"
-          # Premium activation remains fail-closed until Decision Feed + email E2E are production-ready.
-          STOCKRADAR_CHECKOUT_READY: "0"
+          # Owner explicitly approved production Manual VietQR. The private Supabase billing gate stays authoritative.
+          STOCKRADAR_CHECKOUT_READY: "1"
         run: |
           python scripts/inject_public_ux.py .pages-site
           python scripts/inject_home_radar_polish.py .pages-site
@@ -115,6 +115,15 @@ jobs:
             python scripts/verify_conversion_funnel_v4.py .pages-site
             python scripts/verify_ai_assistant.py .pages-site
           fi
+
+      - name: Assert live checkout survives final transforms
+        run: |
+          grep -q 'VPBank' .pages-site/thanh-toan/index.html
+          grep -q '0934389822' .pages-site/thanh-toan/index.html
+          grep -q 'vpbank-qr-static.svg' .pages-site/thanh-toan/index.html
+          grep -q 'data-checkout-confirm' .pages-site/thanh-toan/index.html
+          ! grep -q 'BẢO VỆ NGƯỜI DÙNG TRẢ PHÍ' .pages-site/thanh-toan/index.html
+          ! grep -q 'Premium tạm dừng kích hoạt mới' .pages-site/thanh-toan/index.html
 
       - name: Install Chromium visual QA
         run: |
