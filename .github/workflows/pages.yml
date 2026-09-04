@@ -21,6 +21,7 @@ on:
       - 'scripts/apply_ai_first_premium_email.py'
       - 'scripts/strip_public_methods.py'
       - 'scripts/inject_ai_assistant.py'
+      - 'scripts/enforce_registration_plan_ctas.py'
       - 'scripts/verify*.py'
       - 'package.json'
       - 'package-lock.json'
@@ -91,6 +92,7 @@ jobs:
           fi
           python scripts/strip_public_methods.py .pages-site
           python scripts/inject_ai_assistant.py .pages-site
+          python scripts/enforce_registration_plan_ctas.py .pages-site
 
       - name: Verify production auth artifact
         run: python scripts/verify_pages_auth.py .pages-site
