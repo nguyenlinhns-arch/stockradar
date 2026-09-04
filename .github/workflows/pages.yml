@@ -23,6 +23,7 @@ on:
       - 'scripts/inject_ai_assistant.py'
       - 'scripts/enforce_registration_plan_ctas.py'
       - 'scripts/verify*.py'
+      - 'scripts/visual_qa.cjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/pages.yml'
