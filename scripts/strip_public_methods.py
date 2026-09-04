@@ -63,6 +63,7 @@ def rewrite(source: str) -> str:
         ('Pocket Pivot · Early Breakout · Confirmed Breakout · Retest', 'Mua · chờ · theo dõi · bỏ qua'),
         ('Pocket Pivot · Early Breakout · Confirmed Breakout', 'Mua · chờ · theo dõi'),
         ('Pocket Pivot · Breakout · Retest', 'Mua · chờ · theo dõi · bỏ qua'),
+        ('Đạt vùng mua · Chờ mua · Theo dõi · Bỏ qua.', 'Mua · chờ · theo dõi · bỏ qua.'),
         ('SEPA · VCP · VPA · RVOL', 'TRẠNG THÁI HÀNH ĐỘNG'),
         ('4M · SEPA · VPA', 'TRẠNG THÁI · DÒNG TIỀN · RỦI RO'),
     )
