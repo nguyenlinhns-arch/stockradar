@@ -68,25 +68,27 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("false,", migration)
         self.assertIn("product_email_consent_version", migration)
 
-    def test_product_email_entitlement_allows_free_daily_but_masks_premium_alerts(self):
-        migration = self.read("supabase/migrations/20260904060000_restore_free_daily_premium_intraday_email.sql")
+    def test_effective_product_email_entitlement_is_trial_or_paid_only(self):
+        migration = self.read("supabase/migrations/20260904104050_enforce_paid_only_product_email.sql")
         lowered = migration.lower()
-        self.assertIn("tier = 'free' and not coalesce(new.daily_brief, false)", lowered)
-        self.assertIn("pref.daily_brief and prof.account_tier in ('free','trial','paid')", lowered)
+        self.assertIn("tier not in ('trial','paid')", lowered)
+        self.assertIn("pref.daily_brief and prof.account_tier in ('trial','paid')", lowered)
         self.assertIn("pref.event_alerts and prof.account_tier in ('trial','paid')", lowered)
         self.assertIn("daily_brief_content_tier", lowered)
-        self.assertIn("then 'free'", lowered)
+        self.assertIn("then 'premium'", lowered)
+        self.assertNotIn("then 'free'", lowered)
         self.assertIn("eligible_for_premium", lowered)
         self.assertIn("create or replace function public.handle_email_verified()", lowered)
-        self.assertIn("prof.account_tier = 'free' and pref.daily_brief is true", lowered)
+        self.assertIn("prof.account_tier in ('trial','paid')", lowered)
 
-    def test_email_architecture_matches_free_daily_and_premium_alert_split(self):
+    def test_email_architecture_matches_paid_only_product_email(self):
         architecture = self.read("email/ARCHITECTURE.md")
-        self.assertIn("`daily`: Free/Trial/Paid", architecture)
+        self.assertIn("`daily`: Trial/Paid only", architecture)
         self.assertIn("`state_change` / buy-sell event alerts: Trial/Paid only", architecture)
         self.assertIn("09:00 Vietnam time", architecture)
         self.assertIn("10:30 / 11:15 / 13:30 / 14:15", architecture)
         self.assertIn("Preference data is not delivery entitlement", architecture)
+        self.assertIn("Free never passes a product-content email entitlement gate", architecture)
         self.assertIn("account signup remains fail-closed", architecture)
 
     def test_homepage_is_email_first_with_clear_paid_conversion(self):
