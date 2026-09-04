@@ -1,0 +1,106 @@
+name: StockRadar HOSE Official Disclosure Depth Sharded
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/acquire_hose_official_disclosures_shard_v1.py'
+      - 'scripts/merge_hose_official_disclosure_shards_v1.py'
+      - '.github/workflows/hose-official-disclosures-depth-sharded.yml'
+  schedule:
+    # 16:10 Asia/Ho_Chi_Minh on trading weekdays.
+    - cron: '10 9 * * 1-5'
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  shard:
+    strategy:
+      fail-fast: false
+      matrix:
+        shard_index: [0, 1, 2, 3]
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --disable-pip-version-check pandas requests
+      - name: Download canonical HOSE universe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/market
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-market-bootstrap&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          test -n "$id"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/market.zip
+          unzip -q -o /tmp/market.zip -d artifacts/market
+      - name: Acquire shard ${{ matrix.shard_index }} of 4
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          python scripts/acquire_hose_official_disclosures_shard_v1.py \
+            --universe artifacts/market/security_master.csv \
+            --as-of "$as_of" \
+            --lookback-days 120 \
+            --shard-index ${{ matrix.shard_index }} \
+            --shard-count 4 \
+            --workers 8 \
+            --output-dir artifacts/shard-${{ matrix.shard_index }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hose-official-depth-shard-${{ matrix.shard_index }}
+          path: artifacts/shard-${{ matrix.shard_index }}/
+          retention-days: 7
+          if-no-files-found: error
+
+  merge:
+    needs: shard
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install --disable-pip-version-check pandas
+      - name: Download shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: hose-official-depth-shard-*
+          path: artifacts/shards
+      - name: Download canonical HOSE universe
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/market
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-market-bootstrap&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          test -n "$id"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/market.zip
+          unzip -q -o /tmp/market.zip -d artifacts/market
+      - name: Merge and enforce 405-ticker source readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
+          python scripts/merge_hose_official_disclosure_shards_v1.py \
+            --root artifacts/shards \
+            --universe artifacts/market/security_master.csv \
+            --as-of "$as_of" \
+            --lookback-days 120 \
+            --output-dir artifacts/merged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-hose-official-disclosures-depth-v1
+          path: artifacts/merged/
+          retention-days: 30
+          if-no-files-found: error
