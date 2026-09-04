@@ -1,0 +1,122 @@
+name: Sync StockRadar Research Cache
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/sync-stockradar-research-cache.yml"
+      - "scripts/sync_internal_research_cache.py"
+      - "supabase/functions/stock-research-sync/**"
+  schedule:
+    # Vietnam: 10:40, 11:25, 13:40, 14:25 and 20:05 on weekdays.
+    - cron: "40 3 * * 1-5"
+    - cron: "25 4 * * 1-5"
+    - cron: "40 6 * * 1-5"
+    - cron: "25 7 * * 1-5"
+    - cron: "5 13 * * 1-5"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: stockradar-research-cache-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Google Drive client
+        run: pip install --disable-pip-version-check -q google-api-python-client google-auth
+
+      - name: Download newest internal ticker lookup from Drive
+        env:
+          STOCKRADAR_GDRIVE_JSON: ${{ secrets.STOCKRADAR_GDRIVE_JSON }}
+          STOCKRADAR_DRIVE_FEED_FOLDER: "1MhOr5yBaM7ZUonQmTg-XLtgoA9l-wgs8"
+        run: |
+          python - <<'PY'
+          import io, json, os, pathlib, sys
+          from google.oauth2 import service_account
+          from googleapiclient.discovery import build
+          from googleapiclient.http import MediaIoBaseDownload
+
+          raw = os.environ.get("STOCKRADAR_GDRIVE_JSON", "").strip()
+          if not raw:
+              raise SystemExit("STOCKRADAR_GDRIVE_JSON is missing")
+          info = json.loads(raw)
+          creds = service_account.Credentials.from_service_account_info(
+              info,
+              scopes=["https://www.googleapis.com/auth/drive.readonly"],
+          )
+          drive = build("drive", "v3", credentials=creds, cache_discovery=False)
+          folder = os.environ["STOCKRADAR_DRIVE_FEED_FOLDER"]
+          query = (
+              f"'{folder}' in parents and trashed = false and "
+              "name contains 'stockradar_ticker_lookup_internal_'"
+          )
+          result = drive.files().list(
+              q=query,
+              orderBy="modifiedTime desc",
+              pageSize=20,
+              fields="files(id,name,mimeType,modifiedTime,size)",
+              supportsAllDrives=True,
+              includeItemsFromAllDrives=True,
+          ).execute()
+          files = [f for f in result.get("files", []) if f.get("mimeType") == "application/json"]
+          if not files:
+              raise SystemExit("No internal StockRadar ticker lookup JSON found in Drive feed folder")
+          selected = files[0]
+          request = drive.files().get_media(fileId=selected["id"], supportsAllDrives=True)
+          fh = io.BytesIO()
+          downloader = MediaIoBaseDownload(fh, request, chunksize=1024 * 1024)
+          done = False
+          while not done:
+              _, done = downloader.next_chunk()
+          pathlib.Path("/tmp/stockradar-research-bundle.json").write_bytes(fh.getvalue())
+          print(json.dumps({
+              "selected": selected["name"],
+              "modifiedTime": selected.get("modifiedTime"),
+              "size": len(fh.getvalue()),
+          }, ensure_ascii=False))
+          PY
+
+      - name: Validate bundle locally
+        run: python scripts/sync_internal_research_cache.py /tmp/stockradar-research-bundle.json --dry-run
+
+      - name: Obtain GitHub OIDC token
+        id: oidc
+        shell: bash
+        run: |
+          set -euo pipefail
+          RESPONSE="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=stockradar-supabase-sync")"
+          TOKEN="$(python -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"${RESPONSE}")"
+          echo "token=${TOKEN}" >> "${GITHUB_OUTPUT}"
+
+      - name: Sync bundle into private StockRadar research cache
+        env:
+          GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body --silent --show-error --retry 2 \
+            -H "Authorization: Bearer ${GITHUB_OIDC_TOKEN}" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/stockradar-research-bundle.json \
+            "https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/stock-research-sync" \
+            | tee /tmp/stockradar-sync-result.json
+          python - <<'PY'
+          import json
+          data = json.load(open('/tmp/stockradar-sync-result.json', encoding='utf-8'))
+          if data.get('status') not in {'SYNCED', 'ALREADY_SYNCED'}:
+              raise SystemExit(f"Unexpected sync status: {data}")
+          print(json.dumps(data, ensure_ascii=False, indent=2))
+          PY
