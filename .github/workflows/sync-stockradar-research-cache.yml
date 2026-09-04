@@ -24,6 +24,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   id-token: write
 
 concurrency:
@@ -42,54 +43,43 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Google Drive client
-        run: pip install --disable-pip-version-check -q google-api-python-client google-auth
-
-      - name: Download newest internal ticker lookup from Drive
+      - name: Download validated internal ticker lookup artifact
         env:
-          STOCKRADAR_GDRIVE_JSON: ${{ secrets.STOCKRADAR_GDRIVE_JSON }}
-          STOCKRADAR_DRIVE_FEED_FOLDER: "1MhOr5yBaM7ZUonQmTg-XLtgoA9l-wgs8"
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_RUN_ID: ${{ github.event.workflow_run.id }}
+        shell: bash
         run: |
+          set -euo pipefail
+          mkdir -p /tmp/stockradar-bundle
+          if [ "$EVENT_NAME" = "workflow_run" ] && [ -n "${EVENT_RUN_ID:-}" ]; then
+            artifact_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${EVENT_RUN_ID}/artifacts?per_page=100" --jq '.artifacts | map(select(.name == "stockradar-ticker-lookup-internal-v1" and .expired == false)) | .[0].id // empty')"
+          else
+            artifact_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-ticker-lookup-internal-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          fi
+          if [ -z "$artifact_id" ]; then
+            echo 'No validated internal StockRadar bundle artifact found.' >&2
+            exit 1
+          fi
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > /tmp/stockradar-bundle.zip
+          unzip -q -o /tmp/stockradar-bundle.zip -d /tmp/stockradar-bundle
+          bundle="$(find /tmp/stockradar-bundle -name 'stockradar_ticker_lookup_internal_405_*.json' ! -name '*_manifest.json' -print -quit)"
+          if [ -z "$bundle" ]; then
+            echo 'Validated bundle JSON missing from artifact.' >&2
+            exit 1
+          fi
+          cp "$bundle" /tmp/stockradar-research-bundle.json
           python - <<'PY'
-          import io, json, os, pathlib
-          from google.oauth2 import service_account
-          from googleapiclient.discovery import build
-          from googleapiclient.http import MediaIoBaseDownload
-
-          raw = os.environ.get("STOCKRADAR_GDRIVE_JSON", "").strip()
-          if not raw:
-              raise SystemExit("STOCKRADAR_GDRIVE_JSON is missing")
-          info = json.loads(raw)
-          creds = service_account.Credentials.from_service_account_info(
-              info,
-              scopes=["https://www.googleapis.com/auth/drive.readonly"],
-          )
-          drive = build("drive", "v3", credentials=creds, cache_discovery=False)
-          folder = os.environ["STOCKRADAR_DRIVE_FEED_FOLDER"]
-          query = f"'{folder}' in parents and trashed = false and name contains 'stockradar_ticker_lookup_internal_'"
-          result = drive.files().list(
-              q=query,
-              orderBy="modifiedTime desc",
-              pageSize=20,
-              fields="files(id,name,mimeType,modifiedTime,size)",
-              supportsAllDrives=True,
-              includeItemsFromAllDrives=True,
-          ).execute()
-          files = [
-              f for f in result.get("files", [])
-              if f.get("mimeType") == "application/json" and not f.get("name", "").endswith("_manifest.json")
-          ]
-          if not files:
-              raise SystemExit("No internal StockRadar ticker lookup JSON found in Drive feed folder")
-          selected = files[0]
-          request = drive.files().get_media(fileId=selected["id"], supportsAllDrives=True)
-          fh = io.BytesIO()
-          downloader = MediaIoBaseDownload(fh, request, chunksize=1024 * 1024)
-          done = False
-          while not done:
-              _, done = downloader.next_chunk()
-          pathlib.Path("/tmp/stockradar-research-bundle.json").write_bytes(fh.getvalue())
-          print(json.dumps({"selected": selected["name"], "modifiedTime": selected.get("modifiedTime"), "size": len(fh.getvalue())}, ensure_ascii=False))
+          import json, pathlib
+          p=pathlib.Path('/tmp/stockradar-research-bundle.json')
+          d=json.loads(p.read_text(encoding='utf-8'))
+          print(json.dumps({
+              'artifact_bundle':p.name,
+              'size':p.stat().st_size,
+              'as_of_date':d.get('as_of_date'),
+              'universe_count':d.get('universe_count'),
+              'internal_research_ready_count':d.get('internal_research_ready_count'),
+          }, ensure_ascii=False))
           PY
 
       - name: Validate bundle locally
