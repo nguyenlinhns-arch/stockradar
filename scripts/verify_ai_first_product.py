@@ -24,7 +24,9 @@ def main() -> None:
     errors: list[str] = []
 
     home = (output / "index.html").read_text(encoding="utf-8")
+    plans = (output / "dang-ky" / "index.html").read_text(encoding="utf-8")
     signup = (output / "signup" / "index.html").read_text(encoding="utf-8")
+    checkout = (output / "thanh-toan" / "index.html").read_text(encoding="utf-8")
     account = (output / "tai-khoan" / "index.html").read_text(encoding="utf-8")
     ai = (output / "assets" / "ai-center.js").read_text(encoding="utf-8")
 
@@ -53,8 +55,15 @@ def main() -> None:
         "FREE · 10 CÂU / NGÀY",
         "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
         "signup/?plan=free",
-        "dang-ky/?plan=premium",
+        "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
+        "Mở Premium · 199K/30 ngày",
     ), "AI client access model", errors)
+
+    require(plans, (
+        "Đăng ký & thanh toán",
+        "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
+        "Không cần tạo Free rồi mới nâng cấp",
+    ), "Premium registration entry", errors)
 
     require(signup, (
         "Free · 0đ",
@@ -64,7 +73,20 @@ def main() -> None:
         "Action Alert",
         "data-premium-email-onboarding",
         "premium-email-product-v1.css",
-    ), "signup tiers", errors)
+        "data-premium-signup-payment-flow-v1",
+        "dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium",
+        "Xác minh & sang thanh toán",
+        "Không cần tạo Free rồi nâng cấp",
+    ), "signup tiers and Premium payment continuation", errors)
+
+    require(checkout, (
+        "StockRadar Premium",
+        "199.000đ",
+        "VPBank",
+        "0934389822",
+        "data-checkout-confirm",
+        "vpbank-qr-static.svg",
+    ), "Premium checkout", errors)
 
     require(account, (
         "data-premium-email-health",
@@ -80,6 +102,9 @@ def main() -> None:
     for private_example in ("MBB", "HPG", "ACB"):
         if private_example in ai:
             errors.append(f"AI public examples must not expose internal priority ticker: {private_example}")
+
+    if "dang-ky/?plan=premium" in ai:
+        errors.append("AI Premium CTA must not detour through plan selection; it must continue to Premium signup/payment")
 
     if home.count("<h1") != 1:
         errors.append("AI-first homepage must contain exactly one H1")
