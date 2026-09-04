@@ -63,6 +63,7 @@ def _validate_bundle(bundle: dict[str, Any]) -> dict[str, dict[str, Any]]:
         raise SyncError("Only HOSE bundles are accepted")
     if str(bundle.get("data_role") or "").upper() not in {
         "INTERNAL_BACKEND_RESEARCH",
+        "INTERNAL_BACKEND_RESEARCH_POSTCLOSE",
         "INTERNAL_RESEARCH",
     }:
         raise SyncError("Bundle is not marked as internal research")
