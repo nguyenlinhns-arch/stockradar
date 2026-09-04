@@ -34,6 +34,29 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertIn("@media (max-width: 620px)", styles)
         self.assertIn("checkout-mobile-bar", styles)
 
+    def test_disabled_checkout_has_non_payment_premium_interest_fallback(self):
+        page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
+        email_client = (ROOT / "website" / "assets" / "email-interest.js").read_text(encoding="utf-8")
+
+        for marker in (
+            "CỔNG THANH TOÁN CHƯA MỞ",
+            "Đăng ký ưu tiên Premium thay vì chờ",
+            'data-email-interest-form',
+            'name="event_alerts" type="checkbox" checked hidden',
+            'name="privacy" type="checkbox" required',
+            "Báo tôi khi Premium mở thanh toán",
+            "assets/email-interest.js",
+            "assets/lead-v1.css",
+            'data-next-href="signup/?plan=premium"',
+        ):
+            self.assertIn(marker, page)
+
+        self.assertIn("/functions/v1/email-interest", email_client)
+        self.assertIn("privacy_accepted: true", email_client)
+        self.assertIn("credentials: 'omit'", email_client)
+        self.assertNotIn("service_role", page.lower())
+        self.assertNotIn("service_role", email_client.lower())
+
     def test_premium_plan_routes_to_checkout(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
         self.assertIn('href="thanh-toan/?plan=premium"', plans)
