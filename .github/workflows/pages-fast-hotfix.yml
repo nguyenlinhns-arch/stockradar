@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - 'website/**'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
