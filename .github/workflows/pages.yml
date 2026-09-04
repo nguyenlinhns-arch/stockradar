@@ -58,6 +58,30 @@ jobs:
       - name: Verify buyer-ready product surface
         run: python scripts/verify_buyer_readiness.py .pages-site
 
+      - name: Install Chromium visual QA
+        run: |
+          npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+          npx playwright install --with-deps chromium
+
+      - name: Run multi-viewport visual QA
+        run: |
+          python -m http.server 8765 --bind 127.0.0.1 --directory .pages-site >/tmp/stockradar-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for attempt in {1..30}; do
+            if curl -fsS http://127.0.0.1:8765/ >/dev/null; then
+              ready=1
+              break
+            fi
+            sleep 0.2
+          done
+          if [ "$ready" != "1" ]; then
+            cat /tmp/stockradar-http.log
+            exit 1
+          fi
+          STOCKRADAR_QA_URL=http://127.0.0.1:8765 npm run visual-qa
+
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:
