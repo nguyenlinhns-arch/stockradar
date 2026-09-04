@@ -129,13 +129,12 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             "insert into private.email_suppressions",
             "update public.product_email_preferences",
             "set enabled=false",
+            "revoke all on function public.record_stockradar_email_delivery_event_v1",
             "to service_role",
         ):
             self.assertIn(marker, sql)
-        self.assertNotIn(
-            "grant execute on function public.record_stockradar_email_delivery_event_v1",
-            sql.split("to service_role")[0].lower().replace("revoke all on function", ""),
-        )
+        self.assertNotIn("to authenticated", sql)
+        self.assertNotIn("to anon", sql)
 
     def test_unsubscribe_is_token_scoped_and_does_not_delete_account(self) -> None:
         source = self.read("supabase/functions/email-unsubscribe/index.ts")
