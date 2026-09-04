@@ -69,11 +69,7 @@ class StaticAssetTests(unittest.TestCase):
             for html in output.rglob("*.html"):
                 source = html.read_text(encoding="utf-8")
                 self.assertIn('data-api-mode="disabled"', source, html)
-                if html == output / "index.html":
-                    self.assertIn('name="robots" content="index,follow,max-image-preview:large"', source, html)
-                    self.assertNotIn('name="robots" content="noindex,nofollow"', source, html)
-                else:
-                    self.assertIn('name="robots" content="noindex,nofollow"', source, html)
+                self.assertIn('name="robots" content="noindex,nofollow"', source, html)
             for path in [*(output / "public" / "data").glob("*.json"), output / "assets" / "app.js"]:
                 source = path.read_text(encoding="utf-8").upper()
                 for forbidden in ("DEMO", "MOCK", "MÔ PHỎNG", "FIXTURE"):
@@ -272,7 +268,7 @@ class StaticAssetTests(unittest.TestCase):
         ):
             self.assertIn(marker, homepage)
         self.assertIn('content="PRODUCTION"', homepage)
-        self.assertIn('name="robots" content="index,follow,max-image-preview:large"', homepage)
+        self.assertIn('name="robots" content="noindex,nofollow"', homepage)
         self.assertNotIn("Radar 30", homepage)
         self.assertNotIn("30 mã", homepage)
         self.assertNotIn("10 ngành · 3 mã", homepage)
