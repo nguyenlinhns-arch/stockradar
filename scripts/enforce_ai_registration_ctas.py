@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Force final StockRadar AI registration CTAs through the current plan page.
+"""Force final StockRadar AI CTAs to match the Guest -> Free -> Premium funnel.
 
 This runs after all Pages UX transforms. Older conversion transforms may still
-rewrite AI links to the legacy /signup/ form; the published artifact must route
-chat CTAs through /dang-ky/ so users first see the current Free/Premium page.
+rewrite AI links to the legacy /signup/ form. Guest registration must route to
+the current /dang-ky/ Free page, while a signed-in Free account upgrades directly
+through /thanh-toan/ instead of being sent through registration again.
 
 The static builder intentionally keeps generated pages noindex by default. This
 final production-only guard also makes the public homepage indexable while
@@ -43,13 +44,17 @@ def rewrite_asset(path: Path) -> None:
     for old, new in REPLACEMENTS:
         source = source.replace(old, new)
 
-    # The central AI must expose both current plan destinations. The floating
-    # assistant only needs the Free registration destination when unauthenticated.
     if path.name == "ai-center.js":
-        for marker in ("dang-ky/?plan=free", "dang-ky/?plan=premium"):
+        # Homepage AI is account-aware: Guests can create Free; signed-in Free
+        # upgrades directly to payment. Premium must never be another signup.
+        for marker in ("dang-ky/?plan=free", "thanh-toan/?plan=premium", "Nâng Premium"):
             if marker not in source:
-                raise RuntimeError(f"Final AI center missing current registration route: {marker}")
+                raise RuntimeError(f"Final AI center missing current account-state CTA: {marker}")
+        if "dang-ky/?plan=premium" in source:
+            raise RuntimeError("Final AI center routes signed-in Premium upgrade through registration")
     elif "dang-ky/?plan=free" not in source:
+        # Floating assistant may be mounted on public pages and only needs the
+        # unauthenticated Free registration destination.
         raise RuntimeError("Final AI assistant missing current Free registration route")
 
     for stale, _ in REPLACEMENTS:
@@ -91,7 +96,7 @@ def main() -> None:
     rewrite_asset(output / "assets" / "ai-center.js")
     rewrite_asset(output / "assets" / "ai-assistant.js")
     enforce_homepage_seo(output)
-    print("AI registration CTA + homepage SEO guard: PASS")
+    print("AI account-state CTA + homepage SEO guard: PASS")
 
 
 if __name__ == "__main__":
