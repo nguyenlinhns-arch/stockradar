@@ -16,68 +16,55 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
-      - name: Install raw-data client
+      - name: Install current community data client
         run: |
           python -m pip install --upgrade pip
-          python -m pip install 'vnstock==3.5.1' 'pandas<3'
-      - name: Fetch raw listing OHLCV and statements only
+          python -m pip install 'vnstock==4.0.7' 'pandas<3'
+      - name: Fetch raw listing OHLCV and statement line-items
         run: |
           python - <<'PY'
           import json
           import pandas as pd
-          from vnstock import Listing, Quote, Finance, Company
+          from vnstock import Reference, Fundamental
+          from vnstock.ui import Market
 
-          def shape(df):
-              return list(getattr(df, 'shape', (0, 0)))
-          def cols(df):
-              return [str(c) for c in getattr(df, 'columns', [])]
+          def shape(df): return list(getattr(df, 'shape', (0, 0)))
+          def cols(df): return [str(c) for c in getattr(df, 'columns', [])]
 
-          listing = Listing(source='KBS')
-          hose = listing.symbols_by_exchange(exchange='HOSE')
-          if hasattr(hose, 'tolist') and not isinstance(hose, pd.DataFrame):
-              symbols = [str(x).upper() for x in hose.tolist()]
-          elif isinstance(hose, pd.DataFrame):
-              symbol_col = next((c for c in ('symbol','ticker','code') if c in hose.columns), None)
-              if symbol_col is None:
-                  raise RuntimeError(f'No symbol column in HOSE listing: {cols(hose)}')
-              symbols = [str(x).upper() for x in hose[symbol_col].dropna().tolist()]
-          else:
-              symbols = [str(x).upper() for x in list(hose)]
-          symbols = sorted({s for s in symbols if len(s)==3 and s.isalpha()})
-          if len(symbols) < 300:
-              raise RuntimeError(f'HOSE listing unexpectedly small: {len(symbols)}')
+          ref = Reference()
+          exchanges = ref.equity.list_by_exchange()
+          if not isinstance(exchanges, pd.DataFrame) or exchanges.empty:
+              raise RuntimeError('Reference exchange list is empty')
 
-          quote = Quote(source='KBS', symbol='HPG')
-          px = quote.history(start='2025-01-01', end='2026-09-04', interval='1D')
+          mkt = Market()
+          px = mkt.equity('HPG').ohlcv(start='2025-01-01', end='2026-09-04', interval='1D')
           required_px = {'time','open','high','low','close','volume'}
           if not required_px.issubset(set(map(str, px.columns))):
               raise RuntimeError(f'OHLCV schema missing columns: {cols(px)}')
           if len(px) < 250:
               raise RuntimeError(f'OHLCV history too short: {len(px)}')
 
-          # VCI is used only for raw statement line-items; no provider ratios/scores are accepted.
-          finance = Finance(source='VCI', symbol='HPG')
-          income = finance.income_statement(period='quarter')
-          balance = finance.balance_sheet(period='quarter')
-          cash = finance.cash_flow(period='quarter')
+          fun = Fundamental()
+          income = fun.equity('HPG').income_statement(period='quarter', orient='time_series')
+          balance = fun.equity('HPG').balance_sheet(period='quarter', orient='time_series')
+          cash = fun.equity('HPG').cash_flow(period='quarter', orient='time_series')
           if min(len(income), len(balance), len(cash)) == 0:
               raise RuntimeError('One or more raw statement tables are empty')
 
-          company = Company(source='VCI', symbol='HPG')
-          overview = company.overview()
-
+          info = ref.company('HPG').info()
           print(json.dumps({
               'provider_role': 'RAW_INPUT_ONLY',
-              'hose_symbol_count': len(symbols),
+              'exchange_shape': shape(exchanges),
+              'exchange_columns': cols(exchanges),
               'ohlcv_shape': shape(px),
               'ohlcv_columns': cols(px),
               'income_shape': shape(income),
-              'income_columns': cols(income)[:30],
+              'income_columns': cols(income)[:50],
               'balance_shape': shape(balance),
-              'balance_columns': cols(balance)[:30],
+              'balance_columns': cols(balance)[:50],
               'cashflow_shape': shape(cash),
-              'cashflow_columns': cols(cash)[:30],
-              'overview_shape': shape(overview),
-              'overview_columns': cols(overview)[:30],
+              'cashflow_columns': cols(cash)[:50],
+              'company_shape': shape(info),
+              'company_columns': cols(info)[:50],
           }, ensure_ascii=False, indent=2))
           PY
