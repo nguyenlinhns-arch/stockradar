@@ -61,6 +61,7 @@ jobs:
           python scripts/link_premium_sample.py .pages-site
           python scripts/patch_conversion_funnel_v4.py .pages-site
           python scripts/redesign_home_paid_intent_v1.py .pages-site
+          python scripts/apply_premium_email_product_v1.py .pages-site
           python scripts/strip_public_methods.py .pages-site
 
       - name: Verify production auth artifact
@@ -77,6 +78,9 @@ jobs:
 
       - name: Verify homepage paid intent
         run: python scripts/verify_home_paid_intent_v1.py .pages-site
+
+      - name: Verify Premium email buyer experience
+        run: python scripts/verify_premium_email_product_v1.py .pages-site
 
       - name: Verify measurable Premium funnel
         run: python scripts/verify_conversion_funnel_v4.py .pages-site
