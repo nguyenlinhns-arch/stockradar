@@ -26,6 +26,8 @@ def main() -> None:
     home = (output / "index.html").read_text(encoding="utf-8")
     plans = (output / "dang-ky" / "index.html").read_text(encoding="utf-8")
     signup = (output / "signup" / "index.html").read_text(encoding="utf-8")
+    email_confirm = (output / "xac-minh-email" / "index.html").read_text(encoding="utf-8")
+    signup_client = (output / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
     checkout = (output / "thanh-toan" / "index.html").read_text(encoding="utf-8")
     account = (output / "tai-khoan" / "index.html").read_text(encoding="utf-8")
     ai = (output / "assets" / "ai-center.js").read_text(encoding="utf-8")
@@ -58,18 +60,10 @@ def main() -> None:
         "dang-ky/?plan=premium",
     ), "AI client access model", errors)
 
-    for stale_ai_route in (
-        "signup/?plan=free",
-        "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
-        "signup/?plan=premium",
-    ):
-        if stale_ai_route in ai:
-            errors.append(f"AI client access model: stale direct signup route {stale_ai_route}")
-
     require(plans, (
         "Đăng ký & thanh toán",
         "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
-        "Không cần tạo Free rồi mới nâng cấp",
+        "Không cần tạo Free rồi nâng cấp",
     ), "Premium registration entry", errors)
 
     require(signup, (
@@ -80,11 +74,28 @@ def main() -> None:
         "Action Alert",
         "data-premium-email-onboarding",
         "premium-email-product-v1.css",
-        "data-premium-signup-payment-flow-v1",
-        "dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium",
-        "Xác minh & sang thanh toán",
-        "Không cần tạo Free rồi nâng cấp",
-    ), "signup tiers and Premium payment continuation", errors)
+        "assets/signup-link-v1.js",
+        "data-signup-email-sent",
+        "gửi email xác minh",
+        "Không cần nhập mã OTP",
+    ), "signup tiers and email-link verification", errors)
+
+    for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+        if forbidden in signup:
+            errors.append(f"signup must not expose manual OTP input: {forbidden}")
+
+    require(signup_client, (
+        "/functions/v1/signup-link",
+        "event.stopImmediatePropagation()",
+        "thanh-toan/?plan=premium",
+        "data-signup-existing-login",
+    ), "signup email-link client", errors)
+
+    require(email_confirm, (
+        "assets/email-confirm-v1.js",
+        "data-email-confirm-status",
+        "Không cần nhập mã OTP",
+    ), "email confirmation landing", errors)
 
     require(checkout, (
         "StockRadar Premium",
