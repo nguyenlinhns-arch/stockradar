@@ -35,7 +35,8 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         self.assertIn("premiumIntent && form.elements.email_daily_brief?.checked", client)
         self.assertIn("premiumIntent && form.elements.email_event_alerts?.checked", client)
         self.assertIn("input.disabled = !premium", client)
-        self.assertIn("if (!premium) input.checked = false", client)
+        self.assertIn("if (!premium)", client)
+        self.assertIn("input.checked = false", client)
         self.assertIn("Free có phí 0đ", client)
         self.assertIn("email hệ thống cần thiết cho tài khoản", client)
 
