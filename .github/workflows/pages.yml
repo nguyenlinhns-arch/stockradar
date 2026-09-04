@@ -25,6 +25,7 @@ on:
       - 'scripts/enforce_checkout_public_bank_info.py'
       - 'scripts/enforce_ai_registration_ctas.py'
       - 'scripts/normalize_commercial_pricing.py'
+      - 'scripts/normalize_commercial_plans_preflight_v1.py'
       - 'scripts/apply_commercial_surface_v1.py'
       - 'scripts/apply_commercial_surface_v2.py'
       - 'scripts/fix_commercial_auth_headings.py'
@@ -128,6 +129,7 @@ jobs:
       - name: Apply final commercial surface and SEO
         run: |
           python scripts/normalize_commercial_pricing.py .pages-site
+          python scripts/normalize_commercial_plans_preflight_v1.py .pages-site
           python scripts/apply_commercial_surface_v1.py .pages-site
           python scripts/apply_commercial_surface_v2.py .pages-site
           python scripts/fix_commercial_auth_headings.py .pages-site
