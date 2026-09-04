@@ -1,0 +1,14 @@
+.account-upgrade-card{margin:18px 0 0;border:1px solid #d9e1e7;border-left:4px solid #cf2430;border-radius:8px;background:#fff;box-shadow:0 7px 22px rgba(18,43,68,.06);overflow:hidden}
+.account-upgrade-inner{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:center;padding:18px 20px}
+.account-upgrade-kicker{display:inline-flex;padding:5px 8px;border-radius:999px;background:#fff0f1;color:#ad1d27;font-size:9px;font-weight:900;letter-spacing:.07em;text-transform:uppercase}
+.account-upgrade-card h2{margin:7px 0 5px;color:#0d2b49;font-size:19px}
+.account-upgrade-card p{margin:0;color:#667585;font-size:11px;line-height:1.5}
+.account-upgrade-benefits{display:flex;flex-wrap:wrap;gap:7px 14px;margin-top:10px;color:#405466;font-size:10px}
+.account-upgrade-benefits span::before{content:'✓';margin-right:5px;color:#07845f;font-weight:900}
+.account-upgrade-actions{text-align:right}
+.account-upgrade-price{display:block;margin-bottom:8px;color:#cf2430;font-size:19px;font-weight:900;white-space:nowrap}
+.account-upgrade-price small{color:#667585;font-size:10px;font-weight:700}
+.account-upgrade-actions a{min-height:42px;display:inline-flex;align-items:center;justify-content:center;padding:0 15px;border-radius:5px;background:#cf2430;color:#fff;font-size:11px;font-weight:900;text-decoration:none;white-space:nowrap}
+.account-upgrade-actions a:hover{text-decoration:none}
+.account-upgrade-card.is-trial{border-left-color:#1769aa}.account-upgrade-card.is-trial .account-upgrade-kicker{background:#eaf3fa;color:#1769aa}
+@media(max-width:680px){.account-upgrade-inner{grid-template-columns:1fr;padding:15px}.account-upgrade-actions{text-align:left}.account-upgrade-actions a{width:100%}.account-upgrade-price{font-size:17px}}
