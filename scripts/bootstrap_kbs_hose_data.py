@@ -202,8 +202,18 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
         current_price=pd.to_numeric(pd.Series([b.get("price")]),errors="coerce").iloc[0]
         current_price=float(current_price) if pd.notna(current_price) and current_price>0 else last
         current_vol=pd.to_numeric(pd.Series([b.get("total_volume")]),errors="coerce").iloc[0]
+        daily_bar_count=int(len(g))
+        board_pct_change=pd.to_numeric(pd.Series([b.get("pct_change")]),errors="coerce").iloc[0]
+        if pd.notna(board_pct_change):
+            pct_change=float(board_pct_change)
+        elif len(close)>=2 and float(close.iloc[-2]) != 0:
+            pct_change=(current_price/float(close.iloc[-2])-1.0)*100.0
+        else:
+            pct_change=0.0
+        down_for_pp=g[g["close"].diff()<0].tail(10)
+        down_date_set={ts.date() for ts in down_for_pp["timestamp"] if pd.notna(ts)}
         ig=intraday[intraday["ticker"]==ticker].copy() if not intraday.empty else pd.DataFrame()
-        same_time_ratio=None; current_cum=None; projected_vol=None
+        same_time_ratio=None; current_cum=None; projected_vol=None; same_time_down_cums=[]
         if not ig.empty:
             ig["timestamp"]=pd.to_datetime(ig["timestamp"],errors="coerce")
             ig["volume"]=pd.to_numeric(ig["volume"],errors="coerce")
@@ -226,6 +236,8 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
                     if not dg.empty:
                         cum=float(dg["volume"].sum())
                         pri.append(cum)
+                        if d in down_date_set:
+                            same_time_down_cums.append(cum)
                         full=daily_by_date.get(d)
                         if full and full>0:
                             frac=cum/full
@@ -238,9 +250,14 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
                     projected_vol=current_cum/frac if frac>0 else None
         if current_cum is None and pd.notna(current_vol): current_cum=float(current_vol)
         rvol=(current_cum/vol20) if current_cum is not None and vol20 and vol20>0 else None
-        down=g[g["close"].diff()<0].tail(10)
+        rvol_progress_adjusted=(projected_vol/vol20) if projected_vol is not None and vol20 and vol20>0 else rvol
+        down=down_for_pp
         max_down_vol10=float(down["volume"].max()) if not down.empty else None
-        pocket_vol_pass=bool(projected_vol and max_down_vol10 and projected_vol>max_down_vol10)
+        same_time_max_down=max(same_time_down_cums) if same_time_down_cums else None
+        if current_cum is not None and same_time_max_down is not None:
+            pocket_vol_pass=bool(current_cum>same_time_max_down)
+        else:
+            pocket_vol_pass=bool(projected_vol and max_down_vol10 and projected_vol>max_down_vol10)
         pivot20=float(g["high"].iloc[-21:-1].max()) if len(g)>=21 else None
         dist=((current_price/pivot20)-1)*100 if pivot20 else None
         ma200_slope=None
@@ -276,11 +293,12 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
                 w=g.tail(n); base=float(w["close"].mean()); ranges.append((float(w["high"].max())-float(w["low"].min()))/base if base else 0)
             vcp_score=max(0.0,min(100.0,100*(1-(ranges[2]/ranges[0] if ranges[0] else 1)))) if ranges[0]>0 else 0
         rows.append({
-            "ticker":ticker,"price":current_price,"last_daily_close":last,"ma10":ma10,"ma20":ma20,"ma50":ma50,"ma150":ma150,"ma200":ma200,
-            "vol20":vol20,"current_cum_volume":current_cum,"rvol_vs_full_day_vol20":rvol,"same_time_volume_ratio":same_time_ratio,"projected_full_day_volume":projected_vol,
-            "max_down_volume_10":max_down_vol10,"pocket_pivot_volume_pass_intraday_projection":pocket_vol_pass,"pivot20":pivot20,"distance_to_pivot_pct":dist,
+            "ticker":ticker,"price":current_price,"pct_change":pct_change,"daily_bar_count":daily_bar_count,"last_daily_close":last,"ma10":ma10,"ma20":ma20,"ma50":ma50,"ma150":ma150,"ma200":ma200,
+            "vol20":vol20,"current_cum_volume":current_cum,"rvol_vs_full_day_vol20":rvol,"rvol_progress_adjusted":rvol_progress_adjusted,"same_time_volume_ratio":same_time_ratio,"projected_full_day_volume":projected_vol,
+            "max_down_volume_10":max_down_vol10,"same_time_max_down_volume_10":same_time_max_down,"pocket_pivot_volume_pass":pocket_vol_pass,"pocket_pivot_volume_pass_intraday_projection":pocket_vol_pass,"pivot20":pivot20,"distance_to_pivot_pct":dist,
             "stage":stage,"ma200_slope_20d":ma200_slope,"tenkan":tenkan,"kijun":kijun,"kumo_span_a":span_a,"kumo_span_b":span_b,"ichimoku_state":ichimoku,
             "bollinger_width_pct":bb_width,"bollinger_squeeze":squeeze,"volume_dry_up_5d":vol_dry,"vcp_contraction_score":vcp_score,
+            "technical_history_eligible":bool(daily_bar_count>=210),
             "source":SOURCE_ID,"rights_publication":"BLOCKED_PENDING_TERMS_REVIEW"
         })
     return pd.DataFrame(rows).sort_values("ticker")
