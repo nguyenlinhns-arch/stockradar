@@ -82,6 +82,27 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
         self.assertNotIn("4M/Payback · CANSLIM", js)
         self.assertNotIn("SEPA/VCP", js)
 
+    def test_homepage_ai_resolves_account_before_prompting_for_signup(self):
+        ai = self.read("website/assets/ai-center.js")
+        budget = self.read("scripts/optimize_home_asset_budget_v1.py")
+        for marker in (
+            "const STORAGE_KEY = 'stockradar-auth'",
+            "window.StockRadarAuthClient",
+            "storageKey: STORAGE_KEY",
+            "currentAccountTier",
+            "normalizeTier",
+            "PREMIUM · AI KHÔNG GIỚI HẠN · ACTION ALERT",
+            "Premium · hỏi không giới hạn",
+            "thanh-toan/?plan=premium",
+            "Nâng Premium",
+            "onAuthStateChange",
+            "20260905-ai5",
+        ):
+            self.assertIn(marker, ai if marker != "20260905-ai5" else budget)
+        self.assertNotIn("PAID · AI KHÔNG GIỚI HẠN", ai)
+        self.assertNotIn("TRIAL · AI", ai)
+        self.assertNotIn("Xem gói Paid", ai)
+
 
 if __name__ == "__main__":
     unittest.main()
