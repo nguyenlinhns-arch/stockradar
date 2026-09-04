@@ -8,7 +8,6 @@ covered by production public-surface verification and rendered Chromium QA.
 
 from __future__ import annotations
 
-import sys
 import unittest
 
 
@@ -33,20 +32,27 @@ def flatten(suite: unittest.TestSuite):
 def main() -> None:
     discovered = unittest.defaultTestLoader.discover("engine/tests")
     tests = []
-    retired_found = []
+    retired_found: set[str] = set()
+
     for test in flatten(discovered):
         test_id = test.id()
-        short_id = ".".join(test_id.split(".")[-3:])
-        if short_id in RETIRED:
-            retired_found.append(short_id)
+        matched = next((retired_id for retired_id in RETIRED if test_id.endswith(retired_id)), None)
+        if matched:
+            retired_found.add(matched)
             continue
         tests.append(test)
 
-    missing = RETIRED - set(retired_found)
+    missing = RETIRED - retired_found
     if missing:
-        raise RuntimeError("Retired regression IDs no longer resolve; review runner: " + ", ".join(sorted(missing)))
+        raise RuntimeError(
+            "Retired regression IDs no longer resolve; review runner: "
+            + ", ".join(sorted(missing))
+        )
 
-    print(f"Retired {len(retired_found)} obsolete public-UI assertions; running {len(tests)} active regression tests.")
+    print(
+        f"Retired {len(retired_found)} obsolete public-UI assertions; "
+        f"running {len(tests)} active regression tests."
+    )
     result = unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(tests))
     raise SystemExit(0 if result.wasSuccessful() else 1)
 
