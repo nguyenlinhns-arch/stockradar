@@ -4,7 +4,7 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Thanh toán StockRadar Premium 199.000đ/30 ngày bằng VietQR/chuyển khoản, mã giao dịch riêng và kích hoạt sau đối soát.">
+  <meta name="description" content="Thanh toán StockRadar Premium 199.000đ/30 ngày bằng VietQR/chuyển khoản, mã giao dịch riêng và kích hoạt sau khi quản trị xác nhận thanh toán qua email.">
   <title>Thanh toán Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-checkout3">
@@ -14,7 +14,7 @@
   <script src="assets/auth-config.js?v=20260904-checkout3" defer></script>
   <script src="assets/app.js?v=20260904-checkout3" defer></script>
   <script src="assets/email-interest.js?v=20260904-privacy1" defer></script>
-  <script src="assets/checkout-v1.js?v=20260904-checkout3" defer></script>
+  <script src="assets/checkout-v1.js?v=20260904-checkout4" defer></script>
 </head>
 <body data-proposition="checkout">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -31,7 +31,7 @@
       <div class="checkout-hero-inner">
         <span class="checkout-eyebrow">STOCKRADAR PREMIUM · 30 NGÀY</span>
         <h1>Thanh toán một lần.<br>Kích hoạt đúng 30 ngày Premium.</h1>
-        <p>Giá sáng lập 199.000đ/30 ngày. Không tự gia hạn. Mỗi yêu cầu thanh toán có mã chuyển khoản riêng và chỉ kích hoạt sau khi giao dịch được xác minh.</p>
+        <p>Giá sáng lập 199.000đ/30 ngày. Không tự gia hạn. Mỗi yêu cầu thanh toán có mã chuyển khoản riêng; Premium chỉ kích hoạt sau khi giao dịch được kiểm tra và quản trị xác nhận qua email.</p>
         <div class="checkout-steps" aria-label="Quy trình thanh toán">
           <span class="checkout-step"><b>1</b>Tài khoản</span>
           <span class="checkout-step is-active"><b>2</b>Thanh toán</span>
@@ -66,14 +66,14 @@
                     <div class="checkout-bank-row"><span>Nội dung chuyển khoản</span><strong data-checkout-reference>—</strong><button class="checkout-copy" type="button" data-copy-reference data-copy-value="" disabled>Sao chép</button></div>
                     <div class="checkout-bank-row"><span>Mã còn hiệu lực</span><strong data-checkout-expiry>—</strong><small data-checkout-expiry-at>—</small></div>
                   </div>
-                  <div class="checkout-warning"><strong>Quan trọng:</strong> chuyển đúng số tiền và đúng nội dung hiển thị trên trang này. Bấm “Tôi đã chuyển khoản” chỉ gửi yêu cầu đối soát, không tự cấp Premium.</div>
+                  <div class="checkout-warning"><strong>Quan trọng:</strong> chuyển đúng số tiền và đúng nội dung hiển thị trên trang này. Bấm “Tôi đã chuyển khoản” chỉ gửi yêu cầu xác nhận tới email quản trị StockRadar, không tự cấp Premium.</div>
                 </div>
               </div>
             </section>
 
             <section class="checkout-confirm">
               <h3>Sau khi đã chuyển khoản</h3>
-              <p>Gửi xác nhận để StockRadar đưa giao dịch vào hàng chờ đối soát. Khi giao dịch được xác minh, tài khoản tự chuyển sang Premium và thời hạn được cộng đúng 30 ngày.</p>
+              <p>Bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị. Sau khi tiền thực nhận được kiểm tra và xác nhận, tài khoản tự chuyển sang Premium, cộng đúng 30 ngày và gửi email kết quả cho khách hàng.</p>
               <button class="checkout-primary" type="button" data-checkout-confirm disabled>Tôi đã chuyển khoản · Gửi xác nhận</button>
               <div class="checkout-state is-warn" data-checkout-state aria-live="polite">Đang kiểm tra tài khoản và trạng thái thanh toán…</div>
               <a class="checkout-secondary-link" href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-login>Đăng nhập để thanh toán</a>
@@ -83,7 +83,7 @@
           <section class="checkout-confirm" data-checkout-disabled-fallback>
             <span class="checkout-section-label">THANH TOÁN CHƯA ĐƯỢC KÍCH HOẠT</span>
             <h3>Luồng thanh toán đã sẵn sàng, nhưng chưa có tài khoản nhận tiền production</h3>
-            <p>StockRadar chỉ mở nút chuyển khoản khi backend đã có ngân hàng, số tài khoản, chủ tài khoản và quy trình đối soát được xác nhận. Trong thời gian đó bạn có thể tạo tài khoản Premium để sẵn sàng nâng cấp.</p>
+            <p>StockRadar chỉ mở nút chuyển khoản khi backend đã có ngân hàng, số tài khoản, chủ tài khoản và quy trình xác nhận thanh toán. Trong thời gian đó bạn có thể tạo tài khoản Premium để sẵn sàng nâng cấp.</p>
             <form class="lead-form email-interest-form" data-email-interest-form data-next-href="signup/?plan=premium" data-next-label="Tạo tài khoản Premium" novalidate>
               <div class="lead-field"><label for="checkout-interest-email">Email</label><input id="checkout-interest-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
               <input name="daily_brief" type="checkbox" hidden aria-hidden="true" tabindex="-1">
@@ -110,12 +110,12 @@
             </ul>
             <div class="checkout-total"><div class="checkout-total-row"><span>Gói</span><strong>Premium 30 ngày</strong></div><div class="checkout-total-row"><span>Tự gia hạn</span><strong>Không</strong></div><div class="checkout-total-row is-total"><span>Tổng thanh toán</span><strong data-checkout-amount>199.000đ</strong></div></div>
             <div class="checkout-account"><span>Tài khoản nhận Premium</span><strong data-checkout-account-email>Chưa đăng nhập</strong></div>
-            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> chỉ sau khi giao dịch được xác minh.</span></div><div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> nếu còn Premium, 30 ngày mới được cộng tiếp từ ngày hết hạn hiện tại.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free, không xóa tài khoản, watchlist hay lịch sử.</span></div></div>
+            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> chỉ sau khi quản trị xác nhận tiền thực nhận qua email.</span></div><div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> nếu còn Premium, 30 ngày mới được cộng tiếp từ ngày hết hạn hiện tại.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free, không xóa tài khoản, watchlist hay lịch sử.</span></div></div>
           </div>
         </aside>
       </div>
 
-      <div class="checkout-help"><article><strong>1 · Tạo mã riêng</strong><span>Mỗi yêu cầu có mã chuyển khoản riêng, giới hạn thời gian và gắn với đúng tài khoản đăng nhập.</span></article><article><strong>2 · Đối soát trước khi cấp quyền</strong><span>Nút xác nhận không thể tự tạo Premium; backend phải xác minh thanh toán.</span></article><article><strong>3 · Cộng đúng 30 ngày</strong><span>Quyền Premium được cộng nối tiếp nếu tài khoản đang còn hạn.</span></article></div>
+      <div class="checkout-help"><article><strong>1 · Tạo mã riêng</strong><span>Mỗi yêu cầu có mã chuyển khoản riêng, giới hạn thời gian và gắn với đúng tài khoản đăng nhập.</span></article><article><strong>2 · Xác nhận qua email quản trị</strong><span>Nút của khách chỉ gửi yêu cầu; mở link email cũng chưa cấp quyền. Quản trị phải kiểm tra tiền và bấm xác nhận cuối.</span></article><article><strong>3 · Cộng đúng 30 ngày</strong><span>Quyền Premium được cộng nối tiếp nếu tài khoản đang còn hạn và khách nhận email xác nhận kết quả.</span></article></div>
     </section>
   </main>
   <div class="checkout-mobile-bar"><a href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-mobile-action>Đăng nhập để thanh toán</a></div>
