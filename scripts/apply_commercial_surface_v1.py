@@ -9,6 +9,10 @@ from pathlib import Path
 
 STYLE_NAME = "commercial-v1.css"
 STYLE_MARKER = "data-commercial-v1"
+NOTIFICATION_STYLE_NAME = "header-notifications.css"
+NOTIFICATION_SCRIPT_NAME = "header-notifications.js"
+NOTIFICATION_MARKER = "data-header-notifications-v1"
+SUPABASE_BROWSER_SRC = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"
 CORE_ROUTES = ("", "hom-nay", "radar5", "kiem-tra-co-phieu", "khuyen-nghi", "nganh", "hieu-qua", "dang-ky", "tai-khoan")
 
 
@@ -34,6 +38,37 @@ def inject_style(source: str) -> str:
     if "</head>" not in source:
         raise RuntimeError("Commercial surface page has no closing head tag")
     return source.replace("</head>", f'<link rel="stylesheet" href="assets/{STYLE_NAME}?v=20260904-commercial1" {STYLE_MARKER}>\n</head>', 1)
+
+
+def inject_notification_assets(source: str) -> str:
+    """Add the owner-only notification bell only to auth-aware pages with the shared site header."""
+    if NOTIFICATION_MARKER in source:
+        return source
+    if "assets/auth-config.js" not in source or "site-header" not in source:
+        return source
+    if "</head>" not in source:
+        raise RuntimeError("Notification target page has no closing head tag")
+
+    tags = [
+        f'<link rel="stylesheet" href="assets/{NOTIFICATION_STYLE_NAME}?v=20260904-alert1" {NOTIFICATION_MARKER}>',
+    ]
+    if SUPABASE_BROWSER_SRC not in source:
+        tags.append(f'<script src="{SUPABASE_BROWSER_SRC}" defer></script>')
+    tags.append(f'<script src="assets/{NOTIFICATION_SCRIPT_NAME}?v=20260904-alert1" defer></script>')
+    return source.replace("</head>", "\n".join(tags) + "\n</head>", 1)
+
+
+def inject_notification_assets_all(output: Path) -> int:
+    changed = 0
+    for page in output.rglob("*.html"):
+        source = read(page)
+        patched = inject_notification_assets(source)
+        if patched != source:
+            write(page, patched)
+            changed += 1
+    if changed < 1:
+        raise RuntimeError("Notification bell injection found no auth-aware Pages")
+    return changed
 
 
 def remove_section(source: str, class_name: str, *, required: bool = True) -> str:
@@ -216,18 +251,23 @@ def verify(output: Path) -> None:
     for route, source in pages.items():
         if STYLE_MARKER not in source:
             raise RuntimeError(f"Commercial stylesheet missing from {route or 'home'}")
-    print("Commercial surface v1: PASS (AI → signals → proof → pricing; verbose explanations removed)")
+        if NOTIFICATION_MARKER not in source or NOTIFICATION_SCRIPT_NAME not in source:
+            raise RuntimeError(f"Notification bell bundle missing from {route or 'home'}")
+    print("Commercial surface v1: PASS (AI → signals → proof → pricing; notification bell enabled)")
 
 
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
         raise RuntimeError(f"Pages output does not exist: {output}")
-    if not (output / "assets" / STYLE_NAME).is_file():
-        raise RuntimeError(f"Missing commercial stylesheet: {STYLE_NAME}")
+    for asset in (STYLE_NAME, NOTIFICATION_STYLE_NAME, NOTIFICATION_SCRIPT_NAME):
+        if not (output / "assets" / asset).is_file():
+            raise RuntimeError(f"Missing commercial asset: {asset}")
     for route in CORE_ROUTES:
         process_page(output, route)
+    injected = inject_notification_assets_all(output)
     verify(output)
+    print(f"StockRadar notification bell injected into {injected} auth-aware page(s)")
 
 
 if __name__ == "__main__":
