@@ -25,11 +25,23 @@ class ConversionFunnelAssetTests(unittest.TestCase):
         self.assertIn("Hoàn tất tài khoản Free", state)
         self.assertIn("thanh-toan", injector)
 
-    def test_free_and_trial_account_center_gets_contextual_premium_upsell(self):
+    def test_only_free_account_center_gets_contextual_premium_upsell(self):
         client = self.read("website/assets/account-upgrade-v1.js")
         styles = self.read("website/assets/account-upgrade-v1.css")
         injector = self.read("scripts/inject_public_ux.py")
-        self.assertIn("['FREE', 'TRIAL']", client)
+
+        # Trial/Paid/Premium are all normalized to the buyer-facing Premium state.
+        for marker in (
+            "normalized === 'PAID'",
+            "normalized === 'TRIAL'",
+            "normalized === 'PREMIUM'",
+            "return 'PREMIUM'",
+            "normalized === 'FREE'",
+            "return 'FREE'",
+        ):
+            self.assertIn(marker, client)
+        self.assertIn("if (tier !== 'FREE')", client)
+        self.assertIn("card.hidden = true", client)
         self.assertIn("data-account-tier", client)
         self.assertIn("199.000đ", client)
         self.assertIn("thanh-toan/?plan=premium", client)
