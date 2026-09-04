@@ -116,7 +116,7 @@
     const email = escapeHtml(user?.email || 'Tài khoản');
     const initial = escapeHtml((user?.email || 'S').slice(0, 1).toUpperCase());
     group.dataset.accountState = premium ? 'premium' : 'free';
-    group.innerHTML = `<a class="auth-account-link" href="${siteUrl('tai-khoan/')}" title="${email}"><span class="auth-avatar">${initial}</span><span class="auth-account-email">${email}</span></a>${premium ? '<span class="header-account-tier">Premium</span>' : `<a class="header-register-cta" href="${siteUrl('thanh-toan/?plan=premium')}">Nâng Premium</a>`}<button class="auth-logout" type="button" data-global-auth-logout>Đăng xuất</button>`;
+    group.innerHTML = `<a class="auth-account-link" href="${siteUrl('tai-khoan/')}" title="${email}"><span class="auth-avatar">${initial}</span><span class="auth-account-email">${email}</span></a>${premium ? '<span class="header-account-tier">Premium</span>' : `<a class="button button-primary button-small header-account-upgrade" href="${siteUrl('thanh-toan/?plan=premium')}">Nâng Premium</a>`}<button class="auth-logout" type="button" data-global-auth-logout>Đăng xuất</button>`;
   }
 
   function canonicalizeHeader() {
