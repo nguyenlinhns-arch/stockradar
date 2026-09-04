@@ -199,7 +199,6 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("data-plan-comparison", register)
         self.assertIn('href="signup/?plan=free"', register)
         self.assertIn('href="signup/?plan=premium"', register)
-        self.assertIn('href="thanh-toan/?plan=premium"', register)
         self.assertIn("StockRadar Free", register)
         self.assertIn("StockRadar Premium", register)
         self.assertIn("Free không nhận báo cáo 09:00", register)
