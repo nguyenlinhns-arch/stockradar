@@ -7,6 +7,7 @@
     LONG_TERM: 'Dài hạn',
     ACCUMULATION: 'Tích sản',
   });
+  const PREMIUM_TIERS = new Set(['TRIAL', 'PAID']);
 
   function siteUrl(path = '') {
     return new URL(String(path).replace(/^\/+/, ''), document.baseURI).toString();
@@ -20,6 +21,12 @@
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'stockradar-auth' },
     });
     return window.StockRadarAuthClient;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, character => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    }[character]));
   }
 
   function setMessage(target, message, kind = '') {
@@ -36,10 +43,15 @@
     return Array.from(form.querySelectorAll(`input[name="${name}"]:checked`)).map(input => input.value);
   }
 
+  function isPremium(profile) {
+    return PREMIUM_TIERS.has(String(profile?.account_tier || '').toUpperCase());
+  }
+
   function friendlyDatabaseError(error) {
     const raw = String(error?.message || '').toLowerCase();
     if (raw.includes('watchlist limit reached')) return 'Đã đạt giới hạn danh sách theo dõi của gói hiện tại.';
     if (raw.includes('verified active stockradar account required')) return 'Cần xác minh email trước khi lưu danh sách theo dõi.';
+    if (raw.includes('product alerts are unavailable on free tier')) return 'Cảnh báo theo từng mã chỉ dành cho Trial/Premium.';
     if (raw.includes('duplicate key')) return 'Mã này đã có trong danh sách theo dõi.';
     if (raw.includes('row-level security') || raw.includes('permission')) return 'Phiên đăng nhập không còn quyền ghi dữ liệu. Hãy đăng nhập lại.';
     return 'Chưa thể lưu dữ liệu. Vui lòng thử lại.';
@@ -51,20 +63,42 @@
     boxes.forEach(box => { box.disabled = !box.checked && checked.length >= 3; });
   }
 
-  function renderWatchlist(target, items) {
+  function renderWatchlist(target, items, profile) {
     if (!target) return;
     if (!items.length) {
-      target.innerHTML = '<div class="account-empty-state">Chưa có mã theo dõi. Thêm tối đa theo giới hạn gói của bạn.</div>';
+      target.innerHTML = '<div class="account-empty-state">Chưa có mã theo dõi. Thêm mã để StockRadar ưu tiên phân tích và cảnh báo đúng thứ bạn quan tâm.</div>';
       return;
     }
+    const premium = isPremium(profile);
     target.innerHTML = items.map(item => {
-      const ticker = String(item.ticker || '').replace(/[^A-Z]/g, '');
+      const ticker = normalizeTicker(item.ticker);
       const horizon = HORIZON_LABELS[item.horizon] || item.horizon || '—';
-      return `<article class="watchlist-row" data-watchlist-id="${item.id}">
-        <div class="watchlist-main"><a href="${siteUrl(`co-phieu/${ticker}/`)}"><strong>${ticker}</strong></a><span>${horizon}${item.owns_stock ? ' · Đang sở hữu' : ''}</span></div>
+      const alertOn = Boolean(item.alert_enabled);
+      const alertLabel = premium ? (alertOn ? 'Cảnh báo: Bật' : 'Cảnh báo: Tắt') : 'Cảnh báo · Premium';
+      const alertClass = alertOn ? 'button button-primary button-small' : 'button button-secondary button-small';
+      return `<article class="watchlist-row" data-watchlist-id="${escapeHtml(item.id)}">
+        <div class="watchlist-main"><a href="${siteUrl(`co-phieu/${ticker}/`)}"><strong>${escapeHtml(ticker)}</strong></a><span>${escapeHtml(horizon)}${item.owns_stock ? ' · Đang sở hữu' : ''}</span></div>
+        <button class="${alertClass}" type="button" data-watchlist-alert aria-pressed="${alertOn ? 'true' : 'false'}"${premium ? '' : ' disabled'}>${alertLabel}</button>
         <button class="button button-secondary button-small" type="button" data-watchlist-remove>Gỡ</button>
       </article>`;
     }).join('');
+  }
+
+  function mountTodayEntry(root, profile, items) {
+    if (!root) return;
+    let entry = document.querySelector('[data-paid-account-entry]');
+    if (!entry) {
+      entry = document.createElement('section');
+      entry.className = 'compact-cta';
+      entry.dataset.paidAccountEntry = '';
+      root.insertAdjacentElement('beforebegin', entry);
+    }
+    const premium = isPremium(profile);
+    const owned = items.filter(item => item.owns_stock).length;
+    const alerts = items.filter(item => item.alert_enabled).length;
+    entry.innerHTML = `<div><span class="panel-label">BẢNG HÔM NAY${premium ? ' · PREMIUM' : ''}</span><h2>Hôm nay có gì cần làm?</h2><p>${premium
+      ? `Đang theo dõi ${items.length} mã · ${owned} mã đang sở hữu · ${alerts} cảnh báo đang bật.`
+      : `Tổng hợp mã đang theo dõi và trạng thái thị trường. Action Alert theo từng mã mở ở Trial/Premium.`}</p></div><div><a class="button button-primary" href="${siteUrl('hom-nay/')}">Mở Hôm nay</a>${premium ? '' : `<a class="button button-secondary" href="${siteUrl('dang-ky/')}">Xem Premium</a>`}</div>`;
   }
 
   async function loadProfile(client, userId) {
@@ -136,7 +170,8 @@
       preferencesForm?.querySelectorAll('input[name="preferred_horizons"]').forEach(input => { input.checked = horizons.has(input.value); });
       preferencesForm?.querySelectorAll('input[name="preferred_sectors"]').forEach(input => { input.checked = sectors.has(input.value); });
       if (preferencesForm) enforceSectorLimit(preferencesForm);
-      renderWatchlist(watchlistTarget, watchlist);
+      renderWatchlist(watchlistTarget, watchlist, profile);
+      mountTodayEntry(root, profile, watchlist);
       const limit = profile.account_tier === 'PAID' ? 20 : 3;
       if (limitTarget) limitTarget.textContent = `${watchlist.length}/${limit} mã`;
       setMessage(status, 'Tùy chọn được lưu theo tài khoản và bảo vệ bằng RLS.', 'success');
@@ -207,7 +242,8 @@
           if (error) throw error;
         }
         watchlist = await loadWatchlist(client, user.id);
-        renderWatchlist(watchlistTarget, watchlist);
+        renderWatchlist(watchlistTarget, watchlist, profile);
+        mountTodayEntry(root, profile, watchlist);
         const limit = profile.account_tier === 'PAID' ? 20 : 3;
         if (limitTarget) limitTarget.textContent = `${watchlist.length}/${limit} mã`;
         watchlistForm.reset();
@@ -220,6 +256,36 @@
     });
 
     watchlistTarget?.addEventListener('click', async event => {
+      const alertButton = event.target.closest('[data-watchlist-alert]');
+      if (alertButton) {
+        const row = alertButton.closest('[data-watchlist-id]');
+        const id = row?.dataset.watchlistId;
+        const item = watchlist.find(candidate => candidate.id === id);
+        if (!id || !item) return;
+        if (!isPremium(profile)) {
+          setMessage(watchlistMessage, 'Cảnh báo theo từng mã chỉ dành cho Trial/Premium.', 'error');
+          return;
+        }
+        const next = !Boolean(item.alert_enabled);
+        alertButton.disabled = true;
+        try {
+          const { error } = await client
+            .from('watchlist_items')
+            .update({ alert_enabled: next })
+            .eq('id', id)
+            .eq('user_id', user.id);
+          if (error) throw error;
+          watchlist = watchlist.map(candidate => candidate.id === id ? { ...candidate, alert_enabled: next } : candidate);
+          renderWatchlist(watchlistTarget, watchlist, profile);
+          mountTodayEntry(root, profile, watchlist);
+          setMessage(watchlistMessage, `${next ? 'Đã bật' : 'Đã tắt'} cảnh báo cho ${item.ticker}.`, 'success');
+        } catch (error) {
+          alertButton.disabled = false;
+          setMessage(watchlistMessage, friendlyDatabaseError(error), 'error');
+        }
+        return;
+      }
+
       const button = event.target.closest('[data-watchlist-remove]');
       if (!button) return;
       const row = button.closest('[data-watchlist-id]');
@@ -234,7 +300,8 @@
           .eq('user_id', user.id);
         if (error) throw error;
         watchlist = watchlist.filter(item => item.id !== id);
-        renderWatchlist(watchlistTarget, watchlist);
+        renderWatchlist(watchlistTarget, watchlist, profile);
+        mountTodayEntry(root, profile, watchlist);
         const limit = profile.account_tier === 'PAID' ? 20 : 3;
         if (limitTarget) limitTarget.textContent = `${watchlist.length}/${limit} mã`;
         setMessage(watchlistMessage, 'Đã gỡ khỏi danh sách theo dõi.', 'success');
