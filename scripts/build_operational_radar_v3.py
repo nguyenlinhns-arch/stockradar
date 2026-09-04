@@ -160,12 +160,13 @@ def build(args):
         regime = "LEADING" if score >= 65 else "IMPROVING" if score >= 55 else "NEUTRAL" if score >= 45 else "WEAK" if score >= 35 else "LAGGING"
         sec_rows.append({"sector": sector, "count": count, "sector_strength_score": round(score, 2), "sector_regime": regime, "sector_confidence": round(confidence, 2)})
     sector_df = pd.DataFrame(sec_rows)
+    sector_join = sector_df.rename(columns={"sector": "sector_join_v3"})
 
     out = scanner.merge(status[["ticker", "company_name_vi", "sector_v2", "daily_bar_count", "technical_data_ready", "fundamental_data_ready"]], on="ticker", how="left")
     out = out.merge(risk, on="ticker", how="left")
     out = out.merge(news[["ticker", "news_count_raw", "latest_news_time", "latest_news_age_days", "latest_news_title"]], on="ticker", how="left")
     out = out.merge(events[["ticker", "event_count_raw", "latest_event_time", "latest_event_age_days", "corporate_action_current_ready"]], on="ticker", how="left")
-    out = out.merge(sector_df, left_on="sector_v2", right_on="sector", how="left").drop(columns=["sector"])
+    out = out.merge(sector_join, left_on="sector_v2", right_on="sector_join_v3", how="left").drop(columns=["sector_join_v3"])
 
     out["intraday_5m_ready"] = out["ticker"].isin(intraday_set)
     out["market_score"] = market_score
