@@ -36,8 +36,8 @@ def validate(root: Path) -> dict:
     website = _read_csv(root / REQUIRED_FILES["website_feed"])
     manifest = json.loads((root / REQUIRED_FILES["runtime_manifest"]).read_text(encoding="utf-8"))
 
-    eligible = scanner.loc[scanner.get("full_scan_eligible", False).fillna(False).astype(bool), "ticker"]
-    eligible_set = set(eligible)
+    full_scan = scanner["full_scan_eligible"] if "full_scan_eligible" in scanner.columns else pd.Series(False, index=scanner.index)
+    eligible_set = set(scanner.loc[full_scan.fillna(False).astype(bool), "ticker"])
     website_set = set(website["ticker"])
 
     checks = {
@@ -92,15 +92,16 @@ def validate(root: Path) -> dict:
         "private_note",
     }
     checks["website_feed_no_personal_columns"] = not bool(forbidden_public_columns & set(website.columns))
+    checks = {key: bool(value) for key, value in checks.items()}
 
     passed = all(checks.values())
     return {
         "status": "PASS_INTERNAL" if passed else "BLOCKED",
         "canonical_hose_count": EXPECTED_HOSE,
-        "scanner_rows": len(scanner),
-        "valuation_rows": len(valuation),
-        "eligible_feed_rows": len(eligible_set),
-        "website_feed_rows": len(website_set),
+        "scanner_rows": int(len(scanner)),
+        "valuation_rows": int(len(valuation)),
+        "eligible_feed_rows": int(len(eligible_set)),
+        "website_feed_rows": int(len(website_set)),
         "checks": checks,
         "public_publication_authorized": False,
         "note": "PASS_INTERNAL means the private scanner bundle is structurally usable. Publication remains gated by source rights, freshness, corporate-action reconciliation, compliance and production approval.",
