@@ -12,3 +12,5 @@ if old not in text:
 text = text.replace(old, new, 1)
 TARGET.write_text(text, encoding="utf-8")
 print("patched domain V4 sector join collision safely")
+
+# Trigger marker: narrow patch validated against the exact merge anchor.
