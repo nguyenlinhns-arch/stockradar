@@ -18,7 +18,7 @@ permissions:
 jobs:
   official-disclosure-depth:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,8 +54,8 @@ jobs:
             --universe artifacts/market/security_master.csv \
             --as-of "$as_of" \
             --lookback-days 120 \
-            --include-media-days 30 \
-            --workers 8 \
+            --include-media-days 0 \
+            --workers 12 \
             --output-dir artifacts/hose-official-depth
 
       - name: Enforce official-depth QA and fail-closed policy
