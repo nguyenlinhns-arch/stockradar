@@ -8,6 +8,7 @@ from engine.stockradar.ledger import ImmutableLedger
 from engine.stockradar.models import Candidate, Recommendation, RecommendationMode, UniverseSnapshot
 from engine.stockradar.ranking import build_radar
 from engine.stockradar.ticker_lookup import TickerMaster
+from engine.stockradar.ticker_symbol import is_valid_hose_ticker
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,8 +49,7 @@ def build_public() -> dict[str, object]:
         (
             item
             for item in ticker_payload.get("items", [])
-            if str(item.get("ticker", "")).isalpha()
-            and len(str(item.get("ticker", ""))) == 3
+            if is_valid_hose_ticker(item.get("ticker", ""))
             and str(item.get("ticker", "")).isupper()
         ),
         key=lambda item: item["ticker"],

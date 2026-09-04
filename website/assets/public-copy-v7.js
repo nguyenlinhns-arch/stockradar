@@ -104,7 +104,7 @@
     document.querySelectorAll('.home-watch-row').forEach(row => {
       if (row.dataset.publicLookupReady === '1') return;
       const ticker = String(row.querySelector('b')?.textContent || '').trim().toUpperCase();
-      if (!/^[A-Z]{3}$/.test(ticker)) return;
+      if (!/^(?=.*[A-Z])[A-Z0-9]{3}$/.test(ticker)) return;
       row.dataset.publicLookupReady = '1';
       row.tabIndex = 0;
       row.setAttribute('role', 'button');

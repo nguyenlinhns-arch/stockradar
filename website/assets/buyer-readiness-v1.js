@@ -26,10 +26,10 @@
 
   function currentTicker() {
     const staticTicker = String(document.body?.dataset?.staticTicker || '').trim().toUpperCase();
-    if (/^[A-Z]{3}$/.test(staticTicker)) return staticTicker;
+    if (/^(?=.*[A-Z])[A-Z0-9]{3}$/.test(staticTicker)) return staticTicker;
     const query = new URLSearchParams(location.search).get('ticker');
     const ticker = String(query || '').trim().toUpperCase();
-    return /^[A-Z]{3}$/.test(ticker) ? ticker : '';
+    return /^(?=.*[A-Z])[A-Z0-9]{3}$/.test(ticker) ? ticker : '';
   }
 
   function rewriteConversionLinks() {

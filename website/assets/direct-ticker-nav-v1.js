@@ -6,7 +6,7 @@
   }
 
   function valid(ticker) {
-    return /^[A-Z]{3}$/.test(ticker);
+    return /^(?=.*[A-Z])[A-Z0-9]{3}$/.test(ticker);
   }
 
   function analysisUrl(ticker) {

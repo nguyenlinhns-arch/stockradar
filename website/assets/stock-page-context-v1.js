@@ -6,7 +6,7 @@
     const routeTicker = parts[parts.length - 1] !== 'co-phieu' ? parts[parts.length - 1] : '';
     const raw = new URLSearchParams(location.search).get('ticker') || routeTicker;
     const ticker = String(raw || '').trim().toUpperCase();
-    return /^[A-Z]{3}$/.test(ticker) ? ticker : '';
+    return /^(?=.*[A-Z])[A-Z0-9]{3}$/.test(ticker) ? ticker : '';
   }
 
   function mount() {

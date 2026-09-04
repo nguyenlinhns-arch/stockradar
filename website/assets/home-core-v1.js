@@ -12,11 +12,11 @@
   }
 
   function normalizeTicker(value) {
-    return String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   }
 
   function validTicker(value) {
-    return /^[A-Z]{3}$/.test(value);
+    return /^(?=.*[A-Z])[A-Z0-9]{3}$/.test(value);
   }
 
   function validEmail(value) {

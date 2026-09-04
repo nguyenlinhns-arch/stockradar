@@ -581,11 +581,18 @@
   }
 
   function normalizeLookupTicker(value) {
-    return String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   }
 
   function isValidStockTicker(value) {
-    return /^[A-Z]{3}$/.test(String(value || ''));
+    return /^(?=.*[A-Z])[A-Z0-9]{3}$/.test(String(value || ''));
+  }
+
+  function enableAlphanumericTickerInputs() {
+    document.querySelectorAll('input[name="ticker"], #watch-ticker').forEach(input => {
+      input.setAttribute('pattern', '[A-Za-z0-9]{3}');
+      input.setAttribute('title', 'Mã HOSE gồm 3 ký tự chữ/số, ví dụ FPT, C32, HT1');
+    });
   }
 
   function horizonCards(report) {
@@ -801,7 +808,7 @@
         if (!query) { suggestions.innerHTML = ''; return; }
         try {
           const assets = await loadTickerAssets();
-          const matches = assets.master.items.filter(item => /^[A-Z]{3}$/.test(item.ticker) && (item.ticker.startsWith(query) || item.company_name.toUpperCase().includes(query))).slice(0, 8);
+          const matches = assets.master.items.filter(item => /^(?=.*[A-Z])[A-Z0-9]{3}$/.test(item.ticker) && (item.ticker.startsWith(query) || item.company_name.toUpperCase().includes(query))).slice(0, 8);
           suggestions.innerHTML = matches.length
             ? matches.map(item => `<button type="button" role="option" data-ticker-value="${escapeHtml(item.ticker)}"><strong>${escapeHtml(item.ticker)}</strong><span>${escapeHtml(item.company_name)}</span><small>${escapeHtml(item.sector)}</small></button>`).join('')
             : (isValidStockTicker(query) ? `<button type="button" role="option" data-ticker-value="${escapeHtml(query)}"><strong>${escapeHtml(query)}</strong><span>Tra mã này</span><small>CHỜ XÁC MINH</small></button>` : '');
@@ -998,6 +1005,7 @@
     getUtm(); retentionEvents();
     track('landing_view');
     mountPortalShell();
+    enableAlphanumericTickerInputs();
     wireNavigation();
     if (/(^|\/)pro\/?$/.test(location.pathname)) { track('pro_page_view'); track('pro_view'); }
     if (/(^|\/)nganh\/?$/.test(location.pathname)) track('sector_view');
