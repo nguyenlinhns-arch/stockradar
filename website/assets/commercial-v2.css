@@ -1,0 +1,38 @@
+:root{--sr2-ink:#0b1f33;--sr2-navy:#0d2b49;--sr2-blue:#0f6fff;--sr2-line:#d9e2eb;--sr2-soft:#f6f8fb;--sr2-muted:#64748b}
+
+/* Stock detail */
+.commercial-stock-page .stock-report-shell{padding:14px 0 28px}
+.commercial-stock-page .buyer-decision-strip{grid-template-columns:repeat(4,1fr);gap:7px;margin:0 0 10px}
+.commercial-stock-page .buyer-decision-strip>div{min-height:64px;padding:10px 11px;border-radius:10px}
+.commercial-stock-page .buyer-decision-strip strong{font-size:11px}.commercial-stock-page .buyer-decision-strip span{font-size:9px;line-height:1.35;margin-top:3px}
+.commercial-stock-page .analysis-tier-grid{gap:10px}
+.commercial-stock-page .analysis-tier-card{border-radius:12px;box-shadow:0 8px 24px rgba(11,31,51,.05)}
+.commercial-stock-page .analysis-tier-head{padding:12px 13px}
+.commercial-stock-page .analysis-tier-head h2{font-size:18px;margin:3px 0}.commercial-stock-page .analysis-tier-head p{font-size:10px;line-height:1.4}
+.commercial-stock-page .analysis-tier-entitlements{padding:8px 12px;gap:5px}.commercial-stock-page .analysis-tier-entitlements span{font-size:9px}
+.commercial-premium-preview{padding:10px 12px 13px;display:grid;gap:7px}
+.commercial-premium-row{display:grid;grid-template-columns:110px 1fr;gap:10px;padding:9px 10px;background:#f7f9fc;border:1px solid #e4eaf0;border-radius:9px}
+.commercial-premium-row span{font-size:9px;font-weight:850;text-transform:uppercase;color:#6b7b8e}.commercial-premium-row strong{font-size:11px;color:var(--sr2-ink)}
+.commercial-premium-actions{display:flex;gap:7px;flex-wrap:wrap;padding-top:3px}.commercial-premium-actions a{font-size:10px!important;min-height:34px!important;padding:7px 10px!important}
+.commercial-stock-page .live-report-metrics{gap:6px}.commercial-stock-page .live-report-metrics>div{padding:9px 10px}.commercial-stock-page .live-report-evidence article{padding:10px 11px}.commercial-stock-page .live-report-foot{font-size:8px}
+
+/* Auth */
+.commercial-auth-page .auth-shell{padding:28px 0 40px}
+.commercial-auth-page .auth-layout{display:block!important;max-width:620px!important;margin:0 auto!important}
+.commercial-auth-page .auth-intro{display:none!important}
+.commercial-auth-page .auth-card{border-radius:14px!important;box-shadow:0 14px 38px rgba(11,31,51,.08)!important;padding:20px!important;background:#fff!important}
+.commercial-auth-page .auth-card-header{margin-bottom:12px!important}.commercial-auth-page .auth-card-header h2{font-size:24px!important;margin:4px 0!important}.commercial-auth-page .auth-card-header p{font-size:10px!important;line-height:1.4!important}
+.commercial-auth-page .auth-config-pill{font-size:9px!important}.commercial-auth-page .signup-plan-selector{margin-bottom:10px!important;padding:0!important;border:0!important}.commercial-auth-page .signup-plan-selector legend{font-size:10px!important;margin-bottom:7px!important}
+.commercial-auth-page .signup-plan-grid{gap:7px!important}.commercial-auth-page .signup-plan-option-body{padding:10px!important}.commercial-auth-page .signup-plan-option-body strong{font-size:12px!important}.commercial-auth-page .signup-plan-option-body>span{font-size:9px!important;line-height:1.35!important}
+.commercial-auth-page .signup-plan-note{font-size:9px!important;margin:6px 0 10px!important}.commercial-auth-page .auth-field{margin-bottom:10px!important}.commercial-auth-page .auth-field label{font-size:10px!important}.commercial-auth-page .auth-field input{min-height:42px!important;padding:9px 10px!important}
+.commercial-auth-page .auth-check{font-size:9px!important;line-height:1.4!important}.commercial-auth-page .signup-email-options{margin-top:10px!important;padding:10px!important;border-radius:10px!important}.commercial-auth-page .signup-email-options legend{font-size:10px!important}.commercial-auth-page .signup-email-note{font-size:8px!important;line-height:1.4!important}
+.commercial-auth-page .auth-form>.button{width:100%;min-height:42px}.commercial-auth-page .auth-switch{text-align:center;font-size:10px!important}.commercial-auth-page .auth-security-note{font-size:8px!important;padding:8px 9px!important}.commercial-auth-page .auth-recovery{font-size:10px!important;margin-top:8px!important}
+
+/* Checkout */
+.commercial-checkout-page .checkout-hero{padding:24px 0 12px!important}.commercial-checkout-page .checkout-hero-inner{max-width:1060px!important}.commercial-checkout-page .checkout-hero h1{font-size:32px!important;margin:4px 0!important;letter-spacing:-.035em}.commercial-checkout-page .checkout-hero p{font-size:10px!important;max-width:760px!important;line-height:1.45!important;margin:5px 0 0!important}.commercial-checkout-page .checkout-steps{margin-top:10px!important}
+.commercial-checkout-page .checkout-main{padding:14px 0 34px!important}.commercial-checkout-page .checkout-grid{gap:12px!important}.commercial-checkout-page .checkout-card{border-radius:13px!important;box-shadow:0 10px 28px rgba(11,31,51,.055)!important}.commercial-checkout-page .checkout-card-head{padding:14px!important}.commercial-checkout-page .checkout-card-head h2{font-size:20px!important;margin:3px 0!important}.commercial-checkout-page .checkout-card-head p{font-size:9px!important;line-height:1.4!important}
+.commercial-checkout-page .checkout-method{padding:13px!important}.commercial-checkout-page .checkout-payment-body{gap:14px!important}.commercial-checkout-page .checkout-bank-row{padding:8px 0!important;font-size:10px!important}.commercial-checkout-page .checkout-warning{font-size:9px!important;line-height:1.4!important;padding:9px!important}.commercial-checkout-page .checkout-confirm{padding:12px 13px!important}.commercial-checkout-page .checkout-confirm h3{font-size:16px!important}.commercial-checkout-page .checkout-confirm p{font-size:9px!important;line-height:1.4!important}.commercial-checkout-page .checkout-state{font-size:9px!important;line-height:1.4!important}
+.commercial-checkout-page .checkout-summary-inner{padding:16px!important}.commercial-checkout-page .checkout-summary h2{font-size:20px!important}.commercial-checkout-page .checkout-summary p{font-size:9px!important;line-height:1.4!important}.commercial-checkout-page .checkout-features{gap:5px!important}.commercial-checkout-page .checkout-features li{font-size:9px!important;line-height:1.4!important}.commercial-checkout-page .checkout-notes{gap:5px!important}.commercial-checkout-page .checkout-note{font-size:8px!important;line-height:1.4!important}.commercial-checkout-page .checkout-total-row{font-size:9px!important}.commercial-checkout-page .checkout-help{display:none!important}
+
+@media(max-width:780px){.commercial-stock-page .buyer-decision-strip{grid-template-columns:1fr 1fr}.commercial-stock-page .analysis-tier-grid{grid-template-columns:1fr!important}.commercial-premium-row{grid-template-columns:1fr}.commercial-auth-page .auth-shell{padding:18px 0 28px}.commercial-checkout-page .checkout-hero h1{font-size:27px!important}.commercial-checkout-page .checkout-grid{grid-template-columns:1fr!important}}
+@media(max-width:480px){.commercial-stock-page .buyer-decision-strip{grid-template-columns:1fr 1fr}.commercial-auth-page .auth-card{padding:15px!important}.commercial-auth-page .signup-plan-grid{grid-template-columns:1fr!important}.commercial-checkout-page .checkout-payment-body{grid-template-columns:1fr!important}}
