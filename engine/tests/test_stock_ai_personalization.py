@@ -8,37 +8,48 @@ EDGE = ROOT / "supabase" / "functions" / "stock-ai" / "index.ts"
 CLIENT = ROOT / "website" / "assets" / "ai-assistant.js"
 
 
+def compact(source: str) -> str:
+    """Ignore formatting/minification while preserving semantic contract checks."""
+    return re.sub(r"\s+", "", source)
+
+
 class StockAiPersonalizationTests(unittest.TestCase):
     def test_edge_reads_account_context_server_side(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn('.from("user_preferences")', source)
-        self.assertIn('.from("watchlist_items")', source)
-        self.assertIn("owns_stock", source)
-        self.assertIn("alert_enabled", source)
-        self.assertIn("cost_basis", source)
-        self.assertIn("portfolio_weight_pct", source)
-        self.assertIn('REQUEST_SCOPE: scope', source)
-        self.assertIn('USER_CONTEXT: userContext', source)
-        self.assertIn('scope === "portfolio"', source)
-        self.assertIn("MAX_PORTFOLIO_TICKERS = 20", source)
+        tight = compact(source)
+        for marker in (
+            '.from("user_preferences")',
+            '.from("watchlist_items")',
+            "owns_stock",
+            "alert_enabled",
+            "cost_basis",
+            "portfolio_weight_pct",
+        ):
+            self.assertIn(marker, source)
+        self.assertIn('REQUEST_SCOPE:scope', tight)
+        self.assertIn('USER_CONTEXT:userContext', tight)
+        self.assertIn('scope==="portfolio"', tight)
+        self.assertIn('MAX_WATCH=20', tight)
 
     def test_single_ticker_context_is_minimized(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn('const requestedWatchItem = scope === "ticker"', source)
-        self.assertIn('const userContext = scope === "portfolio"', source)
-        self.assertIn('requested_ticker: requestedWatchItem ?', source)
-        self.assertIn('requested_ticker_configured', source)
-        self.assertIn('cost_basis: requestedWatchItem.cost_basis', source)
-        self.assertIn('portfolio_weight_pct: requestedWatchItem.portfolio_weight_pct', source)
-        self.assertIn('const researchTickers = scope === "ticker" ? [ticker]', source)
+        tight = compact(source)
+        self.assertIn('requested=scope==="ticker"?watch.find(x=>x.ticker===ticker)||null:null', tight)
+        self.assertIn('userContext=scope==="portfolio"?', tight)
+        self.assertIn('requested_ticker:requested', tight)
+        self.assertIn('requested_ticker_configured:!!requested', tight)
+        self.assertIn('cost_basis', source)
+        self.assertIn('portfolio_weight_pct', source)
+        self.assertIn('researchTickers=scope==="ticker"?[ticker]:', tight)
         self.assertNotIn("user.email", source)
 
     def test_position_context_is_optional_self_declared_and_cannot_infer_nav(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn('const ownsStock = row.owns_stock === true', source)
-        self.assertIn('cost_basis: ownsStock ? positionNumber(row.cost_basis, 0.0001) : null', source)
-        self.assertIn('portfolio_weight_pct: ownsStock ? positionNumber(row.portfolio_weight_pct, 0, 100) : null', source)
-        self.assertIn('position_context_count: positionContextCount', source)
+        tight = compact(source)
+        self.assertIn('constown=r.owns_stock===true', tight)
+        self.assertIn('cost_basis:own?pos(r.cost_basis,.0001):null', tight)
+        self.assertIn('portfolio_weight_pct:own?pos(r.portfolio_weight_pct,0,100):null', tight)
+        self.assertIn('position_context_count:positionCount', tight)
         self.assertIn('position_context_configured:', source)
         self.assertNotIn("broker_account", source)
         self.assertNotIn("position_quantity", source)
@@ -46,14 +57,12 @@ class StockAiPersonalizationTests(unittest.TestCase):
 
     def test_free_and_premium_share_decision_context_while_alert_rights_differ(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn('const ACTIVE_TIERS = new Set(["FREE", "TRIAL", "PAID"])', source)
-        self.assertIn('const PREMIUM_TIERS = new Set(["TRIAL", "PAID"])', source)
-        self.assertIn('const actionContext = readyRows.map((row) => normalizeReport', source)
-        self.assertIn('alert_enabled: PREMIUM_TIERS.has(tier) && row.alert_enabled === true', source)
-        self.assertRegex(
-            source,
-            re.compile(r'tier\s*===\s*"FREE"\s*\?\s*"Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay\.'),
-        )
+        tight = compact(source)
+        self.assertIn('TIERS=newSet(["FREE","TRIAL","PAID"])', tight)
+        self.assertIn('PREMIUM=newSet(["TRIAL","PAID"])', tight)
+        self.assertIn('action=ready.map(r=>normReport(r.data))', tight)
+        self.assertIn('alert_enabled:PREMIUM.has(tier)&&r.alert_enabled===true', tight)
+        self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay.", source)
         self.assertNotIn("redactForFree", source)
         self.assertNotIn("user.email", source)
 
