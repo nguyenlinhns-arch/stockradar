@@ -15,35 +15,32 @@ class FreeStockContextTests(unittest.TestCase):
         self.assertIn("Radar toàn HOSE", page)
         self.assertNotIn("Radar 30", page)
 
-    def test_free_context_is_truthful_four_horizon_and_useful_while_decision_feed_is_closed(self):
+    def test_free_context_is_live_first_and_truthful_while_decision_feed_is_closed(self):
         source = (ROOT / "website" / "assets" / "free-stock-context-v1.js").read_text(encoding="utf-8")
         market = (ROOT / "website" / "assets" / "public-market-reference-v1.js").read_text(encoding="utf-8")
         for marker in (
-            "FREE · BỐI CẢNH STOCKRADAR",
-            "5–20 phiên",
-            "1–6 tháng",
-            "6–18 tháng",
-            "2–5 năm+",
-            "Không bịa Fair Value, Buy Zone, Stop hay Target",
-            "Không dùng tín hiệu/điểm của bên hiển thị tham chiếu làm tín hiệu StockRadar",
-            "Không biến dữ liệu nghiên cứu nội bộ thành dữ liệu khách hàng khi chưa có quyền phát hành",
+            "KẾT LUẬN STOCKRADAR",
             "CHƯA PHÁT HÀNH MUA/BÁN",
+            "Dữ liệu thị trường thực tế được hiển thị ở phía trên",
+            "Score, xếp hạng, 4 khung, Fair Value",
             "ticker-universe.json",
-            "DECISION FEED ĐANG CHỜ",
             "public-market-reference-v1.js",
             "public-market-reference-v1.css",
             "^[A-Z0-9]{3}$",
+            "target.insertAdjacentHTML('beforeend'",
         ):
             self.assertIn(marker, source)
         for marker in (
-            "DỮ LIỆU THỊ TRƯỜNG HIỂN THỊ TRỰC TIẾP",
+            "DỮ LIỆU THỊ TRƯỜNG · HOSE:${ticker}",
+            "Giá hiện tại & biểu đồ",
             "TradingView",
-            "StockRadar không tải xuống, xử lý hay dùng dữ liệu TradingView làm đầu vào",
+            "StockRadar không dùng tín hiệu/điểm của TradingView làm tín hiệu mua bán",
             "embed-widget-symbol-info.js",
             "embed-widget-advanced-chart.js",
             "embed-widget-symbol-profile.js",
             "embed-widget-financials.js",
             "HOSE:${ticker}",
+            "freeContent.prepend(section)",
         ):
             self.assertIn(marker, market)
         self.assertNotIn("Radar 30", source)
