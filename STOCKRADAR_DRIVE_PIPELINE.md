@@ -17,7 +17,10 @@ Current internal coverage verified on 2026-09-04:
 - Intraday 5m: 403/405.
 - Internal valuation bootstrap: 405/405.
 - Internal scanner master: 405/405.
-- Internal website feed: 405/405.
+- Full-scan eligible at current snapshot: 107/405.
+- Internal website feed: 107/107 eligible tickers.
+
+The website feed is intentionally an eligible subset, not a second full-universe database. Full-universe coverage belongs to scanner master; website feed contains only records that pass the current internal Full-Scan Gate.
 
 ## Private pipeline
 
@@ -26,6 +29,19 @@ Current internal coverage verified on 2026-09-04:
 The scanner implements the project sequence:
 
 `4M/Payback -> CANSLIM -> valuation -> SEPA/VCP -> VPA -> Pocket Pivot/Early Breakout -> Ichimoku/Bollinger/Stage -> liquidity/flow -> risk/reward -> action gate`.
+
+## Internal QA result 2026-09-04
+
+Private scanner bundle gate: `PASS_INTERNAL`.
+
+Verified conditions:
+
+- scanner master = 405 unique HOSE tickers;
+- valuation = same 405-ticker universe;
+- internal website feed = exactly the 107 current `full_scan_eligible` tickers;
+- feed is a subset of scanner master and contains no personal-priority metadata;
+- publication gate remains closed for every internal feed row;
+- public publication authorization remains `false`.
 
 ## Public boundary
 
@@ -53,6 +69,8 @@ python scripts/validate_private_scanner_bundle.py private-staging --output qa-ou
 ```
 
 `PASS_INTERNAL` confirms structural scanner usability only. It never authorizes publication.
+
+Regression tests cover both the correct eligible-subset contract and a deliberately mismatched feed that must block.
 
 ## Website integration
 
