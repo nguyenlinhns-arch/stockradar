@@ -171,6 +171,8 @@ def enforce_signup_direct_flow(output: Path) -> Path:
         'Thanh toán chỉ ở bước riêng sau khi tài khoản được xác minh.',
         'Thanh toán chỉ ở bước riêng sau khi tạo tài khoản.',
     )
+    source = source.replace('tài khoản được xác minh', 'tài khoản được tạo')
+    source = source.replace('xác minh tài khoản', 'tạo tài khoản')
 
     source = source.replace(
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>',
