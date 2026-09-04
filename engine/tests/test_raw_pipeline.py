@@ -131,6 +131,11 @@ class RawPipelineTests(unittest.TestCase):
                 "source_terms_reviewed": rights,
                 "evidence_ref": "RAW-RIGHTS-001" if rights else "",
             },
+            "compliance": {
+                "review_completed": True,
+                "public_recommendation_approved": True,
+                "evidence_ref": "RAW-COMPLIANCE-001",
+            },
             "active_status": {"semantics_resolved": True, "market_status_checked": True},
             "datasets": {
                 "security_master": {"path": "security_master.csv", "ticker_column": "ticker", "exchange_column": "exchange"},
