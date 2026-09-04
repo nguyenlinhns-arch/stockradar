@@ -11,6 +11,14 @@ function loadPlaywright() {
 
 const { chromium } = loadPlaywright();
 
+const benignThirdPartyConsoleErrors = new Set([
+  'Cannot listen to the event from the provided iframe, contentWindow is not available',
+]);
+
+function isBenignThirdPartyConsoleError(message) {
+  return benignThirdPartyConsoleErrors.has(String(message || '').trim());
+}
+
 (async () => {
   const base = process.env.STOCKRADAR_QA_URL || 'http://127.0.0.1:8765';
   const out = path.resolve(__dirname, '..', 'artifacts', 'screenshots');
@@ -61,7 +69,10 @@ const { chromium } = loadPlaywright();
       const routeErrors = [];
       const prefix = `${target.route} [${viewport.name}]`;
       page.on('console', msg => {
-        if (msg.type() === 'error') routeErrors.push(`console: ${msg.text()}`);
+        if (msg.type() !== 'error') return;
+        const text = msg.text();
+        if (isBenignThirdPartyConsoleError(text)) return;
+        routeErrors.push(`console: ${text}`);
       });
       page.on('pageerror', err => routeErrors.push(`pageerror: ${err.message}`));
 
