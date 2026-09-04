@@ -3,6 +3,26 @@ name: Verify and deploy StockRadar Pages
 on:
   push:
     branches: [main]
+    paths:
+      - 'website/**'
+      - 'engine/**'
+      - 'scripts/build_pages.py'
+      - 'scripts/fail_close_public_ticker_seed.py'
+      - 'scripts/inject_public_ux.py'
+      - 'scripts/inject_home_radar_polish.py'
+      - 'scripts/upgrade_home_radar_operational.py'
+      - 'scripts/apply_buyer_readiness.py'
+      - 'scripts/redesign_home_value_block.py'
+      - 'scripts/apply_conversion_v3.py'
+      - 'scripts/link_premium_sample.py'
+      - 'scripts/patch_conversion_funnel_v4.py'
+      - 'scripts/redesign_home_paid_intent_v1.py'
+      - 'scripts/apply_premium_email_product_v1.py'
+      - 'scripts/strip_public_methods.py'
+      - 'scripts/verify*.py'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
