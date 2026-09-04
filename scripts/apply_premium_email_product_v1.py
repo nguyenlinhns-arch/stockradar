@@ -91,6 +91,78 @@ def transform_signup(source: str) -> str:
         if pos < 0:
             raise RuntimeError("Signup form marker missing")
         source = source[:pos] + SIGNUP_BLOCK + "\n        " + source[pos:]
+
+    replacements = (
+        (
+            'Tạo tài khoản StockRadar Free để nhận bản rà soát 09:00 hoặc chọn Premium để thêm cảnh báo điểm mua/bán trong phiên.',
+            'Tạo tài khoản StockRadar Free hoặc ghi nhận nhu cầu Premium. Free dùng các chức năng công khai; Daily 09:00 và Action Alert thuộc Trial/Premium.',
+        ),
+        (
+            'Free nhận bản tin 09:00.<br>Premium thêm cảnh báo trong phiên.',
+            'Free để tra cứu.<br>Premium để nhận lớp quyết định.',
+        ),
+        (
+            'Gói Free dành cho người muốn theo dõi thị trường mỗi ngày. Premium kế thừa quyền Free và bổ sung phân tích chuyên sâu, kế hoạch giao dịch cùng cảnh báo điểm mua/bán khi tín hiệu đạt chuẩn.',
+            'Gói Free dành cho người muốn dùng các chức năng công khai và tự đánh giá. Premium bổ sung Daily 09:00, kế hoạch giao dịch và cảnh báo hành động khi dữ liệu đủ chuẩn.',
+        ),
+        (
+            '<span class="auth-step"><b>3</b>Nhận email theo quyền gói</span>',
+            '<span class="auth-step"><b>3</b>Kích hoạt quyền theo gói</span>',
+        ),
+        (
+            '<li><strong>Free:</strong> 0đ, tra cứu mã HOSE, Radar/phân tích công khai, danh sách theo dõi cơ bản và <strong>bản rà soát thị trường lúc 09:00 mỗi ngày</strong> sau khi email được xác minh và bạn đồng ý nhận.</li>',
+            '<li><strong>Free:</strong> 0đ, tra cứu mã HOSE, Radar/phân tích công khai, danh sách theo dõi cơ bản và email hệ thống cần thiết cho tài khoản.</li>',
+        ),
+        (
+            '<li><strong>Premium trả phí:</strong> toàn bộ quyền Free + phân tích sâu, Buy Zone/Stop/Target/R:R và <strong>cảnh báo điểm mua/bán trong phiên</strong> tại 10:30, 11:15, 13:30, 14:15 khi tín hiệu đủ chuẩn.</li>',
+            '<li><strong>Premium trả phí:</strong> toàn bộ quyền Free + Daily 09:00, phân tích sâu, Buy Zone/Stop/Target/R:R và <strong>cảnh báo điểm mua/bán trong phiên</strong> tại 10:30, 11:15, 13:30, 14:15 khi tín hiệu đủ chuẩn.</li>',
+        ),
+        (
+            '<span>Tra cứu, Radar, phân tích công khai và bản rà soát 09:00 hằng ngày.</span>',
+            '<span>Tra cứu, Radar, phân tích công khai và watchlist cơ bản.</span>',
+        ),
+        (
+            '<span>Toàn bộ Free + phân tích sâu và cảnh báo điểm mua/bán trong phiên.</span>',
+            '<span>Daily 09:00 + phân tích sâu + kế hoạch giao dịch + Action Alert.</span>',
+        ),
+        (
+            'Free có phí 0đ và có quyền nhận bản rà soát 09:00 sau khi xác minh email và đồng ý nhận.',
+            'Free có phí 0đ, dùng chức năng công khai và chỉ nhận email hệ thống cần thiết cho tài khoản.',
+        ),
+        (
+            '<legend>Email StockRadar</legend>',
+            '<legend>Email Premium StockRadar</legend>',
+        ),
+        (
+            '<label class="auth-check"><input name="email_daily_brief" type="checkbox"><span><strong>Bản rà soát StockRadar lúc 09:00 hằng ngày</strong> <span class="email-choice-badge">FREE + PREMIUM</span> — tổng quan thị trường, cổ phiếu/ngành nổi bật ở mức phù hợp với quyền gói. Chọn mục này để nhận email sau khi xác minh.</span></label>',
+            '<label class="auth-check"><input name="email_daily_brief" type="checkbox" disabled><span><strong>Daily 09:00</strong> <span class="email-choice-badge">PREMIUM</span> — ưu tiên watchlist và việc cần chú ý trước bối cảnh thị trường. Chỉ ghi nhận nhu cầu khi bạn chọn Premium.</span></label>',
+        ),
+        (
+            '<label class="auth-check"><input name="email_event_alerts" type="checkbox"><span><strong>Cảnh báo điểm mua/bán trong phiên</strong> <span class="email-choice-badge">PREMIUM</span> — thông báo khi có hành động được xác nhận như đạt điểm mua, nhồi lệnh, hạ tỷ trọng hoặc cắt lỗ/bán.</span></label>',
+            '<label class="auth-check"><input name="email_event_alerts" type="checkbox" disabled><span><strong>Cảnh báo điểm mua/bán trong phiên</strong> <span class="email-choice-badge">PREMIUM</span> — thông báo khi có hành động được xác nhận như đạt điểm mua, nhồi lệnh, hạ tỷ trọng hoặc cắt lỗ/bán.</span></label>',
+        ),
+        (
+            'Không có email nội dung nào được bật nếu bạn chưa đồng ý nhận. Free đủ quyền nhận bản 09:00; cảnh báo mua/bán chỉ được gửi khi tài khoản có quyền Trial/Paid, email đã xác minh và có đồng ý nhận hợp lệ.',
+            'Hai lựa chọn này chỉ dành cho Trial/Paid. Chọn Premium ở trên để ghi nhận nhu cầu; quyền gửi thực tế vẫn cần tài khoản đủ quyền, email đã xác minh, consent hợp lệ và hệ thống delivery được kích hoạt.',
+        ),
+        (
+            'Sau khi xác minh, Free có thể nhận bản tin 09:00 theo lựa chọn; cảnh báo điểm mua/bán chỉ kích hoạt khi tài khoản có quyền Premium.',
+            'Sau khi xác minh, Free dùng tài khoản bình thường; các email nội dung chỉ có hiệu lực khi tài khoản được cấp quyền Trial/Paid và hệ thống gửi đủ điều kiện.',
+        ),
+        (
+            'assets/signup-email-intent.js?v=20260904-privacy1',
+            'assets/signup-email-intent.js?v=20260904-paid2',
+        ),
+    )
+    for old, new in replacements:
+        source = source.replace(old, new)
+
+    if '<a href="hom-nay/">Hôm nay</a>' not in source:
+        source = source.replace(
+            '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="radar5/">',
+            '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu><a href="hom-nay/">Hôm nay</a><a href="radar5/">',
+            1,
+        )
     return inject_css(source)
 
 
@@ -117,7 +189,6 @@ def transform_account(source: str) -> str:
         1,
     )
 
-    # Current product contract: Free receives transactional account email only.
     source = source.replace(
         'Free nhận bản rà soát cơ bản; Trial/Paid có thể nhận nội dung Premium và cảnh báo điểm mua/bán.',
         'Báo cáo hằng ngày và cảnh báo hành động dành cho Trial/Paid; Free chỉ nhận email hệ thống cần thiết cho tài khoản.',
