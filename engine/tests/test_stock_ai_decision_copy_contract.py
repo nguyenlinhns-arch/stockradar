@@ -5,6 +5,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 CORE = ROOT / "supabase" / "functions" / "_shared" / "stockradar-core.ts"
 AUTH_AI = ROOT / "supabase" / "functions" / "stock-ai" / "index.ts"
+GUEST_AI = ROOT / "supabase" / "functions" / "stock-ai-guest" / "index.ts"
 
 
 class StockAiDecisionCopyContractTests(unittest.TestCase):
@@ -12,6 +13,7 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
     def setUpClass(cls):
         cls.source = CORE.read_text(encoding="utf-8")
         cls.auth_ai = AUTH_AI.read_text(encoding="utf-8")
+        cls.guest_ai = GUEST_AI.read_text(encoding="utf-8")
 
     def test_model_prompt_requires_decision_first_plain_text(self):
         source = self.source
@@ -44,6 +46,14 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn('if(mode==="METHOD_ONLY")', source)
         self.assertNotIn('if(mode!=="ACTION_READY")', source)
         self.assertIn('RESEARCH_CONTEXT:researchContexts', source)
+        self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
+        self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
+
+    def test_guest_research_uses_model_when_data_exists(self):
+        source = self.guest_ai.replace(" ", "")
+        self.assertIn('if(mode==="METHOD_ONLY")', source)
+        self.assertNotIn('if(mode!=="ACTION_READY")', source)
+        self.assertIn('RESEARCH_CONTEXT:researchContext', source)
         self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
         self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
 
