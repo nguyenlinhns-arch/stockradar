@@ -24,9 +24,9 @@
     return validTicker(routeTicker) ? routeTicker : '';
   }
 
-  function extractTicker(text) {
+  function explicitTicker(text) {
     const tokens = String(text || '').toUpperCase().match(/\b[A-Z0-9]{3}\b/g) || [];
-    return tokens.find(token => validTicker(token) && !STOPWORDS.has(token)) || state.ticker || '';
+    return tokens.find(token => validTicker(token) && !STOPWORDS.has(token)) || '';
   }
 
   function isPortfolioPage() {
@@ -36,6 +36,13 @@
   function portfolioIntent(text) {
     const value = String(text || '').toLowerCase();
     return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|các mã đang giữ|cac ma dang giu|tài khoản|tai khoan|hôm nay.*(làm gì|lam gi|chú ý|chu y)|mã nào.*(gần|gan|tốt|tot|rủi ro|rui ro))/.test(value);
+  }
+
+  function tickerForMessage(text) {
+    const explicit = explicitTicker(text);
+    if (explicit) return explicit;
+    if (portfolioIntent(text)) return '';
+    return state.ticker || '';
   }
 
   function requestScope(message, ticker) {
@@ -122,7 +129,7 @@
 
   async function askAI(message, log, input, sendButton) {
     if (state.sending) return;
-    const ticker = extractTicker(message);
+    const ticker = tickerForMessage(message);
     const scope = requestScope(message, ticker);
     if (!scope) {
       appendMessage(log, 'assistant', 'Hãy nhập một mã HOSE, hoặc hỏi về danh mục/watchlist, ví dụ: “FPT mua được chưa?” hay “Danh mục hôm nay cần chú ý gì?”.');
