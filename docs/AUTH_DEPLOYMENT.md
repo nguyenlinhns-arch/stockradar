@@ -4,20 +4,32 @@ StockRadar uses GitHub Pages for the public site and Supabase Auth for identity.
 
 Current Supabase project: `StockRadar` (`xamviatbxufjlpiwhebb`, Singapore).
 
-Current temporary production URL: `https://nguyenlinhns-arch.github.io/stockradar/`.
+Known GitHub Pages origin: `https://nguyenlinhns-arch.github.io/stockradar/`. The intended canonical product domain is `https://stockradar.vn/`; verify the active Pages custom-domain/DNS state before changing Auth URLs.
 
 ## Required Supabase Auth configuration
 
-In **Authentication → URL Configuration**:
+In **Authentication → URL Configuration**, the Site URL and redirects must match the host actually serving authentication flows.
 
-- Site URL: `https://nguyenlinhns-arch.github.io/stockradar/` while GitHub Pages is the live host.
-- Add exact redirects:
-  - `https://nguyenlinhns-arch.github.io/stockradar/tai-khoan/`
-  - `https://nguyenlinhns-arch.github.io/stockradar/dat-lai-mat-khau/`
+For the GitHub Pages origin, exact redirects include:
 
-When `https://stockradar.vn/` becomes the live canonical host, replace Site URL with that domain and add the equivalent `/tai-khoan/` and `/dat-lai-mat-khau/` redirects before switching traffic.
+- `https://nguyenlinhns-arch.github.io/stockradar/tai-khoan/`
+- `https://nguyenlinhns-arch.github.io/stockradar/dat-lai-mat-khau/`
+
+When `https://stockradar.vn/` is verified as the live canonical host, use that Site URL and add the equivalent `/tai-khoan/` and `/dat-lai-mat-khau/` redirects before switching auth traffic. Do not infer DNS readiness from repository state alone.
 
 Keep email confirmations enabled.
+
+## Versioned legal and email consent
+
+Current versions are intentionally separate:
+
+- Terms of Use: `2026-09-03`
+- Privacy Policy: `2026-09-04`
+- Product-email consent document: `2026-09-04`
+
+Signup metadata records the terms and privacy versions separately. Public email-interest forms submit the current product-email consent version. `private.email_delivery_gate.current_consent_version` is `2026-09-04`; preferences without current granted consent are disabled fail-closed.
+
+A policy bump must never silently reinterpret an older consent as consent to the new version. When changing the privacy/email consent version, update the public copy/client metadata and database current version together, then test that the new version is accepted and the old version is rejected.
 
 ## Email delivery launch gate
 
@@ -45,7 +57,7 @@ For password recovery use:
 
 - `supabase/email-templates/recovery.html`
 
-The organization is on Supabase Free. The default hosted sender is testing-only and is not the public delivery channel. Before opening registration to arbitrary users, connect a custom SMTP provider and verify its sending domain. Issue #1 tracks this launch gate.
+The default hosted sender is testing-only and is not the public product delivery channel. Before opening arbitrary-user email flows, connect a custom SMTP provider and verify its sending domain.
 
 ## Production build configuration
 
@@ -56,16 +68,18 @@ Production release sequence:
 1. `python -m engine.cli build-public`
 2. `python -m unittest discover -s engine/tests -v`
 3. `python scripts/build_pages.py --output .pages-site` with auth enabled and public Supabase config.
-4. `python scripts/verify_pages_auth.py .pages-site`
-5. Only after all checks pass may GitHub Pages deploy.
+4. Apply production-facing UX/buyer-readiness guards.
+5. Run production auth, public-surface and buyer-ready verifiers.
+6. Install pinned Playwright/Chromium and run multi-viewport visual QA against the built artifact.
+7. Only after all checks pass may GitHub Pages upload and deploy.
+
+The visual gate covers 15 actually published routes at desktop, tablet and mobile sizes (45 route/viewport checks). It fails on non-200 responses, missing main/H1/title, horizontal overflow, relevant console/page errors, broken mobile navigation and undersized primary controls.
 
 The workflow uses `cancel-in-progress: true`, so a newer `main` commit cancels stale Pages runs and becomes the only release candidate.
 
-The verifier blocks deployment when production auth is disabled, email-delivery state is not explicitly declared, Supabase config is incomplete, a privileged key appears in public output, or OTP/legal/password-hardening/account-deletion surfaces are missing.
-
 ## Implemented flows
 
-- Signup: email + password + terms/privacy consent.
+- Signup: email + password + separately versioned terms/privacy consent.
 - Signup confirmation: six-digit email OTP using `verifyOtp`.
 - Resend signup OTP with a persistent 60-second UI cooldown plus Supabase server-side rate limiting.
 - Resume verification from the login page for users who registered but have not confirmed their email.
@@ -76,12 +90,14 @@ The verifier blocks deployment when production auth is disabled, email-delivery 
 - Forgot-password email and reset page.
 - Change password while signed in only after supplying the current password; recovery-token password reset remains separate.
 - User profile in `public.profiles`: default tier `FREE`; status moves from `PENDING` to `ACTIVE` after email verification.
-- RLS restricts profile reads to the signed-in user and does not let the browser edit entitlement fields.
-- Database grants are least-privilege: `anon` has no direct table privileges; `authenticated` receives only `SELECT` on `profiles`, with RLS restricting rows to the signed-in user. `consent_receipts` is not directly granted to browser roles.
-- Versioned terms/privacy consent receipts in `public.consent_receipts` created by the server-side signup trigger.
-- Public Terms and Privacy pages.
-- Self-service account deletion requires current-password reauthentication plus explicit `XOA` confirmation before the authenticated Edge Function is invoked.
-- `delete-account` Edge Function uses the current Supabase publishable/secret key model, keeps server-only secret material inside Supabase, validates the user JWT, restricts browser origins, and deletes related profile/consent rows through database cascades.
+- RLS restricts profile/watchlist/preference rows to the signed-in user and does not let the browser edit entitlement fields.
+- Versioned legal/product-email consent receipts created by server-side flows.
+- Public Terms and Privacy pages; Privacy Policy current version is 2026-09-04.
+- Self-service account deletion requires current-password reauthentication, explicit `XOA` confirmation, a verified user JWT and a Supabase `session_id` created within the previous five minutes.
+- `delete-account` Edge Function is source-controlled, JWT-protected, origin-restricted and checks the recent session through a service-role-only RPC before calling `auth.admin.deleteUser`.
+- Payment and subscription audit rows do not block deletion: their user FKs use `ON DELETE SET NULL`, preserving reconciliation history while removing the direct deleted-account link.
+- Production rollback tests verify both the billing-history deletion behavior and the recent-session gate without leaving test data.
+- Authenticated stock-report requests use private operational observability that does not retain JWT/IP/email/user-agent/report payload.
 - Global login/register or account/logout controls on deployed HTML pages.
 
 ## Security boundaries
@@ -91,13 +107,18 @@ The verifier blocks deployment when production auth is disabled, email-delivery 
 - Public Pages code may contain only the Supabase project URL and publishable key.
 - Secret/service-role/SMTP credentials remain server-side only.
 - Paid entitlement must come from trusted backend/billing state, never client-editable metadata.
+- Browser roles cannot invoke recent-session deletion verification or private stock API audit RPCs directly.
 - Never collect broker passwords, trading OTPs, broker API secrets, order credentials, NAV, bank OTPs, or portfolio-control credentials through StockRadar authentication.
 
-## Release checks after Auth changes
+## Release checks after Auth/privacy changes
 
 - GitHub Actions regression suite: PASS.
 - Production auth artifact verifier: PASS.
-- Supabase Security Advisor: no unresolved warnings introduced by the change.
-- Supabase Performance Advisor: no unresolved warnings introduced by the change.
+- Production public/buyer-ready verifiers: PASS.
+- Multi-viewport Chromium visual QA: PASS.
+- Supabase Security Advisor: no new application WARN/ERROR.
+- Supabase Performance Advisor: no new actionable WARN/ERROR.
 - Verify effective browser grants remain least-privilege after schema changes.
+- For deletion changes, rerun billing-history SET NULL and recent-session rollback tests.
+- For privacy/consent changes, verify current consent is accepted and the prior version is rejected using rollback-safe tests.
 - Test one real signup mailbox end to end after any email-template, SMTP, Site URL, redirect, or canonical-domain change.
