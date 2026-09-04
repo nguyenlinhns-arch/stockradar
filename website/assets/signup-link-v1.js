@@ -39,6 +39,13 @@
     return new URL(plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/?verified=1', document.baseURI).toString();
   }
 
+  function syncExistingLogin(form) {
+    const link = document.querySelector('[data-signup-existing-login]');
+    if (!link) return;
+    const next = selectedPlan(form) === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/';
+    link.href = `dang-nhap/?next=${encodeURIComponent(next)}`;
+  }
+
   async function redirectExistingPremiumUser(form) {
     if (selectedPlan(form) !== 'premium') return false;
     const cfg = window.STOCKRADAR_AUTH_CONFIG || {};
@@ -159,6 +166,7 @@
     if (!form || !panel) return;
 
     document.querySelector('[data-auth-signup-otp-form]')?.remove();
+    syncExistingLogin(form);
 
     form.addEventListener('submit', event => submitSignup(event, form, panel), true);
 
@@ -169,7 +177,10 @@
     });
 
     form.querySelectorAll('input[name="selected_plan"]').forEach(input => {
-      input.addEventListener('change', () => redirectExistingPremiumUser(form));
+      input.addEventListener('change', () => {
+        syncExistingLogin(form);
+        redirectExistingPremiumUser(form);
+      });
     });
 
     const params = new URLSearchParams(location.search);
