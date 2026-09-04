@@ -24,15 +24,15 @@ jobs:
   publish:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install bundle and Drive dependencies
-        run: pip install --disable-pip-version-check pandas numpy google-api-python-client google-auth
+      - name: Install bundle dependencies
+        run: pip install --disable-pip-version-check pandas numpy
 
       - name: Resolve successful Research V7 run
         id: research
@@ -115,71 +115,10 @@ jobs:
           }, ensure_ascii=False))
           PY
 
-      - name: Upload GitHub bundle artifact
+      - name: Upload canonical production handoff artifact
         uses: actions/upload-artifact@v4
         with:
           name: stockradar-ticker-lookup-internal-v1
           path: artifacts/internal-research-bundle/
           retention-days: 30
           if-no-files-found: error
-
-      - name: Publish bundle and manifest to production Drive feed
-        env:
-          STOCKRADAR_GDRIVE_JSON: ${{ secrets.STOCKRADAR_GDRIVE_JSON }}
-          STOCKRADAR_DRIVE_FEED_FOLDER: '1MhOr5yBaM7ZUonQmTg-XLtgoA9l-wgs8'
-        shell: bash
-        run: |
-          set -euo pipefail
-          python - <<'PY'
-          import json, os
-          from pathlib import Path
-          from google.oauth2 import service_account
-          from googleapiclient.discovery import build
-          from googleapiclient.http import MediaFileUpload
-
-          raw=os.environ.get('STOCKRADAR_GDRIVE_JSON','').strip()
-          if not raw:
-              raise SystemExit('STOCKRADAR_GDRIVE_JSON is missing')
-          info=json.loads(raw)
-          creds=service_account.Credentials.from_service_account_info(
-              info, scopes=['https://www.googleapis.com/auth/drive']
-          )
-          drive=build('drive','v3',credentials=creds,cache_discovery=False)
-          folder=os.environ['STOCKRADAR_DRIVE_FEED_FOLDER']
-          paths=sorted(Path('artifacts/internal-research-bundle').glob('stockradar_ticker_lookup_internal_405_*.json'))
-          if len(paths)!=2:
-              raise SystemExit(f'Expected bundle + manifest, found {len(paths)} files')
-
-          uploaded=[]
-          for path in paths:
-              name=path.name
-              q=f"'{folder}' in parents and trashed = false and name = '{name.replace(chr(39), chr(92)+chr(39))}'"
-              result=drive.files().list(
-                  q=q,
-                  pageSize=10,
-                  fields='files(id,name,modifiedTime)',
-                  supportsAllDrives=True,
-                  includeItemsFromAllDrives=True,
-              ).execute()
-              media=MediaFileUpload(str(path), mimetype='application/json', resumable=False)
-              existing=(result.get('files') or [])
-              if existing:
-                  file_id=existing[0]['id']
-                  saved=drive.files().update(
-                      fileId=file_id,
-                      media_body=media,
-                      fields='id,name,modifiedTime',
-                      supportsAllDrives=True,
-                  ).execute()
-                  action='updated'
-              else:
-                  saved=drive.files().create(
-                      body={'name':name,'parents':[folder],'mimeType':'application/json'},
-                      media_body=media,
-                      fields='id,name,modifiedTime',
-                      supportsAllDrives=True,
-                  ).execute()
-                  action='created'
-              uploaded.append({'action':action, **saved})
-          print(json.dumps({'drive_folder':folder,'files':uploaded},ensure_ascii=False))
-          PY
