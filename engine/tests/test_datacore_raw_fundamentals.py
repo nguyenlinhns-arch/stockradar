@@ -174,9 +174,10 @@ class DataCoreRawFundamentalTests(unittest.TestCase):
             path = Path(directory) / "fundamentals.csv"
             write_fundamentals(path, rows)
             header = path.read_text(encoding="utf-8").splitlines()[0]
-            self.assertEqual(tuple(header.split(",")), OUTPUT_FIELDS)
-            for forbidden in ("roe", "pe", "pb", "eps", "score", "rank", "recommendation", "target"):
-                self.assertNotIn(forbidden, header.lower())
+            columns = tuple(header.split(","))
+            self.assertEqual(columns, OUTPUT_FIELDS)
+            forbidden = {"roe", "pe", "pb", "eps", "score", "rank", "recommendation", "target"}
+            self.assertFalse(forbidden.intersection(columns))
 
 
 if __name__ == "__main__":
