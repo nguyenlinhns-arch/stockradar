@@ -12,7 +12,7 @@
   <link rel="stylesheet" href="assets/lead-v1.css?v=20260904-checkout2">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="assets/app.js?v=20260904-checkout2" defer></script>
-  <script src="assets/email-interest.js?v=20260904-checkout2" defer></script>
+  <script src="assets/email-interest.js?v=20260904-privacy1" defer></script>
   <script src="assets/checkout-v1.js?v=20260904-checkout2" defer></script>
 </head>
 <body data-proposition="checkout">
@@ -50,19 +50,9 @@
 
           <div class="checkout-methods">
             <section class="checkout-method">
-              <div class="checkout-method-title">
-                <strong>Chuyển khoản ngân hàng</strong>
-                <span class="checkout-badge">Khuyến nghị</span>
-              </div>
+              <div class="checkout-method-title"><strong>Chuyển khoản ngân hàng</strong><span class="checkout-badge">Khuyến nghị</span></div>
               <div class="checkout-payment-body">
-                <div class="checkout-qr" aria-label="Vị trí mã VietQR">
-                  <div>
-                    <div class="checkout-qr-icon">QR</div>
-                    <strong>VietQR</strong>
-                    <span>Mã QR sẽ hiển thị tại đây khi cổng thanh toán StockRadar được chính thức mở.</span>
-                  </div>
-                </div>
-
+                <div class="checkout-qr" aria-label="Vị trí mã VietQR"><div><div class="checkout-qr-icon">QR</div><strong>VietQR</strong><span>Mã QR sẽ hiển thị tại đây khi cổng thanh toán StockRadar được chính thức mở.</span></div></div>
                 <div>
                   <div class="checkout-bank-list">
                     <div class="checkout-bank-row"><span>Ngân hàng</span><strong data-checkout-bank>—</strong></div>
@@ -93,7 +83,7 @@
               <div class="lead-field"><label for="checkout-interest-email">Email</label><input id="checkout-interest-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
               <input name="daily_brief" type="checkbox" hidden aria-hidden="true" tabindex="-1">
               <input name="event_alerts" type="checkbox" checked hidden aria-hidden="true" tabindex="-1">
-              <label class="lead-check"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và nhu cầu Premium theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-03.</span></label>
+              <label class="lead-check"><input name="privacy" type="checkbox" required><span>Tôi đồng ý StockRadar lưu email và nhu cầu Premium theo <a href="quyen-rieng-tu/">Chính sách quyền riêng tư</a> phiên bản 2026-09-04.</span></label>
               <div class="lead-honeypot" aria-hidden="true"><label for="checkout-interest-company">Công ty</label><input id="checkout-interest-company" name="company" type="text" autocomplete="off" tabindex="-1"></div>
               <button class="lead-submit" type="submit">Báo tôi khi Premium mở thanh toán</button>
               <p class="email-interest-message" data-email-interest-message aria-live="polite">StockRadar chỉ ghi nhận nhu cầu cảnh báo Premium; không yêu cầu OTP, không tự thu phí.</p>
@@ -104,49 +94,23 @@
 
         <aside class="checkout-card checkout-summary" aria-labelledby="checkout-summary-title">
           <div class="checkout-summary-inner">
-            <span class="checkout-plan-pill">PREMIUM</span>
-            <h2 id="checkout-summary-title">StockRadar Premium</h2>
+            <span class="checkout-plan-pill">PREMIUM</span><h2 id="checkout-summary-title">StockRadar Premium</h2>
             <p>Gói 30 ngày dành cho nhà đầu tư cần phân tích sâu và cảnh báo hành động trong phiên.</p>
             <div class="checkout-price"><strong data-checkout-amount>199.000đ</strong><span>/ 30 ngày</span></div>
-
             <ul class="checkout-features">
-              <li>Toàn bộ quyền Free, gồm bản rà soát 09:00 hằng ngày.</li>
-              <li>Phân tích sâu 4M · CANSLIM · Payback · Bear/Base/Bull.</li>
-              <li>Buy Zone · Stop-loss · Target · Upside/Downside · Risk/Reward.</li>
-              <li>Cảnh báo mua/bán tại 10:30 · 11:15 · 13:30 · 14:15 khi tín hiệu đạt chuẩn.</li>
-              <li>Danh sách theo dõi mở rộng và nhật ký khuyến nghị đầy đủ.</li>
+              <li>Toàn bộ quyền Free, gồm bản rà soát 09:00 hằng ngày.</li><li>Phân tích sâu 4M · CANSLIM · Payback · Bear/Base/Bull.</li><li>Buy Zone · Stop-loss · Target · Upside/Downside · Risk/Reward.</li><li>Cảnh báo mua/bán tại 10:30 · 11:15 · 13:30 · 14:15 khi tín hiệu đạt chuẩn.</li><li>Danh sách theo dõi mở rộng và nhật ký khuyến nghị đầy đủ.</li>
             </ul>
-
-            <div class="checkout-total">
-              <div class="checkout-total-row"><span>Gói</span><strong>Premium 30 ngày</strong></div>
-              <div class="checkout-total-row"><span>Tự gia hạn</span><strong>Không</strong></div>
-              <div class="checkout-total-row is-total"><span>Tổng thanh toán</span><strong data-checkout-amount>199.000đ</strong></div>
-            </div>
-
-            <div class="checkout-account">
-              <span>Tài khoản nhận quyền Premium</span>
-              <strong data-checkout-account-email>Chưa đăng nhập</strong>
-            </div>
-
-            <div class="checkout-notes">
-              <div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> sau khi giao dịch được xác minh.</span></div>
-              <div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> mỗi thanh toán hợp lệ cộng đúng 30 ngày.</span></div>
-              <div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> tài khoản trở về Free, không xóa hồ sơ và danh sách theo dõi.</span></div>
-            </div>
+            <div class="checkout-total"><div class="checkout-total-row"><span>Gói</span><strong>Premium 30 ngày</strong></div><div class="checkout-total-row"><span>Tự gia hạn</span><strong>Không</strong></div><div class="checkout-total-row is-total"><span>Tổng thanh toán</span><strong data-checkout-amount>199.000đ</strong></div></div>
+            <div class="checkout-account"><span>Tài khoản nhận quyền Premium</span><strong data-checkout-account-email>Chưa đăng nhập</strong></div>
+            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> sau khi giao dịch được xác minh.</span></div><div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> mỗi thanh toán hợp lệ cộng đúng 30 ngày.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> tài khoản trở về Free, không xóa hồ sơ và danh sách theo dõi.</span></div></div>
           </div>
         </aside>
       </div>
 
-      <div class="checkout-help">
-        <article><strong>1 · Thanh toán đúng nội dung</strong><span>Mỗi yêu cầu có mã giao dịch riêng để đối soát chính xác và tránh ghi nhận nhầm.</span></article>
-        <article><strong>2 · Chờ xác minh giao dịch</strong><span>Không kích hoạt Premium chỉ dựa vào nút “đã chuyển khoản”; giao dịch phải được backend xác minh.</span></article>
-        <article><strong>3 · Premium cộng 30 ngày</strong><span>Nếu đang còn hạn, lần gia hạn tiếp theo được cộng tiếp từ thời điểm hết hạn hiện tại.</span></article>
-      </div>
+      <div class="checkout-help"><article><strong>1 · Thanh toán đúng nội dung</strong><span>Mỗi yêu cầu có mã giao dịch riêng để đối soát chính xác và tránh ghi nhận nhầm.</span></article><article><strong>2 · Chờ xác minh giao dịch</strong><span>Không kích hoạt Premium chỉ dựa vào nút “đã chuyển khoản”; giao dịch phải được backend xác minh.</span></article><article><strong>3 · Premium cộng 30 ngày</strong><span>Nếu đang còn hạn, lần gia hạn tiếp theo được cộng tiếp từ thời điểm hết hạn hiện tại.</span></article></div>
     </section>
   </main>
-
   <div class="checkout-mobile-bar"><a href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-mobile-action>Đăng nhập để thanh toán</a></div>
-
   <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-ky/">So sánh gói</a></div></div><p class="disclaimer">Thanh toán không đồng nghĩa cam kết lợi nhuận. StockRadar là công cụ nghiên cứu và sàng lọc; người dùng tự chịu trách nhiệm với quyết định đầu tư.</p></div></footer>
 </body>
 </html>
