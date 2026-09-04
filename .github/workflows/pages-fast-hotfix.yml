@@ -9,6 +9,7 @@ on:
       - 'engine/tests/test_stock_ai_product_center.py'
       - 'scripts/inject_ai_assistant.py'
       - 'scripts/verify_ai_assistant.py'
+      - 'scripts/redesign_home_value_block.py'
       - '.github/workflows/pages-fast-hotfix.yml'
   workflow_dispatch:
 
