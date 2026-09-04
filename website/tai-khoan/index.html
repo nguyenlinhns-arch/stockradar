@@ -9,9 +9,11 @@
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260903-auth7">
   <link rel="stylesheet" href="assets/email-preferences.css?v=20260903-email2">
+  <link rel="stylesheet" href="assets/account-notifications.css?v=20260904-alert1">
   <script src="assets/app.js?v=20260903-auth7" defer></script>
   <script src="assets/account-preferences.js?v=20260904-position1" defer></script>
   <script src="assets/email-preferences.js?v=20260903-email2" defer></script>
+  <script src="assets/account-notifications.js?v=20260904-alert1" defer></script>
 </head>
 <body data-proposition="account">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -26,6 +28,17 @@
           <article class="auth-account-card"><span class="panel-label">HỒ SƠ</span><h2>Thông tin tài khoản</h2><div class="auth-account-list"><div class="auth-account-row"><span>Email</span><strong data-account-email>—</strong></div><div class="auth-account-row"><span>Xác minh email</span><strong data-account-verified>—</strong></div><div class="auth-account-row"><span>Ngày tạo</span><strong data-account-created>—</strong></div><div class="auth-account-row"><span>Gói hiện tại</span><strong data-account-tier>—</strong></div><div class="auth-account-row"><span>Trạng thái</span><strong data-account-status>—</strong></div></div></article>
           <article class="auth-account-card"><span class="panel-label">BẢO MẬT</span><h2>Đổi mật khẩu</h2><form class="auth-form" data-auth-update-password-form data-require-current-password novalidate><div class="auth-field"><label for="account-current-password">Mật khẩu hiện tại</label><div class="auth-password-wrap"><input id="account-current-password" name="current_password" type="password" autocomplete="current-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-current-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="account-password">Mật khẩu mới</label><div class="auth-password-wrap"><input id="account-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password" aria-pressed="false">Hiện</button></div></div><div class="auth-field"><label for="account-password-confirm">Nhập lại mật khẩu mới</label><div class="auth-password-wrap"><input id="account-password-confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="8" maxlength="128" required><button class="auth-password-toggle" type="button" data-password-toggle="account-password-confirm" aria-pressed="false">Hiện</button></div></div><button class="button button-secondary" type="submit">Đổi mật khẩu</button><p class="auth-message" data-auth-message aria-live="polite">Cần xác nhận mật khẩu hiện tại trước khi đổi.</p></form></article>
         </div>
+
+        <section class="stockradar-notification-center" data-stockradar-notifications aria-labelledby="stockradar-notification-title">
+          <article class="auth-account-card stockradar-notification-card">
+            <header class="stockradar-notification-head">
+              <div><span class="panel-label">CẢNH BÁO TRỰC TIẾP</span><h2 id="stockradar-notification-title">Thông báo StockRadar</h2><p>Chỉ hiển thị thay đổi trạng thái hành động đã qua đầy đủ gate dữ liệu và đúng mã/khung bạn bật cảnh báo.</p></div>
+              <div class="stockradar-notification-summary" aria-live="polite"><span class="stockradar-notification-badge" data-notification-unread hidden>0</span><span class="stockradar-notification-summary-text" data-notification-unread-label>Đang tải…</span></div>
+            </header>
+            <div class="stockradar-notification-toolbar"><p class="auth-message" data-notification-status aria-live="polite">Đang tải cảnh báo…</p><button class="button button-secondary button-small" type="button" data-notification-refresh>Làm mới</button></div>
+            <div class="stockradar-notification-list" data-notification-list><div class="account-empty-state">Đang tải cảnh báo…</div></div>
+          </article>
+        </section>
 
         <section class="account-email-center" data-product-email-preferences aria-labelledby="email-preferences-title">
           <article class="auth-account-card email-preference-card">
