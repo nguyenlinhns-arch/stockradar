@@ -7,12 +7,20 @@
     }[character]));
   }
 
+  function validTicker(value) {
+    const ticker = String(value || '').trim().toUpperCase();
+    return ticker.length === 3
+      && /^[A-Z0-9]{3}$/.test(ticker)
+      && /[A-Z]/.test(ticker)
+      ? ticker
+      : '';
+  }
+
   function tickerFromLocation() {
     const pathParts = location.pathname.split('/').filter(Boolean);
     const routeTicker = pathParts[pathParts.length - 1] !== 'co-phieu' ? pathParts[pathParts.length - 1] : '';
     const raw = new URLSearchParams(location.search).get('ticker') || routeTicker;
-    const ticker = String(raw || '').trim().toUpperCase();
-    return /^[A-Z]{3}$/.test(ticker) ? ticker : '';
+    return validTicker(raw);
   }
 
   let universePromise;
@@ -37,28 +45,29 @@
   function markup(ticker, security) {
     const verified = Boolean(security);
     const company = verified
-      ? security.company_name || 'Doanh nghiệp đã có trong lớp Radar công khai'
-      : 'StockRadar đã nhận mã; bản Free chưa có dữ liệu công khai để xác minh doanh nghiệp';
+      ? security.company_name || 'Doanh nghiệp đã được xác minh trong universe công khai'
+      : 'StockRadar đã nhận mã; feed phát hành công khai hiện chưa có manifest xác minh cho mã này';
     const sector = verified
-      ? security.sector || 'Chưa có phân loại ngành công khai'
-      : 'Không kết luận mã thuộc HOSE hay ngành nào chỉ từ định dạng 3 ký tự';
+      ? security.sector || 'Chưa có phân loại ngành trong feed công khai'
+      : 'Không tự suy luận doanh nghiệp/ngành khi publication gate chưa mở';
+    const releaseState = verified ? 'ĐÃ XÁC MINH CÔNG KHAI' : 'CHỜ GATE PHÁT HÀNH';
     return `
       <section class="free-context-card" data-free-stock-context>
         <header class="free-context-head">
-          <div><span class="panel-label">BẢN FREE · THÔNG TIN CÓ THỂ KẾT LUẬN</span><h3>${escapeHtml(ticker)}</h3><p>${escapeHtml(company)} · ${escapeHtml(sector)}</p></div>
-          <span class="free-context-status ${verified ? 'is-verified' : ''}">${verified ? 'CÓ TRONG RADAR 30' : 'CHƯA XÁC MINH CÔNG KHAI'}</span>
+          <div><span class="panel-label">BẢN FREE · BỐI CẢNH CÓ THỂ PHÁT HÀNH</span><h3>${escapeHtml(ticker)}</h3><p>${escapeHtml(company)} · ${escapeHtml(sector)}</p></div>
+          <span class="free-context-status ${verified ? 'is-verified' : ''}">${releaseState}</span>
         </header>
         <div class="free-context-horizons" aria-label="Bốn khung đầu tư">
-          <div><span>5–20 phiên</span><strong>Ngắn hạn</strong><small>Chưa đủ dữ liệu định lượng để phát hành hành động.</small></div>
-          <div><span>1–6 tháng</span><strong>Trung hạn</strong><small>Chưa đủ dữ liệu định lượng để phát hành hành động.</small></div>
-          <div><span>6–18 tháng</span><strong>Dài hạn</strong><small>Chưa đủ dữ liệu định lượng để phát hành hành động.</small></div>
-          <div><span>2–5 năm+</span><strong>Tích sản</strong><small>Chưa đủ dữ liệu định lượng để phát hành hành động.</small></div>
+          <div><span>5–20 phiên</span><strong>Ngắn hạn</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
+          <div><span>1–6 tháng</span><strong>Trung hạn</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
+          <div><span>6–18 tháng</span><strong>Dài hạn</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
+          <div><span>2–5 năm+</span><strong>Tích sản</strong><small>Chưa phát hành kết luận hành động ở feed công khai hiện tại.</small></div>
         </div>
         <div class="free-context-grid">
-          <article><strong>Free đang có</strong><ul><li>Mã và thông tin doanh nghiệp/ngành khi đã có trong lớp công khai.</li><li>Bốn góc nhìn đầu tư tách biệt.</li><li>Trạng thái và lịch sử khuyến nghị công khai nếu đã phát hành.</li></ul></article>
-          <article><strong>Free chưa suy luận</strong><ul><li>Không dựng giá, định giá, Buy Zone, Stop hay Target khi nguồn chưa đạt chuẩn.</li><li>Không biến danh sách Radar thành khuyến nghị mua.</li><li>Không coi mã 3 ký tự ngoài Radar 30 là mã HOSE hợp lệ nếu chưa có lớp xác minh công khai.</li></ul></article>
+          <article><strong>Free hiển thị</strong><ul><li>Thông tin doanh nghiệp/ngành khi đã qua publication gate.</li><li>Bốn khung đầu tư tách biệt và trạng thái Radar theo snapshot.</li><li>Lịch sử khuyến nghị đã được phát hành công khai.</li></ul></article>
+          <article><strong>Free không tự dựng</strong><ul><li>Không bịa giá, Fair Value, Buy Zone, Stop hay Target khi feed được cấp quyền chưa sẵn sàng.</li><li>Không biến thứ hạng Radar thành khuyến nghị mua.</li><li>Không coi dữ liệu nội bộ là dữ liệu được phép phát hành chỉ vì scanner đã tính xong.</li></ul></article>
         </div>
-        <div class="free-context-conclusion"><span>Kết luận hiện tại</span><strong>CHƯA CÓ CƠ SỞ DỮ LIỆU ĐỦ ĐỂ ĐƯA RA HÀNH ĐỘNG MUA/BÁN</strong><p>Đây là kết luận có chủ đích của bản Free khi dữ liệu chưa đáp ứng điều kiện phát hành, không phải lỗi tra cứu.</p></div>
+        <div class="free-context-conclusion"><span>Trạng thái phát hành hiện tại</span><strong>CHƯA PHÁT HÀNH TÍN HIỆU MUA/BÁN CHO SNAPSHOT CÔNG KHAI NÀY</strong><p>Radar nội bộ và feed công khai là hai gate độc lập. Khi manifest dữ liệu hợp lệ và Decision Gate đạt chuẩn, trang sẽ tự động thay phần này bằng kết luận thực tế.</p></div>
       </section>`;
   }
 
