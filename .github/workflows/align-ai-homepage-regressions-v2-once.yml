@@ -31,3 +31,4 @@ jobs:
           git commit -m 'Align homepage regressions with AI-first product'
           git pull --rebase origin main
           git push origin HEAD:main
+# retry 2
