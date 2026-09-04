@@ -96,7 +96,7 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertIn("plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/'", auth)
         self.assertIn("options: { emailRedirectTo: destination }", auth)
         self.assertIn("location.href = destination", auth)
-        self.assertNotIn("Thanh toán / Nâng Premium", registration_guard)
+        self.assertIn('Legacy Premium CTA leaked into final registration page', registration_guard)
 
 
 if __name__ == "__main__":
