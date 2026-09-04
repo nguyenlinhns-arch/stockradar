@@ -7,31 +7,35 @@ WEBSITE = ROOT / "website"
 
 
 class AuthSurfaceTests(unittest.TestCase):
-    def test_signup_requires_email_password_email_link_and_legal_consent(self) -> None:
+    def test_signup_requires_email_password_and_legal_consent_without_verification(self) -> None:
         signup = (WEBSITE / "signup" / "index.html").read_text(encoding="utf-8")
         signup_client = (WEBSITE / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
-        confirm = (WEBSITE / "xac-minh-email" / "index.html").read_text(encoding="utf-8")
-        confirm_client = (WEBSITE / "assets" / "email-confirm-v1.js").read_text(encoding="utf-8")
         function = (ROOT / "supabase" / "functions" / "signup-link" / "index.ts").read_text(encoding="utf-8")
         policy = (WEBSITE / "assets" / "auth-policy.js").read_text(encoding="utf-8")
 
-        for marker in ('type="email"', 'type="password"', 'assets/signup-link-v1.js', 'data-signup-email-sent'):
+        for marker in ('type="email"', 'type="password"', 'assets/signup-link-v1.js', 'data-auth-signup-form'):
             self.assertIn(marker, signup)
-        for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+        for forbidden in (
+            'data-auth-signup-otp-form',
+            'data-signup-email-sent',
+            'autocomplete="one-time-code"',
+            'Nhập mã OTP 6 số',
+            'Kiểm tra email để xác minh tài khoản',
+            'Đã xác minh? Đăng nhập',
+            'xac-minh-email/',
+        ):
             self.assertNotIn(forbidden, signup)
 
         self.assertIn('/functions/v1/signup-link', signup_client)
         self.assertIn('event.stopImmediatePropagation()', signup_client)
+        self.assertIn('signInWithPassword', signup_client)
         self.assertIn("'thanh-toan/?plan=premium'", signup_client)
-        self.assertIn('assets/email-confirm-v1.js', confirm)
-        self.assertIn('data-email-confirm-status', confirm)
-        self.assertIn('detectSessionInUrl: true', confirm_client)
-        self.assertIn("'thanh-toan/?plan=premium'", confirm_client)
+        self.assertNotIn('showEmailSent', signup_client)
 
-        self.assertIn('auth.admin.generateLink', function)
-        self.assertIn('type: "signup"', function)
-        self.assertIn('RESEND_API_KEY', function)
-        self.assertIn('XÁC MINH EMAIL STOCKRADAR', function)
+        self.assertIn('auth.admin.createUser', function)
+        self.assertIn('email_confirm: true', function)
+        self.assertNotIn('auth.admin.generateLink', function)
+        self.assertNotIn('RESEND_API_KEY', function)
 
         self.assertIn("dieu-khoan/", signup)
         self.assertIn("quyen-rieng-tu/", signup)
@@ -59,7 +63,7 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn('STOCKRADAR_PRODUCT_EMAIL_READY: "0"', workflow)
 
     def test_unverified_users_can_resume_with_login_otp(self) -> None:
-        # Login recovery may still offer OTP; the removed OTP requirement is signup-only.
+        # Login recovery may still offer OTP; the removed verification requirement is signup-only.
         login = (WEBSITE / "dang-nhap" / "index.html").read_text(encoding="utf-8")
         extra = (WEBSITE / "assets" / "auth-extra.js").read_text(encoding="utf-8")
         self.assertIn("data-auth-login-otp-form", login)
