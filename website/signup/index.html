@@ -4,7 +4,7 @@
   <base href="../">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="description" content="Tạo tài khoản StockRadar Free để nhận bản rà soát 09:00 hoặc chọn Premium để thêm cảnh báo điểm mua/bán trong phiên.">
+  <meta name="description" content="Tạo tài khoản StockRadar Free hoặc Premium. Free dùng các tính năng công khai; Premium mở báo cáo 09:00, Action Alert và theo dõi watchlist qua email.">
   <title>Tạo tài khoản Free hoặc Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-email1">
@@ -20,16 +20,16 @@
     <div class="container auth-layout">
       <section class="auth-intro">
         <span class="panel-label">TÀI KHOẢN STOCKRADAR</span>
-        <h1>Free nhận bản tin 09:00.<br>Premium thêm cảnh báo trong phiên.</h1>
-        <p>Gói Free dành cho người muốn theo dõi thị trường mỗi ngày. Premium kế thừa quyền Free và bổ sung phân tích chuyên sâu, kế hoạch giao dịch cùng cảnh báo điểm mua/bán khi tín hiệu đạt chuẩn.</p>
+        <h1>Free để tự tra cứu.<br>Premium để StockRadar chủ động theo dõi &amp; email khi cần.</h1>
+        <p>Free dùng các bề mặt công khai và email hệ thống cần thiết cho tài khoản. Premium mở lớp quyết định, watchlist cá nhân, báo cáo 09:00 và Action Alert khi trạng thái đủ điều kiện thay đổi.</p>
         <div class="auth-stepper" aria-label="Quy trình đăng ký">
           <span class="auth-step is-active"><b>1</b>Chọn gói + tài khoản</span>
           <span class="auth-step"><b>2</b>Xác minh email</span>
-          <span class="auth-step"><b>3</b>Nhận email theo quyền gói</span>
+          <span class="auth-step"><b>3</b>Cấu hình watchlist &amp; email</span>
         </div>
         <ul class="auth-benefits">
-          <li><strong>Free:</strong> 0đ, tra cứu mã HOSE, Radar/phân tích công khai, danh sách theo dõi cơ bản và <strong>bản rà soát thị trường lúc 09:00 mỗi ngày</strong> sau khi email được xác minh và bạn đồng ý nhận.</li>
-          <li><strong>Premium trả phí:</strong> toàn bộ quyền Free + phân tích sâu, Buy Zone/Stop/Target/R:R và <strong>cảnh báo điểm mua/bán trong phiên</strong> tại 10:30, 11:15, 13:30, 14:15 khi tín hiệu đủ chuẩn.</li>
+          <li><strong>Free:</strong> 0đ, dùng các tính năng công khai và chỉ nhận email hệ thống cần thiết như xác minh, bảo mật, thanh toán/gia hạn hoặc thông báo tài khoản.</li>
+          <li><strong>Premium trả phí:</strong> toàn bộ quyền Free + MUA/CHỜ, GIỮ/TĂNG/GIẢM/BÁN, Vùng mua/Stop/Target, báo cáo 09:00 theo watchlist và <strong>Action Alert trong phiên</strong> tại 10:30, 11:15, 13:30, 14:15 khi có thay đổi đủ điều kiện.</li>
           <li>OTP tại đây chỉ xác minh tài khoản StockRadar, không liên quan OTP môi giới hoặc ngân hàng.</li>
         </ul>
         <a class="text-link" href="dang-ky/">← Xem lại bảng so sánh Free / Premium</a>
@@ -40,11 +40,11 @@
           <fieldset class="signup-plan-selector">
             <legend>Gói bạn muốn đăng ký</legend>
             <div class="signup-plan-grid">
-              <label class="signup-plan-option"><input type="radio" name="selected_plan" value="free" checked><span class="signup-plan-option-body"><strong>Free · 0đ</strong><span>Tra cứu, Radar, phân tích công khai và bản rà soát 09:00 hằng ngày.</span></span></label>
-              <label class="signup-plan-option"><input type="radio" name="selected_plan" value="premium"><span class="signup-plan-option-body"><strong>Premium · 199.000đ/30 ngày*</strong><span>Toàn bộ Free + phân tích sâu và cảnh báo điểm mua/bán trong phiên.</span></span></label>
+              <label class="signup-plan-option"><input type="radio" name="selected_plan" value="free" checked><span class="signup-plan-option-body"><strong>Free · 0đ</strong><span>Tra cứu, Radar và các nội dung công khai; không có email nội dung hằng ngày.</span></span></label>
+              <label class="signup-plan-option"><input type="radio" name="selected_plan" value="premium"><span class="signup-plan-option-body"><strong>Premium · 199.000đ/30 ngày</strong><span>Quyết định đầy đủ, My StockRadar, báo cáo 09:00 và Action Alert theo watchlist.</span></span></label>
             </div>
           </fieldset>
-          <p class="signup-plan-note" data-signup-plan-note>Free có phí 0đ và có quyền nhận bản rà soát 09:00 sau khi xác minh email và đồng ý nhận.</p>
+          <p class="signup-plan-note" data-signup-plan-note>Free chỉ nhận email hệ thống cần thiết cho tài khoản. Email nội dung là quyền Trial/Paid.</p>
 
           <div class="auth-field"><label for="signup-email">Email</label><input id="signup-email" name="email" type="email" inputmode="email" autocomplete="email" maxlength="160" required placeholder="email@example.com"></div>
           <div class="auth-field"><label for="signup-password">Mật khẩu</label><div class="auth-password-wrap"><input id="signup-password" name="password" type="password" autocomplete="new-password" minlength="8" maxlength="128" required placeholder="Ít nhất 8 ký tự"><button class="auth-password-toggle" type="button" data-password-toggle="signup-password" aria-pressed="false">Hiện</button></div></div>
@@ -52,10 +52,10 @@
           <label class="auth-check"><input name="terms" type="checkbox" required><span>Tôi đã đọc và đồng ý với <a href="dieu-khoan/" target="_blank" rel="noopener">Điều khoản sử dụng</a> phiên bản 2026-09-03 và <a href="quyen-rieng-tu/" target="_blank" rel="noopener">Chính sách quyền riêng tư</a> phiên bản 2026-09-04.</span></label>
 
           <fieldset class="signup-email-options">
-            <legend>Email StockRadar</legend>
-            <label class="auth-check"><input name="email_daily_brief" type="checkbox"><span><strong>Bản rà soát StockRadar lúc 09:00 hằng ngày</strong> <span class="email-choice-badge">FREE + PREMIUM</span> — tổng quan thị trường, cổ phiếu/ngành nổi bật ở mức phù hợp với quyền gói. Chọn mục này để nhận email sau khi xác minh.</span></label>
-            <label class="auth-check"><input name="email_event_alerts" type="checkbox"><span><strong>Cảnh báo điểm mua/bán trong phiên</strong> <span class="email-choice-badge">PREMIUM</span> — thông báo khi có hành động được xác nhận như đạt điểm mua, nhồi lệnh, hạ tỷ trọng hoặc cắt lỗ/bán.</span></label>
-            <p class="signup-email-note">Không có email nội dung nào được bật nếu bạn chưa đồng ý nhận. Free đủ quyền nhận bản 09:00; cảnh báo mua/bán chỉ được gửi khi tài khoản có quyền Trial/Paid, email đã xác minh và có đồng ý nhận hợp lệ.</p>
+            <legend>Tùy chọn email Premium</legend>
+            <label class="auth-check"><input name="email_daily_brief" type="checkbox"><span><strong>Báo cáo StockRadar lúc 09:00</strong> <span class="email-choice-badge">PREMIUM</span> — ưu tiên watchlist/mã đang sở hữu trước, bối cảnh thị trường sau.</span></label>
+            <label class="auth-check"><input name="email_event_alerts" type="checkbox"><span><strong>Action Alert trong phiên</strong> <span class="email-choice-badge">PREMIUM</span> — chỉ gửi khi trạng thái hành động của mã được theo dõi thay đổi đủ điều kiện; không đổi thì không tạo alert riêng.</span></label>
+            <p class="signup-email-note">Không mục email nội dung nào được chọn sẵn. Các lựa chọn chỉ có hiệu lực khi tài khoản Trial/Paid đang hoạt động, email đã xác minh, có đồng ý nhận hiện hành và hệ thống gửi production đã được kích hoạt.</p>
           </fieldset>
 
           <button class="button button-primary" type="submit" data-signup-submit-label>Tạo tài khoản Free &amp; gửi mã xác minh</button>
@@ -67,7 +67,7 @@
           <div class="auth-field"><label for="signup-otp">Mã xác minh</label><input class="auth-otp-input" id="signup-otp" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required placeholder="000000" aria-describedby="signup-otp-help"><small id="signup-otp-help">Chỉ nhập 6 chữ số từ email StockRadar.</small></div>
           <button class="button button-primary" type="submit">Xác minh &amp; mở Tài khoản</button>
           <div class="auth-otp-actions"><button type="button" class="auth-link-button" data-auth-otp-resend>Gửi lại mã</button><button type="button" class="auth-link-button" data-auth-otp-change>Đổi email</button></div>
-          <p class="auth-message" data-auth-message aria-live="polite">Sau khi xác minh, Free có thể nhận bản tin 09:00 theo lựa chọn; cảnh báo điểm mua/bán chỉ kích hoạt khi tài khoản có quyền Premium.</p>
+          <p class="auth-message" data-auth-message aria-live="polite">Sau khi xác minh, Free chỉ nhận email hệ thống; email nội dung chỉ có hiệu lực khi tài khoản có quyền Trial/Paid và đáp ứng đủ điều kiện gửi.</p>
         </form>
 
         <p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>
@@ -75,6 +75,6 @@
       </section>
     </div>
   </main>
-  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-nhap/">Đăng nhập</a></div></div><p class="disclaimer">* Giá Premium là mức sáng lập dự kiến; thanh toán chỉ thực hiện ở bước riêng khi cổng thanh toán được kích hoạt và người dùng xác nhận.</p></div></footer>
+  <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-nhap/">Đăng nhập</a></div></div><p class="disclaimer">Premium 199.000đ/30 ngày, không tự gia hạn. Thanh toán chỉ mở khi cổng thanh toán production được kích hoạt và người dùng chủ động xác nhận.</p></div></footer>
 </body>
 </html>
