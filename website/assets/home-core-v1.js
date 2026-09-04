@@ -2,7 +2,7 @@
   'use strict';
 
   const DIRECT_SIGNUP_ROUTE = 'signup/';
-  const CONSENT_VERSION = '2026-09-03';
+  const CONSENT_VERSION = '2026-09-04';
   const FALLBACK_SUPABASE_URL = 'https://xamviatbxufjlpiwhebb.supabase.co';
   const LEAD_CAPTURED_KEY = 'sr_email_lead_captured';
   const PENDING_LEAD_EMAIL_KEY = 'sr_pending_lead_email';
@@ -12,11 +12,11 @@
   }
 
   function normalizeTicker(value) {
-    return String(value || '').trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+    return String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3);
   }
 
   function validTicker(value) {
-    return /^[A-Z]{3}$/.test(value);
+    return /^[A-Z0-9]{3}$/.test(value);
   }
 
   function validEmail(value) {
@@ -24,7 +24,7 @@
   }
 
   function stockUrl(ticker) {
-    return new URL(`co-phieu/?ticker=${encodeURIComponent(ticker)}`, document.baseURI).href;
+    return new URL(`co-phieu/${encodeURIComponent(ticker)}/`, document.baseURI).href;
   }
 
   function registrationUrl() {
@@ -43,9 +43,9 @@
     return new URL(DIRECT_SIGNUP_ROUTE, document.baseURI).href;
   }
 
-  function freeSignupUrl() {
+  function premiumSignupUrl() {
     const url = new URL(directSignupUrl());
-    url.searchParams.set('plan', 'free');
+    url.searchParams.set('plan', 'premium');
     return url.href;
   }
 
@@ -141,7 +141,7 @@
         const ticker = normalizeTicker(input.value);
         input.value = ticker;
         if (!validTicker(ticker)) {
-          setSearchMessage(form, 'Nhập mã gồm đúng 3 chữ cái, ví dụ FPT.', 'error');
+          setSearchMessage(form, 'Nhập mã gồm đúng 3 ký tự A-Z hoặc 0-9, ví dụ FPT.', 'error');
           input.focus();
           return;
         }
@@ -166,25 +166,20 @@
     const link = document.createElement('a');
     link.className = 'home-lead-next';
     link.dataset.homeLeadNext = '';
-    link.href = emailDeliveryReady() ? freeSignupUrl() : registrationUrl();
-    link.textContent = emailDeliveryReady()
-      ? 'Tạo tài khoản Free để kích hoạt bản tin'
-      : 'Xem gói Free / Premium';
+    link.href = premiumSignupUrl();
+    link.textContent = 'Tạo tài khoản Premium';
     form.append(link);
   }
 
   function applyLeadState() {
     if (!hasCapturedLead()) return;
-    const ready = emailDeliveryReady();
-    const nextHref = ready ? freeSignupUrl() : registrationUrl();
-    const nextLabel = ready ? 'Hoàn tất Free' : 'Xem gói';
+    const nextHref = premiumSignupUrl();
+    const nextLabel = 'Tiếp tục Premium';
 
     document.querySelectorAll('.header-register-cta').forEach(link => {
       link.href = nextHref;
       link.textContent = nextLabel;
-      link.setAttribute('aria-label', ready
-        ? 'Hoàn tất tạo tài khoản Free để kích hoạt bản rà soát 09:00'
-        : 'Xem gói Free và Premium của StockRadar');
+      link.setAttribute('aria-label', 'Tiếp tục tạo tài khoản để hoàn tất nhu cầu Premium');
     });
 
     const mobile = document.querySelector('.mobile-newsletter-bar a');
@@ -207,12 +202,12 @@
 
       removeLeadNext(form);
       if (!validEmail(email)) {
-        setLeadMessage(form, 'Nhập email hợp lệ để đăng ký bản rà soát 09:00.', 'error');
+        setLeadMessage(form, 'Nhập email hợp lệ để ghi nhận nhu cầu Premium.', 'error');
         form.elements.email?.focus();
         return;
       }
       if (!dailyBrief) {
-        setLeadMessage(form, 'Chọn xác nhận muốn nhận bản rà soát 09:00.', 'error');
+        setLeadMessage(form, 'Chọn xác nhận bạn quan tâm Daily 09:00 Premium.', 'error');
         return;
       }
       if (!privacyAccepted) {
@@ -223,7 +218,7 @@
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 10000);
       if (button) button.disabled = true;
-      setLeadMessage(form, 'Đang ghi nhận email…');
+      setLeadMessage(form, 'Đang ghi nhận nhu cầu Premium…');
       try {
         const response = await fetch(emailInterestEndpoint(), {
           method: 'POST',
@@ -247,7 +242,7 @@
           throw new Error(payload.message || 'Chưa thể ghi nhận email lúc này.');
         }
         rememberLead(email);
-        setLeadMessage(form, 'Đã ghi nhận email. Hoàn tất tạo tài khoản Free và xác minh email để kích hoạt bản tin 09:00.', 'success');
+        setLeadMessage(form, 'Đã ghi nhận nhu cầu Premium. Việc này chưa kích hoạt gửi email hoặc thanh toán; hãy tạo tài khoản để tiếp tục.', 'success');
         renderLeadNext(form);
         applyLeadState();
         form.elements.daily_brief.checked = false;
@@ -266,12 +261,12 @@
 
   function mountRegistration() {
     const compareHref = registrationUrl();
-    const freeLeadHref = leadUrl();
+    const premiumLeadHref = leadUrl();
 
     document.querySelectorAll('.header-register-cta').forEach(link => {
-      link.href = freeLeadHref;
-      link.textContent = 'Nhận email 09:00';
-      link.setAttribute('aria-label', 'Đăng ký nhận bản rà soát StockRadar lúc 09:00 miễn phí');
+      link.href = premiumLeadHref;
+      link.textContent = 'Nhận email Premium';
+      link.setAttribute('aria-label', 'Đăng ký quan tâm Daily 09:00 và Action Alert Premium');
     });
 
     document.querySelectorAll('a[href="signup/"]').forEach(link => {
@@ -282,7 +277,7 @@
     const mobile = document.querySelector('.mobile-newsletter-bar a');
     if (mobile) {
       mobile.href = '#nhan-ban-tin';
-      mobile.textContent = 'Nhận email 09:00';
+      mobile.textContent = 'Nhận email Premium';
     }
 
     applyLeadState();
