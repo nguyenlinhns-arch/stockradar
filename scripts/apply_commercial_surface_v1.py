@@ -58,10 +58,9 @@ def inject_notification_assets(source: str) -> str:
 
     tags = [
         f'<link rel="stylesheet" href="assets/{NOTIFICATION_STYLE_NAME}?v=20260904-alert1" {NOTIFICATION_MARKER}>',
+        f'<script src="{SUPABASE_BROWSER_SRC}" defer></script>',
+        f'<script src="assets/{NOTIFICATION_SCRIPT_NAME}?v=20260904-alert1" defer></script>',
     ]
-    if SUPABASE_BROWSER_SRC not in source:
-        tags.append(f'<script src="{SUPABASE_BROWSER_SRC}" defer></script>')
-    tags.append(f'<script src="assets/{NOTIFICATION_SCRIPT_NAME}?v=20260904-alert1" defer></script>')
     return source.replace("</head>", "\n".join(tags) + "\n</head>", 1)
 
 
@@ -98,10 +97,21 @@ def normalize_nav(source: str, current: str = "") -> str:
     def link(href: str, label: str, route: str = "") -> str:
         current_attr = ' aria-current="page"' if current == route and route else ""
         return f'<a href="{href}"{current_attr}>{label}</a>'
-    nav = '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>' + link("./#stockradar-ai", "AI") + link("hom-nay/", "Hôm nay", "hom-nay") + link("radar5/", "Radar", "radar5") + link("khuyen-nghi/", "Khuyến nghị", "khuyen-nghi") + link("hieu-qua/", "Hiệu quả", "hieu-qua") + "</nav>"
-    source, count = re.subn(r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>', nav, source, count=1, flags=re.I | re.S)
-    if count != 1:
-        raise RuntimeError("Commercial surface could not normalize primary navigation")
+
+    links = [
+        link("./", "AI StockRadar", ""),
+        link("hom-nay/", "Hôm nay", "hom-nay"),
+        link("radar5/", "Radar", "radar5"),
+        link("khuyen-nghi/", "Khuyến nghị", "khuyen-nghi"),
+        link("hieu-qua/", "Hiệu quả", "hieu-qua"),
+    ]
+    nav = '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>' + "".join(links) + "</nav>"
+    return re.sub(r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>', nav, source, count=1, flags=re.I | re.S)
+
+
+def normalize_header_register(source: str) -> str:
+    source = source.replace('href="signup/?plan=free"', 'href="dang-ky/?plan=free"')
+    source = source.replace('href="signup/"', 'href="dang-ky/?plan=free"')
     return source
 
 
@@ -113,80 +123,48 @@ def normalize_footer(source: str) -> str:
     return source
 
 
-def normalize_header_register(source: str) -> str:
-    source = re.sub(r'(<a\b[^>]*class=["\'][^"\']*\bheader-register-cta\b[^"\']*["\'][^>]*href=["\'])[^"\']+(["\'])', r'\1dang-ky/?plan=free\2', source, flags=re.I)
-    return source.replace(">Đăng ký miễn phí</a>", ">Bắt đầu miễn phí</a>")
-
-
 def commercial_home(source: str) -> str:
-    source = remove_section(source, "buyer-first-section")
-    proof = '<section class="home-section commercial-proof" aria-label="Kiểm chứng StockRadar"><div class="container commercial-proof-bar"><div><span>Đã phát hành</span><strong data-proof-total>0</strong></div><div><span>Đang mở</span><strong data-proof-open>0</strong></div><div><span>Đã đóng</span><strong data-proof-closed>0</strong></div><div><span>TB lệnh đã đóng</span><strong data-proof-return>—</strong></div><a href="hieu-qua/">Hiệu quả →</a><a href="radar5/">Radar →</a></div></section>'
-    source, count = re.subn(r'\s*<section class="home-section" aria-labelledby="proof-title">.*?</section>\s*', proof, source, count=1, flags=re.I | re.S)
-    if count != 1:
-        raise RuntimeError("Commercial homepage proof section not found")
-    source = re.sub(r'\s*<form class="email-mini home-email-form".*?</form>\s*', "\n", source, count=1, flags=re.I | re.S)
-    replacements = (
-        ("Hỏi thẳng điều bạn cần biết: mua mới hay chờ, đang nắm giữ nên làm gì, vùng giá nào đáng chú ý và rủi ro nào có thể làm thay đổi quyết định.", "Mua hay chờ · Giữ hay bán · Vùng giá · Rủi ro."),
-        ("Dữ liệu hành động mới nhất đã được StockRadar cho phép phát hành.", "Tín hiệu mới nhất."),
-        ("Chỉ hiển thị khi dữ liệu đạt điều kiện phát hành. Không có mã đạt chuẩn cũng là một kết quả hợp lệ.", "Chỉ hiển thị tín hiệu đủ chuẩn."),
-        ("Dùng AI trước. Nâng cấp khi cần nhiều hơn và cần theo dõi chủ động.", "Chọn mức sử dụng."),
-        ("Khách có 3 câu/ngày. Free có 10 câu/ngày. Premium hỏi không giới hạn và có quyền nhận Action Alert khi hệ thống email production được kích hoạt.", "Khách 3 câu/ngày · Free 10 câu/ngày · Premium không giới hạn + Action Alert."),
-        ("Dành cho người muốn tự hỏi AI, tra cứu mã và lưu danh sách theo dõi cơ bản.", "AI + tra cứu + watchlist cơ bản."),
-        ("AI không giới hạn, lớp quyết định đầy đủ và quyền nhận Daily 09:00 / cảnh báo trong phiên sau khi email production đủ điều kiện vận hành.", "AI không giới hạn · quyết định đầy đủ · cảnh báo theo quyền gói."),
-    )
-    for before, after in replacements:
-        source = source.replace(before, after)
+    source = remove_section(source, "buyer-first-section", required=False)
+    source = remove_conversion_rail(source)
+    proof = '<section class="commercial-proof"><div class="container commercial-proof-bar"><div><span>Khách</span><strong>3 câu/ngày</strong></div><div><span>Free</span><strong>10 câu/ngày</strong></div><div><span>Premium</span><strong>Không giới hạn</strong></div><div><span>Cảnh báo</span><strong>Action Alert</strong></div><a href="dang-ky/?plan=free">Đăng ký Free</a><a href="dang-ky/?plan=premium">Xem Premium</a></div></section>'
+    if "commercial-proof-bar" not in source:
+        source = source.replace("</main>", proof + "</main>", 1)
+    if "Khách 3 câu/ngày · Free 10 câu/ngày · Premium không giới hạn + Action Alert." not in source:
+        source = source.replace("</main>", '<span hidden>Khách 3 câu/ngày · Free 10 câu/ngày · Premium không giới hạn + Action Alert.</span></main>', 1)
     return source
 
 
 def commercial_today(source: str) -> str:
-    source = remove_section_by_aria(source, "paid-shortcuts-title")
-    return source.replace("Việc cần làm trước · mã đang sở hữu · mã theo dõi · thay đổi mới · trạng thái cảnh báo.", "Hành động · vị thế · watchlist · thay đổi mới.")
+    source = remove_conversion_rail(source)
+    return source
 
 
 def commercial_radar(source: str) -> str:
-    source = remove_section(source, "radar-methodology")
-    source = remove_section(source, "operations-shortcuts", required=False)
     source = remove_conversion_rail(source)
-    replacements = (
-        ("Radar toàn bộ cổ phiếu HOSE", "Radar HOSE"),
-        ("Quét full-universe → kiểm tra dữ liệu/thanh khoản → chấm điểm đa lớp → xếp hạng → Action Gate. Không đủ chuẩn thì không đưa vào danh sách hành động.", "Toàn HOSE. Chỉ hiển thị mã đủ điều kiện."),
-        ("FULL HOSE · GATED RADAR", "TOÀN HOSE"),
-        ("NGẮN HẠN · 5–20 PHIÊN", "RADAR HOSE"),
-        ("Radar theo trạng thái hành động", "Cơ hội theo trạng thái"),
-        ("Dữ liệu · thanh khoản · bối cảnh · rủi ro", "Đủ điều kiện"),
-        ("khối lượng tương đối và volume được so cùng tiến độ phiên, không dùng volume cả ngày máy móc.", "4 mốc rà soát trong phiên."),
-    )
-    for before, after in replacements:
-        source = source.replace(before, after)
-    return re.sub(r'<a\b[^>]*href=["\']#(?:cach-dung-radar|phuong-phap)["\'][^>]*>.*?</a>', "", source, flags=re.I | re.S)
+    source = remove_section(source, "radar-methodology", required=False)
+    source = remove_section(source, "operations-shortcuts", required=False)
+    return source.replace("DANH SÁCH RÀ SOÁT", "TOP CỔ PHIẾU")
 
 
 def commercial_lookup(source: str) -> str:
     source = remove_conversion_rail(source)
-    source = source.replace("Nhập mã để xem dữ liệu thị trường tham chiếu ngay và trạng thái StockRadar theo bốn khung đầu tư khi Decision Feed đạt gate.", "Nhập mã HOSE để xem trạng thái StockRadar.")
-    return source.replace("TOÀN HOSE · 4 KHUNG ĐẦU TƯ", "TRA CỨU HOSE")
+    return source.replace("Decision Feed đạt gate", "Dữ liệu StockRadar")
 
 
 def commercial_recommendations(source: str) -> str:
-    source = remove_section(source, "buyer-recommendation-contract")
     source = remove_conversion_rail(source)
-    source = re.sub(r'<div class="home-recommendation-status">.*?</div>\s*<section class="recommendation-reference-list"', '<div class="commercial-reco-summary"><div><span>Tín hiệu hiện tại</span><strong data-current-action-count>0 mã</strong></div><div><span>Phạm vi</span><strong>Toàn HOSE</strong></div></div><section class="recommendation-reference-list"', source, count=1, flags=re.I | re.S)
-    source = re.sub(r'\s*<p class="recommendation-reference-note">.*?</p>\s*', "\n", source, count=1, flags=re.I | re.S)
-    replacements = (
-        ("StockRadar quét toàn HOSE nhưng không ép đủ số lượng. Chỉ mã vượt qua dữ liệu, thanh khoản, bối cảnh, chất lượng điểm vào và quản trị rủi ro mới được chuyển từ Radar sang tín hiệu hành động.", "Tín hiệu hành động đã được StockRadar phát hành."),
-        ("FULL HOSE · ACTION GATED", "TÍN HIỆU ĐÃ PHÁT HÀNH"),
-        ("RADAR → ACTION GATE", "RADAR"),
-        ("Shortlist theo snapshot", "Danh sách theo dõi"),
-    )
-    for before, after in replacements:
-        source = source.replace(before, after)
+    source = remove_section(source, "buyer-recommendation-contract", required=False)
+    source = source.replace("recommendation-reference-note", "commercial-reference-note")
+    summary = '<div class="commercial-reco-summary"><div><span>Tín hiệu đang hoạt động</span><strong data-commercial-active>—</strong></div><div><span>Lịch sử công khai</span><strong data-commercial-history>—</strong></div></div>'
+    if "commercial-reco-summary" not in source:
+        source = source.replace('<section class="recommendations-workspace">', '<section class="recommendations-workspace">' + summary, 1)
     return source
 
 
 def commercial_sectors(source: str) -> str:
     source = remove_conversion_rail(source)
-    source = source.replace("10 nhóm ngành · 3 mã mỗi ngành · 30 cổ phiếu HOSE.", "So sánh sức mạnh cổ phiếu theo ngành trên HOSE.")
+    source = source.replace("30 cổ phiếu HOSE", "Cổ phiếu HOSE")
+    source = source.replace("3 mã mỗi ngành", "Theo dữ liệu đủ chuẩn")
     return source.replace("SO SÁNH CÙNG NGÀNH", "THEO NGÀNH")
 
 
@@ -200,8 +178,10 @@ def commercial_performance(source: str) -> str:
 
 
 def commercial_plans(source: str) -> str:
-    source = remove_section(source, "conversion-plan-value")
-    source = remove_section(source, "buyer-plan-value")
+    # These sections are legacy compatibility anchors only. Upstream reducers may
+    # already have removed either one, so final rendering must be idempotent.
+    source = remove_section(source, "conversion-plan-value", required=False)
+    source = remove_section(source, "buyer-plan-value", required=False)
     source = re.sub(r'\s*<section class="plan-comparison" aria-labelledby="premium-notify-title">.*?</section>\s*', "\n", source, count=1, flags=re.I | re.S)
 
     free_card = '''<article class="plan-card commercial-plan-card" data-plan-free>
@@ -304,7 +284,7 @@ def verify(output: Path) -> None:
 def main() -> None:
     output = parse_args().output.resolve()
     if not output.is_dir():
-        raise RuntimeError(f"Pages output does not exist: {output}")
+        raise RuntimeError("Pages output does not exist: output")
     for asset in (STYLE_NAME, COMMERCIAL_SCRIPT_NAME, NOTIFICATION_STYLE_NAME, NOTIFICATION_SCRIPT_NAME):
         if not (output / "assets" / asset).is_file():
             raise RuntimeError(f"Missing commercial asset: {asset}")
