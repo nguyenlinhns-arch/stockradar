@@ -17,6 +17,12 @@ def require(source: str, markers: tuple[str, ...], label: str, errors: list[str]
             errors.append(f"{label}: missing {marker}")
 
 
+def forbid(source: str, markers: tuple[str, ...], label: str, errors: list[str]) -> None:
+    for marker in markers:
+        if marker in source:
+            errors.append(f"{label}: forbidden stale contract {marker}")
+
+
 def main() -> None:
     output = parse_args().output.resolve()
     errors: list[str] = []
@@ -52,7 +58,19 @@ def main() -> None:
         'name="post_session_digest"',
         'name="weekly_report"',
         "Không đổi trạng thái → không tạo Action Alert riêng",
+        "Free chỉ nhận email hệ thống cần thiết cho tài khoản",
+        "Daily 09:00 ưu tiên watchlist",
+        "tài khoản Trial/Paid",
+        'pattern="[A-Za-z0-9]{3}"',
+        "assets/account-preferences.js?v=20260904-paid2",
+        "assets/email-preferences.js?v=20260904-paid3",
     ), "My StockRadar email health", errors)
+
+    forbid(account, (
+        "Free nhận bản rà soát cơ bản",
+        "Bản rà soát thị trường cơ bản ở Free",
+        "Ở Free, công tắc này chỉ kích hoạt bản tin hằng ngày",
+    ), "My StockRadar paid-only email", errors)
 
     for source, label in ((home, "home"), (signup, "signup"), (account, "account")):
         if "premium-email-product-v1.css" not in source:
