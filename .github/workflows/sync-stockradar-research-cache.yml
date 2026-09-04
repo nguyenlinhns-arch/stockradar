@@ -1,3 +1,4 @@
+# Bootstrap trigger: 2026-09-04
 name: Sync StockRadar Research Cache
 
 on:
@@ -44,7 +45,7 @@ jobs:
           STOCKRADAR_DRIVE_FEED_FOLDER: "1MhOr5yBaM7ZUonQmTg-XLtgoA9l-wgs8"
         run: |
           python - <<'PY'
-          import io, json, os, pathlib, sys
+          import io, json, os, pathlib
           from google.oauth2 import service_account
           from googleapiclient.discovery import build
           from googleapiclient.http import MediaIoBaseDownload
@@ -59,10 +60,7 @@ jobs:
           )
           drive = build("drive", "v3", credentials=creds, cache_discovery=False)
           folder = os.environ["STOCKRADAR_DRIVE_FEED_FOLDER"]
-          query = (
-              f"'{folder}' in parents and trashed = false and "
-              "name contains 'stockradar_ticker_lookup_internal_'"
-          )
+          query = f"'{folder}' in parents and trashed = false and name contains 'stockradar_ticker_lookup_internal_'"
           result = drive.files().list(
               q=query,
               orderBy="modifiedTime desc",
@@ -82,11 +80,7 @@ jobs:
           while not done:
               _, done = downloader.next_chunk()
           pathlib.Path("/tmp/stockradar-research-bundle.json").write_bytes(fh.getvalue())
-          print(json.dumps({
-              "selected": selected["name"],
-              "modifiedTime": selected.get("modifiedTime"),
-              "size": len(fh.getvalue()),
-          }, ensure_ascii=False))
+          print(json.dumps({"selected": selected["name"], "modifiedTime": selected.get("modifiedTime"), "size": len(fh.getvalue())}, ensure_ascii=False))
           PY
 
       - name: Validate bundle locally
