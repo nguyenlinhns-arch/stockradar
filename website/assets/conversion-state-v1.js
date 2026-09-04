@@ -15,7 +15,30 @@
     return new URL(String(path || '').replace(/^\/+/, ''), document.baseURI).toString();
   }
 
+  function shouldLoadAI() {
+    const parts = location.pathname.split('/').filter(Boolean).map(part => part.toLowerCase());
+    const excluded = new Set(['signup', 'dang-ky', 'dang-nhap', 'dat-lai-mat-khau', 'tai-khoan', 'dieu-khoan', 'quyen-rieng-tu', 'email']);
+    return !parts.some(part => excluded.has(part));
+  }
+
+  function loadStockRadarAI() {
+    if (!shouldLoadAI() || document.querySelector('script[data-stockradar-ai-loader]')) return;
+    if (!document.querySelector('link[data-stockradar-ai-style]')) {
+      const css = document.createElement('link');
+      css.rel = 'stylesheet';
+      css.href = siteUrl('assets/ai-assistant.css?v=20260904-ai1');
+      css.dataset.stockradarAiStyle = '';
+      document.head.append(css);
+    }
+    const script = document.createElement('script');
+    script.src = siteUrl('assets/ai-assistant.js?v=20260904-ai1');
+    script.async = true;
+    script.dataset.stockradarAiLoader = '';
+    document.head.append(script);
+  }
+
   function apply() {
+    loadStockRadarAI();
     if (!captured()) return;
     const ready = emailDeliveryReady();
     const href = siteUrl(ready ? 'signup/?plan=free' : 'dang-ky/');
