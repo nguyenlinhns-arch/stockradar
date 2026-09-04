@@ -22,6 +22,7 @@ on:
       - 'scripts/strip_public_methods.py'
       - 'scripts/inject_ai_assistant.py'
       - 'scripts/enforce_registration_plan_ctas.py'
+      - 'scripts/enforce_checkout_public_bank_info.py'
       - 'scripts/verify*.py'
       - 'scripts/visual_qa.cjs'
       - 'package.json'
@@ -94,6 +95,7 @@ jobs:
           python scripts/strip_public_methods.py .pages-site
           python scripts/inject_ai_assistant.py .pages-site
           python scripts/enforce_registration_plan_ctas.py .pages-site
+          python scripts/enforce_checkout_public_bank_info.py .pages-site
 
       - name: Verify production auth artifact
         run: python scripts/verify_pages_auth.py .pages-site
