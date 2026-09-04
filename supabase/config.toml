@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.checkout-approval]
 verify_jwt = false
+
+[functions.stock-ai-guest]
+verify_jwt = false
