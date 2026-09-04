@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const CONSENT_VERSION = '2026-09-03';
+  const CONSENT_VERSION = '2026-09-04';
   const FALLBACK_SUPABASE_URL = 'https://xamviatbxufjlpiwhebb.supabase.co';
   const LEAD_CAPTURED_KEY = 'sr_email_lead_captured';
   const PENDING_LEAD_EMAIL_KEY = 'sr_pending_lead_email';
