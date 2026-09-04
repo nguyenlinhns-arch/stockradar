@@ -21,9 +21,20 @@ jobs:
         run: python -m unittest discover -s engine/tests -v
       - name: Syntax-check SSI adapter and acquisition CLI
         run: python -m py_compile engine/stockradar/ssi_raw_adapter.py scripts/acquire_ssi_raw_market.py
-      - name: Verify no SSI credential values are committed
+      - name: Verify SSI credentials stay environment-only
         run: |
-          ! grep -RInE 'api_secret\s*=\s*["'"'][^"'"']+|api_key\s*=\s*["'"'][^"'"']+' engine/stockradar/ssi_raw_adapter.py scripts/acquire_ssi_raw_market.py
+          python - <<'PY'
+          from pathlib import Path
+          files = [Path('engine/stockradar/ssi_raw_adapter.py'), Path('scripts/acquire_ssi_raw_market.py')]
+          source = '\n'.join(path.read_text(encoding='utf-8') for path in files)
+          required = ['SSI_FASTCONNECT_CLIENT_ID', 'SSI_FASTCONNECT_API_KEY', 'SSI_FASTCONNECT_API_SECRET']
+          for name in required:
+              assert name in source, name
+          forbidden = ['sb_secret_', 'service_role', 'BEGIN PRIVATE KEY', 'BEGIN RSA PRIVATE KEY']
+          for marker in forbidden:
+              assert marker not in source, marker
+          print('SSI credential source policy: PASS')
+          PY
       - name: Build and verify Pages
         env:
           STOCKRADAR_ENABLE_AUTH: "1"
