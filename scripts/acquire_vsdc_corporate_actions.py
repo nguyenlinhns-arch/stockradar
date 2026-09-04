@@ -16,7 +16,7 @@ from urllib.parse import quote
 import pandas as pd
 import requests
 
-BASE = "https://www.vsd.vn/vi/lich-giao-dich"
+BASE = "https://vsdc.vn/vi/lich-giao-dich"
 SEARCH_ENDPOINT = "/lich-thq/search"
 SOURCE = "VSDC_CORPORATE_ACTION_CALENDAR_INTERNAL"
 HEADERS = {
@@ -48,6 +48,16 @@ def _visible_text(html: str) -> str:
     return re.sub(r"\s+", " ", unescape(text)).strip()
 
 
+def _extract_vptoken(html: str) -> str:
+    for tag in re.findall(r"<meta\b[^>]*>", html or "", flags=re.I):
+        if not re.search(r"\bname\s*=\s*['\"]__VPToken['\"]", tag, flags=re.I):
+            continue
+        match = re.search(r"\bcontent\s*=\s*(['\"])(.*?)\1", tag, flags=re.I | re.S)
+        if match:
+            return unescape(match.group(2)).strip()
+    return ""
+
+
 def pagination_meta(html: str) -> dict[str, int | None]:
     text = _visible_text(html)
     match = re.search(r"Hiển thị:\s*(\d+)\s*-\s*(\d+)\s*/\s*(\d+)\s*bản ghi", text, re.I)
@@ -58,23 +68,32 @@ def pagination_meta(html: str) -> dict[str, int | None]:
     return {"first": first, "last": last, "total": total, "record_on_page": record_on_page}
 
 
-def fetch_html(day: date, retries: int = 3) -> str:
+def fetch_initial_page(session: requests.Session, day: date, retries: int = 3) -> tuple[str, str]:
     date_value = day.strftime("%d/%m/%Y")
     url = f"{BASE}?date={quote(date_value)}&tab=LICH_THQ"
     last = None
-    with requests.Session() as session:
-        for attempt in range(retries):
-            try:
-                r = session.get(url, headers=HEADERS, timeout=18)
-                r.raise_for_status()
-                return r.text
-            except Exception as exc:
-                last = exc
-                time.sleep(min(4.0, 0.5 * (2**attempt)))
+    for attempt in range(retries):
+        try:
+            response = session.get(url, headers=HEADERS, timeout=18)
+            response.raise_for_status()
+            token = _extract_vptoken(response.text)
+            if not token:
+                raise RuntimeError("VSDC GET succeeded but meta __VPToken is missing")
+            return response.text, token
+        except Exception as exc:
+            last = exc
+            time.sleep(min(4.0, 0.5 * (2**attempt)))
     raise RuntimeError(f"VSDC fetch failed {date_value}: {last}")
 
 
-def fetch_search_page(day: date, page: int, record_on_page: int, retries: int = 3) -> str:
+def fetch_search_page(
+    session: requests.Session,
+    day: date,
+    page: int,
+    record_on_page: int,
+    vp_token: str,
+    retries: int = 3,
+) -> str:
     date_value = day.strftime("%d/%m/%Y")
     search_key = f"|||{date_value}|{date_value}|VI"
     payload = {
@@ -85,17 +104,24 @@ def fetch_search_page(day: date, page: int, record_on_page: int, retries: int = 
         "OrderType": "",
     }
     url = f"{_origin()}{SEARCH_ENDPOINT}"
-    headers = {**HEADERS, "Content-Type": "application/json;charset=utf-8", "Referer": f"{BASE}?date={quote(date_value)}&tab=LICH_THQ"}
+    headers = {
+        **HEADERS,
+        "Accept": "*/*",
+        "Content-Type": "application/json;charset=utf-8",
+        "Referer": f"{BASE}?date={quote(date_value)}&tab=LICH_THQ",
+        "Origin": _origin(),
+        "X-Requested-With": "XMLHttpRequest",
+        "__VPToken": vp_token,
+    }
     last = None
-    with requests.Session() as session:
-        for attempt in range(retries):
-            try:
-                r = session.post(url, headers=headers, json=payload, timeout=18)
-                r.raise_for_status()
-                return r.text
-            except Exception as exc:
-                last = exc
-                time.sleep(min(4.0, 0.5 * (2**attempt)))
+    for attempt in range(retries):
+        try:
+            response = session.post(url, headers=headers, json=payload, timeout=18)
+            response.raise_for_status()
+            return response.text
+        except Exception as exc:
+            last = exc
+            time.sleep(min(4.0, 0.5 * (2**attempt)))
     raise RuntimeError(f"VSDC page fetch failed {date_value} page={page}: {last}")
 
 
@@ -167,8 +193,9 @@ def daterange(start: date, end: date) -> list[date]:
 
 
 def fetch_one(day: date) -> tuple[date, list[dict[str, object]], dict[str, object], str | None]:
+    session = requests.Session()
     try:
-        first_html = fetch_html(day)
+        first_html, vp_token = fetch_initial_page(session, day)
         meta = pagination_meta(first_html)
         first_rows, first_raw = parse_tables(first_html, day)
         total = meta.get("total")
@@ -189,22 +216,34 @@ def fetch_one(day: date) -> tuple[date, list[dict[str, object]], dict[str, objec
         rows = list(first_rows)
         raw_rows = int(first_raw)
         pages_fetched = 1
+        display_mismatches = []
 
         for page in range(2, pages_expected + 1):
-            page_html = fetch_search_page(day, page, record_on_page)
+            page_html = fetch_search_page(session, day, page, record_on_page, vp_token)
+            page_meta = pagination_meta(page_html)
             page_rows, page_raw = parse_tables(page_html, day)
             rows.extend(page_rows)
             raw_rows += int(page_raw)
             pages_fetched += 1
+            expected_first = (page - 1) * record_on_page + 1
+            if page_meta.get("first") != expected_first or page_meta.get("total") != total:
+                display_mismatches.append({
+                    "page": page,
+                    "expected_first": expected_first,
+                    "actual_first": page_meta.get("first"),
+                    "expected_total": total,
+                    "actual_total": page_meta.get("total"),
+                })
 
-        complete = pages_fetched == pages_expected and raw_rows >= total
+        complete = pages_fetched == pages_expected and raw_rows >= total and not display_mismatches
         stats = {
             "advertised_total": total,
             "raw_rows": raw_rows,
             "pages_expected": pages_expected,
             "pages_fetched": pages_fetched,
             "pagination_complete": bool(complete),
-            "reason": "PASS" if complete else "RAW_ROWS_BELOW_ADVERTISED_TOTAL",
+            "page_display_mismatch_count": len(display_mismatches),
+            "reason": "PASS" if complete else ("PAGE_DISPLAY_MISMATCH" if display_mismatches else "RAW_ROWS_BELOW_ADVERTISED_TOTAL"),
         }
         return day, rows, stats, None
     except Exception as exc:
@@ -214,8 +253,11 @@ def fetch_one(day: date) -> tuple[date, list[dict[str, object]], dict[str, objec
             "pages_expected": None,
             "pages_fetched": 0,
             "pagination_complete": False,
+            "page_display_mismatch_count": 0,
             "reason": "FETCH_OR_PARSE_ERROR",
         }, str(exc)
+    finally:
+        session.close()
 
 
 def main() -> None:
