@@ -79,8 +79,11 @@ def main() -> None:
         "assets/auth-account-security.js",
         "assets/auth-extra.js",
         "assets/auth-delete-security.js",
+        "assets/signup-link-v1.js",
+        "assets/email-confirm-v1.js",
         "assets/home-core-v1.js",
         "signup/index.html",
+        "xac-minh-email/index.html",
         "dang-nhap/index.html",
         "dat-lai-mat-khau/index.html",
         "tai-khoan/index.html",
@@ -93,13 +96,15 @@ def main() -> None:
         require(site / relative)
 
     signup = require(site / "signup" / "index.html")
+    email_confirm = require(site / "xac-minh-email" / "index.html")
+    signup_link = require(site / "assets" / "signup-link-v1.js")
+    email_confirm_js = require(site / "assets" / "email-confirm-v1.js")
     login = require(site / "dang-nhap" / "index.html")
     reset = require(site / "dat-lai-mat-khau" / "index.html")
     account = require(site / "tai-khoan" / "index.html")
     stock = require(site / "co-phieu" / "index.html")
     home = require(site / "index.html")
     home_core = require(site / "assets" / "home-core-v1.js")
-    auth = require(site / "assets" / "auth.js")
     email_gate = require(site / "assets" / "auth-email-gate.js")
     policy = require(site / "assets" / "auth-policy.js")
     account_security = require(site / "assets" / "auth-account-security.js")
@@ -107,26 +112,36 @@ def main() -> None:
     delete_security = require(site / "assets" / "auth-delete-security.js")
 
     checks = {
-        "signup OTP input": ("one-time-code", signup),
-        "signup OTP form": ("data-auth-signup-otp-form", signup),
+        "signup email field": ('type="email"', signup),
+        "signup password field": ('type="password"', signup),
+        "signup email-link client": ("assets/signup-link-v1.js", signup),
+        "signup sent panel": ("data-signup-email-sent", signup),
+        "email confirmation route": ("assets/email-confirm-v1.js", email_confirm),
+        "email confirmation session detection": ("detectSessionInUrl: true", email_confirm_js),
+        "signup edge call": ("/functions/v1/signup-link", signup_link),
+        "signup direct Premium continuation": ("thanh-toan/?plan=premium", signup_link),
         "terms link": ("dieu-khoan/", signup),
         "privacy link": ("quyen-rieng-tu/", signup),
         "email delivery fail-closed gate": ("emailDeliveryReady", email_gate),
         "login OTP recovery": ("data-auth-login-otp-form", login),
-        "OTP verification": ("verifyOtp", auth + extra),
-        "OTP resend": ("auth.resend", auth + extra),
+        "login OTP verification": ("verifyOtp", extra),
+        "login OTP resend": ("auth.resend", extra),
         "consent metadata": ("terms_accepted", policy),
         "account profile": ("data-account-tier", account),
-        "current password input": ("name=\"current_password\"", account),
+        "current password input": ('name="current_password"', account),
         "current password enforcement": ("currentPassword", account_security),
         "account deletion UI": ("data-delete-account-form", account),
-        "delete password input": ("name=\"delete_current_password\"", account),
+        "delete password input": ('name="delete_current_password"', account),
         "delete reauthentication": ("signInWithPassword", delete_security),
         "account deletion function": ("delete-account", delete_security),
     }
     missing = [name for name, (marker, source) in checks.items() if marker not in source]
     if missing:
         raise SystemExit("auth release checks failed: " + ", ".join(missing))
+
+    for forbidden in ('data-auth-signup-otp-form', 'autocomplete="one-time-code"', 'Nhập mã OTP 6 số'):
+        if forbidden in signup:
+            raise SystemExit(f"manual signup OTP leaked into production artifact: {forbidden}")
 
     for label, source in (
         ("signup", signup),
@@ -137,12 +152,11 @@ def main() -> None:
         require_all(source, FULL_AUTH_ASSETS, label)
         require_all(source, (SUPABASE_CDN, "assets/auth.css", "assets/auth-extra.css"), label)
 
+    require_all(email_confirm, (SUPABASE_CDN, "assets/auth-config.js", "assets/email-confirm-v1.js"), "email confirmation")
+
     require_all(stock, (SUPABASE_CDN, "assets/auth-config.js", "assets/stock-api-client.js"), "stock analysis")
     reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
 
-    # Homepage reads only the tiny auth-config launch state. The lightweight home core
-    # owns the email-first funnel: capture Free 09:00 interest, then route to account
-    # creation / plan comparison without loading the heavy Supabase browser SDK.
     require_all(home, ("assets/auth-config.js", "assets/home-core-v1.js"), "homepage")
     require_all(
         home_core,
@@ -169,7 +183,7 @@ def main() -> None:
     state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
     print(
         "StockRadar production auth verification: PASS "
-        f"(email delivery {state}; homepage email-first funnel self-contained; auth bundles route-scoped)"
+        f"(email delivery {state}; signup uses one-click email verification; auth bundles route-scoped)"
     )
 
 
