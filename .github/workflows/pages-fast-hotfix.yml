@@ -1,0 +1,98 @@
+name: Fast deploy StockRadar Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/pages-fast-hotfix.yml'
+  workflow_dispatch:
+
+permissions:
+  actions: read
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages-fast-hotfix
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out current main
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install runtime dependency
+        run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5
+
+      - name: Build fail-closed public data
+        run: python -m engine.cli build-public
+
+      - name: Run regression suite
+        run: python -m unittest discover -s engine/tests -v
+
+      - name: Fail-close unlicensed public ticker seed
+        run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
+
+      - name: Build Pages artifact
+        env:
+          STOCKRADAR_ENABLE_AUTH: "1"
+          STOCKRADAR_AUTH_EMAIL_READY: "0"
+          STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
+        run: python scripts/build_pages.py --output .pages-site
+
+      - name: Apply production UX transforms
+        env:
+          STOCKRADAR_PRODUCT_EMAIL_READY: "0"
+          STOCKRADAR_CHECKOUT_READY: "0"
+        run: |
+          python scripts/inject_public_ux.py .pages-site
+          python scripts/inject_home_radar_polish.py .pages-site
+          python scripts/upgrade_home_radar_operational.py .pages-site
+          python scripts/apply_buyer_readiness.py .pages-site
+          python scripts/redesign_home_value_block.py .pages-site
+          python scripts/apply_conversion_v3.py .pages-site
+          python scripts/link_premium_sample.py .pages-site
+          python scripts/patch_conversion_funnel_v4.py .pages-site
+          python scripts/redesign_home_paid_intent_v1.py .pages-site
+          python scripts/apply_premium_email_product_v1.py .pages-site
+          python scripts/strip_public_methods.py .pages-site
+
+      - name: Verify deployable artifact
+        run: |
+          python scripts/verify_pages_auth.py .pages-site
+          python scripts/verify_pages_public_surface_paid_home_v1.py .pages-site
+          python scripts/verify_buyer_readiness.py .pages-site
+          python scripts/verify_conversion_paid_home_v1.py .pages-site
+          python scripts/verify_home_paid_intent_v1.py .pages-site
+          python scripts/verify_premium_email_product_v1.py .pages-site
+          python scripts/verify_conversion_funnel_v4.py .pages-site
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+        with:
+          enablement: true
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: .pages-site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
