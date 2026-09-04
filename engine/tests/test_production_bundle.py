@@ -55,6 +55,11 @@ def descriptor():
             "source_terms_reviewed": True,
             "evidence_ref": "CONTRACT-001",
         },
+        "compliance": {
+            "review_completed": True,
+            "public_recommendation_approved": True,
+            "evidence_ref": "COMPLIANCE-001",
+        },
         "active_status": {
             "semantics_resolved": True,
             "market_status_checked": True,
@@ -113,6 +118,7 @@ class ProductionBundleTests(unittest.TestCase):
             self.assertEqual(manifest["datasets"]["ohlcv"]["input_role"], "RAW_INPUT_ONLY")
             self.assertEqual(manifest["computation"]["calculation_origin"], "STOCKRADAR_ENGINE")
             self.assertFalse(manifest["computation"]["external_scores_accepted"])
+            self.assertTrue(manifest["compliance"]["public_recommendation_approved"])
 
     def test_blocked_rights_remain_blocked_after_assembly(self):
         with TemporaryDirectory() as directory:
@@ -126,6 +132,28 @@ class ProductionBundleTests(unittest.TestCase):
             )
             self.assertFalse(result.passed)
             self.assertIn("rights_redistribution_allowed_false", result.failures)
+
+    def test_missing_compliance_object_is_rejected_before_manifest(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            payload = descriptor()
+            del payload["compliance"]
+            with self.assertRaisesRegex(ProductionBundleError, "compliance object is required"):
+                build_manifest_from_descriptor(root, payload)
+
+    def test_unapproved_compliance_remains_blocked_after_assembly(self):
+        with TemporaryDirectory() as directory:
+            root = Path(directory)
+            self.populate(root)
+            payload = descriptor()
+            payload["compliance"]["public_recommendation_approved"] = False
+            result = validate_production_manifest(
+                build_manifest_from_descriptor(root, payload),
+                now=NOW,
+            )
+            self.assertFalse(result.passed)
+            self.assertIn("compliance_public_recommendation_approved_false", result.failures)
 
     def test_bundle_rejects_path_traversal(self):
         with TemporaryDirectory() as directory:
