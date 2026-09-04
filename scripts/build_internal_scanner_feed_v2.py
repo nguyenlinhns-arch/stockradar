@@ -230,7 +230,12 @@ def build(args):
     out["data_role"] = "INTERNAL_RESEARCH_BOOTSTRAP"
     out["schema_version"] = SCHEMA_VERSION
 
-    source_ms = pd.to_numeric(out.get("source_time_ms"), errors="coerce").dropna()
+    source_time_series = (
+        out["source_time_ms"]
+        if "source_time_ms" in out.columns
+        else pd.Series(np.nan, index=out.index, dtype="float64")
+    )
+    source_ms = pd.to_numeric(source_time_series, errors="coerce").dropna()
     max_source_ms = int(source_ms.max()) if len(source_ms) else None
     max_source_utc = datetime.fromtimestamp(max_source_ms / 1000, tz=timezone.utc).isoformat() if max_source_ms else None
 
