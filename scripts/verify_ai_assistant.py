@@ -10,7 +10,6 @@ import sys
 from pathlib import Path
 
 
-# Keep the legacy contract explicit so older pages/builds remain verifiable.
 LEGACY_HOME_COPY = (
     "Hỏi StockRadar AI trước khi ra quyết định.",
     "10 lượt hỏi mỗi ngày",
@@ -91,8 +90,8 @@ def main() -> int:
         require_markers(
             home,
             (
-                'id="stockradar-ai"',
                 "data-stockradar-ai-center",
+                "Hỏi một mã cổ phiếu",
                 "3 câu/ngày",
                 "10 câu/ngày",
                 "Hỏi không giới hạn",
@@ -104,7 +103,7 @@ def main() -> int:
             ),
             "Native AI-first homepage",
         )
-        ai_pos = home.index('id="stockradar-ai"')
+        ai_pos = home.index("data-stockradar-ai-center")
         lookup_pos = home.find("data-stock-search-form")
         radar_pos = home.find("data-live-radar-home")
         if lookup_pos < 0 or radar_pos < 0 or not (ai_pos < lookup_pos < radar_pos):
@@ -132,8 +131,6 @@ def main() -> int:
     if home.count("<h1") != 1:
         raise SystemExit("StockRadar AI center must own the single homepage H1")
 
-    # The supporting AI assistant must remain available on core product pages,
-    # even when the homepage uses the newer guest-capable native AI center.
     for relative in (
         "index.html",
         "hom-nay/index.html",
@@ -148,7 +145,7 @@ def main() -> int:
         if "sr-ai-nav-link" not in source:
             raise SystemExit(f"AI navigation missing from: {relative}")
 
-    print("StockRadar AI production surface verified: AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement")
+    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement")
     return 0
 
 
