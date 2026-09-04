@@ -112,6 +112,11 @@ Deno.serve(async (req: Request) => {
     eventMeta.bounce_type = String(bounce.type || "").slice(0, 80);
     eventMeta.bounce_subtype = String(bounce.subType || "").slice(0, 120);
   }
+  if (type === "email.suppressed" && data.suppressed && typeof data.suppressed === "object") {
+    const suppressed = data.suppressed as Record<string, unknown>;
+    eventMeta.suppression_type = String(suppressed.type || "").slice(0, 120);
+    eventMeta.suppression_message = String(suppressed.message || "").slice(0, 300);
+  }
 
   try {
     await recordEvent(supabaseUrl, admin, {
