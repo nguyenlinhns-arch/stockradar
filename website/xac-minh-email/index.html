@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi" data-api-mode="auto">
+<head>
+  <base href="../">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Xác minh email tài khoản StockRadar và tiếp tục theo gói đã chọn.">
+  <title>Xác minh email — StockRadar</title>
+  <link rel="icon" href="assets/logo.svg">
+  <link rel="stylesheet" href="assets/styles.css?v=20260904-email1">
+  <link rel="stylesheet" href="assets/auth.css?v=20260903-auth7">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+  <script src="assets/auth-config.js?v=20260903-auth7" defer></script>
+  <script src="assets/email-confirm-v1.js?v=20260904-link1" defer></script>
+</head>
+<body data-proposition="account">
+  <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
+  <header class="site-header"><div class="container nav"><a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a></div></header>
+  <main id="content" class="auth-shell">
+    <div class="container" style="max-width:760px">
+      <section class="auth-card" style="margin:48px auto">
+        <div class="auth-card-header">
+          <span class="auth-config-pill">XÁC MINH EMAIL</span>
+          <h1 style="margin:12px 0 8px">Đang xác minh tài khoản StockRadar…</h1>
+          <p>Không cần nhập mã OTP. StockRadar đang xác nhận liên kết bạn vừa bấm trong email.</p>
+        </div>
+        <p class="auth-message" data-email-confirm-status aria-live="polite">Đang kiểm tra phiên xác minh…</p>
+        <div data-email-confirm-actions hidden style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="button button-primary" href="signup/">Quay lại đăng ký</a>
+          <a class="button button-secondary" href="dang-nhap/">Đăng nhập</a>
+        </div>
+      </section>
+    </div>
+  </main>
+</body>
+</html>
