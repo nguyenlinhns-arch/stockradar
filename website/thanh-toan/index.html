@@ -9,6 +9,7 @@
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-checkout1">
   <link rel="stylesheet" href="assets/checkout-v1.css?v=20260904-checkout1">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
   <script src="assets/app.js?v=20260904-checkout1" defer></script>
   <script src="assets/checkout-v1.js?v=20260904-checkout1" defer></script>
 </head>
@@ -77,7 +78,7 @@
               <h3>Sau khi đã chuyển khoản</h3>
               <p>Bấm xác nhận để hệ thống ghi nhận yêu cầu đối soát. Quyền Premium chỉ được kích hoạt sau khi backend xác minh thanh toán thành công; thao tác bấm nút không tự tạo quyền trả phí.</p>
               <button class="checkout-primary" type="button" data-checkout-confirm disabled>Tôi đã chuyển khoản · Gửi xác nhận</button>
-              <div class="checkout-state is-warn" data-checkout-state aria-live="polite">Đang kiểm tra trạng thái thanh toán…</div>
+              <div class="checkout-state is-warn" data-checkout-state aria-live="polite">Thanh toán chỉ mở khi hệ thống cấp đủ thông tin giao dịch.</div>
               <a class="checkout-secondary-link" href="dang-nhap/" data-checkout-login>Đăng nhập để thanh toán</a>
             </section>
           </div>
@@ -106,7 +107,7 @@
 
             <div class="checkout-account">
               <span>Tài khoản nhận quyền Premium</span>
-              <strong data-checkout-account-email>Đang kiểm tra…</strong>
+              <strong data-checkout-account-email>Chưa đăng nhập</strong>
             </div>
 
             <div class="checkout-notes">
