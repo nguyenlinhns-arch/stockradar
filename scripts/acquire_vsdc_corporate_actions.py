@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import concurrent.futures as cf
 from datetime import date, datetime, timedelta, timezone
 from io import StringIO
 import json
@@ -32,21 +33,19 @@ def normalize_col(value: object) -> str:
     return re.sub(r"\s+", " ", str(value or "")).strip()
 
 
-def fetch_html(session: requests.Session, day: date, retries: int = 4) -> str:
+def fetch_html(day: date, retries: int = 3) -> str:
     date_value = day.strftime("%d/%m/%Y")
     url = f"{BASE}?date={quote(date_value)}&tab=LICH_THQ"
     last = None
-    for attempt in range(retries):
-        try:
-            r = session.get(url, headers=HEADERS, timeout=30)
-            r.raise_for_status()
-            if "Ngày ĐKCC" not in r.text and "Mã CK" not in r.text:
-                # Empty-day pages may not contain the table; keep HTML for parser fallback.
+    with requests.Session() as session:
+        for attempt in range(retries):
+            try:
+                r = session.get(url, headers=HEADERS, timeout=18)
+                r.raise_for_status()
                 return r.text
-            return r.text
-        except Exception as exc:
-            last = exc
-            time.sleep(min(8.0, 0.8 * (2**attempt)))
+            except Exception as exc:
+                last = exc
+                time.sleep(min(4.0, 0.5 * (2**attempt)))
     raise RuntimeError(f"VSDC fetch failed {date_value}: {last}")
 
 
@@ -58,7 +57,6 @@ def parse_tables(html: str, requested_day: date) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
     for table in tables:
         table.columns = [normalize_col(c) for c in table.columns]
-        by_lower = {c.casefold(): c for c in table.columns}
         ticker_col = next((c for c in table.columns if "mã ck" in c.casefold()), None)
         market_col = next((c for c in table.columns if "thị trường" in c.casefold()), None)
         title_col = next((c for c in table.columns if "tiêu đề" in c.casefold()), None)
@@ -107,11 +105,21 @@ def classify(title: str) -> str:
     return "OTHER_RIGHT"
 
 
-def daterange(start: date, end: date):
+def daterange(start: date, end: date) -> list[date]:
+    days: list[date] = []
     day = start
     while day <= end:
-        yield day
+        days.append(day)
         day += timedelta(days=1)
+    return days
+
+
+def fetch_one(day: date) -> tuple[date, list[dict[str, object]], str | None]:
+    try:
+        html = fetch_html(day)
+        return day, parse_tables(html, day), None
+    except Exception as exc:
+        return day, [], str(exc)
 
 
 def main() -> None:
@@ -119,7 +127,7 @@ def main() -> None:
     parser.add_argument("--start", required=True)
     parser.add_argument("--end", required=True)
     parser.add_argument("--output-dir", default="artifacts/vsdc-corporate-actions")
-    parser.add_argument("--sleep", type=float, default=0.08)
+    parser.add_argument("--workers", type=int, default=8)
     args = parser.parse_args()
 
     start = date.fromisoformat(args.start)
@@ -128,22 +136,24 @@ def main() -> None:
         raise SystemExit("end must be >= start")
     if (end - start).days > 370:
         raise SystemExit("single acquisition window capped at 371 calendar days")
+    workers = max(1, min(int(args.workers), 12))
 
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
     rows: list[dict[str, object]] = []
     errors: list[dict[str, str]] = []
+    days = daterange(start, end)
     fetched_days = 0
 
-    with requests.Session() as session:
-        for day in daterange(start, end):
-            try:
-                html = fetch_html(session, day)
+    with cf.ThreadPoolExecutor(max_workers=workers) as executor:
+        futures = [executor.submit(fetch_one, day) for day in days]
+        for future in cf.as_completed(futures):
+            day, day_rows, error = future.result()
+            if error:
+                errors.append({"date": day.isoformat(), "error": error})
+            else:
                 fetched_days += 1
-                rows.extend(parse_tables(html, day))
-            except Exception as exc:
-                errors.append({"date": day.isoformat(), "error": str(exc)})
-            time.sleep(max(args.sleep, 0.0))
+                rows.extend(day_rows)
 
     df = pd.DataFrame(rows)
     if df.empty:
@@ -160,8 +170,10 @@ def main() -> None:
         "source": SOURCE,
         "window_start": start.isoformat(),
         "window_end": end.isoformat(),
-        "days_requested": (end - start).days + 1,
+        "days_requested": len(days),
         "days_fetched": fetched_days,
+        "days_failed": len(errors),
+        "workers": workers,
         "row_count": int(len(df)),
         "unique_tickers": int(df["ticker"].nunique()) if not df.empty else 0,
         "event_type_counts": df["event_type"].value_counts().to_dict() if not df.empty else {},
