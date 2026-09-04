@@ -1,0 +1,5 @@
+StockRadar auth + checkout release marker
+2026-09-04
+Signup -> verification -> Premium checkout
+Login + recovery via Supabase Auth
+Checkout backend remains fail-closed until real bank receiving details are configured.
