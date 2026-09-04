@@ -30,7 +30,6 @@ def main() -> None:
         "dang-ky/index.html",
         "signup/index.html",
         "hieu-qua/index.html",
-        "thanh-toan/index.html",
         "premium-mau/index.html",
     )
     for relative in required_pages:
@@ -41,6 +40,15 @@ def main() -> None:
         source = path.read_text(encoding="utf-8")
         if "conversion-v3.js" not in source:
             errors.append(f"conversion tracker missing: {relative}")
+
+    # Checkout is intentionally absent from the production artifact while the
+    # billing gate is closed. If it is present in a future ready build, it must
+    # participate in the same privacy-minimal funnel measurement.
+    checkout_path = output / "thanh-toan" / "index.html"
+    if checkout_path.is_file():
+        checkout = checkout_path.read_text(encoding="utf-8")
+        if "conversion-v3.js" not in checkout:
+            errors.append("conversion tracker missing: thanh-toan/index.html")
 
     tracker_path = output / "assets" / "conversion-v3.js"
     if not tracker_path.is_file():
@@ -94,7 +102,7 @@ def main() -> None:
             (
                 "đo funnel",
                 "không ghi email, mật khẩu, OTP, NAV",
-                "địa chỉ IP thô",
+                "không lưu địa chỉ IP thô",
             ),
             "privacy policy",
             errors,
@@ -105,7 +113,11 @@ def main() -> None:
     if errors:
         raise RuntimeError("Conversion funnel v4 verification failed:\n- " + "\n- ".join(errors))
 
-    print("Conversion funnel v4 verification: PASS (tracked lookup → Premium → signup → safe next)")
+    checkout_state = "tracked" if checkout_path.is_file() else "fail-closed"
+    print(
+        "Conversion funnel v4 verification: PASS "
+        f"(tracked lookup → Premium → signup → safe next; checkout={checkout_state})"
+    )
 
 
 if __name__ == "__main__":
