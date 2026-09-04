@@ -54,10 +54,18 @@ def main() -> None:
         "KHÁCH · 3 CÂU / NGÀY",
         "FREE · 10 CÂU / NGÀY",
         "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
+        "dang-ky/?plan=free",
+        "dang-ky/?plan=premium",
+        "Đăng ký Free",
+        "Xem gói Paid",
+    ), "AI client access model", errors)
+
+    for stale_ai_route in (
         "signup/?plan=free",
         "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
-        "Mở Premium · 199K/30 ngày",
-    ), "AI client access model", errors)
+    ):
+        if stale_ai_route in ai:
+            errors.append(f"AI client access model: stale direct signup route {stale_ai_route}")
 
     require(plans, (
         "Đăng ký & thanh toán",
@@ -102,9 +110,6 @@ def main() -> None:
     for private_example in ("MBB", "HPG", "ACB"):
         if private_example in ai:
             errors.append(f"AI public examples must not expose internal priority ticker: {private_example}")
-
-    if "dang-ky/?plan=premium" in ai:
-        errors.append("AI Premium CTA must not detour through plan selection; it must continue to Premium signup/payment")
 
     if home.count("<h1") != 1:
         errors.append("AI-first homepage must contain exactly one H1")
