@@ -11,6 +11,8 @@ from pathlib import Path
 
 BANNED_PUBLIC_TERMS = (
     "phân tích",
+    "phương pháp",
+    "setup",
     "4M",
     "CANSLIM",
     "SEPA",
@@ -56,6 +58,7 @@ def rewrite(source: str) -> str:
         ('MẪU PHƯƠNG PHÁP', 'QUY TẮC'),
         ('Phương pháp StockRadar', 'Cách dùng StockRadar'),
         ('Phương pháp quét', 'Cách StockRadar rà soát'),
+        ('Nhìn trạng thái, không cần học phương pháp.', 'Chỉ cần nhìn trạng thái và hành động.'),
         ('setup đạt chuẩn', 'điều kiện hành động đạt chuẩn'),
         ('Setup đạt chuẩn', 'Điều kiện hành động đạt chuẩn'),
         ('setup và dữ liệu cùng đạt chuẩn', 'điều kiện hành động và dữ liệu cùng đạt chuẩn'),
@@ -126,10 +129,16 @@ def rewrite(source: str) -> str:
         flags=re.IGNORECASE,
     )
 
-    # Final safety net: public HTML must not use the word "phân tích" at all.
+    # Final safety net: public HTML must not expose analysis/method/setup language at all.
     source = source.replace("PHÂN TÍCH", "TRẠNG THÁI")
     source = source.replace("Phân tích", "Tra cứu")
     source = source.replace("phân tích", "tra cứu")
+    source = source.replace("PHƯƠNG PHÁP", "QUY TẮC")
+    source = source.replace("Phương pháp", "Cách dùng")
+    source = source.replace("phương pháp", "cách dùng")
+    source = source.replace("SETUP", "TRẠNG THÁI")
+    source = source.replace("Setup", "Trạng thái")
+    source = source.replace("setup", "trạng thái")
     return source
 
 
