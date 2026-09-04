@@ -22,7 +22,10 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("quyen-rieng-tu/", signup)
         self.assertIn("terms_accepted", policy)
         self.assertIn("privacy_accepted", policy)
-        self.assertIn("2026-09-03", policy)
+        self.assertIn("const TERMS_VERSION = '2026-09-03'", policy)
+        self.assertIn("const PRIVACY_VERSION = '2026-09-04'", policy)
+        self.assertIn("terms_version: TERMS_VERSION", policy)
+        self.assertIn("privacy_version: PRIVACY_VERSION", policy)
 
     def test_public_email_flows_fail_closed_until_smtp_is_ready(self) -> None:
         config = (WEBSITE / "assets" / "auth-config.js").read_text(encoding="utf-8")
@@ -70,11 +73,15 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn("stopImmediatePropagation", security)
 
     def test_legal_pages_exist_and_are_versioned(self) -> None:
-        for route in ("dieu-khoan", "quyen-rieng-tu"):
+        expected = {
+            "dieu-khoan": "2026-09-03",
+            "quyen-rieng-tu": "2026-09-04",
+        }
+        for route, version in expected.items():
             path = WEBSITE / route / "index.html"
             self.assertTrue(path.is_file(), route)
             source = path.read_text(encoding="utf-8")
-            self.assertIn("2026-09-03", source)
+            self.assertIn(version, source)
             self.assertIn("STOCKRADAR.VN", source)
 
     def test_public_auth_assets_never_contain_privileged_keys(self) -> None:
