@@ -31,7 +31,7 @@ def main() -> None:
         "09:00 · Watchlist trước",
         "Trong phiên · Chỉ khi đổi trạng thái",
         "Không đổi · Không spam",
-        "Theo dõi mã &amp; nhận email",
+        "Theo dõi mã của tôi &amp; nhận email",
         "Email chỉ được gửi khi tài khoản, consent, quyền gói và hệ thống delivery đều đủ điều kiện",
     ), "homepage Premium email", errors)
 
