@@ -138,6 +138,6 @@ Deno.serve(async (req: Request) => {
   return json(origin, 202, {
     accepted: true,
     status: "PENDING_VERIFICATION",
-    message: "Đã ghi nhận email và lựa chọn ở trạng thái chờ xác minh. Hoàn tất tạo tài khoản Free và xác minh email để kích hoạt bản rà soát 09:00; cảnh báo mua/bán chỉ dành cho Premium.",
+    message: "Đã ghi nhận nhu cầu email Premium ở trạng thái chờ xác minh. Bước này chưa tạo quyền gửi email. Product email chỉ được gửi khi tài khoản Trial/Paid đã xác minh, có đồng ý nhận hiện hành, không bị suppression và delivery gate production đã được kích hoạt.",
   });
 });
