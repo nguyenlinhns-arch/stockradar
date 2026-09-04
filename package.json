@@ -1,0 +1,12 @@
+{
+  "name": "stockradar-qa",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pinned browser dependency for StockRadar CI visual QA.",
+  "scripts": {
+    "visual-qa": "node scripts/visual_qa.cjs"
+  },
+  "devDependencies": {
+    "playwright": "1.62.1"
+  }
+}
