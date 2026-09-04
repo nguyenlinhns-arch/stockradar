@@ -22,8 +22,9 @@ def build(args) -> None:
 
     requested = max(int(coverage.get("days_requested") or 0), 1)
     fetched = int(coverage.get("days_fetched") or 0)
-    global_coverage_ratio = fetched / requested
-    source_ready = global_coverage_ratio >= 0.98
+    global_coverage_ratio = float(coverage.get("source_coverage_ratio") or (fetched / requested))
+    pagination_complete = bool(coverage.get("pagination_complete") is True and int(coverage.get("days_pagination_incomplete") or 0) == 0)
+    source_ready = bool(coverage.get("source_ready") is True and global_coverage_ratio >= 0.98 and pagination_complete)
 
     events = events.copy()
     if not events.empty:
@@ -56,6 +57,7 @@ def build(args) -> None:
             "ticker": ticker,
             "corporate_action_source_ready_v2": source_ready,
             "corporate_action_source_coverage_ratio_v2": round(global_coverage_ratio, 4),
+            "corporate_action_pagination_complete_v2": pagination_complete,
             "corporate_action_event_count_window_v2": int(len(g)),
             "sensitive_event_count_window_v2": int(len(sensitive)),
             "near_sensitive_event_count_v2": int(len(near)),
@@ -65,7 +67,8 @@ def build(args) -> None:
             "next_sensitive_event_title_v2": next_row["title"] if next_row is not None else None,
             "days_to_next_sensitive_event_v2": int(next_row["days_from_asof"]) if next_row is not None else np.nan,
             "corporate_action_gate_v2": gate,
-            "corporate_action_action_allowed_v2": gate in {"PASS_NO_NEAR_SENSITIVE_EVENT", "REVIEW_UPCOMING_30D"},
+            "corporate_action_action_allowed_v2": gate == "PASS_NO_NEAR_SENSITIVE_EVENT",
+            "corporate_action_review_required_v2": gate == "REVIEW_UPCOMING_30D",
             "price_adjustment_reconciliation_required_v2": gate in {"BLOCK_NEAR_PRICE_ADJUSTMENT_EVENT", "BLOCK_RECENT_EVENT_RECONCILIATION"},
         })
 
@@ -77,10 +80,14 @@ def build(args) -> None:
         "canonical_hose": EXPECTED_HOSE,
         "source_ready": bool(source_ready),
         "source_coverage_ratio": round(global_coverage_ratio, 4),
+        "pagination_complete": pagination_complete,
+        "days_pagination_incomplete": int(coverage.get("days_pagination_incomplete") or 0),
+        "advertised_records_all_markets": int(coverage.get("advertised_records_all_markets") or 0),
+        "raw_table_rows_all_markets": int(coverage.get("raw_table_rows_all_markets") or 0),
         "event_rows": int(len(events)),
         "unique_event_tickers": int(events["ticker"].nunique()) if not events.empty else 0,
         "gate_counts": out["corporate_action_gate_v2"].value_counts().to_dict(),
-        "policy": "Corporate actions are a price-adjustment/risk gate, never alpha. Sensitive events near record date block action until adjusted-price reconciliation passes.",
+        "policy": "Corporate actions are a price-adjustment/risk gate, never alpha. Source readiness requires complete pagination. Upcoming sensitive events require review; near/recent sensitive events block action until reconciliation passes.",
         "publication_allowed": False,
     }
     Path(args.manifest).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
