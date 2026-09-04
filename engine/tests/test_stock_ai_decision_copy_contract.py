@@ -56,14 +56,37 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn("target_3_6m", source)
         self.assertIn("target_12m", source)
 
+    def test_question_aware_fallback_covers_homepage_shortcuts(self):
+        source = self.source
+        self.assertIn("function questionIntent(question)", source)
+        self.assertIn("return 'RISK'", source)
+        self.assertIn("return 'MEDIUM'", source)
+        self.assertIn("return 'LONG'", source)
+        self.assertIn("return 'HOLD'", source)
+        self.assertIn("return 'BUY'", source)
+        self.assertIn("Rủi ro chính của ${ticker}", source)
+        self.assertIn("${ticker} trong 3–6 tháng", source)
+        self.assertIn("Nếu đang nắm giữ ${ticker}", source)
+        self.assertIn("singleResearch(list[0], question)", source)
+
     def test_user_facing_state_and_block_reason_normalization_is_present(self):
         source = self.source
         self.assertIn("'THEO DOI KHONG HANH DONG': 'THEO DÕI — CHƯA HÀNH ĐỘNG'", source)
         self.assertIn("'HA TY TRONG HOAC BAN': 'HẠ TỶ TRỌNG HOẶC BÁN'", source)
+        self.assertIn("'GIU QUAN SAT': 'GIỮ VÀ QUAN SÁT'", source)
         self.assertIn("'PHAN HOA THAN TRONG': 'PHÂN HÓA, THẬN TRỌNG'", source)
         self.assertIn("'LAGGING': 'YẾU HƠN THỊ TRƯỜNG'", source)
+        self.assertIn("'WEAK': 'YẾU'", source)
+        self.assertIn("'NEUTRAL': 'TRUNG TÍNH'", source)
         self.assertIn("NO_BUY_SETUP: 'chưa có setup mua đạt chuẩn'", source)
         self.assertIn("RR_BELOW_2: 'Risk/Reward dưới 2'", source)
+
+    def test_corporate_action_conflict_is_reconciled_before_showing_risk(self):
+        source = self.source
+        self.assertIn("corporateActionClear", source)
+        self.assertIn("CURRENT_CORPORATE_ACTION_UNVERIFIED", source)
+        self.assertIn("corp.execution_clear_v7 === true", source)
+        self.assertIn("PASS_NO_NEAR_SENSITIVE_EVENT", source)
 
     def test_action_ready_fallback_uses_published_fields(self):
         source = self.source
@@ -84,11 +107,13 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         source = "".join(self.auth_ai.split())
         self._assert_model_research_path(self.auth_ai)
         self.assertIn('RESEARCH_CONTEXT:researchContexts', source)
+        self.assertIn('question:message', source)
 
     def test_guest_research_uses_model_when_data_exists(self):
         source = "".join(self.guest_ai.split())
         self._assert_model_research_path(self.guest_ai)
         self.assertIn('RESEARCH_CONTEXT:researchContext', source)
+        self.assertIn('question:message', source)
 
 
 if __name__ == "__main__":
