@@ -221,10 +221,10 @@
 
     const log = node('div', 'sr-center-log');
     log.setAttribute('aria-live', 'polite');
-    addMessage(log, 'assistant', 'Tôi là StockRadar AI. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết, ví dụ: “FPT mua được chưa?” hoặc “HPG 3–6 tháng thế nào?”.');
+    addMessage(log, 'assistant', 'Tôi là StockRadar AI. Nhập một mã HOSE và hỏi thẳng điều bạn cần biết, ví dụ: “FPT mua được chưa?” hoặc “MWG 3–6 tháng thế nào?”.');
 
     const chips = node('div', 'sr-center-chips');
-    ['FPT mua được chưa?', 'HPG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
+    ['FPT mua được chưa?', 'MWG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
       const button = node('button', '', label);
       button.type = 'button';
       chips.append(button);
