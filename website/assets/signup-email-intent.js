@@ -88,6 +88,7 @@
       const premium = plan === 'premium';
       const name = document.querySelector('[data-signup-plan-name]');
       const note = document.querySelector('[data-signup-plan-note]');
+      const emailNote = document.querySelector('.signup-email-note');
       const submit = document.querySelector('[data-signup-submit-label]');
       const daily = form.elements.email_daily_brief;
       const alerts = form.elements.email_event_alerts;
@@ -98,16 +99,29 @@
           ? 'Premium mở StockRadar AI không giới hạn, Daily 09:00, kế hoạch giao dịch và Action Alert trong phiên khi dữ liệu đủ chuẩn. Giá 199.000đ/30 ngày.'
           : 'Free có phí 0đ, StockRadar AI 10 câu/ngày và email hệ thống cần thiết cho tài khoản. Báo cáo hằng ngày và Action Alert thuộc Premium.';
       }
+      if (emailNote) {
+        emailNote.textContent = premium
+          ? 'Tài khoản Premium mặc định bật Báo cáo StockRadar lúc 09:00 và Action Alert trong phiên. Bạn có thể bỏ chọn nếu không muốn nhận một trong hai loại email.'
+          : 'Email nội dung chỉ áp dụng cho Premium. Free chỉ nhận email hệ thống cần thiết cho tài khoản.';
+      }
       [daily, alerts].forEach(input => {
         if (!input) return;
         input.disabled = !premium;
-        if (!premium) input.checked = false;
+        if (!premium) {
+          input.checked = false;
+        } else if (input.dataset.userTouched !== '1') {
+          input.checked = true;
+        }
       });
       if (submit) submit.textContent = premium
         ? 'Tạo tài khoản Premium & thanh toán'
         : 'Tạo tài khoản Free';
     };
 
+    [form.elements.email_daily_brief, form.elements.email_event_alerts].forEach(input => {
+      if (!input) return;
+      input.addEventListener('change', () => { input.dataset.userTouched = '1'; });
+    });
     form.querySelectorAll('input[name="selected_plan"]').forEach(input => input.addEventListener('change', render));
     render();
   }
