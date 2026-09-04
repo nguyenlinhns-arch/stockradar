@@ -4,6 +4,11 @@ on:
   workflow_run:
     workflows: ["StockRadar HOSE Data Bootstrap"]
     types: [completed]
+  schedule:
+    # 08:10 Asia/Ho_Chi_Minh: build the morning research state before the 09:00 brief.
+    - cron: '10 1 * * 1-5'
+    # 16:20 Asia/Ho_Chi_Minh: rebuild after post-close VSDC, reference depth and HOSE deep disclosures.
+    - cron: '20 9 * * 1-5'
   workflow_dispatch:
   push:
     branches: [main]
@@ -16,11 +21,16 @@ on:
       - 'scripts/build_decision_layer_v5.py'
       - 'scripts/build_unified_radar_v6.py'
       - 'scripts/build_unified_radar_v7.py'
+      - 'scripts/merge_hose_official_disclosures_v1.py'
       - '.github/workflows/research-decision-v7.yml'
 
 permissions:
   contents: read
   actions: read
+
+concurrency:
+  group: stockradar-research-decision-v7
+  cancel-in-progress: false
 
 jobs:
   research-decision-v7:
@@ -108,6 +118,41 @@ jobs:
           else
             echo 'Official HOSE disclosure artifact unavailable; Catalyst V3 will remain recall-only/unverified.'
           fi
+
+      - name: Download latest deep official HOSE disclosure artifact when available
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/hose-official-depth
+          id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-official-disclosures-depth-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+          if [ -n "$id" ]; then
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${id}/zip" > /tmp/hose-official-depth.zip
+            unzip -q -o /tmp/hose-official-depth.zip -d artifacts/hose-official-depth
+          else
+            echo 'Deep official HOSE disclosure artifact unavailable; official catalyst source remains fail-closed.'
+          fi
+
+      - name: Merge realtime and deep official HOSE disclosures
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/hose-official-merged
+          realtime_csv="$(find artifacts/hose-official -name 'hose_official_disclosures_history.csv' -print -quit || true)"
+          realtime_manifest="$(find artifacts/hose-official -name 'hose_official_disclosures_manifest.json' -print -quit || true)"
+          deep_csv="$(find artifacts/hose-official-depth -name 'hose_official_disclosures_history.csv' -print -quit || true)"
+          deep_manifest="$(find artifacts/hose-official-depth -name 'hose_official_disclosures_manifest.json' -print -quit || true)"
+          args=(
+            --universe artifacts/market/security_master.csv
+            --output artifacts/hose-official-merged/hose_official_disclosures_history.csv
+            --manifest artifacts/hose-official-merged/hose_official_disclosures_manifest.json
+          )
+          if [ -n "$realtime_csv" ]; then args+=(--realtime-history "$realtime_csv"); fi
+          if [ -n "$realtime_manifest" ]; then args+=(--realtime-manifest "$realtime_manifest"); fi
+          if [ -n "$deep_csv" ]; then args+=(--deep-history "$deep_csv"); fi
+          if [ -n "$deep_manifest" ]; then args+=(--deep-manifest "$deep_manifest"); fi
+          python scripts/merge_hose_official_disclosures_v1.py "${args[@]}"
 
       - name: Resolve authoritative corporate-action coverage
         env:
@@ -229,8 +274,8 @@ jobs:
         run: |
           set -euo pipefail
           as_of="$(TZ=Asia/Ho_Chi_Minh date +%F)"
-          official_csv="$(find artifacts/hose-official -name 'hose_official_disclosures_history.csv' -print -quit || true)"
-          official_manifest="$(find artifacts/hose-official -name 'hose_official_disclosures_manifest.json' -print -quit || true)"
+          official_csv="artifacts/hose-official-merged/hose_official_disclosures_history.csv"
+          official_manifest="artifacts/hose-official-merged/hose_official_disclosures_manifest.json"
           args=(
             --news artifacts/reference/company_news_depth_v2.csv
             --insider artifacts/reference/insider_trading_depth_v2.csv
