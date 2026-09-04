@@ -40,7 +40,7 @@
           <div class="account-upgrade-benefits">
             <span>Daily 09:00 · Watchlist trước</span>
             <span>Buy Zone · Stop · Target · R/R</span>
-            <span>Action Alert · khoảng 20 mã theo dõi</span>
+            <span>Action Alert · 10:30 · 11:15 · 13:30 · 14:15</span>
           </div>
         </div>
         <div class="account-upgrade-actions">
