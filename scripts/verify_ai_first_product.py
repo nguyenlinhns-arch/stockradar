@@ -63,7 +63,7 @@ def main() -> None:
     require(plans, (
         "Đăng ký & thanh toán",
         "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
-        "Không cần tạo Free rồi nâng cấp",
+        "không phải đăng ký Free trước",
     ), "Premium registration entry", errors)
 
     require(signup, (
