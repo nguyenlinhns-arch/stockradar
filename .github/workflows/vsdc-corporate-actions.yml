@@ -8,7 +8,6 @@ on:
       - 'scripts/acquire_vsdc_corporate_actions.py'
       - 'scripts/run_vsdc_corporate_actions_v2.py'
       - 'scripts/build_corporate_action_gate_v2.py'
-      - 'scripts/probe_vsdc_pagination.py'
       - '.github/workflows/vsdc-corporate-actions.yml'
   schedule:
     # 15:40 Asia/Ho_Chi_Minh on trading weekdays, after the post-close market snapshot.
@@ -28,10 +27,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install dependencies
-        run: pip install --disable-pip-version-check pandas requests lxml html5lib beautifulsoup4
-
-      - name: Probe VSDC pagination contract
-        run: python scripts/probe_vsdc_pagination.py --date 27/07/2026
+        run: pip install --disable-pip-version-check pandas requests lxml html5lib
 
       - name: Reuse latest non-expired HOSE market artifact for canonical universe
         env:
@@ -51,7 +47,7 @@ jobs:
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > /tmp/market.zip
           unzip -q -o /tmp/market.zip -d artifacts/market
 
-      - name: Acquire current VSDC corporate-action calendar window
+      - name: Acquire complete VSDC corporate-action calendar window
         shell: bash
         run: |
           set -euo pipefail
@@ -83,25 +79,54 @@ jobs:
             --output artifacts/vsdc/corporate_action_gate_v2_405.csv \
             --manifest artifacts/vsdc/corporate_action_gate_v2_manifest.json
 
-      - name: Enforce source coverage and fail-closed publication policy
+      - name: Enforce day coverage, pagination completeness and fail-closed publication
         shell: bash
         run: |
           set -euo pipefail
           python - <<'PY'
           import json
           from pathlib import Path
+
           coverage = json.loads(Path('artifacts/vsdc/vsdc_hose_corporate_actions_coverage.json').read_text(encoding='utf-8'))
           manifest = json.loads(Path('artifacts/vsdc/corporate_action_gate_v2_manifest.json').read_text(encoding='utf-8'))
           requested = max(int(coverage.get('days_requested') or 0), 1)
           fetched = int(coverage.get('days_fetched') or 0)
-          ratio = fetched / requested
+          ratio = float(coverage.get('source_coverage_ratio') or fetched / requested)
+          incomplete = int(coverage.get('days_pagination_incomplete') or 0)
+          advertised = int(coverage.get('advertised_records_all_markets') or 0)
+          raw_rows = int(coverage.get('raw_table_rows_all_markets') or 0)
+          pages_expected = int(coverage.get('pagination_pages_expected') or 0)
+          pages_fetched = int(coverage.get('pagination_pages_fetched') or 0)
+
+          failures = []
           if ratio < 0.98:
-              raise SystemExit(f'VSDC coverage too low: {fetched}/{requested} ({ratio:.2%})')
+              failures.append(f'day_coverage={fetched}/{requested} ({ratio:.2%})')
+          if coverage.get('source_ready') is not True:
+              failures.append('coverage_source_ready=false')
+          if coverage.get('pagination_complete') is not True or incomplete != 0:
+              failures.append(f'pagination_incomplete_days={incomplete}')
+          if pages_fetched < pages_expected:
+              failures.append(f'pages={pages_fetched}/{pages_expected}')
+          if raw_rows < advertised:
+              failures.append(f'raw_rows={raw_rows}<advertised={advertised}')
           if manifest.get('canonical_hose') != 405:
-              raise SystemExit('Corporate-action gate must cover canonical 405 HOSE tickers')
+              failures.append('canonical_hose_not_405')
+          if manifest.get('source_ready') is not True or manifest.get('pagination_complete') is not True:
+              failures.append('gate_source_not_ready')
           if manifest.get('publication_allowed') is not False:
-              raise SystemExit('Corporate-action raw publication must remain fail-closed')
-          print(json.dumps({'coverage_ratio': ratio, 'event_rows': manifest.get('event_rows'), 'gate_counts': manifest.get('gate_counts')}, ensure_ascii=False))
+              failures.append('raw_publication_must_remain_closed')
+          if failures:
+              raise SystemExit('VSDC corporate-action QA failed: ' + '; '.join(failures))
+
+          print(json.dumps({
+              'coverage_ratio': ratio,
+              'pagination_complete': True,
+              'advertised_records_all_markets': advertised,
+              'raw_table_rows_all_markets': raw_rows,
+              'pages_fetched': pages_fetched,
+              'event_rows_hose': manifest.get('event_rows'),
+              'gate_counts': manifest.get('gate_counts'),
+          }, ensure_ascii=False))
           PY
 
       - name: Upload internal VSDC corporate-action artifact
