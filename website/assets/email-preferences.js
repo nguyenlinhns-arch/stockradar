@@ -33,7 +33,7 @@
   function friendlyError(error) {
     const raw = String(error?.message || '').toLowerCase();
     if (raw.includes('free product email requires daily brief')) {
-      return 'Gói Free chỉ có thể bật gửi khi chọn bản rà soát 09:00. Cảnh báo mua/bán thuộc quyền Premium.';
+      return 'Gói Free chỉ có thể bật gửi khi chọn bản rà soát 09:00. Cảnh báo mua/bán chỉ dành cho Premium.';
     }
     if (raw.includes('premium product email requires at least one selected product')) {
       return 'Chọn ít nhất một loại email trước khi bật gửi.';
