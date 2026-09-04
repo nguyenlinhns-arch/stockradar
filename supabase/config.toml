@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.stock-ai-guest]
 verify_jwt = false
+
+[functions.signup-link]
+verify_jwt = false
