@@ -1,4 +1,5 @@
 from pathlib import Path
+import re
 import unittest
 
 
@@ -49,7 +50,10 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('const PREMIUM_TIERS = new Set(["TRIAL", "PAID"])', source)
         self.assertIn('const actionContext = readyRows.map((row) => normalizeReport', source)
         self.assertIn('alert_enabled: PREMIUM_TIERS.has(tier) && row.alert_enabled === true', source)
-        self.assertIn('tier === "FREE" ? "Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay.', source)
+        self.assertRegex(
+            source,
+            re.compile(r'tier\s*===\s*"FREE"\s*\?\s*"Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay\.'),
+        )
         self.assertNotIn("redactForFree", source)
         self.assertNotIn("user.email", source)
 
