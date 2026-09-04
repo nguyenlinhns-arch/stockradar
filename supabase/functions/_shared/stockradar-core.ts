@@ -46,9 +46,13 @@ function state(value) {
     'KHONG HANH DONG': 'CHƯA HÀNH ĐỘNG',
     'HA TY TRONG HOAC BAN': 'HẠ TỶ TRỌNG HOẶC BÁN',
     'GIU': 'GIỮ',
+    'GIU QUAN SAT': 'GIỮ VÀ QUAN SÁT',
     'PHAN HOA THAN TRONG': 'PHÂN HÓA, THẬN TRỌNG',
     'LAGGING': 'YẾU HƠN THỊ TRƯỜNG',
     'LEADING': 'DẪN DẮT',
+    'WEAK': 'YẾU',
+    'NEUTRAL': 'TRUNG TÍNH',
+    'STRONG': 'MẠNH',
     'RESEARCH READY WATCH': 'THEO DÕI — DỮ LIỆU NGHIÊN CỨU SẴN SÀNG',
   };
   if (exact[s.toUpperCase()]) return exact[s.toUpperCase()];
@@ -65,9 +69,21 @@ const REASONS = {
   COMPLIANCE: 'kiểm tra tuân thủ công khai chưa hoàn tất',
   ACTIVE_PRODUCTION_MANIFEST: 'chưa có production manifest đang hoạt động',
 };
-function reasons(value) {
+function reasonArray(value, corporateActionClear = false) {
   const raw = Array.isArray(value) ? value : txt(value).split('|');
-  return raw.map(v => txt(v)).filter(Boolean).map(v => REASONS[v] || state(v)).join('; ');
+  return raw.map(v => txt(v)).filter(Boolean)
+    .filter(v => !(corporateActionClear && v === 'CURRENT_CORPORATE_ACTION_UNVERIFIED'))
+    .map(v => REASONS[v] || state(v));
+}
+function reasons(value, corporateActionClear = false) { return reasonArray(value, corporateActionClear).join('; '); }
+function questionIntent(question) {
+  const q = txt(question).toLowerCase();
+  if (/(rủi ro|rui ro|risk|downside|nguy cơ|nguy co)/i.test(q)) return 'RISK';
+  if (/(3\s*[-–]\s*6|3\s*đến\s*6|3\s*den\s*6|trung hạn|trung han)/i.test(q)) return 'MEDIUM';
+  if (/(12\s*tháng|12\s*thang|dài hạn|dai han|tích sản|tich san)/i.test(q)) return 'LONG';
+  if (/(đang nắm|dang nam|nắm giữ|nam giu|đang giữ|dang giu|có hàng|co hang|giữ thế nào|giu the nao)/i.test(q)) return 'HOLD';
+  if (/(mua|điểm mua|diem mua|vào được|vao duoc)/i.test(q)) return 'BUY';
+  return 'GENERAL';
 }
 
 export function normalizeResearchContext(raw) {
@@ -90,17 +106,36 @@ export function normalizeResearchContext(raw) {
   };
 }
 
-function singleResearch(context) {
+function singleResearch(context, question = '') {
   const ticker = txt(context.ticker) || 'Mã đang hỏi';
-  const a = obj(context.analysis), tech = obj(context.technical_detail), post = obj(context.scanner_postclose), plan = obj(context.trade_plan), catalyst = obj(context.catalyst), score = obj(context.scores);
+  const a = obj(context.analysis), tech = obj(context.technical_detail), post = obj(context.scanner_postclose), plan = obj(context.trade_plan), catalyst = obj(context.catalyst), score = obj(context.scores), corp = obj(context.corporate_action);
   const price = num(a.price) ?? num(post.price);
   const setup = state(a.candidate_setup || post.candidate_setup || post.setup_internal || a.radar_status_v7 || a.radar_status_v6);
   const newState = state(a.new_position_state_v5);
   const holdState = state(a.holding_state_v5);
   const waiting = setup.includes('THEO DÕI') || newState.includes('THEO DÕI') || newState.includes('CHƯA HÀNH ĐỘNG') || !setup;
-  const lines = [waiting
-    ? `KẾT LUẬN: ${ticker} CHƯA MUA MỚI. Tiếp tục theo dõi và chờ setup/dòng tiền xác nhận.`
-    : `KẾT LUẬN: ${ticker} chưa có tín hiệu hành động được xác nhận; tiếp tục theo dõi setup hiện tại.`];
+  const t36 = num(plan.target_3_6m ?? a.target_3_6m_v5), t12 = num(plan.target_12m ?? a.target_12m_v5);
+  const up36 = pctFrom(price, t36), up12 = pctFrom(price, t12);
+  const corporateActionClear = corp.execution_clear_v7 === true || corp.gate_v2 === 'PASS_NO_NEAR_SENSITIVE_EVENT';
+  const riskReasons = reasonArray(a.decision_block_reasons_v5 || obj(context.risk).decision_block_reasons_v5, corporateActionClear);
+  const intent = questionIntent(question);
+
+  let conclusion;
+  if (intent === 'RISK' && riskReasons.length) {
+    conclusion = `KẾT LUẬN: Rủi ro chính của ${ticker}: ${riskReasons.slice(0, 3).join('; ')}.${waiting ? ' Chưa phù hợp mua mới.' : ''}`;
+  } else if (intent === 'MEDIUM' && up36 != null) {
+    const view = up36 < 0 ? 'mức tham chiếu nghiên cứu đang thấp hơn giá hiện tại' : up36 < 10 ? 'dư địa nghiên cứu còn mỏng' : 'vẫn còn dư địa nghiên cứu';
+    conclusion = `KẾT LUẬN: ${ticker} trong 3–6 tháng ${view} (${up36 >= 0 ? '+' : ''}${fmtPct(up36)}). ${waiting ? 'Chưa mua mới ở thời điểm hiện tại.' : 'Chưa có tín hiệu hành động được xác nhận.'}`;
+  } else if (intent === 'LONG' && up12 != null) {
+    conclusion = `KẾT LUẬN: ${ticker} tham chiếu nghiên cứu 12 tháng còn ${up12 >= 0 ? '+' : ''}${fmtPct(up12)} so với giá hiện tại; ${waiting ? 'chưa mua mới vì setup hiện tại chưa đạt.' : 'vẫn cần tín hiệu hành động được xác nhận.'}`;
+  } else if (intent === 'HOLD' && holdState) {
+    conclusion = `KẾT LUẬN: Nếu đang nắm giữ ${ticker}: ${holdState}.${waiting ? ' Không mua thêm ở thời điểm hiện tại.' : ''}`;
+  } else {
+    conclusion = waiting
+      ? `KẾT LUẬN: ${ticker} CHƯA MUA MỚI. Tiếp tục theo dõi và chờ setup/dòng tiền xác nhận.`
+      : `KẾT LUẬN: ${ticker} chưa có tín hiệu hành động được xác nhận; tiếp tục theo dõi setup hiện tại.`;
+  }
+  const lines = [conclusion];
 
   const buy = [];
   if (newState) buy.push(`trạng thái ${newState}`);
@@ -127,18 +162,15 @@ function singleResearch(context) {
   if (why.length) lines.push(`VÌ SAO: ${why.join(' · ')}.`);
 
   const refs = [];
-  const t36 = num(plan.target_3_6m ?? a.target_3_6m_v5), t12 = num(plan.target_12m ?? a.target_12m_v5);
-  if (t36 != null) { const up = pctFrom(price,t36); refs.push(`3–6 tháng ${fmtPrice(t36)}${up != null ? ` (${up >= 0 ? '+' : ''}${fmtPct(up)})` : ''}`); }
-  if (t12 != null) { const up = pctFrom(price,t12); refs.push(`12 tháng ${fmtPrice(t12)}${up != null ? ` (${up >= 0 ? '+' : ''}${fmtPct(up)})` : ''}`); }
+  if (t36 != null) refs.push(`3–6 tháng ${fmtPrice(t36)}${up36 != null ? ` (${up36 >= 0 ? '+' : ''}${fmtPct(up36)})` : ''}`);
+  if (t12 != null) refs.push(`12 tháng ${fmtPrice(t12)}${up12 != null ? ` (${up12 >= 0 ? '+' : ''}${fmtPct(up12)})` : ''}`);
   if (refs.length) lines.push(`THAM CHIẾU NGHIÊN CỨU: ${refs.join(' · ')}. Đây không phải Target hành động đã phát hành.`);
 
   const catTitle = txt(catalyst.latest_official_title_v3 || catalyst.latest_official_title || a.latest_official_catalyst_title_v3 || a.latest_catalyst_title_v2);
   const catTime = txt(catalyst.latest_official_time_v3 || catalyst.latest_official_time || a.latest_official_catalyst_time_v3 || a.latest_catalyst_time_v2);
   if (catTitle) lines.push(`CATALYST: ${catTitle}${catTime ? ` (${catTime})` : ''}.`);
 
-  const riskBits = [];
-  const block = reasons(a.decision_block_reasons_v5 || obj(context.risk).decision_block_reasons_v5);
-  if (block) riskBits.push(block);
+  const riskBits = [...riskReasons];
   const dd = num(obj(context.risk).max_drawdown60_pct ?? a.max_drawdown60_pct), vol = num(obj(context.risk).realized_vol20_pct ?? a.realized_vol20_pct);
   if (dd != null) riskBits.push(`drawdown 60 phiên ${fmtPct(dd)}`);
   if (vol != null) riskBits.push(`biến động thực hiện 20 phiên ${fmtPct(vol)}`);
@@ -165,9 +197,9 @@ function actionAnswer(list) {
   return `KẾT LUẬN: StockRadar đã có ${list.length} Action Report đủ điều kiện phát hành.\n\n${rows.join('\n')}\n\nChỉ sử dụng các mức đã có trong Action Report; không tự suy diễn thêm.`;
 }
 
-export function deterministicStockRadarAnswer({ mode, researchContext, actionContext }) {
+export function deterministicStockRadarAnswer({ mode, researchContext, actionContext, question = '' }) {
   const list = Array.isArray(researchContext) ? researchContext.filter(Boolean) : researchContext ? [researchContext] : [];
-  if (mode === 'RESEARCH_ONLY' && list.length === 1) return singleResearch(list[0]);
+  if (mode === 'RESEARCH_ONLY' && list.length === 1) return singleResearch(list[0], question);
   if (mode === 'RESEARCH_ONLY' && list.length > 1) {
     const rows = list.slice(0, 12).map(c => {
       const a = obj(c.analysis), score = obj(c.scores), price = num(a.price), setup = state(a.candidate_setup || a.radar_status_v7 || a.radar_status_v6), radar = num(score.radar_score_v7 ?? a.radar_score_v7 ?? a.radar_score_v6);
