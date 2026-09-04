@@ -1,0 +1,51 @@
+name: Acquire internal reference depth V2
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/acquire-reference-depth-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  acquire:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - name: Install acquisition dependencies
+        run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5 requests==2.32.5 lxml==6.0.1
+      - name: Acquire deeper company news and insider references
+        run: python scripts/acquire_reference_depth_v2.py
+      - name: Acquire current VSDC HOSE corporate actions
+        run: python scripts/acquire_vsdc_corporate_actions.py --start 2026-05-01 --end 2026-10-31 --output-dir artifacts/vsdc-corporate-actions
+      - name: Create acquisition summary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          paths = [
+              Path('artifacts/reference-depth-v2/reference_depth_v2_coverage.json'),
+              Path('artifacts/vsdc-corporate-actions/vsdc_hose_corporate_actions_coverage.json'),
+          ]
+          payload = {'components': []}
+          for path in paths:
+              payload['components'].append(json.loads(path.read_text(encoding='utf-8')))
+          Path('artifacts/reference-acquisition-v2-summary.json').write_text(json.dumps(payload, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          PY
+      - name: Upload internal acquisition artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-internal-reference-depth-v2
+          path: |
+            artifacts/reference-depth-v2/
+            artifacts/vsdc-corporate-actions/
+            artifacts/reference-acquisition-v2-summary.json
+          retention-days: 14
+          if-no-files-found: error
