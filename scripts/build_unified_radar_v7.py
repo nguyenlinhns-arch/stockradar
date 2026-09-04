@@ -70,10 +70,16 @@ def _corporate_action_gate(path: str | None, tickers: list[str]) -> pd.DataFrame
         "corporate_action_review_required_v2": False,
         "price_adjustment_reconciliation_required_v2": False,
     })
-    if not path:
-        return defaults
-    p = Path(path)
-    if not p.exists():
+    p: Path | None = None
+    if path:
+        candidate = Path(path)
+        if candidate.exists():
+            p = candidate
+    else:
+        candidates = sorted(Path("artifacts/vsdc").rglob("corporate_action_gate_v2_405.csv")) if Path("artifacts/vsdc").exists() else []
+        if candidates:
+            p = candidates[0]
+    if p is None:
         return defaults
     gate = pd.read_csv(p)
     if "ticker" not in gate.columns:
@@ -156,11 +162,24 @@ def build(args) -> None:
         authority_ratio = float(authority_ratio or 0)
     except Exception:
         authority_ratio = 0.0
-    authority_pagination_complete = bool(
-        authority.get("pagination_complete") is True
-        and int(authority.get("days_pagination_incomplete") or 0) == 0
+
+    gate_source_ready = _bool_series(ca_gate.get("corporate_action_source_ready_v2", pd.Series(False, index=ca_gate.index)))
+    gate_pagination_ready = _bool_series(ca_gate.get("corporate_action_pagination_complete_v2", pd.Series(False, index=ca_gate.index)))
+    gate_full_authoritative_ready = bool(len(ca_gate) == EXPECTED_HOSE and gate_source_ready.all() and gate_pagination_ready.all())
+    explicit_pagination = authority.get("pagination_complete")
+    if explicit_pagination is True:
+        authority_pagination_complete = int(authority.get("days_pagination_incomplete") or 0) == 0
+    elif explicit_pagination is False:
+        authority_pagination_complete = False
+    else:
+        # Backward-compatible wrapper: infer completeness only from all 405 authoritative ticker-gate rows.
+        authority_pagination_complete = gate_full_authoritative_ready
+    authoritative_ready = bool(
+        authority.get("source_ready") is True
+        and authority_ratio >= 0.98
+        and authority_pagination_complete
+        and gate_full_authoritative_ready
     )
-    authoritative_ready = bool(authority.get("source_ready") is True and authority_ratio >= 0.98 and authority_pagination_complete)
 
     out["radar_score_v7"] = pd.to_numeric(out["radar_score_v6"], errors="coerce")
     out["catalyst_alpha_weight_v7"] = 0.0
