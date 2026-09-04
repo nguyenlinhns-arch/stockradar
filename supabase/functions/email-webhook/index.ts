@@ -1,5 +1,20 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
+type AdminCredential = { key: string; legacy: boolean };
+function adminCredential(): AdminCredential {
+  try {
+    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    const current = String(keys?.default || "").trim();
+    if (current.startsWith("sb_secret_")) return { key: current, legacy: false };
+  } catch (_) {}
+  return { key: String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim(), legacy: true };
+}
+function adminHeaders(admin: AdminCredential) {
+  const value: Record<string,string> = { apikey: admin.key, "content-type":"application/json", accept:"application/json" };
+  if (admin.legacy) value.authorization = `Bearer ${admin.key}`;
+  return value;
+}
+
 const ALLOWED_EVENTS = new Set([
   "email.sent","email.delivered","email.delivery_delayed","email.bounced","email.complained",
   "email.opened","email.clicked","email.failed","email.scheduled","email.suppressed",
@@ -53,10 +68,10 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 }
 
-async function recordEvent(supabaseUrl: string, serviceRole: string, body: Record<string, unknown>) {
+async function recordEvent(supabaseUrl: string, admin: AdminCredential, body: Record<string, unknown>) {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/record_stockradar_email_delivery_event_v1`, {
     method: "POST",
-    headers: { apikey: serviceRole, authorization: `Bearer ${serviceRole}`, "content-type": "application/json", accept: "application/json" },
+    headers: adminHeaders(admin),
     body: JSON.stringify(body),
   });
   if (!response.ok) throw new Error(`delivery-event rpc ${response.status}:${(await response.text()).slice(0, 300)}`);
@@ -67,9 +82,9 @@ Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed", { status: 405 });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const admin = adminCredential();
   const webhookSecret = Deno.env.get("RESEND_WEBHOOK_SECRET") || "";
-  if (!supabaseUrl || !serviceRole || !webhookSecret) {
+  if (!supabaseUrl || !admin.key || !webhookSecret) {
     return new Response(JSON.stringify({ ok: false, reason: "WEBHOOK_NOT_CONFIGURED" }), { status: 503, headers: { "content-type": "application/json" } });
   }
 
@@ -99,7 +114,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    await recordEvent(supabaseUrl, serviceRole, {
+    await recordEvent(supabaseUrl, admin, {
       p_provider_name: "RESEND",
       p_provider_event_id: eventId,
       p_provider_message_id: providerMessageId || null,
