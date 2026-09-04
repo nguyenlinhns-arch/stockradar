@@ -24,11 +24,12 @@ class StockAiProductCenterTests(unittest.TestCase):
         self.assertIn("from public, anon, authenticated", lowered)
         self.assertNotIn("grant execute on function public.consume_stockradar_api_quota(uuid, text) to authenticated", lowered)
 
-    def test_free_ai_uses_full_ready_report_and_premium_is_proactive_delivery(self):
+    def test_free_ai_uses_same_decision_context_and_premium_gets_proactive_alert_rights(self):
         source = EDGE.read_text(encoding="utf-8")
-        self.assertIn("FREE và TRIAL/PAID dùng cùng lõi dữ liệu quyết định", source)
-        self.assertIn("const reports = readyRows.map((row) => normalizeReport", source)
-        self.assertIn("Quyền email Action Alert", source)
+        self.assertIn('const ACTIVE_TIERS = new Set(["FREE", "TRIAL", "PAID"])', source)
+        self.assertIn('const PREMIUM_TIERS = new Set(["TRIAL", "PAID"])', source)
+        self.assertIn('const actionContext = readyRows.map((row) => normalizeReport', source)
+        self.assertIn('alert_enabled: PREMIUM_TIERS.has(tier) && row.alert_enabled === true', source)
         self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay", source)
         self.assertNotIn("redactForFree", source)
 
