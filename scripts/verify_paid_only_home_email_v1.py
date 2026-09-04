@@ -6,11 +6,11 @@ from pathlib import Path
 
 
 REQUIRED = (
-    "PREMIUM · EMAIL 09:00",
-    "Quan tâm Daily 09:00",
-    "Tạo tài khoản Free",
-    "Không bao gồm Daily 09:00 hoặc Action Alert",
-    "Daily 09:00 theo watchlist",
+    "data-home-paid-intent-v1",
+    "Xem email Premium 09:00",
+    "Free chỉ nhận email hệ thống",
+    "Theo dõi mã của tôi",
+    "199.000đ",
 )
 
 STALE_FREE_EMAIL_PROMISES = (
@@ -42,16 +42,17 @@ def main() -> None:
 
     for marker in REQUIRED:
         if marker not in home:
-            errors.append(f"missing paid-only homepage marker: {marker}")
+            errors.append(f"missing final paid-only homepage marker: {marker}")
 
+    folded = home.casefold()
     for marker in STALE_FREE_EMAIL_PROMISES:
-        if marker in home:
+        if marker.casefold() in folded:
             errors.append(f"stale Free product-email promise remains: {marker}")
 
     if errors:
         raise RuntimeError("Paid-only homepage email verification failed:\n- " + "\n- ".join(errors))
 
-    print("Paid-only homepage email verification: PASS")
+    print("Paid-only homepage email verification: PASS (final artifact; Free transactional-only)")
 
 
 if __name__ == "__main__":
