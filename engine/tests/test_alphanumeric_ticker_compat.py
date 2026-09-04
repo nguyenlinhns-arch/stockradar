@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from stockradar.ticker_symbol import is_valid_hose_ticker, normalize_hose_ticker
+from engine.stockradar.ticker_symbol import is_valid_hose_ticker, normalize_hose_ticker
 
 
 class HoseTickerCompatibilityTests(unittest.TestCase):
