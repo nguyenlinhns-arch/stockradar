@@ -4,7 +4,8 @@
 Goals:
 - direct /kiem-tra-co-phieu/ visits use the same privacy-minimal conversion tracker;
 - safe `next` URLs resolve from the site base, not from /signup/;
-- Premium signup/OTP returns to the requested same-origin next step when provided;
+- legacy Premium signup/OTP flows return to a requested same-origin next step;
+- the completed signup flow may already preserve Free/Premium destination itself;
 - no data, email, or billing gate is opened by this patch.
 """
 
@@ -44,13 +45,34 @@ def patch_auth_next(output: Path) -> None:
         raise RuntimeError("Built auth.js missing")
     source = auth.read_text(encoding="utf-8")
 
-    source, count = _replace_once(
-        source,
-        "const target = new URL(value, location.href);",
-        "const target = new URL(value, document.baseURI);",
-        "safeNext base resolution",
-    )
+    old_safe_next = "const target = new URL(value, location.href);"
+    new_safe_next = "const target = new URL(value, document.baseURI);"
+    if old_safe_next in source:
+        source, _ = _replace_once(
+            source,
+            old_safe_next,
+            new_safe_next,
+            "safeNext base resolution",
+        )
+    elif new_safe_next not in source:
+        raise RuntimeError("safeNext base resolution is neither legacy nor completed")
 
+    # Current auth.js owns the full plan-aware continuation contract. Do not layer
+    # the old signupNext rewrite over it; doing so would erase the Premium checkout
+    # destination that is persisted across OTP verification.
+    completed_markers = (
+        "PENDING_SIGNUP_PLAN_KEY",
+        "PENDING_SIGNUP_NEXT_KEY",
+        "function pendingSignupDestination()",
+        "thanh-toan/?plan=premium",
+    )
+    if all(marker in source for marker in completed_markers):
+        auth.write_text(source, encoding="utf-8")
+        return
+
+    # Backward-compatible transform for older built auth bundles. This remains so
+    # the regression fixture and any stale artifact still get a safe same-origin
+    # `next` flow rather than silently falling back to the account page.
     marker = "    const otpForm = document.querySelector('[data-auth-signup-otp-form]');\n    if (!form) return;"
     replacement = (
         "    const otpForm = document.querySelector('[data-auth-signup-otp-form]');\n"
@@ -103,7 +125,7 @@ def main() -> None:
         raise RuntimeError(f"Pages output does not exist: {output}")
     inject_lookup_tracking(output)
     patch_auth_next(output)
-    print("Conversion funnel v4 patch: PASS (lookup tracking + Premium next-step)")
+    print("Conversion funnel v4 patch: PASS (lookup tracking + safe plan-aware Premium next-step)")
 
 
 if __name__ == "__main__":
