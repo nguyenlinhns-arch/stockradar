@@ -17,61 +17,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Restore full regression file and align one policy check
-        run: |
-          set -euo pipefail
-          git checkout 731133fd7bfd9e08598ae3d4ffce88c738b192e5 -- engine/tests/test_email_subscription_funnel.py
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('engine/tests/test_email_subscription_funnel.py')
-          text = path.read_text(encoding='utf-8')
-          old = '''    def test_account_exposes_free_daily_and_premium_alert_controls(self):
-        account = self.read("website/tai-khoan/index.html")
-        client = self.read("website/assets/email-preferences.js")
-        self.assertIn("data-product-email-preferences", account)
-        self.assertIn('name="daily_brief"', account)
-        self.assertIn('name="event_alerts"', account)
-        self.assertIn("assets/email-preferences.js", account)
-        self.assertIn("product_email_preferences", client)
-        self.assertIn("product_email_consent_events", client)
-        self.assertIn("PREMIUM_TIERS", client)
-        self.assertIn("profile.account_tier === 'FREE'", client)
-        self.assertIn("master.disabled = !active", client)
-        self.assertIn("Free · bản tin 09:00", client)
-        self.assertIn("Cảnh báo mua/bán chỉ dành cho Premium", client)
-        self.assertIn("alert_enabled", client)
-        self.assertIn("data-watchlist-alert-toggle", client)
-'''
-          new = '''    def test_account_exposes_premium_email_and_per_ticker_alert_controls(self):
-        account = self.read("website/tai-khoan/index.html")
-        email_client = self.read("website/assets/email-preferences.js")
-        watch_client = self.read("website/assets/account-preferences.js")
-        self.assertIn("data-product-email-preferences", account)
-        self.assertIn('name="daily_brief"', account)
-        self.assertIn('name="event_alerts"', account)
-        self.assertIn("assets/email-preferences.js", account)
-        self.assertIn("product_email_preferences", email_client)
-        self.assertIn("product_email_consent_events", email_client)
-        self.assertIn("PREMIUM_TIERS", email_client)
-        self.assertIn("const premium = isPremiumTier(profile.account_tier);", email_client)
-        self.assertIn("master.disabled = !premium || !active", email_client)
-        self.assertIn("Free · chỉ email hệ thống", email_client)
-        self.assertIn("Báo cáo hằng ngày và cảnh báo hành động được mở ở Trial/Premium", email_client)
-        self.assertIn("alert_enabled", watch_client)
-        self.assertIn("data-watchlist-alert", watch_client)
-        self.assertIn("Cảnh báo theo từng mã chỉ dành cho Trial/Premium", watch_client)
-'''
-          if old not in text:
-              raise SystemExit('Expected original method not found')
-          path.write_text(text.replace(old, new, 1), encoding='utf-8')
-          PY
-          git rm .github/workflows/restore-email-subscription-test.yml
+      - name: Restore full regression coverage
+        run: python scripts/restore_email_subscription_regression.py
 
       - name: Commit restoration
         run: |
           set -euo pipefail
           git config user.name "stockradar-bot"
           git config user.email "actions@users.noreply.github.com"
-          git add engine/tests/test_email_subscription_funnel.py .github/workflows/restore-email-subscription-test.yml
+          git add -A
           git commit -m "Restore full email regression coverage"
+          git pull --rebase origin main
           git push origin HEAD:main
