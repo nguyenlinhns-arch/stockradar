@@ -141,9 +141,22 @@ def main() -> None:
     reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
 
     # Homepage reads only the tiny auth-config launch state. The lightweight home core
-    # routes registration to the Free/Premium plan selector before account creation.
+    # owns the email-first funnel: capture Free 09:00 interest, then route to account
+    # creation / plan comparison without loading the heavy Supabase browser SDK.
     require_all(home, ("assets/auth-config.js", "assets/home-core-v1.js"), "homepage")
-    require_all(home_core, ("emailDeliveryReady", "registrationUrl", "dang-ky/", "So sánh gói"), "homepage core")
+    require_all(
+        home_core,
+        (
+            "emailDeliveryReady",
+            "registrationUrl",
+            "leadUrl",
+            "premiumUrl",
+            "mountEmailLead",
+            "nhan-ban-tin/",
+            "thanh-toan/?plan=premium",
+        ),
+        "homepage core",
+    )
     if SUPABASE_CDN in home:
         raise SystemExit("homepage must not load Supabase browser SDK")
     reject_all(home, (*HEAVY_AUTH_ASSETS, *HOMEPAGE_LEGACY_AUTH_UX), "homepage")
@@ -154,7 +167,10 @@ def main() -> None:
             raise SystemExit(f"privileged auth material detected in public artifact: {path}")
 
     state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
-    print(f"StockRadar production auth verification: PASS (email delivery {state}; homepage gate self-contained; auth bundles route-scoped)")
+    print(
+        "StockRadar production auth verification: PASS "
+        f"(email delivery {state}; homepage email-first funnel self-contained; auth bundles route-scoped)"
+    )
 
 
 if __name__ == "__main__":
