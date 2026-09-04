@@ -47,8 +47,8 @@ jobs:
           STOCKRADAR_CHECKOUT_READY: "0"
         run: |
           python scripts/inject_public_ux.py .pages-site
-          python scripts/apply_buyer_readiness.py .pages-site
           python scripts/inject_home_radar_polish.py .pages-site
+          python scripts/apply_buyer_readiness.py .pages-site
 
       - name: Verify production auth artifact
         run: python scripts/verify_pages_auth.py .pages-site
