@@ -83,10 +83,13 @@ def main() -> int:
                 "FREE · 10 CÂU / NGÀY",
                 "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
                 "signup/?plan=free",
-                "dang-ky/?plan=premium",
+                "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
+                "Mở Premium · 199K/30 ngày",
             ),
             "Native AI browser product contract",
         )
+        if "dang-ky/?plan=premium" in center_js:
+            raise SystemExit("Native AI Premium CTA must continue directly to Premium signup/payment")
         require_markers(
             home,
             (
@@ -145,7 +148,7 @@ def main() -> int:
         if "sr-ai-nav-link" not in source:
             raise SystemExit(f"AI navigation missing from: {relative}")
 
-    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement")
+    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Paid unlimited/email entitlement + direct Premium payment path")
     return 0
 
 
