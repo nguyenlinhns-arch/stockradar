@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: "3.13"
 
+      - name: Install Python runtime dependencies
+        run: python -m pip install --disable-pip-version-check --no-cache-dir pandas==3.0.5
+
       - name: Build fail-closed public data
         run: python -m engine.cli build-public
 
