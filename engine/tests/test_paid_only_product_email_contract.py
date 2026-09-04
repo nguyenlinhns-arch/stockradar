@@ -49,9 +49,10 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
 
     def test_homepage_does_not_sell_product_email_as_free(self):
         home = self.read("website/index.html")
-        self.assertIn("PREMIUM · EMAIL 09:00", home)
+        self.assertIn("PREMIUM · 199K/30 NGÀY", home)
         self.assertIn("Daily 09:00 Premium", home)
-        self.assertIn("Không bao gồm Daily 09:00 hoặc Action Alert", home)
+        self.assertIn("Không Daily 09:00", home)
+        self.assertIn("Tôi quan tâm Daily 09:00 Premium.", home)
         self.assertNotIn("FREE · EMAIL 09:00", home)
         self.assertNotIn("Nhận bản tin 09:00 miễn phí", home)
         self.assertNotIn("Nhận bản rà soát thị trường mỗi sáng", home)
