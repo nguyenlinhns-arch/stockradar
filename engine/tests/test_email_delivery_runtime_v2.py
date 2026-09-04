@@ -38,6 +38,7 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             "RESEND_API_KEY",
             "STOCKRADAR_EMAIL_FROM",
             "claim_stockradar_email_outbox_v1",
+            "preflight_stockradar_email_outbox_v1",
             "finish_stockradar_email_outbox_v1",
             '"Idempotency-Key":idem',
             '"List-Unsubscribe"',
@@ -45,10 +46,41 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             "STOCKRADAR_FUNCTIONS_BASE_URL",
             "XEM TRẠNG THÁI MỚI NHẤT",
             "Không có thay đổi hành động mới",
+            "suppressed",
         ):
             self.assertIn(marker, source)
         self.assertNotIn("re_xxxxxxxxx", source)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY =", source)
+        self.assertLess(
+            source.index("preflight_stockradar_email_outbox_v1"),
+            source.index("issue_stockradar_unsubscribe_token_v1"),
+        )
+        self.assertLess(
+            source.index("preflight_stockradar_email_outbox_v1"),
+            source.index("fetch(RESEND_ENDPOINT"),
+        )
+
+    def test_final_preflight_rechecks_ttl_consent_suppression_and_delivery_gate(self) -> None:
+        sql = self.read("supabase/migrations/20260904103000_add_email_send_preflight.sql")
+        for marker in (
+            "preflight_stockradar_email_outbox_v1",
+            "OUTBOX_NOT_PROCESSING",
+            "EXPIRED_AT_PREFLIGHT",
+            "EMAIL_NOT_VERIFIED_AT_PREFLIGHT",
+            "NO_EMAIL_PREFERENCE_AT_PREFLIGHT",
+            "SUPPRESSED_AT_PREFLIGHT_",
+            "DELIVERY_DISABLED_AT_PREFLIGHT",
+            "CONSENT_REVOKED_AT_PREFLIGHT",
+            "ENTITLEMENT_CHANGED_AT_PREFLIGHT",
+            "eligible_for_premium",
+            "status='SUPPRESSED'",
+            "to service_role",
+        ):
+            self.assertIn(marker, sql)
+        self.assertNotIn(
+            "grant execute on function public.preflight_stockradar_email_outbox_v1(uuid) to authenticated",
+            sql,
+        )
 
     def test_webhook_verifies_raw_svix_signature_and_replay_window(self) -> None:
         source = self.read("supabase/functions/email-webhook/index.ts")
