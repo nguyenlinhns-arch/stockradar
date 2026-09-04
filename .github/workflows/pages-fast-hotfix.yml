@@ -7,6 +7,9 @@ on:
       - 'website/**'
       - 'engine/tests/test_stock_ai_personalization.py'
       - 'engine/tests/test_stock_ai_product_center.py'
+      - 'engine/tests/test_buyer_readiness.py'
+      - 'engine/tests/test_checkout_surface.py'
+      - 'engine/tests/test_privacy_policy_versioning.py'
       - 'scripts/inject_ai_assistant.py'
       - 'scripts/verify_ai_assistant.py'
       - 'scripts/verify_ai_first_product.py'
@@ -50,15 +53,17 @@ jobs:
       - name: Fail-close unlicensed public ticker seed
         run: python scripts/fail_close_public_ticker_seed.py website/public/data/ticker-universe.json
 
-      - name: Run stock lookup and AI regression suite
+      - name: Run stock lookup, checkout and AI regression suite
         run: |
           python -m unittest -v \
             engine.tests.test_alphanumeric_ticker_compat \
             engine.tests.test_authenticated_stock_client_assets \
             engine.tests.test_buyer_readiness \
+            engine.tests.test_checkout_surface \
             engine.tests.test_direct_ticker_navigation \
             engine.tests.test_free_stock_context \
             engine.tests.test_pages_production_gate \
+            engine.tests.test_privacy_policy_versioning \
             engine.tests.test_public_method_jargon_gate \
             engine.tests.test_route_scoped_auth_bundle \
             engine.tests.test_static_assets \
@@ -79,8 +84,8 @@ jobs:
       - name: Apply production UX transforms
         env:
           STOCKRADAR_PRODUCT_EMAIL_READY: "0"
-          # Premium activation remains fail-closed until Decision Feed + email E2E are production-ready.
-          STOCKRADAR_CHECKOUT_READY: "0"
+          # Owner explicitly approved production Manual VietQR. The private Supabase billing gate stays authoritative.
+          STOCKRADAR_CHECKOUT_READY: "1"
         run: |
           python scripts/inject_public_ux.py .pages-site
           python scripts/inject_home_radar_polish.py .pages-site
@@ -118,6 +123,15 @@ jobs:
             python scripts/verify_paid_only_home_email_v1.py .pages-site
             python scripts/verify_ai_assistant.py .pages-site
           fi
+
+      - name: Assert live checkout survives final transforms
+        run: |
+          grep -q 'VPBank' .pages-site/thanh-toan/index.html
+          grep -q '0934389822' .pages-site/thanh-toan/index.html
+          grep -q 'vpbank-qr-static.svg' .pages-site/thanh-toan/index.html
+          grep -q 'data-checkout-confirm' .pages-site/thanh-toan/index.html
+          ! grep -q 'BẢO VỆ NGƯỜI DÙNG TRẢ PHÍ' .pages-site/thanh-toan/index.html
+          ! grep -q 'Premium tạm dừng kích hoạt mới' .pages-site/thanh-toan/index.html
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
