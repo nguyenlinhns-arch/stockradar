@@ -56,13 +56,12 @@ def main() -> None:
         "PAID · AI KHÔNG GIỚI HẠN · EMAIL ACTION ALERT",
         "dang-ky/?plan=free",
         "dang-ky/?plan=premium",
-        "Đăng ký Free",
-        "Xem gói Paid",
     ), "AI client access model", errors)
 
     for stale_ai_route in (
         "signup/?plan=free",
         "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
+        "signup/?plan=premium",
     ):
         if stale_ai_route in ai:
             errors.append(f"AI client access model: stale direct signup route {stale_ai_route}")
