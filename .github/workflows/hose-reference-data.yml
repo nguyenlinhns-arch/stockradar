@@ -1,0 +1,36 @@
+name: StockRadar HOSE Reference Data
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/acquire_kbs_news_insider.py'
+      - '.github/workflows/hose-reference-data.yml'
+  workflow_dispatch:
+  schedule:
+    # 15:35 Vietnam on trading weekdays.
+    - cron: '35 8 * * 1-5'
+
+permissions:
+  contents: read
+
+jobs:
+  reference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install --disable-pip-version-check pandas requests
+      - name: Acquire company news and insider trading for full HOSE
+        run: python scripts/acquire_kbs_news_insider.py
+      - name: Upload internal reference artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-hose-reference-data
+          path: artifacts/reference/
+          retention-days: 7
+          if-no-files-found: error
