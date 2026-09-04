@@ -6,24 +6,41 @@ const esc = (v: unknown) => String(v ?? "").replaceAll("&","&amp;").replaceAll("
 const fmt = (v: unknown) => v === null || v === undefined || v === "" ? "—" : Array.isArray(v) ? v.join(" · ") : String(v);
 const joinUrl = (base: string, path: string) => `${base.replace(/\/$/,"")}/${path.replace(/^\//,"")}`;
 
+type AdminCredential = { key: string; legacy: boolean };
+
+function adminCredential(): AdminCredential {
+  try {
+    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    const current = String(keys?.default || "").trim();
+    if (current.startsWith("sb_secret_")) return { key: current, legacy: false };
+  } catch (_) {}
+  return { key: String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim(), legacy: true };
+}
+
 async function sha256Hex(value: string) {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2,"0")).join("");
 }
 
-async function rpc(base: string, key: string, name: string, body: Record<string, unknown>) {
-  const res = await fetch(`${base}/rest/v1/rpc/${name}`, { method:"POST", headers:{ apikey:key, authorization:`Bearer ${key}`, "content-type":"application/json", accept:"application/json" }, body:JSON.stringify(body) });
+async function rpc(base: string, admin: AdminCredential, name: string, body: Record<string, unknown>) {
+  const headers: Record<string,string> = {
+    apikey: admin.key,
+    "content-type":"application/json",
+    accept:"application/json",
+  };
+  if (admin.legacy) headers.authorization = `Bearer ${admin.key}`;
+  const res = await fetch(`${base}/rest/v1/rpc/${name}`, { method:"POST", headers, body:JSON.stringify(body) });
   const text = await res.text();
   if (!res.ok) throw new Error(`${name}:${res.status}:${text.slice(0,240)}`);
   return text ? JSON.parse(text) : null;
 }
 
-async function authorizedServiceRequest(req: Request, supabase: string, service: string) {
-  if (req.headers.get("authorization") === `Bearer ${service}`) return true;
+async function authorizedServiceRequest(req: Request, supabase: string, admin: AdminCredential) {
+  if (admin.legacy && req.headers.get("authorization") === `Bearer ${admin.key}`) return true;
   const schedulerToken = String(req.headers.get("x-stockradar-scheduler") || "").trim().toLowerCase();
   if (!/^[a-f0-9]{64}$/.test(schedulerToken)) return false;
   try {
-    const valid = await rpc(supabase, service, "verify_stockradar_email_scheduler_token_v1", {
+    const valid = await rpc(supabase, admin, "verify_stockradar_email_scheduler_token_v1", {
       p_token_hash: await sha256Hex(schedulerToken),
     });
     return valid === true;
@@ -60,33 +77,33 @@ function digestBody(payload: Record<string, unknown>, website: string, kind: str
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return new Response("Method Not Allowed",{status:405});
   const supabase = Deno.env.get("SUPABASE_URL") || "";
-  const service = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+  const admin = adminCredential();
   const resend = Deno.env.get("RESEND_API_KEY") || "";
   const from = Deno.env.get("STOCKRADAR_EMAIL_FROM") || "";
   const replyTo = Deno.env.get("STOCKRADAR_EMAIL_REPLY_TO") || "";
   const website = Deno.env.get("STOCKRADAR_PUBLIC_BASE_URL") || "https://stockradar.vn";
   const functionsBase = Deno.env.get("STOCKRADAR_FUNCTIONS_BASE_URL") || `${supabase.replace(/\/$/,"")}/functions/v1`;
 
-  if (!supabase || !service || !(await authorizedServiceRequest(req, supabase, service))) {
+  if (!supabase || !admin.key || !(await authorizedServiceRequest(req, supabase, admin))) {
     return new Response(JSON.stringify({ok:false,reason:"UNAUTHORIZED"}),{status:401,headers:{"content-type":"application/json"}});
   }
   if (!resend || !from) return new Response(JSON.stringify({ok:false,reason:"PROVIDER_NOT_CONFIGURED"}),{status:503,headers:{"content-type":"application/json"}});
 
   let limit=20; try { const b=await req.json(); limit=Math.min(50,Math.max(1,Number(b?.limit||20))); } catch(_){}
   let claimed: Record<string, unknown>[]=[];
-  try { claimed=await rpc(supabase,service,"claim_stockradar_email_outbox_v1",{p_limit:limit}) || []; }
+  try { claimed=await rpc(supabase,admin,"claim_stockradar_email_outbox_v1",{p_limit:limit}) || []; }
   catch(e){ console.error("email-worker claim failed",String(e)); return new Response(JSON.stringify({ok:false,reason:"CLAIM_FAILED"}),{status:503,headers:{"content-type":"application/json"}}); }
 
   let sent=0,failed=0,suppressed=0;
   for (const item of claimed) {
     const outboxId=String(item.outbox_id||""), userId=String(item.user_id||""), kind=String(item.email_kind||"").toUpperCase(), recipient=String(item.recipient_email||""), idem=String(item.idempotency_key||"");
     const payload=item.payload && typeof item.payload === "object" ? item.payload as Record<string, unknown> : {};
-    if(!outboxId||!userId||!recipient||!KINDS.has(kind)){ failed++; try{await rpc(supabase,service,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SUPPRESSED",p_error:"INVALID_CLAIM"});}catch(_){} continue; }
+    if(!outboxId||!userId||!recipient||!KINDS.has(kind)){ failed++; try{await rpc(supabase,admin,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SUPPRESSED",p_error:"INVALID_CLAIM"});}catch(_){} continue; }
     try {
-      const preflight=await rpc(supabase,service,"preflight_stockradar_email_outbox_v1",{p_outbox_id:outboxId});
+      const preflight=await rpc(supabase,admin,"preflight_stockradar_email_outbox_v1",{p_outbox_id:outboxId});
       if(!preflight?.allowed){ suppressed++; continue; }
-      const kindToken=await rpc(supabase,service,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:kind,p_ttl_days:90});
-      const allToken=await rpc(supabase,service,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:"ALL",p_ttl_days:90});
+      const kindToken=await rpc(supabase,admin,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:kind,p_ttl_days:90});
+      const allToken=await rpc(supabase,admin,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:"ALL",p_ttl_days:90});
       const unsub=joinUrl(functionsBase,`email-unsubscribe?token=${encodeURIComponent(String(kindToken))}`);
       const allUnsub=joinUrl(functionsBase,`email-unsubscribe?token=${encodeURIComponent(String(allToken))}`);
       const subject=String(payload.subject || (kind==="EVENT_ALERT"?"[StockRadar] Cảnh báo hành động":"[StockRadar] Báo cáo"));
@@ -94,8 +111,8 @@ Deno.serve(async (req: Request) => {
       const body=kind==="EVENT_ALERT"?actionBody(payload,website):kind==="DAILY_BRIEF"?dailyBody(payload,website):digestBody(payload,website,kind);
       const res=await fetch(RESEND_ENDPOINT,{method:"POST",headers:{Authorization:`Bearer ${resend}`,"Content-Type":"application/json","Idempotency-Key":idem},body:JSON.stringify({from,to:[recipient],subject,html:shell(preheader,body,unsub,allUnsub),...(replyTo?{reply_to:replyTo}:{}),headers:{"List-Unsubscribe":`<${allUnsub}>`,"List-Unsubscribe-Post":"List-Unsubscribe=One-Click","X-StockRadar-Outbox-ID":outboxId},tags:[{name:"email_kind",value:kind.toLowerCase().replaceAll("_","-")} ]})});
       const text=await res.text(); if(!res.ok) throw new Error(`RESEND_${res.status}:${text.slice(0,240)}`); const result=JSON.parse(text); if(!result?.id) throw new Error("RESEND_MISSING_MESSAGE_ID");
-      await rpc(supabase,service,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SENT",p_provider_message_id:result.id,p_error:null}); sent++;
-    } catch(e) { failed++; console.error("email-worker send failed",outboxId,String(e).slice(0,240)); try{await rpc(supabase,service,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"FAILED",p_provider_message_id:null,p_error:String(e).slice(0,900)});}catch(_){} }
+      await rpc(supabase,admin,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SENT",p_provider_message_id:result.id,p_error:null}); sent++;
+    } catch(e) { failed++; console.error("email-worker send failed",outboxId,String(e).slice(0,240)); try{await rpc(supabase,admin,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"FAILED",p_provider_message_id:null,p_error:String(e).slice(0,900)});}catch(_){} }
   }
   return new Response(JSON.stringify({ok:true,claimed:claimed.length,sent,failed,suppressed}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store"}});
 });
