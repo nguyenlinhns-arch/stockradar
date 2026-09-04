@@ -35,7 +35,7 @@ SIGNUP_BLOCK = '''<div class="premium-email-onboarding-v1" data-premium-email-on
 
 HEALTH_BLOCK = '''<section class="premium-email-health-v1" data-premium-email-health aria-labelledby="premium-email-health-title">
           <article class="premium-email-health-card">
-            <header class="premium-email-health-head"><div><span class="panel-label">SỨC KHỎE EMAIL PREMIUM</span><h2 id="premium-email-health-title">StockRadar có đang canh email cho bạn không?</h2><p>Kiểm tra nhanh cấu hình theo dõi và lần giao email gần nhất của chính tài khoản này.</p></div><strong data-email-health-system>Đang kiểm tra…</strong></header>
+            <header class="premium-email-health-head"><div><span class="panel-label">SỨC KHỎE EMAIL PREMIUM</span><h2 id="premium-email-health-title">StockRadar có đang canh email cho bạn không?</h2><p>Kiểm tra nhanh cấu hình theo dõi và lần giao email gần nhất của chính tài khoản này.</p></div><strong data-email-health-system>—</strong></header>
             <div class="premium-email-health-grid">
               <div><span>Gói / tài khoản</span><strong data-email-health-tier>—</strong></div>
               <div><span>Daily 09:00</span><strong data-email-health-daily>—</strong></div>
@@ -75,7 +75,7 @@ def transform_home(source: str) -> str:
         source = source.replace(marker, f"            {HOME_EMAIL_BLOCK}\n          </div>\n          <aside class=\"home-premium-buybox\">", 1)
     source = source.replace(
         '>Theo dõi mã của tôi</a>',
-        '>Theo dõi mã &amp; nhận email</a>',
+        '>Theo dõi mã của tôi &amp; nhận email</a>',
         1,
     )
     return inject_css(source)
