@@ -2,6 +2,22 @@
 
 Status: signup/consent and pre-auth interest capture foundations implemented; no production sender is connected.
 
+## Buyer-first product principle
+
+A paid user does not buy an email because it contains more indicators. The email is valuable only when it reduces the time and ambiguity between **a meaningful state change** and **the user's next decision**.
+
+Every Premium action alert therefore follows this order:
+
+1. **What changed?** — the material state transition since the previous eligible scan.
+2. **New position?** — `BUY` / `WAIT` for a user who does not own the ticker.
+3. **Existing holding?** — `HOLD` / `ADD` / `REDUCE` / `SELL` for a user who already owns it when that context is known.
+4. **Action map** — Buy Zone/current reference, position guidance when available, Stop/invalidation, Target and Risk/Reward.
+5. **Why now?** — the 2–4 strongest reasons, not a dump of every indicator.
+6. **What would invalidate this?** — the specific condition that would change the decision.
+7. **Evidence timestamp** — ticker, horizon, report date, market-session reference, data cutoff and generated time.
+
+Methods such as 4M, CANSLIM, SEPA/VCP, VPA/RVOL and valuation support the decision but appear **after** the decision fields. A user should be able to understand the action and risk without reading a long methodology section.
+
 ## Entitlement gate
 
 Transactional mail is available where required for every account tier.
@@ -47,7 +63,16 @@ Canonical daily subject:
 
 Free daily content must stay basic: market state, limited objective stock/sector highlights and an upgrade path. It must not expose Premium Buy Zone/Stop/Target/Risk-Reward maps or intraday action alerts.
 
-Premium may include deeper analysis, recommendation lifecycle changes and recipient-specific watchlist/horizon ordering where lawful and supported.
+Premium daily content is ordered by decisions rather than by methodology:
+
+1. **Market regime today** — supportive / neutral / risk-off and the one or two most important reasons.
+2. **Action changes since the previous report** — new `BUY/WAIT/HOLD/ADD/REDUCE/SELL` states only.
+3. **Recipient watchlist first** — tickers the user follows, with holding-context priority when declared.
+4. **Top eligible opportunities** — only Decision-Grade setups, never a forced fixed count.
+5. **Risk list** — invalidations, stops, material deterioration and expiring setups.
+6. **Audit links** — direct links to the ticker report and recommendation history.
+
+The daily report should be skimmable before the session. Long method explanations belong on the website, not above the actionable summary in the inbox.
 
 ## Intraday alert contract
 
@@ -55,8 +80,28 @@ Premium action alerts are evaluated at 10:30, 11:15, 13:30 and 14:15 Vietnam tim
 
 Example subjects:
 
-- `[CHỨNG KHOÁN][dd/mm/yyyy] ĐẠT ĐIỂM MUA – <MÃ>`
-- `[CHỨNG KHOÁN][dd/mm/yyyy] CẢNH BÁO BÁN – <MÃ>`
+- `[StockRadar][dd/mm/yyyy][<MÃ>] MUA MỚI — vào vùng hành động`
+- `[StockRadar][dd/mm/yyyy][<MÃ>] HẠ TỶ TRỌNG — rủi ro tăng`
+- `[StockRadar][dd/mm/yyyy][<MÃ>] BÁN/CẮT LỖ — điều kiện vô hiệu`
+
+Every intraday action email must contain a compact decision card before any explanation:
+
+| Field | Requirement |
+| --- | --- |
+| Ticker + horizon | Mandatory |
+| What changed | Mandatory and compared with the previous eligible state |
+| New-position decision | Mandatory when the model can support it |
+| Holding decision | Mandatory when holding context is known and data supports it |
+| Current/reference price | Mandatory for a price-dependent action |
+| Buy Zone | Mandatory for a buy/add action |
+| Stop / invalidation | Mandatory for tactical buy/add actions |
+| Target | Mandatory where the horizon contract requires one |
+| Risk/Reward | Mandatory where the horizon contract requires one |
+| Reasons | 2–4 strongest evidence points |
+| Next review | Next scheduled scan or explicit review condition |
+| Data timestamps | Mandatory |
+
+A Premium email must never imply that `BUY` for a new position automatically means `ADD` for an existing holder, or that a good long-term business automatically has a valid tactical entry.
 
 ## Priority and suppression
 
@@ -66,6 +111,8 @@ Example subjects:
 - P3: watch-state improvement and low-urgency digest material.
 
 Suppress when data is MOCK/STALE/INSUFFICIENT, the state did not materially change, confirmation failed, cooldown is active, consent is missing, the recommendation has expired/closed, or the recipient lacks entitlement for that specific product. Free may pass the daily entitlement but never the Premium buy/sell-alert entitlement.
+
+**No material state change = no action alert.** This is a product requirement, not merely an email-volume optimization. Repeating the same advice at every scan erodes paid-user trust.
 
 ## Signup and preference path
 
@@ -77,6 +124,8 @@ Once production Auth email delivery is ready, the account-based funnel is the au
 4. Trial/Paid may enable selected Premium alerts after verification, consent and delivery-gate checks.
 5. Account settings allow preference changes and consent withdrawal.
 6. Watchlist rows can store per-ticker `alert_enabled`; this never bypasses Premium entitlement.
+
+Per-ticker alert selection is a buyer-control feature: a Premium user may follow many tickers but only enable push-style action emails for the subset that matters most. The backend must still enforce tier, current consent, global email enablement and signal eligibility.
 
 The browser never becomes the email sender and never holds provider secrets.
 
