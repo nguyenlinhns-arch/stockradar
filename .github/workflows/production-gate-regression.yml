@@ -25,3 +25,5 @@ jobs:
           python-version: '3.12'
       - name: Run production data and bundle contract regressions
         run: python -m unittest engine.tests.test_production_data engine.tests.test_production_bundle
+
+# Compliance gate regression trigger.
