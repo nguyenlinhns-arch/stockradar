@@ -30,6 +30,14 @@ class PrivacyPolicyVersioningTests(unittest.TestCase):
             self.assertIn("Chính sách quyền riêng tư", html)
             self.assertIn("2026-09-04", html)
 
+    def test_account_center_uses_current_email_consent_and_per_ticker_alert_controls(self):
+        source = self.read("website/assets/email-preferences.js")
+        self.assertIn("const CONSENT_VERSION = '2026-09-04'", source)
+        self.assertIn("source: 'ACCOUNT_CENTER'", source)
+        self.assertIn("data-watchlist-alert-toggle", source)
+        self.assertIn("alert_enabled: nextValue", source)
+        self.assertIn("Cảnh báo mã này", source)
+
     def test_privacy_policy_discloses_api_audit_and_account_deletion_retention(self):
         privacy = self.read("website/quyen-rieng-tu/index.html")
         self.assertIn("Phiên bản: 2026-09-04", privacy)
