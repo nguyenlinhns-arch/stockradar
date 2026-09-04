@@ -51,6 +51,7 @@ jobs:
         run: |
           python scripts/inject_public_ux.py .pages-site
           python scripts/inject_home_radar_polish.py .pages-site
+          python scripts/upgrade_home_radar_operational.py .pages-site
           python scripts/apply_buyer_readiness.py .pages-site
           python scripts/strip_public_methods.py .pages-site
 
