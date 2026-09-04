@@ -11,7 +11,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
     def read(self, relative: str) -> str:
         return (ROOT / relative).read_text(encoding="utf-8")
 
-    def test_signup_collects_free_daily_and_premium_alert_intent_without_prechecking(self):
+    def test_signup_collects_premium_email_intent_without_prechecking(self):
         signup = self.read("website/signup/index.html")
         self.assertIn('name="email_daily_brief" type="checkbox"', signup)
         self.assertIn('name="email_event_alerts" type="checkbox"', signup)
@@ -19,9 +19,9 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
         self.assertIn('name="selected_plan" value="free" checked', signup)
         self.assertIn('name="selected_plan" value="premium"', signup)
-        self.assertIn("bản rà soát thị trường lúc 09:00 mỗi ngày", signup)
-        self.assertIn("cảnh báo điểm mua/bán trong phiên", signup)
-        self.assertIn("FREE + PREMIUM", signup)
+        self.assertIn("Free chỉ nhận email hệ thống", signup)
+        self.assertIn("báo cáo Premium 09:00", signup)
+        self.assertIn("Action Alert Premium", signup)
         self.assertIn("PREMIUM", signup)
         self.assertIn("assets/signup-email-intent.js", signup)
 
@@ -83,26 +83,24 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
 
     def test_email_architecture_matches_paid_only_product_email(self):
         architecture = self.read("email/ARCHITECTURE.md")
-        self.assertIn("`daily`: Trial/Paid only", architecture)
-        self.assertIn("`state_change` / buy-sell event alerts: Trial/Paid only", architecture)
-        self.assertIn("09:00 Vietnam time", architecture)
-        self.assertIn("10:30 / 11:15 / 13:30 / 14:15", architecture)
-        self.assertIn("Preference data is not delivery entitlement", architecture)
-        self.assertIn("Free never passes a product-content email entitlement gate", architecture)
-        self.assertIn("account signup remains fail-closed", architecture)
+        self.assertIn("**Free:** account/transactional email only", architecture)
+        self.assertIn("**Trial/Paid:** may receive product email", architecture)
+        self.assertIn("`DAILY_BRIEF` | Trial/Paid", architecture)
+        self.assertIn("`EVENT_ALERT` | Trial/Paid", architecture)
+        self.assertIn("09:00", architecture)
+        self.assertIn("10:30", architecture)
+        self.assertIn("11:15", architecture)
+        self.assertIn("13:30", architecture)
+        self.assertIn("14:15", architecture)
+        self.assertIn("Free preferences can never become delivery entitlement", architecture)
+        self.assertIn("verified email + explicit current consent", architecture)
 
-    def test_homepage_is_email_first_with_clear_paid_conversion(self):
+    def test_homepage_source_still_routes_to_paid_conversion_and_public_lookup(self):
         home = self.read("website/index.html")
-        self.assertIn("data-email-conversion", home)
-        self.assertIn("data-home-email-form", home)
-        self.assertIn('id="nhan-ban-tin"', home)
-        self.assertIn('href="thanh-toan/?plan=premium"', home)
         self.assertIn("home-radar-sector-list", home)
         self.assertIn("data-live-radar-home", home)
         self.assertIn("home-tier-grid", home)
         self.assertIn("Free và Premium có gì?", home)
-        self.assertIn("Nhận bản rà soát thị trường mỗi sáng", home)
-        self.assertIn("FREE 09:00", home)
         self.assertIn("199K", home)
         for feature in (
             "Radar HOSE", "Full HOSE → Full-Scan Gate → Ranking", "So sánh theo ngành",
@@ -139,21 +137,21 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
             self.assertIn("sr_email_lead_captured", source)
             self.assertIn("emailDeliveryReady", source)
         self.assertIn("sr_pending_lead_email", home_core)
-        self.assertIn("Hoàn tất Free", home_core)
         self.assertIn("data-conversion-free-lead", conversion_state)
-        self.assertIn("Hoàn tất tài khoản Free", conversion_state)
 
-    def test_email_lead_landing_captures_interest_then_routes_to_free_signup(self):
+    def test_email_lead_landing_captures_premium_interest_then_routes_to_premium_signup(self):
         page = self.read("website/nhan-ban-tin/index.html")
         client = self.read("website/assets/email-interest.js")
         self.assertIn('data-proposition="email-lead"', page)
-        self.assertIn("Nhận bản rà soát 09:00 miễn phí", page)
+        self.assertIn("PREMIUM · EMAIL THEO WATCHLIST", page)
         self.assertIn("data-email-interest-form", page)
         self.assertIn('name="daily_brief" type="checkbox"', page)
+        self.assertIn('name="event_alerts" type="checkbox"', page)
         self.assertIn('name="privacy" type="checkbox"', page)
         self.assertNotIn('name="daily_brief" type="checkbox" checked', page)
-        self.assertIn('data-next-href="signup/?plan=free"', page)
-        self.assertIn('href="thanh-toan/?plan=premium"', page)
+        self.assertNotIn('name="event_alerts" type="checkbox" checked', page)
+        self.assertIn('data-next-href="signup/?plan=premium"', page)
+        self.assertIn("Free chỉ nhận email hệ thống", page)
         self.assertIn("renderNextStep", client)
         self.assertIn("data-email-interest-next", client)
         self.assertIn("sr_pending_lead_email", client)
@@ -252,7 +250,6 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertIn("rate limit exceeded", edge)
         self.assertIn("SUPABASE_SERVICE_ROLE_KEY", edge)
         self.assertIn("PENDING_VERIFICATION", edge)
-        self.assertIn("Hoàn tất tạo tài khoản Free", edge)
         self.assertIn("stockradar-email-interest-v2", edge)
 
     def test_privacy_page_discloses_pending_interest_retention(self):
