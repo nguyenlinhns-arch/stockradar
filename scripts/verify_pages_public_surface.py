@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify the generated GitHub Pages artifact is production-facing and feature-first."""
+"""Verify the generated GitHub Pages artifact is production-facing and decision-first."""
 
 from __future__ import annotations
 
@@ -18,6 +18,12 @@ FORBIDDEN_HTML_TERMS = (
     "ĐANG HOÀN THIỆN", "TRẠNG THÁI CÔNG KHAI", "ĐANG TẢI", "ĐANG KIỂM TRA",
     "CHỜ DỮ LIỆU", "CHƯA ĐỦ MẪU", "DỮ LIỆU THAM CHIẾU", "MÃ THAM CHIẾU",
     "MẪU BÁO CÁO", "MẪU EMAIL", "DỮ LIỆU MẪU", "MINH HỌA", "MINH HOẠ",
+)
+FORBIDDEN_PUBLIC_METHOD_TERMS = (
+    "4M", "CANSLIM", "SEPA", "VCP", "VPA", "RVOL", "POCKET PIVOT",
+    "EARLY BREAKOUT", "CONFIRMED BREAKOUT", "PAYBACK", "WYCKOFF", "MINERVINI",
+    "O’NEIL", "O'NEIL", "PHIL TOWN", "BEAR/BASE/BULL", "BEAR · BASE · BULL",
+    "BEAR / BASE / BULL",
 )
 HOME_UX_ASSETS = ("assets/mobile-touch-v1.css", "assets/home-core-v1.js")
 NON_HOME_UX_ASSETS = (
@@ -158,8 +164,8 @@ def main() -> None:
             'assets/home-dense-v3.css', 'assets/home-focus-v1.css', 'assets/home-core-v1.js', 'assets/mobile-touch-v1.css',
             'home-radar-sector-list', 'home-tier-grid', 'co-phieu/ACB/', 'co-phieu/VNM/', 'co-phieu/NKG/', 'co-phieu/HAH/',
             'Radar 30', '30 mã', '10 ngành · 3 mã mỗi ngành', 'Free và Premium có gì?',
-            '4M · CANSLIM · Payback', 'Định giá Bear / Base / Bull', 'SEPA/VCP · Stage · Pivot',
-            'VPA · RVOL · dòng tiền lớn', 'Email & cảnh báo trong phiên', '4 mốc/ngày',
+            'Lý do chính', 'Biên an toàn &amp; kỳ vọng', 'Trạng thái giá', 'Dòng tiền &amp; rủi ro',
+            'Email & cảnh báo trong phiên', '4 mốc/ngày',
         ), errors,
     )
     home_source = (output / "index.html").read_text(encoding="utf-8") if (output / "index.html").is_file() else ""
@@ -179,7 +185,7 @@ def main() -> None:
         require_text(
             output, f"co-phieu/{ticker}/index.html",
             (
-                '<base href="../../">', f'<title>{ticker} — Phân tích Free &amp; Premium | StockRadar</title>',
+                '<base href="../../">', f'<title>{ticker} — Tra cứu &amp; quyết định | StockRadar</title>',
                 f'<link rel="canonical" href="https://stockradar.vn/co-phieu/{ticker}/">',
                 f'<meta property="og:url" content="https://stockradar.vn/co-phieu/{ticker}/">',
                 f'data-static-ticker="{ticker}"', 'name="robots" content="noindex,nofollow"', 'assets/stock-page-context-v1.js',
@@ -207,20 +213,24 @@ def main() -> None:
     )
 
     route_features = {
-        "radar5/index.html": ('RADAR 30 · HOSE', '30 mã', '4M · SEPA · VPA'),
-        "breakout/index.html": ('Pocket Pivot · Early Breakout · Confirmed Breakout · Retest', 'SEPA · VCP · VPA · RVOL'),
+        "radar5/index.html": ('RADAR 30 · HOSE', '30 mã', 'CÁCH DÙNG RADAR', '3. Xem trạng thái', '4. Quản trị rủi ro'),
+        "breakout/index.html": ('Mua · chờ · theo dõi · bỏ qua', 'TRẠNG THÁI HÀNH ĐỘNG'),
         "risk/index.html": ('Stop-loss · Hạ tỷ trọng · Cắt lỗ · Risk/Reward', '4 MỐC QUÉT TRONG PHIÊN'),
         "track-record/index.html": ('Dấu thời gian · Entry · Target/Stop · Vòng đời khuyến nghị', 'NHẬT KÝ APPEND-ONLY'),
-        "thay-doi-hom-nay/index.html": ('Setup · Vùng giá · Dòng tiền · Market Direction', '4 MỐC QUÉT TRONG PHIÊN'),
-        "hieu-qua/index.html": ('Kích hoạt · Entry · Target/Stop · Benchmark', 'PHƯƠNG PHÁP ĐO NHẤT QUÁN'),
+        "thay-doi-hom-nay/index.html": ('Trạng thái · Vùng giá · Dòng tiền · Thị trường', '4 MỐC QUÉT TRONG PHIÊN'),
+        "hieu-qua/index.html": ('Kích hoạt · Entry · Target/Stop · Benchmark', 'QUY TẮC ĐO NHẤT QUÁN'),
         "nganh/index.html": ('10 nhóm ngành · 3 mã mỗi ngành · 30 cổ phiếu HOSE', 'SO SÁNH CÙNG NGÀNH'),
         "kiem-tra-co-phieu/index.html": ('4 KHUNG ĐẦU TƯ', 'Buy Zone · Stop · Target'),
-        "co-phieu/index.html": ('4M · Payback · CANSLIM', 'Định giá Bear · Base · Bull', 'Kế hoạch giao dịch'),
+        "co-phieu/index.html": ('Mã này nên làm gì?', 'MUA hay CHỜ', 'GIỮ, NHỒI, HẠ TỶ TRỌNG hay BÁN', 'Kế hoạch giao dịch'),
     }
     for route, features in route_features.items():
         require_text(output, route, ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS, *features), errors)
 
-    require_text(output, "phan-tich/index.html", ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS), errors)
+    require_text(
+        output, "phan-tich/index.html",
+        ('data-header-auth-actions', 'href="dang-nhap/"', 'href="dang-ky/"', *NON_HOME_UX_ASSETS, '<h1>Tra cứu cổ phiếu HOSE</h1>', 'Xem trạng thái'),
+        errors,
+    )
     require_text(output, "quyen-rieng-tu/index.html", ('Đăng ký email trước khi xác minh tài khoản', 'tối đa 30 ngày'), errors)
 
     fallback_js = output / "assets" / "public-fallbacks-v4.js"
@@ -256,6 +266,9 @@ def main() -> None:
         for term in FORBIDDEN_HTML_TERMS:
             if term in upper:
                 errors.append(f"unfinished/sample public HTML term {term}: {page.relative_to(output)}")
+        for term in FORBIDDEN_PUBLIC_METHOD_TERMS:
+            if term in upper:
+                errors.append(f"internal analysis method leaked to public HTML {term}: {page.relative_to(output)}")
         errors.extend(verify_injected_assets(page, output, source))
         errors.extend(verify_header_auth_pair(page, output, source))
 
@@ -270,7 +283,7 @@ def main() -> None:
         raise RuntimeError("Pages public-surface verification failed:\n- " + "\n- ".join(errors))
 
     print(
-        f"Verified production public surface: {len(pages)} HTML pages; homepage feature strip removed; feature-first product pages + 30 Radar ticker routes; no demo/sample/unfinished public copy"
+        f"Verified production public surface: {len(pages)} HTML pages; decision-first product pages + 30 Radar ticker routes; no named analysis methods/setup jargon or demo/sample/unfinished public copy"
     )
 
 
