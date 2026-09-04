@@ -34,7 +34,7 @@ jobs:
         run: python -m engine.cli build-public
 
       - name: Run regression suite
-        run: python -m unittest discover -s engine/tests -v
+        run: python scripts/run_ci_regression.py
 
       - name: Build static Pages artifact
         env:
