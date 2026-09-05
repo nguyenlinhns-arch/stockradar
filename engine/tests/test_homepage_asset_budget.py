@@ -18,15 +18,18 @@ class HomepageAssetBudgetTests(unittest.TestCase):
         self.assertIn('"home-core-v1.js"', source)
         self.assertIn("if is_homepage(page, output):", source)
 
-    def test_home_core_owns_navigation_search_email_lead_and_plan_routes(self):
+    def test_home_core_is_navigation_only(self):
         source = (ROOT / "website" / "assets" / "home-core-v1.js").read_text(encoding="utf-8")
-        for marker in (
-            "mountNavigation", "mountTickerSearch", "mountEmailLead", "mountRegistration",
-            "emailDeliveryReady", "registrationUrl", "leadUrl", "premiumUrl",
-            "nhan-ban-tin/", "thanh-toan/?plan=premium", "emailInterestEndpoint", "window.location.assign",
-        ):
-            self.assertIn(marker, source)
-        self.assertNotIn("đang hoàn thiện", source.lower())
+        self.assertIn("mountNavigation", source)
+        self.assertIn("data-nav-toggle", source)
+        self.assertIn("data-nav-menu", source)
+        self.assertNotIn("mountTickerSearch", source)
+        self.assertNotIn("mountEmailLead", source)
+        self.assertNotIn("emailInterestEndpoint", source)
+        self.assertNotIn("ai-assistant.js", source)
+        self.assertNotIn("ai-assistant.css", source)
+        self.assertNotIn("window.location.assign", source)
+        self.assertLess(len(source.encode("utf-8")), 2500)
 
     def test_built_homepage_is_self_contained_while_radar_keeps_full_runtime(self):
         with tempfile.TemporaryDirectory() as temp:
