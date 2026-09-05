@@ -6,7 +6,6 @@ import { appendResearchSnapshot, buildResearchSnapshot } from "../_shared/stockr
 const ORIGINS = new Set(["https://stockradar.vn","https://www.stockradar.vn","https://nguyenlinhns-arch.github.io","http://localhost:8000","http://127.0.0.1:8000"]);
 const HORIZONS = ["SHORT_TERM","MEDIUM_TERM","LONG_TERM","ACCUMULATION"];
 const TIERS = new Set(["FREE","TRIAL","PAID"]);
-const MAX_WATCH = 20;
 let providerDisabledUntil = 0;
 
 function cors(origin){
@@ -56,7 +55,7 @@ Deno.serve(async req=>{
 
   const [{data:profile,error:profileError},{data:watchRows}]=await Promise.all([
     db.from('profiles').select('account_tier,account_status').eq('id',user.id).maybeSingle(),
-    db.from('watchlist_items').select('ticker,horizon,owns_stock,alert_enabled,cost_basis,portfolio_weight_pct,created_at').eq('user_id',user.id).is('removed_at',null).order('owns_stock',{ascending:false}).order('created_at',{ascending:true}).limit(MAX_WATCH),
+    db.from('watchlist_items').select('ticker,horizon,owns_stock,alert_enabled,cost_basis,portfolio_weight_pct,created_at').eq('user_id',user.id).is('removed_at',null).order('owns_stock',{ascending:false}).order('created_at',{ascending:true}).limit(20),
   ]);
   const tier=String(profile?.account_tier||'').toUpperCase();
   if(profileError||String(profile?.account_status||'').toUpperCase()!=='ACTIVE'||!TIERS.has(tier)){
@@ -91,7 +90,7 @@ Deno.serve(async req=>{
     return json({status:'RATE_LIMITED',tier,answer:tier==='FREE'?'Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay. Hạn mức được làm mới lúc 00:00 giờ Việt Nam.':'Hạn mức hiện tại đã dùng hết.',quota:{remaining:0,limit,reset_at:quotaData.reset_at||null}},429,origin,rate);
   }
 
-  const researchForAnswer=scope==='ticker'?tickerContext:contexts;
+  const researchForAnswer=scope==='ticker'?(contexts[0]||null):contexts;
   let fallback=deterministicStockRadarAnswer({mode,researchContext:researchForAnswer,actionContext:action,question:message});
   fallback=appendPosition(fallback,scope,ticker,watch);
   if(scope==='ticker')fallback=appendResearchSnapshot(fallback,tickerContext);
@@ -109,7 +108,7 @@ Deno.serve(async req=>{
   }
   const key=Deno.env.get('OPENAI_API_KEY')?.trim();
   if(!key||Date.now()<providerDisabledUntil)return json({status:'READY_FALLBACK',reason:!key?'OPENAI_KEY_MISSING':'OPENAI_CIRCUIT_OPEN',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
-  const context={...fullResearchContext,RESPONSE_MODE:mode,ACCESS_TIER:tier,REQUEST_SCOPE:scope,REQUESTED_TICKER:scope==='ticker'?ticker:null,REQUESTED_HORIZON:horizon,USER_QUESTION:message,RECENT_CONVERSATION:hist,USER_CONTEXT:userContext,ACTION_CONTEXT:action,RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts};
+  const context={...fullResearchContext,RESPONSE_MODE:mode,ACCESS_TIER:tier,REQUEST_SCOPE:scope,REQUESTED_TICKER:scope==='ticker'?ticker:null,REQUESTED_HORIZON:horizon,USER_QUESTION:message,RECENT_CONVERSATION:hist,USER_CONTEXT:userContext,ACTION_CONTEXT:action,RESEARCH_CONTEXT:scope==='ticker'?(contexts[0]||null):contexts};
   let response;
   try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')?.trim()||'gpt-5-mini',instructions:STOCKRADAR_SYSTEM_CORE,input:JSON.stringify(context),max_output_tokens:scope==='portfolio'?1200:1000,store:false})})}
   catch{return json({status:'READY_FALLBACK',reason:'OPENAI_NETWORK_ERROR',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
