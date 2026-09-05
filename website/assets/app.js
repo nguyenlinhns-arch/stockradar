@@ -117,6 +117,7 @@
   }
 
   function mountPortalShell() {
+    if (document.querySelector('[data-verified-recommendations]')) return;
     const header = document.querySelector('.site-header');
     if (!header || document.querySelector('.portal-utility')) return;
 
@@ -524,6 +525,7 @@
   }
 
   async function loadRecommendations() {
+    if (document.querySelector('[data-verified-recommendations]')) return;
     const tables = document.querySelectorAll('[data-recommendations]');
     const reports = document.querySelectorAll('[data-stock-report]');
     const performanceTargets = document.querySelectorAll('[data-performance-summary]');
@@ -734,6 +736,7 @@
   }
 
   async function loadRecommendationJournal() {
+    if (document.querySelector('[data-verified-recommendations]')) return;
     const target = document.querySelector('[data-recommendation-journal]');
     if (!target) return;
     try {

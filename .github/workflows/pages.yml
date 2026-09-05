@@ -28,6 +28,7 @@ on:
       - 'scripts/normalize_commercial_plans_preflight_v1.py'
       - 'scripts/normalize_commercial_home_preflight_v1.py'
       - 'scripts/apply_commercial_surface_v1.py'
+      - 'scripts/render_verified_recommendations_page.py'
       - 'scripts/apply_commercial_surface_v2.py'
       - 'scripts/fix_commercial_auth_headings.py'
       - 'scripts/apply_commercial_runtime_v2.py'

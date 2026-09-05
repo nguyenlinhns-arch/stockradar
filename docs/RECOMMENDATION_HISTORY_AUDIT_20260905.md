@@ -87,3 +87,19 @@ Kiểm thử chống dùng giá tương lai, trùng phiên, tự điền phiên 
 DCM cập nhật, bán thiếu chứng cứ, lãi/lỗ khi chưa có giá và lộ địa chỉ người nhận.
 Kiểm tra trình duyệt desktop/mobile: 2 mã gốc, 25 dòng rà soát, bộ lọc mã/trạng thái,
 thời gian Gmail, mức biến động, cuộn bảng trong khung và tải lỗi không hiển thị số 0.
+
+## Trang Khuyến nghị
+
+Trang `/khuyen-nghi/` được dựng sẵn từ cùng `recommendation-history.json` ở bước
+`apply_commercial_surface_v1.py`. Bảng sáu cột nằm đầu trang, mới nhất trước;
+không phụ thuộc vào nguồn điểm mua mới đang rỗng. JavaScript chỉ bổ sung lọc,
+xóa lọc và mở chi tiết; tắt JavaScript vẫn đọc được bảng và các mục mở rộng.
+Giữ ngày giá trong bảng, tách giờ phát hiện và giờ gửi thư.
+
+Mã cũ trong `app.js` không dựng lại thanh trạng thái, khuyến nghị hoặc nhật ký
+trên route mới. Dữ liệu vòng đời dùng `data-verified-lifecycle` riêng để tránh
+bộ tải Radar ghi đè các ô giá qua selector `data-status`.
+
+Kiểm tra giao diện trong `scripts/visual_qa.cjs` đối chiếu số mã/thứ tự với sổ
+công khai và kiểm tra sáu ô còn nguyên sau khi toàn bộ mã giao diện chạy,
+bộ lọc mã, kết quả rỗng, xóa lọc và mở chi tiết trên năm kích thước màn hình.

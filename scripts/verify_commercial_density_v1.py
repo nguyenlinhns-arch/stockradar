@@ -55,6 +55,11 @@ def visible_main(source: str) -> str:
     if not match:
         raise RuntimeError("Missing <main>")
     text = match.group(1)
+    # Verified price/history rows are user-requested records, not explanatory copy.
+    # Adding tomorrow's recommendation must not exhaust the page's prose budget.
+    if 'data-verified-recommendations' in match.group(0):
+        text = re.sub(r'<tbody\b[^>]*>.*?</tbody>', '', text, count=1, flags=re.I | re.S)
+        text = re.sub(r'<section class="vr-details".*?</section>', '', text, count=1, flags=re.I | re.S)
     # Closed disclosure panels expose their summary in the initial page, not their body.
     def disclosure(match):
         if re.search(r'(?:^|\s)open(?:\s|=|$)', match.group(1), flags=re.I):

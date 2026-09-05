@@ -166,6 +166,32 @@ async function visibleFontViolations(page, selectors, minimumPx) {
           }
         }
 
+        if (target.name === 'recommendations') {
+          const ledgerResponse = await page.request.get(base + '/public/data/recommendation-history.json');
+          const ledger = await ledgerResponse.json();
+          const expected = [...ledger.items].sort((a, b) => Date.parse(b.first_sent_at) - Date.parse(a.first_sent_at));
+          const rows = page.locator('[data-verified-row]');
+          const tickers = await rows.evaluateAll(nodes => nodes.map(node => node.dataset.ticker));
+          if (JSON.stringify(tickers) !== JSON.stringify(expected.map(row => row.ticker))) routeErrors.push('verified recommendations missing or out of order');
+          const cells = await rows.evaluateAll(nodes => nodes.map(node => node.querySelectorAll('td').length));
+          if (cells.some(count => count !== 6)) routeErrors.push('verified prices overwritten by legacy runtime');
+          if (await page.locator('.market-tape,.product-subnav').count()) routeErrors.push('legacy empty-data navigation returned');
+          await page.waitForFunction(() => document.querySelector('[data-verified-controls]')?.disabled === false);
+          if (expected.length) {
+            await page.locator('[data-verified-search]').fill(expected[0].ticker.toLowerCase());
+            if (await page.locator('[data-verified-row]:visible').count() !== 1) routeErrors.push('ticker filter did not isolate recommendation');
+            await page.locator('[data-verified-row]:visible [data-rec-detail]').click();
+            const detail = page.locator('#history-' + expected[0].ticker);
+            if (!(await detail.evaluate(node => node.open))) routeErrors.push('recommendation details did not open');
+            await detail.locator('summary').click();
+          }
+          await page.locator('[data-verified-search]').fill('000');
+          if (await page.locator('[data-verified-row]:visible').count() !== 0 || !(await page.locator('[data-verified-empty]').isVisible())) routeErrors.push('empty filter state failed');
+          await page.locator('[data-verified-reset]').click();
+          if (await page.locator('[data-verified-row]:visible').count() !== expected.length) routeErrors.push('reset filter lost recommendations');
+          await page.evaluate(() => { history.replaceState(null, '', location.pathname); window.scrollTo(0, 0); });
+        }
+
         if (target.name === 'plans') {
           if (!(await page.locator('[data-plan-free]').count())) routeErrors.push('Free plan card missing');
           if (!(await page.locator('[data-plan-premium]').count())) routeErrors.push('Premium plan card missing');

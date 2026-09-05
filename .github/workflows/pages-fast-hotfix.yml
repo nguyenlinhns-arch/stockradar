@@ -6,6 +6,7 @@ on:
     paths:
       - 'website/**'
       - 'engine/tests/test_ai_registration_ctas.py'
+      - 'engine/tests/test_verified_recommendations_page.py'
       - 'engine/tests/test_stock_ai_personalization.py'
       - 'engine/tests/test_stock_ai_product_center.py'
       - 'engine/tests/test_buyer_readiness.py'
@@ -23,6 +24,7 @@ on:
       - 'scripts/normalize_commercial_plans_preflight_v1.py'
       - 'scripts/normalize_commercial_home_preflight_v1.py'
       - 'scripts/apply_commercial_surface_v1.py'
+      - 'scripts/render_verified_recommendations_page.py'
       - 'scripts/apply_commercial_surface_v2.py'
       - 'scripts/fix_commercial_auth_headings.py'
       - 'scripts/apply_commercial_runtime_v2.py'
@@ -83,7 +85,8 @@ jobs:
             engine.tests.test_stock_ai_personalization \
             engine.tests.test_stock_ai_product_center \
             engine.tests.test_stock_api_gateway_contract \
-            engine.tests.test_stock_page_context
+            engine.tests.test_stock_page_context \
+            engine.tests.test_verified_recommendations_page
       - name: Build Pages artifact
         env:
           STOCKRADAR_ENABLE_AUTH: "1"

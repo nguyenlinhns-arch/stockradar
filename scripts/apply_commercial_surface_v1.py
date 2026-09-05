@@ -7,6 +7,11 @@ import argparse
 import re
 from pathlib import Path
 
+if __package__:
+    from .render_verified_recommendations_page import render_page
+else:
+    from render_verified_recommendations_page import render_page
+
 STYLE_NAME = "commercial-v1.css"
 STYLE_MARKER = "data-commercial-v1"
 COMMERCIAL_SCRIPT_NAME = "commercial-v1.js"
@@ -168,23 +173,8 @@ def commercial_lookup(source: str) -> str:
     return source.replace("TOÀN HOSE · 4 KHUNG ĐẦU TƯ", "TRA CỨU HOSE")
 
 
-def commercial_recommendations(source: str) -> str:
-    source = remove_section(source, "buyer-recommendation-contract")
-    source = remove_conversion_rail(source)
-    source = re.sub(r'<div class="home-recommendation-status">.*?</div>\s*<section class="recommendation-reference-list"', '<div class="commercial-reco-summary"><div><span>Tín hiệu hiện tại</span><strong data-current-action-count>0 mã</strong></div><div><span>Phạm vi</span><strong>Toàn HOSE</strong></div></div><section class="recommendation-reference-list"', source, count=1, flags=re.I | re.S)
-    source = re.sub(r'\s*<p class="recommendation-reference-note">.*?</p>\s*', "\n", source, count=1, flags=re.I | re.S)
-    replacements = (
-        ("StockRadar quét toàn HOSE nhưng không ép đủ số lượng. Chỉ mã vượt qua dữ liệu, thanh khoản, bối cảnh, chất lượng điểm vào và quản trị rủi ro mới được chuyển từ Radar sang tín hiệu hành động.", "Tín hiệu hành động đã được StockRadar phát hành."),
-        ("FULL HOSE · ACTION GATED", "TÍN HIỆU ĐÃ PHÁT HÀNH"),
-        ("RADAR → ACTION GATE", "RADAR"),
-        ("Shortlist theo snapshot", "Danh sách theo dõi"),
-    )
-    for before, after in replacements:
-        source = source.replace(before, after)
-    source = source.replace('</main>', '<section class="container"><div data-alert-history><p>Đang tải lịch sử email…</p></div></section></main>', 1)
-    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=2" defer></script></head>', 1)
-    source = source.replace('Tín hiệu hiện tại</span>', 'Điểm mua mới</span>')
-    return source
+def commercial_recommendations(source: str, output: Path) -> str:
+    return render_page(source, output)
 
 
 def commercial_sectors(source: str) -> str:
@@ -274,8 +264,8 @@ def commercial_account(source: str) -> str:
 def process_page(output: Path, route: str) -> None:
     page = output / "index.html" if route == "" else output / route / "index.html"
     source = normalize_footer(normalize_header_register(normalize_nav(inject_style(read(page)), route)))
-    transforms = {"": commercial_home, "hom-nay": commercial_today, "radar5": commercial_radar, "kiem-tra-co-phieu": commercial_lookup, "khuyen-nghi": commercial_recommendations, "nganh": commercial_sectors, "hieu-qua": commercial_performance, "dang-ky": commercial_plans, "tai-khoan": commercial_account}
-    write(page, transforms[route](source))
+    transforms = {"": commercial_home, "hom-nay": commercial_today, "radar5": commercial_radar, "kiem-tra-co-phieu": commercial_lookup, "nganh": commercial_sectors, "hieu-qua": commercial_performance, "dang-ky": commercial_plans, "tai-khoan": commercial_account}
+    write(page, commercial_recommendations(source, output) if route == "khuyen-nghi" else transforms[route](source))
 
 
 def verify(output: Path) -> None:
