@@ -62,18 +62,19 @@ ROUTES = {
         "remove_js": {
             "email-interest.js", "public-ux.js", "public-fallbacks-v4.js", "direct-ticker-nav-v1.js",
             "auth-production-gate.js", "header-auth-dedupe-v6.js", "public-copy-v7.js",
-            "conversion-state-v1.js", "buyer-readiness-v1.js",
+            "conversion-state-v1.js", "buyer-readiness-v1.js", "paid-nav-v1.js",
         },
         "required_css": {
             "styles.css", "checkout-v1.css", "professional-v5.css", "mobile-touch-v1.css",
             "header-notifications.css", "commercial-v2.css",
         },
         "required_js": {
-            "auth-config.js", "app.js", "checkout-v1.js", "paid-nav-v1.js", "conversion-v3.js",
+            "auth-config.js", "auth-state-v2.js", "app.js", "checkout-v1.js", "conversion-v3.js",
             "decision-copy-guard-v1.js", "header-notifications.js", "commercial-v2.js",
         },
-        # paid-nav-v1 now owns canonical signed-in header state and session bridging;
-        # keep a small explicit budget allowance for that functional runtime.
+        # auth-state-v2 now owns public-page session bridging and account actions. Checkout
+        # already has its own authenticated payment client, so paid-nav-v1 would duplicate
+        # Supabase account resolution and header observers without adding payment capability.
         "max_css": 6, "max_js": 8, "max_bytes": 230_000,
     },
 }
