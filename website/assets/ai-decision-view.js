@@ -32,8 +32,8 @@
       const sourceStatus=fresh?d.status:'UNAVAILABLE';
       card.append(element('p',`${sourceStatus} · ${d.source||'StockRadar'} · ${fresh?'Nguồn còn hạn':'Nguồn chưa đủ mới'} · ${d.price_time_kind==='EOD'?'Đóng cửa':'Ngày dữ liệu'} ${date(d.as_of_date)} · Rà soát ${time(d.updated_at)} (GMT+7)`,'sr-decision-source'));
       const targets=c.targets||{},zone=c.buy_zone||{};
-      rows(card,[['Giá quan sát',price(c.price)],['Khung đầu tư',({SHORT_TERM:'Ngắn hạn',MEDIUM_TERM:'3–6 tháng',LONG_TERM:'12 tháng',ACCUMULATION:'Tích sản'})[c.horizon]||'Chưa xác định'],
-        ['Vùng mua (Buy Zone)',official&&numeric(zone.low)&&numeric(zone.high)?`${price(zone.low)} – ${price(zone.high)}`:'Chưa xác nhận'],
+      rows(card,[['Giá quan sát',price(c.price)],['Khung đầu tư',({SHORT_TERM:'Ngắn hạn',MEDIUM_TERM:'3–6 tháng',LONG_TERM:'12 tháng',ACCUMULATION:'Tích sản'})[c.horizon]||'Chưa xác định']]);
+      if(official)rows(card,[['Vùng mua (Buy Zone)',numeric(zone.low)&&numeric(zone.high)?`${price(zone.low)} – ${price(zone.high)}`:'Chưa xác nhận'],
         ['Tỷ trọng đề xuất',official?pct(c.position_pct):'Chưa mở vị thế mới'],['Cắt lỗ (Stop-loss)',official?price(c.stop_loss):'Chưa phát hành'],
         ['Target gần',official?price(targets.short_term):'Chưa phát hành'],['Target 3–6 tháng',official?price(targets.three_to_six_months):'Chưa phát hành'],['Target 12 tháng',official?price(targets.twelve_months):'Chưa phát hành'],
         ['Upside / Downside',official?`${pct(c.upside_pct)} / ${pct(c.downside_pct)} từ giá quan sát`:'Chưa có kế hoạch xác nhận'],['Risk/Reward',official&&numeric(c.risk_reward)?`${number(c.risk_reward)} lần`:'Chưa có kế hoạch xác nhận']]);
@@ -49,6 +49,7 @@
           s?`Stop ngắn hạn dựa trên 1,5 × ATR20 ${pct(s.atr20_pct)}, giới hạn rủi ro 5–8%; R/R kịch bản 2 lần. Không dùng stop này cho thời hạn dài hơn.`:'',e.accumulation?.condition||''].filter(Boolean).join('\n\n');
         details(model,'Căn cứ tính và giới hạn',assumptions);card.append(model);
       }
+      if(!official)card.append(element('p','Chưa phát hành vùng mua, tỷ trọng và kế hoạch target/stoploss chính thức.','sr-decision-conditions'));
       const why=element('section',null,'sr-decision-why');why.append(element('strong','Vì sao?'));
       const ul=element('ul');
       for(const text of (fresh?c.reasons:c.missing||[]).slice(0,4))ul.append(element('li',String(text).split(/(?<=\.)\s+(?=[A-ZÀ-Ỹ])/).slice(0,2).join(' ')));
