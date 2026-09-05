@@ -31,15 +31,17 @@ class StockAiProductCenterTests(unittest.TestCase):
         self.assertIn("from public, anon, authenticated", lowered)
         self.assertNotIn("grant execute on function public.consume_stockradar_api_quota(uuid, text) to authenticated", lowered)
 
-    def test_free_ai_uses_same_decision_context_and_premium_gets_proactive_alert_rights(self):
+    def test_free_ai_uses_same_decision_context_and_paid_tier_is_preserved_for_entitlements(self):
         source = EDGE.read_text(encoding="utf-8")
         tight = compact(source)
         self.assertIn('TIERS=newSet(["FREE","TRIAL","PAID"])', tight)
-        self.assertIn('PREMIUM=newSet(["TRIAL","PAID"])', tight)
-        self.assertIn('action=ready.map(r=>normReport(r.data))', tight)
-        self.assertIn('alert_enabled:PREMIUM.has(tier)&&r.alert_enabled===true', tight)
+        self.assertIn("tier=String(profile?.account_tier", tight)
+        self.assertIn("USER_CONTEXT:userContext", tight)
+        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?(contexts[0]||null):contexts", tight)
+        self.assertIn("tier,mode,source,quota", tight)
         self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay", source)
         self.assertNotIn("redactForFree", source)
+        self.assertNotIn("FREE_REDACTED", source)
 
     def test_homepage_transform_places_ai_before_supporting_product_sections(self):
         source = INJECTOR.read_text(encoding="utf-8")
