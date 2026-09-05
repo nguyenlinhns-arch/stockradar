@@ -202,7 +202,7 @@
     setTimeout(normalizeHeaderActions, 1200);
 
     const results = await Promise.allSettled([
-      getJson(DATA.radar), getJson(DATA.recommendations), getJson(DATA.today), recommendationStatus(), getJson('public/data/recommendation-history.json'),
+      getJson(DATA.radar), getJson(DATA.recommendations), getJson(DATA.today), recommendationStatus(), getJson('public/data/recommendation-history.json').then(renderPerformance),
     ]);
     const radar = results[0].status === 'fulfilled' ? results[0].value : {};
     const recommendations = results[1].status === 'fulfilled' ? results[1].value : {};
@@ -211,7 +211,6 @@
     renderMarket(radar);
     renderRecommendations(results[3].status === 'fulfilled' ? results[3].value : null);
     renderToday(today, recommendations);
-    renderPerformance(results[4].status==='fulfilled'?results[4].value:null);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
