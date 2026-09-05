@@ -1,0 +1,114 @@
+{
+  "schema_version": "STOCKRADAR_VERIFIED_HISTORY_V1",
+  "as_of_date": "2026-09-04",
+  "audit_at": "2026-09-05T03:31:58.129449+00:00",
+  "mail_search_through": "2026-09-05",
+  "source": "Email StockRadar đã đối chiếu với thư gốc và nhật ký gửi",
+  "summary": {
+    "tickers": 2,
+    "alerts": 3,
+    "without_sell_email": 2,
+    "with_sell_email": 0,
+    "realized_return_pct": null
+  },
+  "items": [
+    {
+      "recommendation_id": "DCM-20260903",
+      "ticker": "DCM",
+      "record_mode": "VERIFIED_EMAIL_HISTORY",
+      "new_buy_allowed": false,
+      "status": "NO_SELL_EMAIL_FOUND",
+      "first_sent_at": "2026-09-03T04:20:16+00:00",
+      "signal_at": "2026-09-03T11:17:00+07:00",
+      "reference_price": 32200,
+      "latest_price": 32550.0,
+      "price_date": "2026-09-04",
+      "price_change_pct": 1.087,
+      "execution_return_pct": null,
+      "execution_status": "NO_BROKER_FILL_EVIDENCE",
+      "timeline": [
+        {
+          "event_id": "DCM-20260903-BUY-1117",
+          "recommendation_id": "DCM-20260903",
+          "ticker": "DCM",
+          "kind": "BUY",
+          "signal_at": "2026-09-03T11:17:00+07:00",
+          "sent_at": "2026-09-03T04:20:16+00:00",
+          "reference_price": 32200,
+          "buy_zone": [
+            32000,
+            32300
+          ],
+          "stop_loss": 30750,
+          "near_target": [
+            35100
+          ],
+          "recipient_count": 1,
+          "email_status": "SENT_VERIFIED",
+          "evidence_sha256": "1c0a05a64f0ca4ce461d5601b7a512b84cc5cbfef8009c60e3a7a204461d2251",
+          "note": "Mua thăm dò 15–20% theo nội dung email gốc."
+        },
+        {
+          "event_id": "DCM-20260903-UPDATE-1415",
+          "recommendation_id": "DCM-20260903",
+          "ticker": "DCM",
+          "kind": "UPDATE",
+          "signal_at": "2026-09-03T14:15:00+07:00",
+          "sent_at": "2026-09-03T07:21:35+00:00",
+          "reference_price": null,
+          "buy_zone": [
+            32400,
+            32700
+          ],
+          "stop_loss": 31200,
+          "near_target": [
+            35500
+          ],
+          "recipient_count": 2,
+          "email_status": "SENT_VERIFIED",
+          "evidence_sha256": "4f9911261f1d65ce604d0859d36da35427df205b95c3b61a1ade18eb2cbc1bc5",
+          "note": "Cập nhật vùng mua, tỷ trọng 20–25% và cắt lỗ. Giá báo tin là khoảng 32.550–32.800đ, không có một giá duy nhất. Không tính thêm một khuyến nghị mới."
+        }
+      ]
+    },
+    {
+      "recommendation_id": "VHM-20260904",
+      "ticker": "VHM",
+      "record_mode": "VERIFIED_EMAIL_HISTORY",
+      "new_buy_allowed": false,
+      "status": "NO_SELL_EMAIL_FOUND",
+      "first_sent_at": "2026-09-04T07:18:48+00:00",
+      "signal_at": "2026-09-04T14:15:00+07:00",
+      "reference_price": 75400,
+      "latest_price": 75200.0,
+      "price_date": "2026-09-04",
+      "price_change_pct": -0.2653,
+      "execution_return_pct": null,
+      "execution_status": "NO_BROKER_FILL_EVIDENCE",
+      "timeline": [
+        {
+          "event_id": "VHM-20260904-BUY-1415",
+          "recommendation_id": "VHM-20260904",
+          "ticker": "VHM",
+          "kind": "BUY",
+          "signal_at": "2026-09-04T14:15:00+07:00",
+          "sent_at": "2026-09-04T07:18:48+00:00",
+          "reference_price": 75400,
+          "buy_zone": [
+            74800,
+            75600
+          ],
+          "stop_loss": 72800,
+          "near_target": [
+            81500,
+            83400
+          ],
+          "recipient_count": 4,
+          "email_status": "SENT_VERIFIED",
+          "evidence_sha256": "f953abd9b29c822f269046a09994f40c1b23be8a22ad309676fa667e956cfa12",
+          "note": "Mua sớm 15–20% theo nội dung email gốc; nhật ký xác nhận gửi 4 địa chỉ."
+        }
+      ]
+    }
+  ]
+}

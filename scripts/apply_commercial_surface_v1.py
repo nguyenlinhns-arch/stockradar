@@ -120,7 +120,7 @@ def normalize_header_register(source: str) -> str:
 
 def commercial_home(source: str) -> str:
     source = remove_section(source, "buyer-first-section")
-    proof = '<section class="home-section commercial-proof" aria-label="Kiểm chứng StockRadar"><div class="container commercial-proof-bar"><div><span>Đã phát hành</span><strong data-proof-total>0</strong></div><div><span>Đang mở</span><strong data-proof-open>0</strong></div><div><span>Đã đóng</span><strong data-proof-closed>0</strong></div><div><span>TB lệnh đã đóng</span><strong data-proof-return>—</strong></div><a href="hieu-qua/">Hiệu quả →</a><a href="radar5/">Radar →</a></div></section>'
+    proof = '<section class="home-section commercial-proof" aria-label="Kiểm chứng StockRadar"><div class="container commercial-proof-bar"><div><span>Đã báo mua</span><strong data-proof-total>—</strong></div><div><span>Chưa có email bán</span><strong data-proof-open>—</strong></div><div><span>Mã đã báo bán</span><strong data-proof-closed>—</strong></div><div><span>Lãi/lỗ đã chốt</span><strong data-proof-return>—</strong></div><a href="hieu-qua/">Hiệu quả →</a><a href="radar5/">Radar →</a></div></section>'
     source, count = re.subn(r'\s*<section class="home-section" aria-labelledby="proof-title">.*?</section>\s*', proof, source, count=1, flags=re.I | re.S)
     if count != 1:
         raise RuntimeError("Commercial homepage proof section not found")
@@ -181,6 +181,9 @@ def commercial_recommendations(source: str) -> str:
     )
     for before, after in replacements:
         source = source.replace(before, after)
+    source = source.replace('</main>', '<section class="container"><div data-alert-history><p>Đang tải lịch sử email…</p></div></section></main>', 1)
+    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=1" defer></script></head>', 1)
+    source = source.replace('Tín hiệu hiện tại</span>', 'Điểm mua mới</span>')
     return source
 
 
@@ -193,9 +196,9 @@ def commercial_sectors(source: str) -> str:
 def commercial_performance(source: str) -> str:
     source = remove_section(source, "buyer-first-section")
     source = remove_conversion_rail(source)
-    source = source.replace("Kích hoạt · Entry · Target/Stop · Benchmark. Người mua phải kiểm chứng được cả kết quả tốt lẫn kết quả xấu.", "Lịch sử tín hiệu, P/L và benchmark.")
+    source = source.replace("Kích hoạt · Entry · Target/Stop · Benchmark. Người mua phải kiểm chứng được cả kết quả tốt lẫn kết quả xấu.", "Lịch sử email và biến động giá từng mã.")
     source = source.replace("KẾT QUẢ · CÓ DẤU THỜI GIAN", "KẾT QUẢ THỰC TẾ")
-    audit = '<div class="container commercial-audit-strip"><span>Không cherry-pick</span><span>Chưa kích hoạt ≠ đã mua</span><span>So cùng VN-Index</span><span>Có dấu thời gian</span></div>'
+    audit = '<div class="container commercial-audit-strip"><span>Email đã đối chiếu</span><span>Giờ gửi thực tế</span><span>Biến động giá</span><span>Rà soát tháng 8</span></div>'
     return source.replace('<section class="performance-workspace">', '<section class="performance-workspace">' + audit, 1)
 
 

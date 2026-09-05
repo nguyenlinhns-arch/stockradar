@@ -103,7 +103,7 @@
       table.hidden = true;
       empty.hidden = false;
       const coverage=payload?.coverage || {}, status=payload?.data_status;
-      empty.querySelector('strong').textContent = status==='NO_QUALIFIED_BUYS' ? `Chưa có mã đủ điều kiện mua · đã rà soát ${number(coverage.reviewed)} mã HOSE` : status==='STALE' ? 'Dữ liệu rà soát đã cũ · chờ cập nhật' : status==='PUBLICATION_PENDING' ? 'Chưa có khuyến nghị được xác nhận để công bố' : 'Chưa tải được kết quả rà soát';
+      empty.querySelector('strong').textContent = status==='NO_QUALIFIED_BUYS' ? `Chưa có điểm mua mới ở lần quét này · ${number(coverage.reviewed)} mã HOSE` : status==='STALE' ? 'Dữ liệu rà soát đã cũ · chờ cập nhật' : status==='PUBLICATION_PENDING' ? 'Chưa có khuyến nghị được xác nhận để công bố' : 'Chưa tải được kết quả rà soát';
       setText('[data-home-reco-reason]',status==='NO_QUALIFIED_BUYS' ? `${number(coverage.initial_setups)} mã có dấu hiệu giá/khối lượng ban đầu, nhưng chưa đáp ứng đầy đủ tiêu chí mua.` : 'Chưa đủ cơ sở để xác nhận danh sách mua mới.');
       setText('[data-home-reco-state]',payload?.checked_at ? `Kiểm tra trạng thái lúc ${fmtTime(payload.checked_at)} · giờ Việt Nam` : 'Không thể xác nhận trạng thái hiện tại; vui lòng tải lại.');
       return;
@@ -180,11 +180,20 @@
   }
 
   function renderPerformance(payload) {
-    const summary = payload?.performance_summary || {};
-    setText('[data-proof-total]', number(summary.total_published, '0'));
-    setText('[data-proof-open]', number(summary.open, '0'));
-    setText('[data-proof-closed]', number(summary.closed, '0'));
-    setText('[data-proof-return]', pct(summary.average_closed_return_pct));
+    if(payload?.schema_version!=='STOCKRADAR_VERIFIED_HISTORY_V1')return;
+    const s=payload.summary;
+    setText('[data-proof-total]',number(s.tickers));
+    setText('[data-proof-open]',number(s.without_sell_email));
+    setText('[data-proof-closed]',number(s.with_sell_email));
+    setText('[data-proof-return]',pct(s.realized_return_pct));
+    const box=qs('[data-home-history]');
+    if(!box)return;
+    box.replaceChildren();
+    const title=document.createElement('strong');title.textContent=`Đã báo mua ${s.tickers} mã · ${s.alerts} email đã đối chiếu`;box.append(title);
+    for(const r of payload.items){
+      const a=document.createElement('a');a.href=`hieu-qua/#history-${encodeURIComponent(r.ticker)}`;
+      a.textContent=`${r.ticker} · ${fmtTime(r.first_sent_at)} · ${r.status==='NO_SELL_EMAIL_FOUND'?'Chưa có email bán':'Đã ghi nhận email bán'} · Xem hiệu quả →`;box.append(a);
+    }
   }
 
   async function mount() {
@@ -193,7 +202,7 @@
     setTimeout(normalizeHeaderActions, 1200);
 
     const results = await Promise.allSettled([
-      getJson(DATA.radar), getJson(DATA.recommendations), getJson(DATA.today), recommendationStatus(),
+      getJson(DATA.radar), getJson(DATA.recommendations), getJson(DATA.today), recommendationStatus(), getJson('public/data/recommendation-history.json'),
     ]);
     const radar = results[0].status === 'fulfilled' ? results[0].value : {};
     const recommendations = results[1].status === 'fulfilled' ? results[1].value : {};
@@ -202,7 +211,7 @@
     renderMarket(radar);
     renderRecommendations(results[3].status === 'fulfilled' ? results[3].value : null);
     renderToday(today, recommendations);
-    renderPerformance(recommendations);
+    renderPerformance(results[4].status==='fulfilled'?results[4].value:null);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });
