@@ -4,6 +4,8 @@
 
 Updated: 2026-09-04 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
 
+Production verification 2026-09-05: frontend SHA `d226617a242ca4849864c94a65cd35e0523ec338`, [Pages CI/deploy SUCCESS](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/33952719699). 23/23 route smoke, matching runtime asset hashes, existing Premium session and conditional MWG targets verified. Email/checkout readiness remained PAUSED at 14:34 VN; 0 emails sent by this audit.
+
 | Workstream | Status | Evidence | Remaining production gate |
 | --- | --- | --- | --- |
 | V2.1.2 product contract | PASS | Current Product Spec plus personalization, Today Changes, journal and lookup/cache specs | Validate with real-user flow data |

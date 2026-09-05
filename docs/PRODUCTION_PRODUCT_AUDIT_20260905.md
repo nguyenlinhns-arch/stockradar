@@ -9,7 +9,7 @@ Phạm vi kế thừa: Product Spec/V2, Email, Analytics, Recommendation Schema/
 | Hạng mục | Thay đổi và bằng chứng |
 |---|---|
 | P0.1 Session | AI giữa các tuyến dùng chung Supabase client và khóa lưu phiên `stockradar-auth`. Fixture Free/Paid kiểm tra đăng nhập → Home → tải lại → Radar/AI → quay lại → đăng xuất. Tải lại không làm mới quota. Phiên Premium thật đã được kiểm tra ở đợt audit trước. |
-| P0.2 Nguồn/ngày dữ liệu | Home dùng readiness RPC; phân biệt ngày đóng cửa và thời gian nghiên cứu. Thanh trạng thái dưới hero được giữ qua cả script chạy sau tải trang. Không ghi LIVE cho EOD. Mất API hoặc dữ liệu hết hạn chuyển UNAVAILABLE. |
+| P0.2 Nguồn/ngày dữ liệu | Home dùng readiness RPC; phân biệt ngày đóng cửa và thời gian nghiên cứu. Thanh trạng thái dưới hero được giữ qua cả script chạy sau tải trang. Không ghi LIVE cho EOD. Mất API hoặc dữ liệu hết hạn chuyển UNAVAILABLE. Một số trang phụ vẫn có thanh Data Gate cũ theo artifact có ngày riêng; cần tiếp tục đồng bộ cách trình bày với nguồn nghiên cứu hiện hành trước Ads. |
 | P0.3 Decision Card | Hai endpoint AI và hai renderer dùng cùng thẻ: kết luận trước, giá/ngày/nguồn, vùng mua, tỷ trọng, stoploss, target gần/3–6/12 tháng, upside/downside, R/R; lý do ngắn và phân tích đầy đủ có thể mở rộng. Setup/MA10/50/150/200/pivot/volume/RVOL/VPA hiển thị khi có bằng chứng. |
 | Điều kiện mua | Hành động phải cùng ticker, thời hạn, snapshot và báo cáo được phép phát hành. Chặn báo cáo stale/future/mock và kế hoạch mua thiếu hoặc sai vùng vào, stop, target, R/R, setup, tỷ trọng. Kiểm tra tỷ trọng theo ba tầng đã có; không điền tỷ trọng giả. Làn bán/giảm độc lập không bị khóa chỉ vì thiếu target mua. |
 | Target ước tính | Research có mô hình tham khảo ngay trong thẻ, ghi độ tin cậy thấp, giả định/công thức và điều kiện kích hoạt. Không biến target mô hình thành target được phát hành. Stop ngắn hạn gắn giá vào giả định; không dùng chung cho 3–6/12 tháng/tích sản. Xem [TARGET_SCENARIOS_20260905.md](TARGET_SCENARIOS_20260905.md). |
@@ -68,6 +68,15 @@ Không gửi thư thật, không tạo giao dịch thanh toán và không thay �
 - Security advisor: 0 ERROR, **11 WARN** (10 cảnh báo thực thi SECURITY DEFINER theo role có chủ đích; 1 leaked-password protection tắt), 28 INFO. RPC readiness mới chỉ trả boolean và timestamp, không trả cấu hình thanh toán hoặc token. [Giải thích quyền SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Quét secret: 608 file theo dõi và 2.093 Git blob, 0 phát hiện; artifact dữ liệu nguồn/ảnh QA không đưa vào commit.
 - Backend đã triển khai: stock-ai **v23**, stock-ai-guest **v22**, email-worker **v9**, giữ xác thực tùy chỉnh đang dùng. Migrations `20260905101001_preserve_email_horizon_targets.sql` và `20260905101002_align_product_readiness_and_action_email.sql` đã áp dụng.
-- Frontend: bản sửa được gửi qua [workflow Verify and deploy StockRadar Pages](https://github.com/nguyenlinhns-arch/stockradar/actions/workflows/pages.yml). Trạng thái run/SHA và kiểm tra sau deploy được ghi bổ sung khi workflow hoàn tất.
+- Frontend đã triển khai SHA **d226617a242ca4849864c94a65cd35e0523ec338**. [CI và deploy cuối](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/33952719699) đều SUCCESS: Python 445, Node 57, visual 85/85 và các fixture auth/Decision Card/checkout/Radar đều đạt.
+
+## Kiểm tra sau triển khai — 14:20–14:34 giờ VN
+
+- 23/23 tuyến public/auth/utility được kiểm tra trả HTTP 200, bao gồm /theo-doi/. Bản alias trỏ tới /tai-khoan/#watchlist.
+- Năm JS chính trên production khớp nội dung nguồn đã commit và hash trên URL: Decision Card, AI Center, Home, commercial runtime và menu.
+- Trình duyệt có phiên Premium thật giữ phiên sau reload. Đã nhận thẻ MWG với kết luận CHƯA MUA, dữ liệu 04/09, target tham khảo theo các mốc và stoploss có điều kiện. Bố cục cuối đã được quan sát trên production: target tham khảo nằm sau giá/thời hạn, không nằm sau nhiều dòng kế hoạch chưa phát hành.
+- Checkout trong phiên Premium thật báo tạm dừng kích hoạt, không có QR chuyển khoản. RPC lúc 14:34 vẫn PAUSED; cả email/product/billing/checkout đều false; outbox 1 pending, 0 sent. Không thực hiện xác nhận chuyển tiền hoặc gửi thư.
+- Guest smoke nhận HTTP 429 RATE_LIMITED sau khi quota ngày đã hết. Đây là kiểm tra giới hạn thực, không được tính là một câu AI thành công; không reset hoặc đổi định danh để vượt giới hạn. Lượt smoke không ghi nhận JavaScript exception. Không tuyên bố mọi request mạng đều thành công.
+- Phần còn lại trong TESTING/BLOCKED vẫn giữ nguyên. CI SUCCESS và deploy SUCCESS không đồng nghĩa dịch vụ email, thanh toán, track record live hoặc SLA hằng ngày đã sẵn sàng.
 
 [Website production](https://stockradar.vn/) · [Audit ban đầu, trước sửa](WEBSITE_AUDIT_20260905.md) · [Runbook điều kiện mở production](PRODUCTION_GATE_ACTIVATION_RUNBOOK_20260905.md)
