@@ -1,6 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 import { STOCKRADAR_SYSTEM_CORE, deterministicStockRadarAnswer, normalizeResearchContext, stockRadarMode } from "../_shared/stockradar-core.ts";
+import { appendResearchSnapshot, buildResearchSnapshot } from "../_shared/stockradar-research-view.ts";
 
 const ORIGINS = new Set(["https://stockradar.vn","https://www.stockradar.vn","https://nguyenlinhns-arch.github.io","http://localhost:8000","http://127.0.0.1:8000"]);
 const HORIZONS = ["SHORT_TERM","MEDIUM_TERM","LONG_TERM","ACCUMULATION"];
@@ -59,10 +60,11 @@ Deno.serve(async req=>{
 
   const ready=reportRows.filter(r=>!r.error&&r.data?.status==="READY"),actionContext=ready.map(r=>normReport(r.data));
   const researchContext=contextResult.error?null:normalizeResearchContext(contextResult.data),researchReady=researchContext?.context_grade==="RESEARCH_READY",referenceReady=Boolean(researchContext),mode=stockRadarMode(ready.length>0,researchReady,referenceReady);
-  const fallback=deterministicStockRadarAnswer({mode,researchContext,actionContext,question:message});
+  const researchData=buildResearchSnapshot(researchContext);
+  const fallback=appendResearchSnapshot(deterministicStockRadarAnswer({mode,researchContext,actionContext,question:message}),researchContext);
   const ids=[...new Set([...actionContext.map(r=>String(r.snapshot_id||'')),String(researchContext?.snapshot_id||'')].filter(Boolean))];
   const source={action_gate:ready.length?'READY':'PENDING',context_grade:researchContext?.context_grade||null,research_ready:Boolean(researchReady),reference_ready:Boolean(researchContext),snapshot_id:ids.length===1?ids[0]:null,snapshot_count:ids.length,generated_at:[...actionContext.map(r=>String(r.generated_at||'')),String(researchContext?.generated_at||'')].filter(Boolean).sort().at(-1)||null,as_of_date:researchContext?.as_of_date||null,ready_horizons:ready.map(r=>r.horizon)};
-  const base={scope:'ticker',tier:'GUEST',mode,ticker,horizon,quota_consumed:true,source,quota:{limit:3,remaining,reset_at:quota.reset_at||null,reset_timezone:quota.daily_reset_timezone||'Asia/Ho_Chi_Minh'}};
+  const base={scope:'ticker',tier:'GUEST',mode,ticker,horizon,quota_consumed:true,source,research_data:researchData,quota:{limit:3,remaining,reset_at:quota.reset_at||null,reset_timezone:quota.daily_reset_timezone||'Asia/Ho_Chi_Minh'}};
 
   if(mode==="METHOD_ONLY")return json({status:'READY',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   const key=Deno.env.get('OPENAI_API_KEY')?.trim();
@@ -79,5 +81,6 @@ Deno.serve(async req=>{
     if(response.status===429&&/CREDIT|QUOTA|BALANCE/.test(code))providerDisabledUntil=Date.now()+15*60*1000;
     return json({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   }
-  return json({status:"READY",...base,answer_engine:"MODEL_PLUS_STOCKRADAR_CORE",answer:openAIText(payload)||fallback},200,origin,rate);
+  const modelText=openAIText(payload);
+  return json({status:"READY",...base,answer_engine:"MODEL_PLUS_STOCKRADAR_CORE",answer:modelText?appendResearchSnapshot(modelText,researchContext):fallback},200,origin,rate);
 });
