@@ -6,6 +6,11 @@ website/data/
 artifacts/*.sqlite
 artifacts/demo-data/
 qa-output/
+node_modules/
+*.log
+.env
+.env.*
+!.env.example
 
 # Licensed/production market data must never be committed to the public repository.
 production-data/
@@ -15,3 +20,6 @@ private-staging/
 *.production-manifest.json
 *.licensed-bundle.json
 *.stock-cache-batch.json
+supabase/.temp/
+artifacts/screenshots/
+artifacts/auth-session-qa.json

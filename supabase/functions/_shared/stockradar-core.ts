@@ -22,6 +22,8 @@ CÁCH TRẢ LỜI — BẮT BUỘC
 - Với danh mục: “VIỆC CẦN LÀM TRƯỚC:” rồi mã đang sở hữu, watchlist, rủi ro tập trung, mã thiếu dữ liệu.
 - Với RESEARCH_ONLY, ghi cuối: “Góc nhìn nghiên cứu — chưa phải tín hiệu hành động đã được xác nhận.”
 - Với REFERENCE_ONLY, ghi cuối: “Dữ liệu tham chiếu — mã chưa đạt research-ready, không dùng như tín hiệu hành động.”
+- Giá luôn kèm ngày quan sát. Nếu data_quality là stale/error, mở đầu cảnh báo; không xác nhận mua/bán từ snapshot đó. RVOL EOD không phải same-time volume trong phiên.
+- Với câu hỏi mua được chưa, sau kết luận nêu GIÁ HIỆN TẠI, SETUP, BUY ZONE, STOP LOSS, TARGET, UPSIDE, DOWNSIDE, RISK/REWARD, XÁC SUẤT, LÝ DO và ĐIỀU KIỆN HỦY LUẬN ĐIỂM. Trường thiếu ghi “Chưa đủ dữ liệu để xác nhận”. Confidence không phải xác suất thành công.
 - Nếu câu hỏi cụ thể, trả lời đúng ý đó trước. Không lặp lại cùng một trạng thái bằng nhiều câu.`;
 
 export function stockRadarMode(actionReady, researchReady, referenceReady = false) {
@@ -32,7 +34,7 @@ export function stockRadarMode(actionReady, researchReady, referenceReady = fals
 }
 
 function obj(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
-function num(value) { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
+function num(value) { if (value == null || typeof value === 'boolean' || typeof value === 'object' || String(value).trim() === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
 function txt(value) { return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim(); }
 function fmtNumber(value, digits = 2) { const n = num(value); return n == null ? '' : n.toLocaleString('vi-VN', { maximumFractionDigits: digits }); }
 function fmtPrice(value) { const n = num(value); return n == null ? '' : `${Math.round(n).toLocaleString('vi-VN')}đ`; }
@@ -102,6 +104,7 @@ export function normalizeResearchContext(raw) {
   return {
     status: 'CONTEXT_READY', context_grade: contextGrade, ticker: raw.ticker, snapshot_id: raw.snapshot_id,
     generated_at: raw.generated_at, as_of_date: raw.as_of_date,
+    data_quality: raw.data_quality || 'updated', volume_mode: p.volume_mode || 'UNKNOWN', history: obj(p.history),
     price_snapshot_status: raw.price_snapshot_status, public_action_allowed: false,
     company_type: p.company_type, sector: p.sector, business_bucket: p.business_bucket, profile: p.profile,
     quote, setup, scores, risk, market_context: market, trade_plan: plan,
@@ -147,14 +150,14 @@ function singleResearch(context, question = '', reference = false) {
       ? `KẾT LUẬN: ${ticker} CHƯA MUA MỚI. Tiếp tục theo dõi và chờ setup/dòng tiền xác nhận.`
       : `KẾT LUẬN: ${ticker} chưa có tín hiệu hành động được xác nhận; tiếp tục theo dõi setup hiện tại.`;
   }
-  const lines = [conclusion];
+  const lines = [['stale','error'].includes(context.data_quality) ? `KẾT LUẬN: ${ticker} chưa đủ dữ liệu mới để xác nhận mua/bán. Dữ liệu dưới đây là snapshot cũ.` : conclusion];
 
   if (!reference) {
     const buy = [];
     if (newState) buy.push(`trạng thái ${newState}`);
-    const pivot = num(tech.pivot20 ?? tech.pivot), distance = num(tech.distance_to_pivot_pct), rvol = num(tech.rvol_progress_adjusted ?? tech.rvol);
+    const pivot = num(tech.pivot20 ?? tech.pivot), distance = num(tech.distance_to_pivot_pct), rvol = num(context.volume_mode === 'EOD' ? tech.rvol : tech.rvol_progress_adjusted ?? tech.rvol);
     if (pivot != null && distance != null) buy.push(`pivot ${fmtPrice(pivot)}, hiện ${distance < 0 ? 'dưới' : 'trên'} khoảng ${fmtPct(Math.abs(distance))}`);
-    if (rvol != null) buy.push(`RVOL ${fmtNumber(rvol)}x`);
+    if (rvol != null) buy.push(`RVOL ${context.volume_mode === 'EOD' ? 'cuối phiên ' : ''}${fmtNumber(rvol)}x`);
     if (tech.pocket_pivot_volume_pass !== undefined) buy.push(`Pocket Pivot volume ${tech.pocket_pivot_volume_pass === true ? 'đạt' : 'chưa đạt'}`);
     if (buy.length) lines.push(`MUA MỚI: ${buy.join('; ')}.`);
   }

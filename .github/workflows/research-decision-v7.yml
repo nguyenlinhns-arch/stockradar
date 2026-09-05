@@ -333,6 +333,16 @@ jobs:
             --output artifacts/research-v7/unified_v7.csv \
             --manifest artifacts/research-v7/unified_v7_manifest.json
 
+      - name: Build private data layer from the same HOSE core run
+        run: |
+          python scripts/build_data_layer.py \
+            --security-master artifacts/market/security_master.csv \
+            --history artifacts/market/ohlcv.csv \
+            --technical artifacts/market/technical_features_bootstrap.csv \
+            --fundamental artifacts/scanner/derived/fundamental_features_bootstrap.csv \
+            --valuation artifacts/scanner/derived/valuation_bootstrap.csv \
+            --output artifacts/research-v7/data-layer
+
       - name: Enforce V7 fail-closed QA
         run: |
           python - <<'PY'
@@ -382,6 +392,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: stockradar-research-decision-v7
-          path: artifacts/research-v7/
+          path: |
+            artifacts/research-v7/
+            !artifacts/research-v7/data-layer/history.sqlite
           retention-days: 14
           if-no-files-found: error

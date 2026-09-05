@@ -61,7 +61,7 @@
     if (window.__stockradarSupabaseLoading) return window.__stockradarSupabaseLoading;
     window.__stockradarSupabaseLoading = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0';
       script.async = true;
       script.onload = () => resolve();
       script.onerror = () => reject(new Error('Không tải được lớp đăng nhập.'));

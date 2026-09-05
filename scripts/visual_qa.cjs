@@ -63,6 +63,8 @@ async function visibleFontViolations(page, selectors, minimumPx) {
     { name: 'desktop', width: 1440, height: 1000 },
     { name: 'tablet', width: 768, height: 1024 },
     { name: 'mobile', width: 390, height: 844 },
+    { name: 'mobile-small', width: 360, height: 800 },
+    { name: 'mobile-large', width: 430, height: 932 },
   ];
   const bannedVisibleTerms = [
     'phân tích', 'phương pháp', 'setup',

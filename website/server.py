@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import uuid
+from contextlib import closing
 from datetime import datetime, timezone
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -202,7 +203,10 @@ class Handler(BaseHTTPRequestHandler):
     def handle_ticker_autocomplete(self, query: str) -> None:
         if not self.lookup_allowed():
             return
-        master = load_ticker_master()
+        try:
+            master = load_ticker_master()
+        except (OSError, ValueError):
+            return self.send_json({"error": "DATA_UNAVAILABLE", "message": "Dữ liệu tra cứu đang cập nhật."}, HTTPStatus.SERVICE_UNAVAILABLE)
         items = [item.to_dict() for item in master.autocomplete(query)]
         self.send_json(
             {
@@ -218,7 +222,10 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"error": "Not found"}, HTTPStatus.NOT_FOUND)
         if not self.lookup_allowed():
             return
-        master = load_ticker_master()
+        try:
+            master = load_ticker_master()
+        except (OSError, ValueError):
+            return self.send_json({"error": "DATA_UNAVAILABLE", "message": "Dữ liệu tra cứu đang cập nhật."}, HTTPStatus.SERVICE_UNAVAILABLE)
         try:
             security = master.resolve(ticker)
         except UnsupportedTickerError as error:
@@ -281,7 +288,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"error": "Cần đồng ý cho StockRadar liên hệ"}, HTTPStatus.BAD_REQUEST)
         lead_id = str(uuid.uuid4())
         try:
-            with connect() as connection:
+            with closing(connect()) as connection, connection:
                 connection.execute(
                     """
                     INSERT INTO leads (
@@ -312,7 +319,7 @@ class Handler(BaseHTTPRequestHandler):
         name = safe_text(payload.get("event_name"), 60)
         if name not in ALLOWED_EVENTS:
             return self.send_json({"error": "Event not allowed"}, HTTPStatus.BAD_REQUEST)
-        with connect() as connection:
+        with closing(connect()) as connection, connection:
             connection.execute(
                 """
                 INSERT INTO analytics_events (

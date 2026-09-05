@@ -76,15 +76,15 @@
   }
 
   function safeNext(value) {
-    if (!value) return siteUrl('tai-khoan/');
+    if (!value) return siteUrl('./');
     try {
-      const target = new URL(value, location.href);
-      if (target.origin !== location.origin) return siteUrl('tai-khoan/');
+      const target = new URL(value, document.baseURI);
+      if (target.origin !== location.origin) return siteUrl('./');
       const base = new URL(document.baseURI);
-      if (!target.pathname.startsWith(base.pathname)) return siteUrl('tai-khoan/');
+      if (!target.pathname.startsWith(base.pathname)) return siteUrl('./');
       return target.toString();
     } catch (_) {
-      return siteUrl('tai-khoan/');
+      return siteUrl('./');
     }
   }
 
@@ -511,7 +511,7 @@
     passwordToggles();
 
     if (providerReady) {
-      authClient = window.supabase.createClient(
+      authClient = window.StockRadarAuthClient || window.supabase.createClient(
         String(config.supabaseUrl).replace(/\/+$/, ''),
         String(config.supabasePublishableKey),
         {
@@ -523,10 +523,11 @@
           }
         }
       );
+      window.StockRadarAuthClient = authClient;
       authClient.auth.onAuthStateChange((_event, session) => {
         if (session?.user?.email_confirmed_at) clearPendingSignupEmail();
-        refreshNav();
-        renderAccount();
+        // Supabase holds its session lock during this callback. Defer API calls.
+        setTimeout(() => { refreshNav(); renderAccount(); }, 0);
       });
     }
 

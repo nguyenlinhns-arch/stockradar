@@ -1,56 +1,40 @@
-# StockRadar V2.1.2
+# StockRadar.vn
 
-**Public interface:** https://nguyenlinhns-arch.github.io/stockradar/
+Website tiếng Việt cho nghiên cứu cổ phiếu HOSE. Giữ giao diện hiện tại; Python xử lý dữ liệu và quyết định, Supabase lưu cache riêng, Edge Functions phục vụ AI/tài khoản, GitHub Pages phục vụ frontend.
 
-StockRadar V2.1.2 is a deliberately focused validation product:
+`Nguồn → ETL → Data Layer → nghiên cứu/tín hiệu đã kiểm tra → Web / AI / Email`
 
-`light full-HOSE scan → ticker lookup / ranking → on-demand deep analysis + cache → recommendation gate → activation / review / performance → deduplicated monitoring`
+Đã kết nối dữ liệu thật của 405 mã HOSE, lịch sử 07/07/2023–04/09/2026. Mock chỉ phục vụ kiểm thử và bị chặn khỏi kết quả công khai. Các tín hiệu hành động vẫn cần đạt cổng phát hành. Xem [trạng thái và chất lượng dữ liệu](docs/UNIFIED_DATA_LAYER.md).
 
-The repository contains a validation engine, four horizon-specific score profiles, separate recommendation gate, dynamic ticker lookup contract, per-horizon report cache, deterministic activation/review/performance logic, append-only SQLite journal, personalization/email entitlements, ticker-level monitor deduplication, a mobile-first Vietnamese stock dashboard, internal method references, analytics contracts and regression tests.
+## Chạy và kiểm tra
 
-Important status: the included test records remain `MOCK`, but public product routes fail closed instead of rendering them as market output. The internal Drive snapshot validates 405/405 reference records; it does not establish current tradability or public redistribution rights. A real market release requires a licensed/current feed, resolved listing semantics, full-universe reconciliation, four validated horizon models, consent/privacy setup and compliance review.
-
-## Run locally
-
-```bash
-python3 -m engine.cli build-demo
-python3 -m unittest discover -s engine/tests -v
-python3 website/server.py --port 8080
+```sh
+python -m pip install pandas
+npm ci --ignore-scripts
+npx playwright install chromium
+python -m unittest discover -s engine/tests -v
+node --test engine/tests/ai_runtime.test.mjs engine/tests/ai_handlers.test.mjs
+python scripts/build_production.py
+python -m http.server 8765 --bind 127.0.0.1 --directory .pages-site
 ```
 
-Then open `http://127.0.0.1:8080`.
+Ở terminal khác:
 
-## Deploy with GitHub Pages
-
-The repository includes `.github/workflows/pages.yml`. On every push to `main`, it rebuilds the MOCK payload, runs all regression tests, produces a static-only artifact and deploys it with GitHub Pages.
-
-```bash
-python3 scripts/build_pages.py --output .pages-site
-python3 -m http.server 8081 --directory .pages-site
+```sh
+npm run visual-qa
+node scripts/auth_session_qa.cjs
+python scripts/scan_secret_history.py
 ```
 
-The Pages artifact publishes only working read-only product surfaces. Knowledge, architecture explanations, signup, account, watchlist, email and pricing routes stay out of the public build until their production dependencies exist. See `docs/GITHUB_PAGES_DEPLOYMENT.md` for repository, domain and backend gates.
+Dùng Node 24, Python 3.12+. Build tái hiện các bước biến đổi và kiểm tra của Pages. Auth QA dùng browser và SDK thật với HTTP fixtures, không tạo tài khoản production.
 
-## Core deliverables
+## Dữ liệu và triển khai
 
-- `STOCKRADAR_PRODUCT_SPEC_V2.md` — current product contract and V2 scope.
-- `STOCKRADAR_BUILD_STATUS.md` — evidence-backed status by workstream.
-- `STOCKRADAR_EXPERIMENTS.md` — append-only experiment registry.
-- `engine/` — data gates, scoring, ranking/recommendation, lookup/cache, personalization, monitoring and immutable ledger.
-- `website/` — operational Home, strict three-letter ticker lookup, controlled dynamic ticker routes and fail-closed Radar/recommendation/performance/change/history surfaces; non-public future surfaces remain as source references only.
-- `docs/UX_BENCHMARK_VI.md` — patterns learned from established Vietnamese finance products and the boundaries retained for StockRadar.
-- `growth/` — ads, creatives, UTM and analytics.
-- `gpt/` — migration contract for the old GPT prototype.
+- `engine/stockradar/data_layer.py`: chuẩn hóa CSV/JSON/XLSX/Parquet, kiểm tra HOSE/OHLCV, lưu lịch sử SQLite có index và chỉ số dùng chung. XLSX/Parquet cần engine đọc định dạng tương ứng.
+- `scripts/build_data_layer.py`: dựng dữ liệu từ một lần chạy nguồn HOSE, giữ lịch sử đầy đủ ở backend.
+- `research-decision-v7.yml` → `publish-internal-research-bundle.yml` → `sync-stockradar-research-cache.yml`: chuyển dữ liệu và nghiên cứu cùng lượt chạy vào backend bằng GitHub OIDC.
+- `supabase/functions/_shared/`: dữ liệu, định tuyến câu hỏi và diễn giải dùng chung cho guest/tài khoản.
+- `supabase/tests/unified_quota.sql`: kiểm thử quota DB, rollback toàn bộ fixture.
+- `.github/workflows/pages.yml`: kiểm thử, build, QA đa kích thước và deploy khi push main.
 
-## Guardrails
-
-- Score is evidence quality, not win probability.
-- “Top 10 HOSE” is allowed only when the full-universe and selected-horizon gates pass.
-- Demo/mock data is labelled in engine output and blocked from operational public result surfaces.
-- Published snapshots are immutable; corrections are appended.
-- Publication is not activation; unactivated records have no P/L.
-- New-position and holding views are independent; `KHÔNG MUA ĐUỔI` is not an automatic sell.
-- Free users receive transactional email only; verified Trial/Paid consent is required for product email.
-- On-demand lookup never replaces the full-universe gate for Top-HOSE claims.
-- Closed results are frozen and BACKTEST/SHADOW/LIVE_PUBLISHED remain separate.
-- StockRadar does not place orders and does not promise returns.
+Giữ dữ liệu nguồn, khóa API và lịch sử riêng trong thư mục Git bỏ qua hoặc server secrets. Không commit .env, service-role key, vị thế hay danh sách ưu tiên riêng.

@@ -101,7 +101,7 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn('if(mode==="METHOD_ONLY")', source)
         self.assertNotIn('if(mode!=="ACTION_READY")', source)
         self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
-        self.assertIn('answer_engine:"MODEL_PLUS_STOCKRADAR_CORE"', source)
+        self.assertIn('answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE"', source)
 
     def test_signed_in_research_uses_model_when_data_exists(self):
         source = "".join(self.auth_ai.split())
@@ -112,7 +112,7 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
     def test_guest_research_uses_model_when_data_exists(self):
         source = "".join(self.guest_ai.split())
         self._assert_model_research_path(self.guest_ai)
-        self.assertIn('RESEARCH_CONTEXT:researchContext', source)
+        self.assertIn("RESEARCH_CONTEXT:query.scope==='ticker'?researchContext:contexts", source)
         self.assertIn('question:message', source)
 
 

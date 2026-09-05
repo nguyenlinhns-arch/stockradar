@@ -5,6 +5,7 @@ import unittest
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.parse import unquote, urljoin, urlparse
+from urllib.request import url2pathname
 
 from scripts import build_pages
 
@@ -55,7 +56,7 @@ class StaticAssetTests(unittest.TestCase):
                     continue
                 base_url = urljoin(html.as_uri(), parser.base_href or "")
                 parsed = urlparse(urljoin(base_url, ref))
-                path = Path(unquote(parsed.path))
+                path = Path(url2pathname(parsed.path))
                 if parsed.path.endswith("/") or path.is_dir():
                     path /= "index.html"
                 self.assertTrue(path.is_file(), f"{html}: missing {ref} -> {path}")

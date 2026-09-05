@@ -14,6 +14,8 @@ class WebServerTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.original_db_path = web.DB_PATH
         self.original_data_dir = web.DATA_DIR
+        self.original_master = web.TICKER_MASTER_PATH
+        web.TICKER_MASTER_PATH = web.REPOSITORY_ROOT / 'engine/fixtures/hose_universe_demo.json'
         web.DATA_DIR = Path(self.temp.name)
         web.DB_PATH = web.DATA_DIR / "web.sqlite"
         web.LOOKUP_LIMITER.clear()
@@ -28,6 +30,7 @@ class WebServerTests(unittest.TestCase):
         self.thread.join()
         web.DB_PATH = self.original_db_path
         web.DATA_DIR = self.original_data_dir
+        web.TICKER_MASTER_PATH = self.original_master
         self.temp.cleanup()
 
     def post(self, path: str, payload: dict[str, object]):

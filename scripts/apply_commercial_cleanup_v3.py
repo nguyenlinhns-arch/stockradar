@@ -23,10 +23,13 @@ RUNTIME_SCRIPT = r'''<script data-stockradar-runtime-v3>
 
   function syncAuthStorage() {
     try {
+      const migrated = 'stockradar-auth-migrated-v1';
+      if (localStorage.getItem(migrated)) return;
       const current = localStorage.getItem(primary);
       const legacy = localStorage.getItem(secondary);
-      if (current && current !== legacy) localStorage.setItem(secondary, current);
-      else if (!current && legacy) localStorage.setItem(primary, legacy);
+      if (!current && legacy) localStorage.setItem(primary, legacy);
+      localStorage.removeItem(secondary);
+      localStorage.setItem(migrated, '1');
     } catch (_) {}
   }
 
@@ -210,7 +213,7 @@ def force_login_home(output: Path) -> None:
     page = output / "dang-nhap" / "index.html"
     source = read(page)
     source, count = re.subn(
-        r"if\s*\(!url\.searchParams\.has\('next'\)\)\s*\{\s*url\.searchParams\.set\('next',\s*'hom-nay/'\);\s*history\.replaceState\(null,\s*'',\s*url\);\s*\}",
+        r"if\s*\(!url\.searchParams\.has\('next'\)\)\s*\{[^{}]*url\.searchParams\.set\('next',[^;]*;\s*history\.replaceState\(null,\s*'',\s*url\);\s*\}",
         "url.searchParams.set('next', new URL('', document.baseURI).toString());\n      history.replaceState(null, '', url);",
         source,
         count=1,
@@ -224,6 +227,16 @@ def force_login_home(output: Path) -> None:
 def inject_runtime(output: Path) -> None:
     for page in output.rglob("*.html"):
         source = page.read_text(encoding="utf-8")
+        source = re.sub(r'@supabase/supabase-js@2(?=["\'])', '@supabase/supabase-js@2.95.0', source)
+        seen = set()
+        def unique_script(match):
+            ref = match.group(1).split('?')[0]
+            if ref in seen:
+                return ''
+            seen.add(ref)
+            return match.group(0)
+        source = re.sub(r'<script\b[^>]*src=["\']([^"\']+)["\'][^>]*>\s*</script>', unique_script, source, flags=re.I)
+        page.write_text(source, encoding='utf-8')
         if RUNTIME_MARKER in source or "</head>" not in source:
             continue
         page.write_text(source.replace("</head>", f"{RUNTIME_SCRIPT}\n</head>", 1), encoding="utf-8")

@@ -27,7 +27,8 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
     def test_authenticated_ai_combines_full_hose_context_with_published_action_reports(self):
         source = AUTH.read_text(encoding="utf-8")
         tight = compact(source)
-        self.assertIn("fetch_stockradar_ai_context", source)
+        self.assertIn("loadResearchQuery(db,query)", source)
+        self.assertIn("fetch_stockradar_ai_context", (ROOT / "supabase/functions/_shared/stockradar-query.ts").read_text(encoding="utf-8"))
         self.assertIn("fetch_stockradar_cached_report", source)
         self.assertIn("ready.length>0", source)
         self.assertIn("action=ready.map", source)
@@ -39,18 +40,19 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
         source = AUTH.read_text(encoding="utf-8")
         tight = compact(source)
         self.assertIn(".from('watchlist_items')", source)
-        self.assertIn(".limit(20)", tight)
-        self.assertIn("requestedTickers=scope==='ticker'?[ticker]", tight)
-        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?(contexts[0]||null):contexts", tight)
+        self.assertIn(".limit(MAX_WATCH)", tight)
+        self.assertIn("requestedTickers=query.tickers", tight)
+        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts", tight)
         self.assertIn("buildResearchSnapshot(tickerContext)", tight)
         self.assertIn("appendResearchSnapshot(fallback,tickerContext)", tight)
 
     def test_guest_ai_keeps_three_question_quota_and_same_data_core(self):
         source = GUEST.read_text(encoding="utf-8")
-        self.assertIn("fetch_stockradar_ai_context", source)
+        self.assertIn("loadResearchQuery(db,query)", source)
+        self.assertIn("fetch_stockradar_ai_context", (ROOT / "supabase/functions/_shared/stockradar-query.ts").read_text(encoding="utf-8"))
         self.assertIn("fetch_stockradar_cached_report", source)
         self.assertIn("consume_stockradar_guest_ai_quota", source)
-        self.assertIn("Bạn đã dùng đủ 3 câu StockRadar AI hôm nay", source)
+        self.assertIn("Đăng ký miễn phí để tiếp tục sử dụng AI StockRadar.", source)
         self.assertIn("MODEL_PLUS_STOCKRADAR_CORE", source)
 
     def test_research_v7_evidence_is_not_flattened_away(self):

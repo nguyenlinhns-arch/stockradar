@@ -176,7 +176,7 @@ def build_valuation(fundamental: pd.DataFrame, technical: pd.DataFrame) -> pd.Da
     v["fair_value_bootstrap_bear"] = base * 0.85
     v["fair_value_bootstrap_bull"] = base * 1.15
     v["upside_to_base_pct"] = np.where(v["price"] > 0, (base / v["price"] - 1.0) * 100.0, np.nan)
-    v["mos_to_base_pct"] = v["upside_to_base_pct"]
+    v["mos_to_base_pct"] = np.where(base > 0, (1.0 - v["price"] / base) * 100.0, np.nan)
     v["valuation_model_status"] = np.where(base.notna(), "BOOTSTRAP_INTERNAL_ONLY", "INSUFFICIENT_DATA")
     for c in ["pe_current_calc", "pb_current_calc", "revenue_growth_3y_avg_pct", "pbt_growth_3y_avg_pct", "fv_pe_bootstrap", "fv_pb_bootstrap", "fair_value_bootstrap_bear", "fair_value_bootstrap_base", "fair_value_bootstrap_bull", "upside_to_base_pct", "mos_to_base_pct"]:
         v[c] = pd.to_numeric(v[c], errors="coerce").round(4)

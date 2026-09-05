@@ -20,7 +20,6 @@ import numpy as np
 import pandas as pd
 
 EXPECTED_HOSE = 405
-PRIORITY = ("MBB", "HPG", "ACB")
 PUBLICATION_BLOCKERS = ("DATA_RIGHTS", "COMPLIANCE", "ACTIVE_PRODUCTION_MANIFEST")
 
 
@@ -216,9 +215,6 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
         raise ValueError("V7 institutional alpha must remain zero")
 
     tickers = df["ticker"].astype(str).str.strip().str.upper()
-    missing_priority = [t for t in PRIORITY if t not in set(tickers)]
-    if missing_priority:
-        raise ValueError(f"Missing priority tickers: {missing_priority}")
     if tickers.duplicated().any():
         dupes = sorted(set(tickers[tickers.duplicated()].tolist()))
         raise ValueError(f"Duplicate tickers: {dupes[:10]}")
@@ -230,8 +226,7 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
 
     df = df.copy()
     df["ticker"] = tickers
-    df["priority_rank"] = df["ticker"].map({ticker: i for i, ticker in enumerate(PRIORITY, start=1)}).fillna(9999)
-    df = df.sort_values(["priority_rank", "ticker"]).drop(columns=["priority_rank"])
+    df = df.sort_values("ticker")
 
     payloads: dict[str, dict[str, Any]] = {}
     for _, row in df.iterrows():
@@ -264,7 +259,6 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
         "generated_at_vn": generated_at_vn,
         "exchange": "HOSE",
         "universe_count": EXPECTED_HOSE,
-        "priority_order": list(PRIORITY),
         "data_role": "INTERNAL_BACKEND_RESEARCH",
         "source_updated_at": generated_at_vn,
         "source_version": "STOCKRADAR_RESEARCH_DECISION_V7",
@@ -282,6 +276,17 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
         "tickers": payloads,
     }
 
+    if getattr(args, 'data_layer', None):
+        detail = json.loads(Path(args.data_layer).read_text(encoding='utf-8'))
+        if detail.get('schema_version') != 'stockradar.data.v1':
+            raise ValueError('INVALID_DATA_LAYER')
+        if {r['symbol'] for r in detail['records']} != set(payloads):
+            raise ValueError('DATA_LAYER_UNIVERSE_MISMATCH')
+        # Use observation date, never the workflow execution date to freshen old bars.
+        as_of_date = detail['as_of_date']
+        bundle['as_of_date'] = as_of_date
+        bundle['data_layer'] = detail
+
     filename = f"stockradar_ticker_lookup_internal_405_{as_of_date}.json"
     output_path = out_dir / filename
     output_path.write_text(json.dumps(bundle, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
@@ -293,7 +298,6 @@ def build(args: argparse.Namespace) -> tuple[Path, Path]:
         "bundle_file": filename,
         "canonical_hose": EXPECTED_HOSE,
         "unique_tickers": len(payloads),
-        "priority_tickers_present": all(t in payloads for t in PRIORITY),
         "internal_research_ready_count": internal_ready_count,
         "decision_candidate_count": decision_candidate_count,
         "execution_ready_internal_count": execution_ready_count,
@@ -325,6 +329,7 @@ def main() -> None:
     p.add_argument("--manifest", required=True)
     p.add_argument("--output-dir", default="artifacts/internal-research-bundle")
     p.add_argument("--as-of")
+    p.add_argument("--data-layer")
     build(p.parse_args())
 
 

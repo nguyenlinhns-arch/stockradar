@@ -80,7 +80,7 @@
     if (runtime.client) return runtime.client;
     const cfg = config();
     if (!cfg.configured || !window.supabase?.createClient) return null;
-    runtime.client = window.supabase.createClient(
+    runtime.client = window.StockRadarAuthClient || window.supabase.createClient(
       String(cfg.supabaseUrl || '').replace(/\/+$/, ''),
       String(cfg.supabasePublishableKey || ''),
       {
@@ -93,6 +93,7 @@
       }
     );
     window.StockRadarCheckoutClient = runtime.client;
+    window.StockRadarAuthClient = runtime.client;
     return runtime.client;
   }
 

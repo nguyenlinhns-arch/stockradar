@@ -131,6 +131,13 @@ Deno.serve(async (req: Request) => {
     return jsonResponse({ status: "PARTIAL", snapshot_id: snapshotId, universe_count: allRows.length, reference_synced_rows: referenceSynced, eligible_rows: eligible.length, synced_rows: researchSynced, failed_rows: failures.length, failed_tickers: failures.slice(0, 20), prune_performed: false }, 500);
   }
 
+  if (bundle.data_layer) {
+    const detail = bundle.data_layer as JsonObject;
+    if (detail.as_of_date !== asOfDate) return jsonResponse({status:'DATA_LAYER_DATE_MISMATCH'},400);
+    const {error} = await serviceClient.rpc('import_stockradar_data_layer',{p_bundle:detail});
+    if (error) return jsonResponse({status:'DATA_LAYER_IMPORT_FAILED',reason:String(error.code||'RPC_FAILED')},500);
+  }
+
   const [{ data: prunedResearch, error: pruneResearchError }, { data: prunedReference, error: pruneReferenceError }] = await Promise.all([
     serviceClient.rpc("prune_stockradar_internal_research_context", { p_allowed_tickers: eligible.map(({ ticker }) => ticker) }),
     serviceClient.rpc("prune_stockradar_internal_reference_context", { p_allowed_tickers: allRows.map(({ ticker }) => ticker) }),

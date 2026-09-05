@@ -4,7 +4,7 @@
   const config = window.STOCKRADAR_AUTH_CONFIG || {};
   const STORAGE_KEY = 'stockradar-auth';
   const MAX_HISTORY = 6;
-  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO']);
+  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI']);
   const state = { client: null, sending: false, history: [], tier: 'GUEST' };
 
   function node(tag, className, text = '') {
@@ -59,7 +59,7 @@
     if (window.__stockradarSupabaseLoading) return window.__stockradarSupabaseLoading;
     window.__stockradarSupabaseLoading = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0';
       script.async = true;
       script.onload = resolve;
       script.onerror = () => reject(new Error('Không tải được lớp tài khoản.'));
@@ -91,7 +91,8 @@
   async function authSession() {
     const client = await authClient();
     if (!client) return null;
-    const { data } = await client.auth.getSession();
+    const { data, error } = await client.auth.getSession();
+    if (error) throw error;
     return data?.session || null;
   }
 
@@ -102,14 +103,12 @@
 
     let tier = 'FREE';
     try {
-      const { data: profile } = await state.client
-        .from('profiles')
-        .select('account_tier,account_status')
-        .eq('id', user.id)
-        .maybeSingle();
+      const { data: profile, error } = await state.client.rpc('get_my_stockradar_access');
+      if (error) throw error;
+      state.quota = profile?.quota || null;
       const active = String(profile?.account_status || '').toUpperCase() === 'ACTIVE';
       if (active) tier = normalizeTier(profile?.account_tier) === 'PREMIUM' ? 'PREMIUM' : 'FREE';
-    } catch (_) {}
+    } catch (_) { throw new Error('Chưa tải được quyền tài khoản. Vui lòng thử lại.'); }
     return { session, tier };
   }
 
@@ -180,15 +179,14 @@
     send.textContent = 'Đang phân tích…';
 
     try {
-      let account = { session: null, tier: 'GUEST' };
-      try { account = await currentAccountTier(); } catch (_) {}
+      const account = await currentAccountTier();
       const session = account.session;
       const ticker = explicitTicker(message);
       const horizon = horizonFromText(message);
       const authenticated = Boolean(session?.access_token);
-      updatePlan(status, null, account.tier);
+      updatePlan(status, state.quota ? {quota: state.quota, tier: account.tier} : null, account.tier);
 
-      if (!authenticated && !ticker) {
+      if (!authenticated && !ticker && portfolioIntent(message) && !/(top|quét|quet|cổ phiếu nào|co phieu nao)/i.test(message)) {
         addAction(log, 'Khách chưa đăng nhập có thể hỏi trực tiếp một mã HOSE. Để hỏi về danh mục/watchlist hoặc nhận 10 câu/ngày, hãy tạo tài khoản Free.', 'dang-ky/?plan=free', 'Tạo tài khoản Free');
         return;
       }
@@ -198,13 +196,13 @@
       const headers = { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey };
       if (authenticated) headers.Authorization = `Bearer ${session.access_token}`;
       const body = authenticated ? {
-        scope: ticker ? 'ticker' : (portfolioIntent(message) ? 'portfolio' : 'portfolio'),
+        scope: ticker ? 'auto' : (portfolioIntent(message) && !/(top|quét|quet|mã nào|ma nao|cổ phiếu nào|co phieu nao)/i.test(message) ? 'portfolio' : 'auto'),
         ticker: ticker || '', horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY)
       } : {
         ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY), guest_id: guestId()
       };
 
-      const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+      const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(35000) });
       let data = {};
       try { data = await response.json(); } catch (_) {}
 
@@ -221,8 +219,8 @@
 
       if (response.status === 429) {
         const responseTier = normalizeTier(data?.tier || account.tier);
-        if (responseTier === 'GUEST') addAction(log, 'Bạn có thể tiếp tục bằng tài khoản Free với 10 câu/ngày.', 'dang-ky/?plan=free', 'Đăng ký Free');
-        if (responseTier === 'FREE') addAction(log, 'Nếu cần hỏi không giới hạn và nhận Action Alert khi hệ thống đủ điều kiện phát hành, hãy nâng Premium.', 'thanh-toan/?plan=premium', 'Nâng Premium');
+        if (responseTier === 'GUEST') addAction(log, 'Đăng ký miễn phí để tiếp tục sử dụng AI StockRadar.', 'dang-ky/?plan=free', 'Đăng ký Free');
+        if (responseTier === 'FREE') addAction(log, 'Bạn đã sử dụng hết lượt AI miễn phí. Nâng cấp StockRadar Pro để sử dụng không giới hạn.', 'thanh-toan/?plan=premium', 'Nâng Premium');
         return;
       }
 
@@ -232,7 +230,7 @@
         state.history = state.history.slice(-MAX_HISTORY);
       }
     } catch (error) {
-      addMessage(log, 'assistant', error?.message || 'Không thể kết nối StockRadar AI lúc này.');
+      addMessage(log, 'assistant', 'Không thể kết nối StockRadar AI lúc này. Vui lòng thử lại.');
     } finally {
       state.sending = false;
       input.disabled = false;
@@ -300,20 +298,20 @@
 
     try {
       const account = await currentAccountTier();
-      updatePlan(status, null, account.tier);
+      updatePlan(status, {quota:state.quota}, account.tier);
       const client = await authClient();
       client?.auth?.onAuthStateChange?.(() => {
         setTimeout(async () => {
           try {
             const next = await currentAccountTier();
-            updatePlan(status, null, next.tier);
+            updatePlan(status, {quota:state.quota}, next.tier);
           } catch (_) {
-            updatePlan(status, null, 'GUEST');
+            status.textContent = 'Đang chờ xác nhận phiên tài khoản. Vui lòng thử lại.';
           }
         }, 0);
       });
     } catch (_) {
-      updatePlan(status, null, 'GUEST');
+      status.textContent = 'Đang chờ xác nhận phiên tài khoản. Vui lòng thử lại.';
     }
   }
 

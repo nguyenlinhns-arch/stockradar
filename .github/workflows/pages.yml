@@ -145,9 +145,14 @@ jobs:
           python scripts/apply_public_seo_v1.py .pages-site
           python scripts/verify_commercial_density_v1.py .pages-site
       - name: Install Chromium visual QA
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install browser QA dependencies
         run: |
-          npm install --ignore-scripts --no-audit --no-fund --package-lock=false
+          npm ci --ignore-scripts --no-audit --no-fund
           npx playwright install --with-deps chromium
+          node --test engine/tests/ai_runtime.test.mjs engine/tests/ai_handlers.test.mjs
       - name: Run multi-viewport visual QA
         run: |
           python -m http.server 8765 --bind 127.0.0.1 --directory .pages-site >/tmp/stockradar-http.log 2>&1 &
@@ -160,6 +165,7 @@ jobs:
           done
           if [ "$ready" != "1" ]; then cat /tmp/stockradar-http.log; exit 1; fi
           STOCKRADAR_QA_URL=http://127.0.0.1:8765 npm run visual-qa
+          node scripts/auth_session_qa.cjs
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:

@@ -37,9 +37,9 @@ class StockAiProductCenterTests(unittest.TestCase):
         self.assertIn('TIERS=newSet(["FREE","TRIAL","PAID"])', tight)
         self.assertIn("tier=String(profile?.account_tier", tight)
         self.assertIn("USER_CONTEXT:userContext", tight)
-        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?(contexts[0]||null):contexts", tight)
+        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts", tight)
         self.assertIn("tier,mode,source,quota", tight)
-        self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay", source)
+        self.assertIn("Bạn đã sử dụng hết lượt AI miễn phí", source)
         self.assertNotIn("redactForFree", source)
         self.assertNotIn("FREE_REDACTED", source)
 
@@ -77,8 +77,8 @@ class StockAiProductCenterTests(unittest.TestCase):
 
         self.assertIn("Guest -> Free -> Premium", auth_state)
         self.assertIn("header.querySelectorAll('[data-auth-nav]').forEach(node => node.remove())", auth_state)
-        self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", auth_state)
-        self.assertIn("if (group.innerHTML !== html) group.innerHTML = html", paid_nav)
+        self.assertIn("group.innerHTML !== template.innerHTML", auth_state)
+        self.assertIn("group.innerHTML !== template.innerHTML", paid_nav)
         self.assertIn("replace(/\\bTRIAL\\b/g, 'Premium')", auth_state)
         self.assertIn("replace(/\\bPAID\\b/g, 'Premium')", auth_state)
 

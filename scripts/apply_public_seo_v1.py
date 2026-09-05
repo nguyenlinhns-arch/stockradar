@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Apply selective commercial SEO to the final StockRadar Pages artifact.
 
-Stable public product and knowledge routes are indexable. User-specific, billing, lead,
+Stable public product routes are indexable. User-specific, billing, lead,
 thin operational and dynamic stock routes remain noindex. Visible UX is untouched.
 """
 
@@ -22,14 +22,6 @@ PUBLIC_ROUTES = {
     "nganh": ("Cổ phiếu theo ngành — StockRadar", "So sánh sức mạnh cổ phiếu theo ngành trên HOSE."),
     "hieu-qua": ("Hiệu quả StockRadar", "Lịch sử tín hiệu, kết quả và benchmark của StockRadar."),
     "dang-ky": ("Gói StockRadar — Free và Premium", "So sánh StockRadar Free và Premium: AI, tra cứu, lớp quyết định và quyền cảnh báo."),
-    "kien-thuc": ("Kiến thức đầu tư — StockRadar", "Thư viện kiến thức đầu tư cổ phiếu dùng trong nghiên cứu và vận hành StockRadar."),
-    "kien-thuc/canslim-sepa": ("CANSLIM & SEPA — StockRadar", "Kiến thức CANSLIM và SEPA trong lựa chọn cổ phiếu tăng trưởng."),
-    "kien-thuc/vpa": ("VPA và dòng tiền — StockRadar", "Kiến thức Volume Price Analysis và cách đọc cung cầu qua giá và khối lượng."),
-    "kien-thuc/4m": ("4M và Payback — StockRadar", "Kiến thức 4M, chất lượng doanh nghiệp, lợi thế cạnh tranh và biên an toàn."),
-    "kien-thuc/pocket-pivot": ("Pocket Pivot — StockRadar", "Kiến thức Pocket Pivot và điểm mua sớm trong nền giá."),
-    "kien-thuc/cong-cu-ky-thuat": ("Công cụ kỹ thuật — StockRadar", "Kiến thức về đường trung bình, xu hướng, Bollinger Bands và Ichimoku."),
-    "kien-thuc/quan-tri-rui-ro": ("Quản trị rủi ro — StockRadar", "Kiến thức về stop-loss, tỷ trọng, Risk/Reward và bảo vệ vốn."),
-    "kien-thuc/quy-trinh-stockradar": ("Quy trình StockRadar", "Tổng quan quy trình nghiên cứu và ra quyết định của StockRadar."),
 }
 
 PRIVATE_ROUTES = {

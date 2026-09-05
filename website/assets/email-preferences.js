@@ -8,7 +8,7 @@
     if (window.StockRadarEmailPreferenceClient) return window.StockRadarEmailPreferenceClient;
     const config = window.STOCKRADAR_AUTH_CONFIG || {};
     if (!window.supabase?.createClient || !config.configured) return null;
-    window.StockRadarEmailPreferenceClient = window.supabase.createClient(
+    window.StockRadarEmailPreferenceClient = window.StockRadarAuthClient || window.supabase.createClient(
       config.supabaseUrl,
       config.supabasePublishableKey,
       {
@@ -20,6 +20,7 @@
         },
       }
     );
+    window.StockRadarAuthClient = window.StockRadarEmailPreferenceClient;
     return window.StockRadarEmailPreferenceClient;
   }
 

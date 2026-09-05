@@ -207,7 +207,7 @@ def main() -> None:
         (
             "STORAGE_KEY = 'stockradar-auth'",
             "data-header-auth-actions",
-            "profiles",
+            "get_my_stockradar_access",
             "Nâng Premium",
             "Đăng xuất",
         ),
@@ -218,7 +218,7 @@ def main() -> None:
         (
             "STORAGE_KEY = 'stockradar-auth'",
             "data-header-auth-actions",
-            "profiles",
+            "get_my_stockradar_access",
             "Khuyến nghị",
             "My StockRadar",
             "Bắt đầu miễn phí",

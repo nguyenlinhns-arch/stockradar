@@ -82,6 +82,7 @@ jobs:
           python scripts/build_internal_research_bundle_v1.py \
             --unified-v7 "$unified" \
             --manifest "$manifest" \
+            --data-layer artifacts/research-v7/data-layer/data-layer.json \
             --output-dir artifacts/internal-research-bundle
 
       - name: Validate bundle using production cache contract

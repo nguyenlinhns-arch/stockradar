@@ -60,6 +60,7 @@ ROUTES = {
             "buyer-readiness-v1.css", "conversion-v3.css",
         },
         "remove_js": {
+            "auth-state-v2.js",
             "email-interest.js", "public-ux.js", "public-fallbacks-v4.js", "direct-ticker-nav-v1.js",
             "auth-production-gate.js", "header-auth-dedupe-v6.js", "public-copy-v7.js",
             "conversion-state-v1.js", "buyer-readiness-v1.js",

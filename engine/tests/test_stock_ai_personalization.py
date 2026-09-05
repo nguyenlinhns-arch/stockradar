@@ -18,7 +18,7 @@ class StockAiPersonalizationTests(unittest.TestCase):
         source = EDGE.read_text(encoding="utf-8")
         tight = compact(source)
         for marker in (
-            ".from('profiles')",
+            ".rpc('get_my_stockradar_access')",
             ".from('watchlist_items')",
             "owns_stock",
             "alert_enabled",
@@ -29,14 +29,14 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('REQUEST_SCOPE:scope', tight)
         self.assertIn('USER_CONTEXT:userContext', tight)
         self.assertIn("scope==='portfolio'", tight)
-        self.assertIn('.limit(20)', tight)
+        self.assertIn('.limit(MAX_WATCH)', tight)
         self.assertNotIn("user.email", source)
 
     def test_single_ticker_context_is_minimized(self):
         source = EDGE.read_text(encoding="utf-8")
         tight = compact(source)
-        self.assertIn("requestedTickers=scope==='ticker'?[ticker]", tight)
-        self.assertIn("scope==='ticker'?(contexts[0]||null):contexts", tight)
+        self.assertIn("requestedTickers=query.tickers", tight)
+        self.assertIn("scope==='ticker'?tickerContext:contexts", tight)
         self.assertIn("appendPosition(fallback,scope,ticker,watch)", tight)
         self.assertIn("watch.find(r=>r.ticker===ticker&&r.owns_stock)", tight)
         self.assertIn("cost_basis", source)
@@ -61,8 +61,8 @@ class StockAiPersonalizationTests(unittest.TestCase):
         self.assertIn('TIERS=newSet(["FREE","TRIAL","PAID"])', tight)
         self.assertIn("tier=String(profile?.account_tier", tight)
         self.assertIn("USER_CONTEXT:userContext", tight)
-        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?(contexts[0]||null):contexts", tight)
-        self.assertIn("Bạn đã dùng đủ 10 lượt StockRadar AI hôm nay.", source)
+        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts", tight)
+        self.assertIn("Bạn đã sử dụng hết lượt AI miễn phí.", source)
         self.assertNotIn("redactForFree", source)
         self.assertNotIn("user.email", source)
         # Proactive alert entitlement is enforced by the alert/email runtime, not by

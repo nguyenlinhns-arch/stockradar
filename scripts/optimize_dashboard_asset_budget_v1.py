@@ -101,6 +101,15 @@ def process(output: Path, route: str, cfg: dict) -> None:
     if not page.is_file():
         raise RuntimeError(f"Dashboard page missing: {page}")
     source = page.read_text(encoding="utf-8")
+    seen_scripts = set()
+    def unique_script(match):
+        ref = match.group(1)
+        key = urlsplit(ref).path
+        if key in seen_scripts:
+            return ''
+        seen_scripts.add(key)
+        return match.group(0)
+    source = re.sub(r'<script\b[^>]*src=["\']([^"\']+)["\'][^>]*>\s*</script>', unique_script, source, flags=re.I)
 
     for name in cfg["remove_css"]:
         source = remove_asset(source, name, "css")

@@ -7,7 +7,7 @@
 
   const originalCreateClient = window.supabase.createClient.bind(window.supabase);
   window.supabase.createClient = (...args) => {
-    const client = originalCreateClient(...args);
+    const client = window.StockRadarAuthClient || originalCreateClient(...args);
     if (!window.StockRadarAuthClient) window.StockRadarAuthClient = client;
 
     if (client?.auth?.signUp && !client.auth.signUp.__stockradarWrapped) {

@@ -1,5 +1,5 @@
 function obj(value: any): Record<string, any> { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
-function num(value: any): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
+function num(value: any): number | null { if (value == null || typeof value === 'boolean' || typeof value === 'object' || String(value).trim() === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
 function txt(value: any): string { return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim(); }
 function fmtNumber(value: any, digits = 2): string { const n = num(value); return n == null ? '' : n.toLocaleString('vi-VN', { maximumFractionDigits: digits }); }
 function fmtPrice(value: any): string { const n = num(value); return n == null ? '' : `${Math.round(n).toLocaleString('vi-VN')}đ`; }
@@ -51,8 +51,9 @@ export function buildResearchSnapshot(context: any): any {
       holding_state:state(firstTxt(setup.holding_state_v5,a.holding_state_v5)),
       stage:state(firstTxt(tech.stage,tech.stage_analysis,tech.stage_label,a.stage,a.stage_analysis)),
       pivot:firstNum(tech.pivot20,tech.pivot,post.pivot20,post.pivot), distance_to_pivot_pct:firstNum(tech.distance_to_pivot_pct,post.distance_to_pivot_pct),
-      rvol:firstNum(tech.rvol_progress_adjusted,tech.rvol,post.rvol_progress_adjusted,post.rvol), pocket_pivot_volume_pass:tech.pocket_pivot_volume_pass ?? post.pocket_pivot_volume_pass ?? null,
+      rvol:context.volume_mode==='EOD'?num(tech.rvol):firstNum(tech.rvol_progress_adjusted,tech.rvol,post.rvol_progress_adjusted,post.rvol), pocket_pivot_volume_pass:tech.pocket_pivot_volume_pass ?? post.pocket_pivot_volume_pass ?? null,
       ma10:firstNum(tech.ma10,a.ma10,post.ma10), ma50:firstNum(tech.ma50,a.ma50,post.ma50), ma150:firstNum(tech.ma150,a.ma150,post.ma150), ma200:firstNum(tech.ma200,a.ma200,post.ma200),
+      ma20:firstNum(tech.ma20,a.ma20,post.ma20), volume_mode:context.volume_mode || 'UNKNOWN',
       volume:firstNum(tech.volume,post.volume,a.volume), vol20:firstNum(tech.vol20,tech.volume20,post.vol20,post.volume20,a.vol20), max_down_volume10:firstNum(tech.max_down_volume10,post.max_down_volume10,a.max_down_volume10),
       bollinger: firstTxt(tech.bollinger_state,tech.bollinger,post.bollinger_state), ichimoku:firstTxt(tech.ichimoku_state,tech.ichimoku,post.ichimoku_state)
     },
@@ -103,4 +104,30 @@ export function researchSnapshotText(context: any): string {
 export function appendResearchSnapshot(answer: string, context: any): string {
   const base=txt(answer); if(!base||!context||base.includes('DỮ LIỆU NGHIÊN CỨU STOCKRADAR')) return base;
   const block=researchSnapshotText(context); return block?`${base}\n\n${block}`:base;
+}
+
+export function analysisContract(context: any, reports: any[] = [], horizon = 'SHORT_TERM'): any {
+  const s=buildResearchSnapshot(context); if(!s) return null;
+  const a=obj(context.analysis), f=obj(context.fundamental_detail), t=obj(context.technical_detail), v=obj(context.valuation_detail);
+  const report=reports.find(r=>r.status==='READY'&&r.ticker===s.ticker&&r.horizon===horizon);
+  const p=obj(report?.payload), actionPlan={...obj(p.trade_plan),...obj(p.action),...obj(p.recommendation)};
+  const ready=Boolean(report);
+  const canonicalSignal=ready?firstTxt(actionPlan.action,actionPlan.signal,actionPlan.state,p.action_state,p.recommendation_state):s.setup.new_position_state;
+  const evidence=(value:any, source:string)=>({value:value??null,status:value==null?'INSUFFICIENT_DATA':'AVAILABLE',source});
+  const selectedPlan=ready?actionPlan:s.trade_plan;
+  return {symbol:s.ticker,exchange:'HOSE',price:s.price,updated_at:s.generated_at,as_of_date:s.as_of_date,
+    source:'StockRadar Data Layer',snapshot_id:context.snapshot_id,data_quality:context.data_quality||'updated',
+    signal:context.data_quality==='stale'?'CHƯA ĐỦ DỮ LIỆU MỚI':state(canonicalSignal)||'Chưa đủ dữ liệu để xác nhận',signal_status:ready?'ACTION_READY':s.context_grade==='RESEARCH_READY'?'RESEARCH_ONLY':'REFERENCE_ONLY',confidence:s.coverage.decision_confidence,
+    probability:null,stage:s.setup.stage||null,setup:s.setup.candidate_setup||null,pivot:s.setup.pivot,
+    buy_zone:{low:num(selectedPlan.buy_zone_low),high:num(selectedPlan.buy_zone_high)},stop_loss:num(selectedPlan.stop_loss),
+    targets:{short_term:num(selectedPlan.target_near),three_to_six_months:num(selectedPlan.target_3_6m),twelve_months:num(selectedPlan.target_12m)},
+    valuation:{...s.valuation,mos:context.valuation_detail?.mos??null,upside:context.valuation_detail?.upside??null,downside:s.trade_plan.downside_to_stop_pct},
+    risk_reward:num(selectedPlan.risk_reward_to_base),volume:{current:s.setup.volume,vol20:s.setup.vol20,rvol:s.setup.rvol,max_down_volume_10:s.setup.max_down_volume10,mode:s.setup.volume_mode,same_time_volume:num(t.same_time_volume)},
+    technical:{...s.setup,indicators:t.computed_indicators||null},fundamental:s.fundamentals,
+    canslim:{C:evidence(s.fundamentals.profit_growth_yoy_pct,'LNST YoY'),A:evidence(num(f.net_income_median_3y),'LNST trung vị 3 năm'),N:evidence(s.catalyst.official_verified?s.catalyst.latest_title:null,'Công bố HOSE xác minh'),S:evidence(s.scores.supply_demand,'Supply engine'),L:evidence(s.scores.sector_strength,'Sector engine'),I:evidence(s.supply_institutional.context_ready?context.supply_institutional:null,'Institutional context'),M:evidence(s.market.market_regime||null,'Market engine')},
+    four_m:{meaning:evidence(context.business_bucket||null,'Phân loại doanh nghiệp'),moat:evidence(num(f.moat_proxy_score),'Proxy; chưa phải đánh giá định tính'),management:evidence(num(f.management_proxy_score),'Proxy; chưa phải đánh giá định tính'),margin_of_safety:evidence(num(v.mos),'(Fair Value - Price) / Fair Value'),payback:evidence(num(f.payback_years),txt(f.payback_model)||'Thiếu Owner Earnings chuẩn hóa')},
+    vpa:{volume_ratio:s.setup.rvol,volume_mode:s.setup.volume_mode,up_down_volume_ratio20:num(t.computed_indicators?.up_down_volume_ratio20),assessment:evidence(t.vpa_state||a.vpa_state||null,'VPA engine')},
+    sepa:{stage:s.setup.stage,ma50:s.setup.ma50,ma150:s.setup.ma150,ma200:s.setup.ma200,pivot:s.setup.pivot,assessment:evidence(t.trend_template_pass??null,'SEPA engine')},
+    bear_case:{fair_value:context.valuation_detail?.bear??null},base_case:{fair_value:context.valuation_detail?.base??null},bull_case:{fair_value:context.valuation_detail?.bull??null},
+    thesis:[s.setup.candidate_setup,s.market.market_regime].filter(Boolean),risks:[s.risk.blockers,v.assumptions_verified===false?'Định giá sơ bộ; giả định chưa được xác minh':null].filter(Boolean),invalidation:num(selectedPlan.stop_loss)!=null?[`Mất mức ${fmtPrice(selectedPlan.stop_loss)}; đánh giá lại theo snapshot mới`]:['Chưa đủ dữ liệu để xác nhận điều kiện hủy theo giá'],history:context.history||{},public_action_allowed:ready};
 }

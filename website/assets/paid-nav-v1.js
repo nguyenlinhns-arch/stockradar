@@ -28,12 +28,13 @@
     const secondary = aiStorageKey();
     if (!secondary || secondary === STORAGE_KEY) return;
     try {
-      const primaryValue = localStorage.getItem(STORAGE_KEY);
-      if (primaryValue) {
-        if (localStorage.getItem(secondary) !== primaryValue) localStorage.setItem(secondary, primaryValue);
-      } else {
-        localStorage.removeItem(secondary);
+      const marker = 'stockradar-auth-migrated-v1';
+      if (!localStorage.getItem(marker) && !localStorage.getItem(STORAGE_KEY)) {
+        const legacy = localStorage.getItem(secondary);
+        if (legacy) localStorage.setItem(STORAGE_KEY, legacy);
       }
+      localStorage.removeItem(secondary);
+      localStorage.setItem(marker, '1');
     } catch (_) {}
   }
 
@@ -44,7 +45,7 @@
     if (window.__stockradarSupabaseLoading) return window.__stockradarSupabaseLoading;
     window.__stockradarSupabaseLoading = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0';
       script.async = true;
       script.onload = resolve;
       script.onerror = () => reject(new Error('Supabase unavailable'));
@@ -115,6 +116,7 @@
   }
 
   function canonicalizeHeader() {
+    if (window.StockRadarHeaderOwner === 'auth-state') return;
     const header = document.querySelector('.site-header');
     if (!header) return;
     const group = header.querySelector('[data-header-auth-actions]');
@@ -126,7 +128,9 @@
     group.dataset.accountState = runtime.user ? (premiumTier(runtime.tier) ? 'premium' : 'free') : 'guest';
 
     const html = desiredHeaderHtml();
-    if (group.innerHTML !== html) group.innerHTML = html;
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    if (group.innerHTML !== template.innerHTML) group.replaceChildren(template.content.cloneNode(true));
   }
 
   async function resolveAccount() {
@@ -145,11 +149,7 @@
     }
 
     runtime.tier = 'FREE';
-    const { data: profile, error } = await client
-      .from('profiles')
-      .select('account_tier,account_status')
-      .eq('id', runtime.user.id)
-      .maybeSingle();
+    const { data: profile, error } = await client.rpc('get_my_stockradar_access');
     if (!error && String(profile?.account_status || '').toUpperCase() === 'ACTIVE') {
       runtime.tier = premiumTier(profile?.account_tier) ? 'PAID' : 'FREE';
     }

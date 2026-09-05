@@ -1,5 +1,7 @@
 (() => {
   'use strict';
+  if (window.__stockradarAuthStateMounted) return;
+  window.__stockradarAuthStateMounted = true;
 
   const config = window.STOCKRADAR_AUTH_CONFIG || {};
   const STORAGE_KEY = 'stockradar-auth';
@@ -37,13 +39,17 @@
     const secondary = defaultSupabaseStorageKey();
     if (!secondary || secondary === STORAGE_KEY) return;
     try {
+      const migrated = 'stockradar-auth-migrated-v1';
+      if (localStorage.getItem(migrated)) return;
       const primaryValue = localStorage.getItem(STORAGE_KEY);
       const secondaryValue = localStorage.getItem(secondary);
       if (primaryValue) {
-        if (secondaryValue !== primaryValue) localStorage.setItem(secondary, primaryValue);
+        // Keep the current session. Never mirror a token that can resurrect logout.
       } else if (secondaryValue) {
         localStorage.setItem(STORAGE_KEY, secondaryValue);
       }
+      localStorage.removeItem(secondary);
+      localStorage.setItem(migrated, '1');
     } catch (_) {}
   }
 
@@ -54,7 +60,7 @@
     if (window.__stockradarSupabaseLoading) return window.__stockradarSupabaseLoading;
     window.__stockradarSupabaseLoading = new Promise((resolve, reject) => {
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.95.0';
       script.async = true;
       script.onload = resolve;
       script.onerror = () => reject(new Error('Supabase unavailable'));
@@ -119,11 +125,7 @@
     if (!state.user) return;
 
     try {
-      const { data: profile, error } = await auth
-        .from('profiles')
-        .select('account_tier,account_status')
-        .eq('id', state.user.id)
-        .maybeSingle();
+      const { data: profile, error } = await auth.rpc('get_my_stockradar_access');
       if (error) return;
       const active = String(profile?.account_status || '').toUpperCase() === 'ACTIVE';
       state.premium = active && isPremiumTier(profile?.account_tier);
@@ -185,7 +187,9 @@
     group.dataset.accountState = state.user ? (state.premium ? 'premium' : 'free') : 'guest';
 
     const html = desiredHeaderHtml();
-    if (group.innerHTML !== html) group.innerHTML = html;
+    const template = document.createElement('template');
+    template.innerHTML = html;
+    if (group.innerHTML !== template.innerHTML) group.replaceChildren(template.content.cloneNode(true));
   }
 
   function normalizeText(value) {
@@ -272,6 +276,7 @@
 
   async function mount() {
     if (isDedicatedAuthSurface()) return;
+    window.StockRadarHeaderOwner = 'auth-state';
     observeHeader();
     observeTierCopy();
     document.addEventListener('click', event => {
@@ -280,7 +285,6 @@
     await refresh();
     const auth = await client();
     auth?.auth?.onAuthStateChange?.(() => {
-      bridgeSessionStorage();
       setTimeout(refresh, 0);
     });
   }
