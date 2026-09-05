@@ -103,14 +103,15 @@ def commercial_stock(source: str) -> str:
         count=1,
         flags=re.I | re.S,
     )
-    source = source.replace("Lớp quyết định & kế hoạch hành động", "Premium · Quyết định")
-    source = source.replace("Đầu ra ưu tiên quyết định trước, phương pháp và dữ liệu giải thích phía sau.", "Quyết định và kế hoạch hành động.")
+    source = source.replace("Lớp quyết định & kế hoạch hành động", "Premium · Email điểm mua/bán")
+    source = source.replace("Đầu ra ưu tiên quyết định trước, phương pháp và dữ liệu giải thích phía sau.", "Nhận thay đổi đã xác nhận qua email.")
 
     preview = '''<div data-premium-gate-copy><div class="commercial-premium-preview">
       <div class="commercial-premium-row"><span>Mua mới</span><strong>MUA / CHỜ</strong></div>
       <div class="commercial-premium-row"><span>Nắm giữ</span><strong>GIỮ / TĂNG / GIẢM / BÁN</strong></div>
       <div class="commercial-premium-row"><span>Kế hoạch</span><strong>Buy Zone · Stop · Target · Risk/Reward</strong></div>
-      <div class="commercial-premium-row"><span>Theo dõi</span><strong>My StockRadar + Action Alert theo quyền gói</strong></div>
+      <div class="commercial-premium-row"><span>Email tự động</span><strong>Báo điểm mua/bán của mã theo dõi*</strong></div>
+      <small>* Xem lịch và trạng thái gửi trên trang chủ.</small>
       <div class="commercial-premium-actions"><a class="button button-primary" href="dang-ky/?plan=premium">Premium · 199K/30 ngày</a><a class="button button-secondary" href="dang-nhap/">Đăng nhập</a></div>
     </div></div>'''
     source, count = re.subn(r'<div data-premium-gate-copy>.*?</div>\s*</aside>', preview + '\n</aside>', source, count=1, flags=re.I | re.S)
@@ -127,10 +128,11 @@ def commercial_signup(source: str) -> str:
     source = source.replace("Nhập email và mật khẩu. Nếu chọn Premium, tạo tài khoản xong sẽ chuyển thẳng sang thanh toán 199.000đ/30 ngày.", "Email + mật khẩu.")
     source = source.replace("Gói bạn muốn đăng ký", "Chọn gói")
     source = source.replace("StockRadar AI 10 câu/ngày + Tra cứu, Radar và các nội dung công khai; không có email nội dung hằng ngày.", "AI 10 câu/ngày · Tra cứu · Radar.")
-    source = source.replace("StockRadar AI không giới hạn + quyết định đầy đủ, My StockRadar, báo cáo 09:00 và Action Alert theo watchlist.", "AI không giới hạn · Quyết định · My StockRadar · Action Alert.")
-    source = source.replace("Free có 10 câu StockRadar AI/ngày và chỉ nhận email hệ thống cần thiết. Email nội dung là quyền Premium.", "Free 10 câu AI/ngày · Premium không giới hạn.")
+    source = source.replace("StockRadar AI không giới hạn + quyết định đầy đủ, My StockRadar, báo cáo 09:00 và Action Alert theo watchlist.", "Email tự động báo điểm mua/bán · Bản tin 09:00 · AI không giới hạn.")
+    source = source.replace("Free có 10 câu StockRadar AI/ngày và chỉ nhận email hệ thống cần thiết. Email nội dung là quyền Premium.", "Free tự tra cứu · Premium nhận email điểm mua/bán.")
     source = source.replace("Tôi đã đọc và đồng ý với ", "Tôi đồng ý với ")
     source = source.replace("Tùy chọn email Premium", "Email Premium (tùy chọn)")
+    source = source.replace("Action Alert trong phiên", "Email điểm mua/bán trong phiên")
     source = source.replace(" — ưu tiên watchlist/mã đang sở hữu trước, bối cảnh thị trường sau.", "")
     source = source.replace(" — chỉ gửi khi trạng thái hành động của mã được theo dõi thay đổi đủ điều kiện; không đổi thì không tạo alert riêng.", "")
     source = source.replace("Premium mặc định bật Báo cáo StockRadar lúc 09:00 và Action Alert trong phiên. Người dùng có thể bỏ chọn nếu không muốn nhận một trong hai loại email.", "Có thể bật/tắt từng loại email.")
@@ -168,17 +170,17 @@ def commercial_checkout(source: str) -> str:
         "Bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị. Sau khi tiền thực nhận được kiểm tra và xác nhận, tài khoản tự chuyển sang Premium, cộng đúng 30 ngày và gửi email kết quả cho khách hàng.",
         "Sau khi chuyển khoản, gửi xác nhận để kích hoạt Premium sau khi đối soát.",
     )
-    source = source.replace("Lớp quyết định, kế hoạch giao dịch và cảnh báo hành động dành cho tài khoản trả phí.", "AI không giới hạn + lớp quyết định.")
+    source = source.replace("Lớp quyết định, kế hoạch giao dịch và cảnh báo hành động dành cho tài khoản trả phí.", "Email tự động cập nhật điểm mua/bán của mã theo dõi.")
     source = re.sub(
         r'<ul class="checkout-features">.*?</ul>',
-        '<ul class="checkout-features"><li>AI không giới hạn</li><li>MUA/CHỜ · GIỮ/TĂNG/GIẢM/BÁN</li><li>Buy Zone · Stop · Target · Risk/Reward</li><li>My StockRadar + quyền cảnh báo theo gói</li></ul>',
+        '<ul class="checkout-features"><li>Email khi đổi trạng thái mua / giữ / giảm / bán</li><li>Mức giá, lý do và giờ xác nhận</li><li>Bản tin 09:00 và cảnh báo trong phiên</li><li>AI không giới hạn để hỏi sâu</li></ul>',
         source,
         count=1,
         flags=re.I | re.S,
     )
     source = re.sub(
         r'<div class="checkout-notes">.*?</div>\s*</div>\s*</aside>',
-        '<div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> sau khi thanh toán được xác minh.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free, không xóa tài khoản.</span></div></div></div></aside>',
+        '<div class="checkout-notes"><div class="checkout-note"><span>•</span><span><b>Email chưa bật.</b> Khi sẵn sàng, gửi sau các lượt quét trong phiên.</span></div><div class="checkout-note"><span>✓</span><span><b>Kích hoạt gói:</b> sau khi thanh toán được xác minh.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free.</span></div></div></div></aside>',
         source,
         count=1,
         flags=re.I | re.S,

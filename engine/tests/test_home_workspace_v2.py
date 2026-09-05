@@ -84,14 +84,14 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "storageKey: STORAGE_KEY",
             "currentAccountTier",
             "normalizeTier",
-            "PREMIUM · AI KHÔNG GIỚI HẠN · ACTION ALERT",
+            "PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN",
             "Premium · hỏi không giới hạn",
             "thanh-toan/?plan=premium",
             "Nâng Premium",
             "onAuthStateChange",
-            "20260905-ai5",
+            "20260905-email1",
         ):
-            self.assertIn(marker, ai if marker != "20260905-ai5" else budget)
+            self.assertIn(marker, ai if marker != "20260905-email1" else budget)
         self.assertNotIn("PAID · AI KHÔNG GIỚI HẠN", ai)
         self.assertNotIn("TRIAL · AI", ai)
         self.assertNotIn("Xem gói Paid", ai)

@@ -160,7 +160,7 @@
       status.textContent = remaining == null ? 'FREE · 10 CÂU / NGÀY' : `FREE · CÒN ${remaining}/10 CÂU HÔM NAY`;
       status.dataset.tier = 'free';
     } else {
-      status.textContent = 'PREMIUM · AI KHÔNG GIỚI HẠN · ACTION ALERT';
+      status.textContent = 'PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN';
       status.dataset.tier = 'premium';
     }
   }
@@ -272,7 +272,7 @@
     form.append(input, send);
 
     const foot = node('div', 'sr-center-foot');
-    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Premium:</strong> không giới hạn + Action Alert theo quyền gói</span>';
+    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Premium:</strong> email mua/bán + AI không giới hạn</span>';
     host.replaceChildren(top, log, chips, form, foot);
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {

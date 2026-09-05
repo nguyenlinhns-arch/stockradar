@@ -17,7 +17,7 @@ from pathlib import Path
 
 STYLE_MARKER = "data-pricing-professional-v2"
 STYLE_LINK = (
-    '<link rel="stylesheet" href="assets/pricing-professional-v2.css?v=20260904-pricing2" '
+    '<link rel="stylesheet" href="assets/pricing-professional-v2.css?v=20260905-email1" '
     f'{STYLE_MARKER}>'
 )
 PREMIUM_SIGNUP_HREF = "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium"

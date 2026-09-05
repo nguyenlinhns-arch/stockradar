@@ -20,11 +20,11 @@
       const premium = plan === 'premium';
       const note = document.querySelector('[data-signup-plan-note]');
       if (note) note.textContent = premium
-        ? 'Premium · AI không giới hạn · 199.000đ/30 ngày.'
+        ? 'Premium · Email điểm mua/bán · 199.000đ/30 ngày.'
         : 'Free · AI 10 câu/ngày.';
       const emailNote = document.querySelector('.signup-email-note');
       if (emailNote) emailNote.textContent = premium
-        ? 'Có thể bật/tắt Daily 09:00 và Action Alert.'
+        ? 'Tùy chọn bản tin 09:00 và email điểm mua/bán. Kênh gửi chưa bật.'
         : 'Email nội dung chỉ dành cho Premium.';
       const locked = document.querySelector('[data-signup-locked-plan]');
       if (locked) locked.textContent = premium

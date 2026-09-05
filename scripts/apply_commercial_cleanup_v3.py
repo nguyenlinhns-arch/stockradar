@@ -124,7 +124,7 @@ def cleanup_plans(source: str) -> str:
     )
     source = re.sub(
         r'<p class="plan-price-note">.*?</p>',
-        '<p class="plan-price-note">* Email Premium được bật khi kênh gửi chính thức sẵn sàng.</p>',
+        '<p class="plan-price-note">* Email chưa bật. Khi sẵn sàng: bản tin 09:00; cảnh báo sau lượt quét 10:30 · 11:15 · 13:30 · 14:15 (giờ VN), khi tín hiệu được xác nhận. Cập nhật theo lượt quét.</p>',
         source,
         count=1,
         flags=re.I | re.S,

@@ -70,8 +70,8 @@
       document.querySelectorAll('.conversion-rail-copy').forEach(block => {
         const strong = block.querySelector('strong');
         const p = block.querySelector('p');
-        if (strong) strong.textContent = 'Dùng StockRadar Free để tra cứu và theo dõi. Nâng Premium khi cần kế hoạch hành động.';
-        if (p) p.textContent = 'Premium mở rộng phân tích doanh nghiệp, định giá, Buy Zone, Stop, Target, Risk/Reward và cảnh báo hành động theo quyền gói.';
+        if (strong) strong.textContent = 'Premium: email tự động báo điểm mua/bán của mã theo dõi.';
+        if (p) p.textContent = 'Nhận thay đổi đã xác nhận, kèm mức giá và thời gian. Xem lịch và trạng thái gửi trên trang chủ.';
       });
     }
 

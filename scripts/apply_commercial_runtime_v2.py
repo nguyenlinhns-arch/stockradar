@@ -39,7 +39,7 @@ def inject_script(source: str) -> str:
         return source
     if "</head>" not in source:
         raise RuntimeError("Commercial runtime target missing closing head")
-    tag = f'<script src="assets/{SCRIPT_NAME}?v=20260904-commercial2" defer {SCRIPT_MARKER}></script>'
+    tag = f'<script src="assets/{SCRIPT_NAME}?v=20260905-email1" defer {SCRIPT_MARKER}></script>'
     return source.replace("</head>", tag + "\n</head>", 1)
 
 

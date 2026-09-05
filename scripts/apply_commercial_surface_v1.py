@@ -130,9 +130,9 @@ def commercial_home(source: str) -> str:
         ("Dữ liệu hành động mới nhất đã được StockRadar cho phép phát hành.", "Tín hiệu mới nhất."),
         ("Chỉ hiển thị khi dữ liệu đạt điều kiện phát hành. Không có mã đạt chuẩn cũng là một kết quả hợp lệ.", "Chỉ hiển thị tín hiệu đủ chuẩn."),
         ("Dùng AI trước. Nâng cấp khi cần nhiều hơn và cần theo dõi chủ động.", "Chọn mức sử dụng."),
-        ("Khách có 3 câu/ngày. Free có 10 câu/ngày. Premium hỏi không giới hạn và có quyền nhận Action Alert khi hệ thống email production được kích hoạt.", "Khách 3 câu/ngày · Free 10 câu/ngày · Premium không giới hạn + Action Alert."),
+        ("Khách có 3 câu/ngày. Free có 10 câu/ngày. Premium hỏi không giới hạn và có quyền nhận Action Alert khi hệ thống email production được kích hoạt.", "Free để tự tra cứu. Premium để nhận cảnh báo tự động."),
         ("Dành cho người muốn tự hỏi AI, tra cứu mã và lưu danh sách theo dõi cơ bản.", "AI + tra cứu + watchlist cơ bản."),
-        ("AI không giới hạn, lớp quyết định đầy đủ và quyền nhận Daily 09:00 / cảnh báo trong phiên sau khi email production đủ điều kiện vận hành.", "AI không giới hạn · quyết định đầy đủ · cảnh báo theo quyền gói."),
+        ("AI không giới hạn, lớp quyết định đầy đủ và quyền nhận Daily 09:00 / cảnh báo trong phiên sau khi email production đủ điều kiện vận hành.", "Báo thay đổi mã theo dõi, kèm mức giá và giờ xác nhận sau mỗi lượt quét trong phiên."),
     )
     for before, after in replacements:
         source = source.replace(before, after)
@@ -211,7 +211,7 @@ def commercial_plans(source: str) -> str:
             <div class="plan-price"><strong>0đ</strong></div>
             <p class="plan-summary">Dùng StockRadar AI và các công cụ cơ bản.</p>
             <ul class="plan-feature-list"><li>AI 10 câu/ngày</li><li>Tra cứu cổ phiếu HOSE</li><li>Radar &amp; hiệu quả</li><li>Watchlist cơ bản</li></ul>
-            <div class="plan-info-box">Không Daily 09:00 · Không Action Alert.</div>
+            <div class="plan-info-box">Không có email điểm mua/bán.</div>
             <a class="button button-secondary" href="signup/?plan=free" data-registration-plan="free">Đăng ký Free</a>
           </article>'''
     source, free_count = re.subn(r'<article\b[^>]*data-plan-free[^>]*>.*?</article>', free_card, source, count=1, flags=re.I | re.S)
@@ -219,23 +219,24 @@ def commercial_plans(source: str) -> str:
         raise RuntimeError("Commercial Free plan card not found")
 
     premium_card = '''<article class="plan-card plan-card-premium conversion-plan-card commercial-plan-card" data-plan-premium id="premium" data-checkout-ready="true">
-            <span class="plan-ribbon">ĐẦY ĐỦ TÍNH NĂNG</span><span class="plan-kicker">PREMIUM</span><h2>StockRadar Premium</h2>
+            <span class="plan-ribbon">EMAIL TỰ ĐỘNG</span><span class="plan-kicker">PREMIUM</span><h2>StockRadar Premium</h2>
             <div class="plan-price"><strong>199.000đ</strong><span>/ 30 ngày</span></div>
-            <p class="plan-summary">AI không giới hạn + lớp quyết định + theo dõi chủ động.</p>
-            <ul class="plan-feature-list"><li>AI không giới hạn</li><li>MUA/CHỜ · GIỮ/TĂNG/GIẢM/BÁN</li><li>Buy Zone · Stop · Target · Risk/Reward</li><li>My StockRadar + quyền Daily 09:00 / Action Alert</li></ul>
-            <div class="plan-info-box plan-info-box-premium">30 ngày · Không tự gia hạn. Email chỉ hoạt động khi kênh production sẵn sàng.</div>
+            <p class="plan-summary">Email cập nhật điểm mua/bán của mã theo dõi.</p>
+            <ul class="plan-feature-list"><li>Báo khi đổi trạng thái mua / giữ / giảm / bán</li><li>Kèm mức giá, lý do và giờ xác nhận</li><li>Bản tin 09:00 và cảnh báo trong phiên*</li><li>AI không giới hạn để hỏi sâu</li></ul>
+            <div class="plan-info-box plan-info-box-premium">Chọn mã → bật nhận email → nhận thay đổi đã xác nhận.</div>
             <a class="button button-primary" href="signup/?plan=premium&amp;next=thanh-toan/%3Fplan%3Dpremium" data-registration-plan="premium" data-premium-conversion-cta data-conversion-action="plans_premium">Đăng ký Premium</a>
           </article>'''
     source, premium_count = re.subn(r'<article\b[^>]*data-plan-premium[^>]*>.*?</article>', premium_card, source, count=1, flags=re.I | re.S)
     if premium_count != 1:
         raise RuntimeError("Commercial Premium plan card not found")
 
-    comparison = '''<section class="plan-comparison commercial-plan-comparison" data-plan-comparison aria-labelledby="compare-title"><div class="plan-comparison-header"><span class="plan-kicker">SO SÁNH</span><h2 id="compare-title">Free và Premium</h2></div><div class="plan-table-wrap"><table class="plan-table"><thead><tr><th>Tính năng</th><th>Free</th><th>Premium</th></tr></thead><tbody><tr><td>StockRadar AI</td><td>10 câu/ngày</td><td>Không giới hạn</td></tr><tr><td>Tra cứu / Radar</td><td>Có</td><td>Có</td></tr><tr><td>My StockRadar</td><td>Cơ bản</td><td>Đầy đủ</td></tr><tr><td>Quyết định mua / giữ</td><td>Tự đánh giá</td><td>Đầy đủ</td></tr><tr><td>Buy Zone · Stop · Target · R/R</td><td>Không</td><td>Có</td></tr><tr><td>Daily 09:00 / Action Alert</td><td>Không</td><td>Theo quyền gói*</td></tr></tbody></table></div><p class="plan-price-note">* Kênh email được kích hoạt khi production đạt chuẩn vận hành.</p></section>'''
+    comparison = '''<section class="plan-comparison commercial-plan-comparison" data-plan-comparison aria-labelledby="compare-title"><div class="plan-comparison-header"><span class="plan-kicker">SO SÁNH</span><h2 id="compare-title">Free và Premium</h2></div><div class="plan-table-wrap"><table class="plan-table"><thead><tr><th>Tính năng</th><th>Free</th><th>Premium</th></tr></thead><tbody><tr><td>Email điểm mua/bán tự động</td><td>Không</td><td>Có*</td></tr><tr><td>Bản tin 09:00</td><td>Không</td><td>Có*</td></tr><tr><td>Vùng mua / cắt lỗ / mục tiêu</td><td>Không</td><td>Khi được xác nhận</td></tr><tr><td>StockRadar AI</td><td>10 câu/ngày</td><td>Không giới hạn</td></tr><tr><td>Tra cứu / Radar</td><td>Có</td><td>Có</td></tr></tbody></table></div><p class="plan-price-note">* Email chưa bật. Xem lịch và trạng thái gửi trên trang chủ.</p></section>'''
     source, comparison_count = re.subn(r'<section class="plan-comparison"\s+data-plan-comparison.*?</section>', comparison, source, count=1, flags=re.I | re.S)
     if comparison_count != 1:
         raise RuntimeError("Commercial plan comparison not found")
 
-    source = source.replace("Chọn Free hoặc đăng ký Premium", "Chọn gói StockRadar")
+    source = source.replace("Chọn Free hoặc đăng ký Premium", "Email tự động báo điểm mua/bán")
+    source = source.replace("Chọn gói StockRadar", "Email tự động báo điểm mua/bán")
     source = re.sub(r'<p>Premium: tạo tài khoản → thanh toán 199\.000đ/30 ngày\. Không cần tạo Free rồi mới nâng cấp\.</p>', "", source, count=1)
     source = re.sub(r'<script[^>]+src=["\'][^"\']*assets/email-interest\.js[^"\']*["\'][^>]*></script>\s*', "", source, flags=re.I)
     return source
@@ -276,7 +277,7 @@ def process_page(output: Path, route: str) -> None:
 
 def verify(output: Path) -> None:
     pages = {route: read(output / "index.html" if route == "" else output / route / "index.html") for route in CORE_ROUTES}
-    for marker in ("data-stockradar-ai-center", "TOP CỔ PHIẾU", "commercial-proof-bar", "Khách 3 câu/ngày · Free 10 câu/ngày · Premium không giới hạn + Action Alert."):
+    for marker in ("data-stockradar-ai-center", "TOP CỔ PHIẾU", "commercial-proof-bar", "Email tự động báo điểm mua/bán"):
         if marker not in pages[""]:
             raise RuntimeError(f"Commercial homepage missing: {marker}")
     forbidden = {

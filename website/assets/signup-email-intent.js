@@ -96,12 +96,12 @@
       if (name) name.textContent = premium ? 'Premium' : 'Free';
       if (note) {
         note.textContent = premium
-          ? 'Premium mở StockRadar AI không giới hạn, Daily 09:00, kế hoạch giao dịch và Action Alert trong phiên khi dữ liệu đủ chuẩn. Giá 199.000đ/30 ngày.'
+          ? 'Premium: email tự động cập nhật điểm mua/bán của mã theo dõi, bản tin 09:00 và AI không giới hạn. Giá 199.000đ/30 ngày.'
           : 'Free có phí 0đ, StockRadar AI 10 câu/ngày và email hệ thống cần thiết cho tài khoản. Báo cáo hằng ngày và Action Alert thuộc Premium.';
       }
       if (emailNote) {
         emailNote.textContent = premium
-          ? 'Tài khoản Premium mặc định bật Báo cáo StockRadar lúc 09:00 và Action Alert trong phiên. Bạn có thể bỏ chọn nếu không muốn nhận một trong hai loại email.'
+          ? 'Tùy chọn bản tin 09:00 và email điểm mua/bán. Kênh gửi chưa bật; bạn có thể bỏ chọn từng loại email.'
           : 'Email nội dung chỉ áp dụng cho Premium. Free chỉ nhận email hệ thống cần thiết cho tài khoản.';
       }
       [daily, alerts].forEach(input => {

@@ -240,7 +240,7 @@ def inject_assets(source: str, page: Path, output: Path, *, email_ready: bool, c
         '<script>window.STOCKRADAR_BUYER_CONFIG=Object.freeze({'
         f'emailDeliveryReady:{email_literal},checkoutReady:{checkout_literal}'
         '});</script>\n'
-        f'<script src="{js}?v=20260904-buyer1" defer></script>\n'
+        f'<script src="{js}?v=20260905-email1" defer></script>\n'
     )
     return source.replace("</head>", head + "</head>", 1)
 

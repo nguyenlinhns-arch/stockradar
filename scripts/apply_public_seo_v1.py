@@ -15,13 +15,13 @@ from pathlib import Path
 BASE = "https://stockradar.vn"
 
 PUBLIC_ROUTES = {
-    "": ("StockRadar — AI phân tích cổ phiếu HOSE", "Hỏi StockRadar AI, quét Radar HOSE, xem tín hiệu, ngành và hiệu quả trên một hệ thống đơn giản."),
+    "": ("StockRadar — AI và email điểm mua/bán", "Tra cứu cổ phiếu HOSE với AI. Premium tự động cập nhật điểm mua/bán qua email theo lượt rà soát trong phiên; xem lịch và trạng thái gửi."),
     "radar5": ("Radar HOSE — StockRadar", "Radar cổ phiếu HOSE theo trạng thái hành động. Chỉ hiển thị mã đủ điều kiện StockRadar."),
     "kiem-tra-co-phieu": ("Tra cứu cổ phiếu HOSE — StockRadar", "Nhập mã cổ phiếu HOSE để xem trạng thái và dữ liệu StockRadar."),
     "khuyen-nghi": ("Khuyến nghị cổ phiếu — StockRadar", "Danh sách tín hiệu cổ phiếu HOSE đã được StockRadar phát hành và theo dõi."),
     "nganh": ("Cổ phiếu theo ngành — StockRadar", "So sánh sức mạnh cổ phiếu theo ngành trên HOSE."),
     "hieu-qua": ("Hiệu quả StockRadar", "Lịch sử tín hiệu, kết quả và benchmark của StockRadar."),
-    "dang-ky": ("Gói StockRadar — Free và Premium", "So sánh StockRadar Free và Premium: AI, tra cứu, lớp quyết định và quyền cảnh báo."),
+    "dang-ky": ("Gói StockRadar — Free và Premium", "Premium: email tự động cập nhật điểm mua/bán của mã theo dõi, kèm mức giá và giờ xác nhận. Xem lịch gửi và so sánh với Free."),
 }
 
 PRIVATE_ROUTES = {

@@ -259,8 +259,9 @@ class StaticAssetTests(unittest.TestCase):
         for marker in (
             "STOCKRADAR AI · CỬA VÀO CHÍNH",
             "Hỏi một mã cổ phiếu",
-            "Khách có 3 câu/ngày",
-            "Free có 10 câu/ngày",
+            "Khách: 3 câu/ngày",
+            "10 câu AI/ngày",
+            "Email tự động báo điểm mua/bán",
             "PREMIUM · 199K/30 NGÀY",
             "Free và Premium có gì?",
             "Radar HOSE",
