@@ -131,14 +131,24 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn("MINH HỌA", home.upper())
         self.assertNotIn("đang hoàn thiện", home.lower())
 
-    def test_home_and_global_conversion_state_skip_repeated_lead_cta(self):
+    def test_global_conversion_state_owns_captured_lead_state_not_home_core(self):
         home_core = self.read("website/assets/home-core-v1.js")
         conversion_state = self.read("website/assets/conversion-state-v1.js")
-        for source in (home_core, conversion_state):
-            self.assertIn("sr_email_lead_captured", source)
-            self.assertIn("emailDeliveryReady", source)
-        self.assertIn("sr_pending_lead_email", home_core)
+        lead = self.read("website/assets/email-interest.js")
+
+        self.assertIn("sr_email_lead_captured", conversion_state)
+        self.assertIn("emailDeliveryReady", conversion_state)
         self.assertIn("data-conversion-free-lead", conversion_state)
+        self.assertIn("sr_email_lead_captured", lead)
+        self.assertIn("sr_pending_lead_email", lead)
+
+        for legacy in (
+            "sr_email_lead_captured",
+            "sr_pending_lead_email",
+            "emailDeliveryReady",
+            "mountEmailLead",
+        ):
+            self.assertNotIn(legacy, home_core)
 
     def test_email_lead_landing_captures_premium_interest_then_routes_to_premium_signup(self):
         page = self.read("website/nhan-ban-tin/index.html")
