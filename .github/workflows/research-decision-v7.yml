@@ -13,6 +13,10 @@ on:
   push:
     branches: [main]
     paths:
+      - 'engine/stockradar/data_layer.py'
+      - 'scripts/build_data_layer.py'
+      - 'scripts/build_internal_research_bundle_v1.py'
+      - '.github/workflows/publish-internal-research-bundle.yml'
       - 'scripts/prepare_research_pipeline_inputs_v7.py'
       - 'scripts/build_operational_radar_v3.py'
       - 'scripts/build_domain_fundamental_valuation_v4.py'
