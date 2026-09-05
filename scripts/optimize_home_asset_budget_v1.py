@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prune legacy homepage assets after all commercial reducers and enforce a hard local asset budget."""
+"""Prune legacy/non-commercial homepage assets and enforce a hard local asset budget."""
 
 from __future__ import annotations
 
@@ -17,11 +17,13 @@ REMOVE_CSS = {
     "conversion-v3.css",
     "premium-email-product-v1.css",
     "ai-assistant.css",
+    "header-notifications.css",
 }
 REMOVE_JS = {
     "buyer-readiness-v1.js",
     "conversion-v3.js",
     "ai-assistant.js",
+    "header-notifications.js",
 }
 REQUIRED_CSS = {
     "styles.css",
@@ -30,7 +32,6 @@ REQUIRED_CSS = {
     "professional-v5.css",
     "mobile-touch-v1.css",
     "commercial-v1.css",
-    "header-notifications.css",
 }
 REQUIRED_JS = {
     "auth-config.js",
@@ -41,10 +42,9 @@ REQUIRED_JS = {
     "home-core-v1.js",
     "decision-copy-guard-v1.js",
     "commercial-v1.js",
-    "header-notifications.js",
 }
-# Account-aware AI added session/tier synchronization without adding a new asset.
-# Keep the budget tight, with a small reviewed allowance for that runtime logic.
+# Do not raise this cap to absorb optional internal UI. Public homepage assets must
+# earn their place; account-only notification UI belongs on account/product routes.
 MAX_LOCAL_ASSET_BYTES = 192_000
 AI_CENTER_CACHE_VERSION = "20260905-ai5"
 
@@ -113,6 +113,16 @@ def main() -> None:
             flags=re.I | re.S,
         )
 
+    # The notification injector may have added the browser SDK solely for the bell.
+    # Homepage auth runtimes load Supabase lazily, so keep the public first screen free
+    # of this extra static third-party request after the bell is removed.
+    source = re.sub(
+        r'\s*<script\b[^>]*src=["\']https://cdn\.jsdelivr\.net/npm/@supabase/supabase-js@2["\'][^>]*>\s*</script>\s*',
+        "\n",
+        source,
+        flags=re.I | re.S,
+    )
+
     page.write_text(source, encoding="utf-8")
     rendered = page.read_text(encoding="utf-8")
     if f"assets/ai-center.js?v={AI_CENTER_CACHE_VERSION}" not in rendered:
@@ -132,9 +142,8 @@ def main() -> None:
     survived_css = REMOVE_CSS & css_names
     survived_js = REMOVE_JS & js_names
     if survived_css or survived_js:
-        raise RuntimeError(f"Legacy homepage assets survived: css={sorted(survived_css)}, js={sorted(survived_js)}")
+        raise RuntimeError(f"Legacy/non-commercial homepage assets survived: css={sorted(survived_css)}, js={sorted(survived_js)}")
 
-    # Exact allowlists: a new homepage asset must be deliberately reviewed before it can ship.
     extra_css = css_names - REQUIRED_CSS
     extra_js = js_names - REQUIRED_JS
     if extra_css:
@@ -153,9 +162,12 @@ def main() -> None:
     if total_bytes > MAX_LOCAL_ASSET_BYTES:
         raise RuntimeError(f"Homepage local CSS/JS budget exceeded: {total_bytes} > {MAX_LOCAL_ASSET_BYTES}")
 
+    if "header-notifications" in rendered or "@supabase/supabase-js@2" in rendered:
+        raise RuntimeError("Homepage still carries account-only notification/Supabase static runtime")
+
     print(
         "Homepage asset budget: PASS "
-        f"({local_css_count} CSS + {local_js_count} JS; {total_bytes} local bytes; exact allowlist; legacy layers pruned)"
+        f"({local_css_count} CSS + {local_js_count} JS; {total_bytes} local bytes; account-only notification bundle excluded)"
     )
 
 
