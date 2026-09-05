@@ -61,13 +61,13 @@ Không gửi thư thật, không tạo giao dịch thanh toán và không thay �
 
 ## Kiểm chứng và release
 
-- Python: **445/445**; Node: **56/56**.
+- Python: **445/445**; Node: **57/57**.
 - UI: 17 tuyến × 5 kích thước 360/390/430/768/1440; kiểm tra auth Free/Paid và Radar; bổ sung 8 trường hợp Decision Card/checkout, XSS, stale data, menu/thanh trạng thái sau runtime và privacy analytics.
 - SQL: quota + product readiness + recommendation/email gating PASS, rollback; bao gồm manifest, expiry, future data, privacy, cuối tuần, consent revocation, dedupe.
 - Build production và các giới hạn tài nguyên/copy PASS. Test browser dùng fixture được ghi rõ, không tạo sự kiện tài chính hoặc thư giả trên production.
 - Security advisor: 0 ERROR, **11 WARN** (10 cảnh báo thực thi SECURITY DEFINER theo role có chủ đích; 1 leaked-password protection tắt), 28 INFO. RPC readiness mới chỉ trả boolean và timestamp, không trả cấu hình thanh toán hoặc token. [Giải thích quyền SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable), [password protection](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
 - Quét secret: 608 file theo dõi và 2.093 Git blob, 0 phát hiện; artifact dữ liệu nguồn/ảnh QA không đưa vào commit.
-- Backend đã triển khai: stock-ai **v22**, stock-ai-guest **v21**, email-worker **v9**, giữ xác thực tùy chỉnh đang dùng. Migrations `20260905101001_preserve_email_horizon_targets.sql` và `20260905101002_align_product_readiness_and_action_email.sql` đã áp dụng.
+- Backend đã triển khai: stock-ai **v23**, stock-ai-guest **v22**, email-worker **v9**, giữ xác thực tùy chỉnh đang dùng. Migrations `20260905101001_preserve_email_horizon_targets.sql` và `20260905101002_align_product_readiness_and_action_email.sql` đã áp dụng.
 - Frontend: bản sửa được gửi qua [workflow Verify and deploy StockRadar Pages](https://github.com/nguyenlinhns-arch/stockradar/actions/workflows/pages.yml). Trạng thái run/SHA và kiểm tra sau deploy được ghi bổ sung khi workflow hoàn tất.
 
 [Website production](https://stockradar.vn/) · [Audit ban đầu, trước sửa](WEBSITE_AUDIT_20260905.md) · [Runbook điều kiện mở production](PRODUCTION_GATE_ACTIVATION_RUNBOOK_20260905.md)

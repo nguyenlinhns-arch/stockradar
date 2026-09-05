@@ -16,8 +16,9 @@ export function observationFresh(date:any,updated:any,quality:any,now=Date.now()
     && /^(updated|FRESH)$/i.test(String(quality||''));
 }
 
+const holdingQuestion=(question:string)=>/\b(?:BAN|GIU|NAM GIU|CO HANG)\b/.test(fold(question.replace(/bạn/gi,'')));
 function reportLane(p:Data,question:string):Data {
-  const holding=/\b(?:BAN|GIU|NAM GIU|CO HANG)\b/.test(fold(question.replace(/bạn/gi,'')));
+  const holding=holdingQuestion(question);
   const lane=obj(obj(p.action_contract)[holding?'holding':'new_position']);
   return {...lane,state:lane.state||p[holding?'holding_state':'new_position_state'],setup:lane.setup||p.setup};
 }
@@ -55,7 +56,7 @@ export function buildDecisionCards(contexts:Data[],reports:Data[],horizon:string
     const fresh=official||observationFresh(date,updated,c?.data_quality,now);
     const research=fresh&&c?.context_grade==='RESEARCH_READY';
     const lane=reportLane(p,question);
-    const state=official?actionLabel(lane.state,lane.setup):research?'CHƯA MUA':'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH';
+    const state=official?actionLabel(lane.state,lane.setup):research&&!holdingQuestion(question)?'CHƯA MUA':'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH';
     const low=official?positive(p.buy_zone_low??p.buy_zone?.[0]??p.buy_zone?.low):null,high=official?positive(p.buy_zone_high??p.buy_zone?.[1]??p.buy_zone?.high):null;
     const price=official?positive(p.current_price):positive(a.price),stop=official?positive(p.stop_loss):null;
     const targets=official?{short_term:positive(p.target_near??p.target_price),three_to_six_months:positive(p.target_3_6m),twelve_months:positive(p.target_12m)}:{short_term:null,three_to_six_months:null,twelve_months:null};

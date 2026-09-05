@@ -1,6 +1,6 @@
 # STOCKRADAR BUILD STATUS V2.1.2 + OPERATIONAL DATA GATE
 
-> Current product audit: [PRODUCTION_PRODUCT_AUDIT_20260905.md](docs/PRODUCTION_PRODUCT_AUDIT_20260905.md). **NOT READY FOR ADS / NOT END-TO-END AUTOMATED.** Decision Cards, targets/stoploss, shared auth, truthful freshness, closed checkout and meaningful activation tracking have been repaired. Python 445/445 and Node 56/56 PASS. Backend stock-ai v22 / guest v21 / email-worker v9 deployed; production action, email and billing remain BLOCKED. Daily follow-up history refresh is scheduled but TESTING until its first successful run. The tables below describe inherited implementation and do not supersede the dated production audit.
+> Current product audit: [PRODUCTION_PRODUCT_AUDIT_20260905.md](docs/PRODUCTION_PRODUCT_AUDIT_20260905.md). **NOT READY FOR ADS / NOT END-TO-END AUTOMATED.** Decision Cards, targets/stoploss, shared auth, truthful freshness, closed checkout and meaningful activation tracking have been repaired. Python 445/445 and Node 57/57 PASS. Backend stock-ai v23 / guest v22 / email-worker v9 deployed; production action, email and billing remain BLOCKED. Daily follow-up history refresh is scheduled but TESTING until its first successful run. The tables below describe inherited implementation and do not supersede the dated production audit.
 
 Updated: 2026-09-04 UTC. Allowed states: `NOT_STARTED`, `IN_PROGRESS`, `BLOCKED`, `TESTING`, `PASS`, `FAILED`. A reference implementation may PASS while its production dependency remains a separate BLOCKED row.
 

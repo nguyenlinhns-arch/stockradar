@@ -16,6 +16,13 @@ test('research card never promotes preliminary prices to an actionable buy plan'
   assert.equal(card.stop_loss,null);assert.equal(card.buy_zone.low,null);assert.equal(card.risk_reward,null);
   assert.equal(card.price,100000);assert.equal(card.data.as_of_date,'2026-09-04');
 });
+test('a sell/hold question without a released holding decision cannot be answered with a new-buy conclusion',()=>{
+  for(const question of ['Có nên bán FPT?','FPT nên giữ hay bán?']) {
+    const card=buildDecisionCards([context()],[],'SHORT_TERM',question,now)[0];
+    assert.equal(card.conclusion,'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH');assert.equal(card.public_action_allowed,false);
+  }
+  assert.equal(buildDecisionCards([context()],[],'LONG_TERM','Bạn đánh giá FPT một năm thế nào?',now)[0].conclusion,'CHƯA MUA');
+});
 test('action card preserves canonical lane, price, targets and position without mixing research snapshots',()=>{
   const card=buildDecisionCards([context()],[report()],'SHORT_TERM','FPT mua được chưa?',now)[0];
   assert.equal(card.conclusion,'ĐẠT ĐIỂM MUA – EARLY BREAKOUT');assert.equal(card.price,105000);
