@@ -5,7 +5,26 @@ Chỉ phân tích HOSE; không phân tích HNX, UPCoM, Crypto/Coin. Không tiế
 RESEARCH_ONLY: phân tích sâu nhưng các mức giá chỉ là tham chiếu nghiên cứu, chưa phải tín hiệu hành động.
 REFERENCE_ONLY: dữ liệu hiện có nhưng mã chưa đạt research-ready; chỉ mô tả/tham chiếu, không khuyến nghị mua/bán.
 METHOD_ONLY: chưa có snapshot đủ mới; không dùng dữ liệu cũ để suy đoán.
-Trả lời tiếng Việt, quyết định trước. Một mã bắt đầu “KẾT LUẬN:”. Danh mục bắt đầu “VIỆC CẦN LÀM TRƯỚC:”. Không dùng Markdown **. Nếu dữ liệu thiếu thì nói rõ.`;
+
+QUY TẮC TRẢ LỜI BẮT BUỘC:
+1. Trả lời thẳng câu hỏi ngay ở 1–2 câu đầu; không mở đầu bằng giải thích phương pháp.
+2. Với một mã cổ phiếu, luôn ưu tiên cấu trúc ngắn gọn theo đúng thứ tự sau và bỏ mục không có dữ liệu:
+KẾT LUẬN: MUA / CHƯA MUA / GIỮ / HẠ TỶ TRỌNG / CHỜ XÁC NHẬN, kèm một câu lý do chính.
+MUA MỚI: trạng thái hiện tại; nếu chưa mua được thì nói rõ đang chờ điều kiện gì.
+NẾU ĐANG NẮM GIỮ: hành động phù hợp với người đang có hàng.
+VÙNG GIÁ / TARGET / STOP: chỉ nêu khi dữ liệu context có sẵn, ghi rõ là tham chiếu nghiên cứu nếu chưa có Action Report.
+VÌ SAO: tối đa 4 ý quan trọng nhất, ưu tiên setup, dòng tiền, kỹ thuật, định giá/cơ bản, thị trường.
+RỦI RO / ĐIỀU KIỆN ĐỔI: nêu rõ điều kiện làm luận điểm xấu đi.
+DỮ LIỆU: ngày dữ liệu.
+3. Không trả lời kiểu mơ hồ như “chờ Action Gate” mà không giải thích. Nếu chưa có tín hiệu hành động, phải nói bằng ngôn ngữ người dùng: “chưa mua mới”, “chờ vượt pivot với volume xác nhận”, “chờ pullback cạn cung”, hoặc điều kiện tương ứng nếu context có dữ liệu.
+4. Nếu người dùng hỏi “mua được chưa?”, câu đầu phải là Có / Chưa / Chỉ mua thăm dò / Không mua đuổi, sau đó mới giải thích.
+5. Nếu hỏi 3–6 tháng hoặc 12 tháng, phải tách rõ triển vọng, target tham chiếu, upside/downside nếu tính được, catalyst và rủi ro.
+6. Nếu hỏi danh mục, phải xếp thứ tự ưu tiên hành động; không chỉ liệt kê dữ liệu.
+7. Tránh jargon nội bộ nếu không giải thích ngay bằng tiếng Việt. Không dùng Markdown **.
+8. Nếu dữ liệu thiếu, nói chính xác phần nào thiếu và kết luận bảo thủ; không lấp bằng suy đoán.
+9. Câu trả lời nên ngắn, rõ, thiên về quyết định; không biến thành báo cáo dài trừ khi người dùng yêu cầu phân tích sâu.
+
+Một mã bắt đầu “KẾT LUẬN:”. Danh mục bắt đầu “VIỆC CẦN LÀM TRƯỚC:”.`;
 
 function o(v) { return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; }
 function n(v) { const x = Number(v); return Number.isFinite(x) ? x : null; }
@@ -54,18 +73,18 @@ function one(c, q, reference = false) {
   const tick=t(c.ticker), quote=o(c.quote), s=o(c.setup), sc=o(c.scores), r=o(c.risk), m=o(c.market_context), p=o(c.trade_plan), cat=o(c.catalyst), ca=o(c.corporate_action), sup=o(c.supply_institutional);
   const price=n(quote.price) ?? n(o(c.research_v7).price), setup=state(s.candidate_setup || o(c.research_v7).candidate_setup), ns=state(s.new_position_state_v5 || o(c.research_v7).new_position_state_v5), hs=state(s.holding_state_v5 || o(c.research_v7).holding_state_v5), it=intent(q);
   const wait=!setup || setup.includes('THEO DÕI') || ns.includes('THEO DÕI') || ns.includes('CHƯA HÀNH ĐỘNG');
-  const lines=[reference ? `KẾT LUẬN: ${tick} có dữ liệu tham chiếu nhưng CHƯA ĐẠT research-ready; chưa dùng để quyết định mua/bán.` : (wait ? `KẾT LUẬN: ${tick} CHƯA MUA MỚI. Tiếp tục theo dõi và chờ setup/dòng tiền xác nhận.` : `KẾT LUẬN: ${tick} có setup ${setup}, nhưng chưa coi là tín hiệu hành động đã xác nhận.`)];
+  const lines=[reference ? `KẾT LUẬN: ${tick} CHƯA DÙNG ĐỂ MUA/BÁN. Dữ liệu hiện mới ở mức tham chiếu và chưa đạt research-ready.` : (wait ? `KẾT LUẬN: ${tick} CHƯA MUA MỚI. Hiện chưa có setup/dòng tiền đủ mạnh để xác nhận điểm vào.` : `KẾT LUẬN: ${tick} CÓ SETUP ${setup}, nhưng CHƯA COI LÀ TÍN HIỆU HÀNH ĐỘNG ĐÃ XÁC NHẬN.`)];
   const why=[]; if(price!=null) why.push(`giá ${fp(price)}`); if(setup) why.push(`setup ${setup}`);
   for (const [label,v] of [['Radar',sc.radar_score_v7],['cơ bản',sc.fundamental_domain_score_v4],['kỹ thuật',sc.technical_score],['dòng tiền',sc.flow_score_v4],['định giá',sc.valuation_domain_score_v4],['sức mạnh ngành',sc.sector_strength_score],['thị trường',sc.market_score],['cung/cầu',sc.supply_demand_score_v1],['thanh khoản',sc.liquidity_score_v4]]) if(n(v)!=null) why.push(`${label} ${fn(v,1)}/100`);
   const mr=state(m.market_regime), sr=state(m.sector_regime); if(mr) why.push(`bối cảnh ${mr}`); if(sr) why.push(`ngành ${sr}`);
   const risk=[]; const br=reasons(r.decision_block_reasons_v5); if(br) risk.push(br); if(n(r.atr20_pct)!=null) risk.push(`ATR20 ${pc(r.atr20_pct)}`); if(n(r.realized_vol20_pct)!=null) risk.push(`biến động 20 phiên ${pc(r.realized_vol20_pct)}`); if(n(r.max_drawdown60_pct)!=null) risk.push(`drawdown 60 phiên ${pc(r.max_drawdown60_pct)}`); if(ca.review_required_v2===true) risk.push('corporate action cần rà soát');
   const refs=[]; for(const [label,v] of [['3–6 tháng',p.target_3_6m],['12 tháng',p.target_12m]]) if(n(v)!=null){ const u=up(price,v); refs.push(`${label} ${fp(v)}${u!=null?` (${u>=0?'+':''}${pc(u)})`:''}`); }
   const ct=t(cat.latest_official_title_v3), tm=t(cat.latest_official_time_v3);
-  if(it==='HOLD'){ if(hs) lines.push(`NẾU ĐANG NẮM GIỮ: trạng thái nghiên cứu ${hs}.`); if(risk.length) lines.push(`RỦI RO / ĐIỀU KIỆN ĐỔI: ${risk.join('; ')}.`); }
+  if(it==='HOLD'){ if(hs) lines.push(`NẾU ĐANG NẮM GIỮ: ${hs}.`); if(risk.length) lines.push(`RỦI RO / ĐIỀU KIỆN ĐỔI: ${risk.join('; ')}.`); }
   else if(it==='RISK'){ if(risk.length) lines.push(`RỦI RO / ĐIỀU KIỆN ĐỔI: ${risk.join('; ')}.`); if(why.length) lines.push(`BỐI CẢNH: ${why.join(' · ')}.`); }
   else if(it==='CATALYST'){ lines.push(ct ? `CATALYST: ${ct}${tm?` (${tm})`:''}.` : 'CATALYST: snapshot hiện chưa có sự kiện chính thức đủ rõ để nêu.'); if(risk.length) lines.push(`RỦI RO: ${risk.join('; ')}.`); }
   else if(it==='MEDIUM'||it==='LONG'||it==='VALUE'){ if(refs.length) lines.push(`${reference?'THAM CHIẾU SƠ BỘ':'THAM CHIẾU NGHIÊN CỨU'}: ${refs.join(' · ')}.`); if(why.length) lines.push(`VÌ SAO: ${why.join(' · ')}.`); if(risk.length) lines.push(`RỦI RO: ${risk.join('; ')}.`); }
-  else { if(ns) lines.push(`MUA MỚI: trạng thái nghiên cứu ${ns}.`); if(why.length) lines.push(`VÌ SAO: ${why.join(' · ')}.`); if(refs.length&&!reference) lines.push(`THAM CHIẾU NGHIÊN CỨU: ${refs.join(' · ')}.`); if(risk.length) lines.push(`RỦI RO / ĐIỀU KIỆN ĐỔI: ${risk.join('; ')}.`); }
+  else { if(ns) lines.push(`MUA MỚI: ${ns}.`); if(why.length) lines.push(`VÌ SAO: ${why.join(' · ')}.`); if(refs.length&&!reference) lines.push(`THAM CHIẾU NGHIÊN CỨU: ${refs.join(' · ')}.`); if(risk.length) lines.push(`RỦI RO / ĐIỀU KIỆN ĐỔI: ${risk.join('; ')}.`); }
   if(ct && it!=='CATALYST') lines.push(`CATALYST: ${ct}${tm?` (${tm})`:''}.`);
   const extra=[]; if(n(sup.free_float_proxy_pct)!=null) extra.push(`free-float proxy ${pc(sup.free_float_proxy_pct)}`); if(n(sup.float_turnover20_pct)!=null) extra.push(`turnover20 ${pc(sup.float_turnover20_pct,2)}`); if(extra.length && ['BUY','RISK'].includes(it)) lines.push(`CUNG / TỔ CHỨC: ${extra.join(' · ')}.`);
   lines.push(`DỮ LIỆU: ${t(c.as_of_date)||t(c.generated_at)}.`);
