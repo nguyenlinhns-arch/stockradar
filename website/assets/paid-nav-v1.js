@@ -75,17 +75,17 @@
 
   function renderNav(nav, signedIn, premium) {
     const links = signedIn ? [
-      ['./', 'AI StockRadar'],
-      ['hom-nay/', 'Hôm nay'],
+      ['./#stockradar-ai', 'AI'],
+      ['radar5/', 'Radar'],
+      ['khuyen-nghi/', 'Khuyến nghị'],
+      ['hieu-qua/', 'Hiệu quả'],
       ['tai-khoan/', 'My StockRadar'],
-      ['radar5/', 'Radar'],
-      ['hieu-qua/', 'Hiệu quả'],
     ] : [
-      ['./', 'AI StockRadar'],
-      ['hom-nay/', 'Hôm nay'],
-      ['kiem-tra-co-phieu/', 'Tra cứu mã'],
+      ['./#stockradar-ai', 'AI'],
       ['radar5/', 'Radar'],
+      ['khuyen-nghi/', 'Khuyến nghị'],
       ['hieu-qua/', 'Hiệu quả'],
+      ['dang-ky/', 'Gói'],
     ];
 
     const currentPath = location.pathname.replace(/\/+$/, '') + '/';
@@ -106,7 +106,7 @@
 
   function desiredHeaderHtml() {
     if (!runtime.user) {
-      return `<a class="header-login-cta" href="${siteUrl('dang-nhap/')}">Đăng nhập</a><a class="header-register-cta" href="${siteUrl('dang-ky/?plan=free')}">Đăng ký miễn phí</a>`;
+      return `<a class="header-login-cta" href="${siteUrl('dang-nhap/')}">Đăng nhập</a><a class="header-register-cta" href="${siteUrl('dang-ky/?plan=free')}">Bắt đầu miễn phí</a>`;
     }
     const email = escapeHtml(runtime.user.email || 'Tài khoản');
     const initial = escapeHtml((runtime.user.email || 'S').slice(0, 1).toUpperCase());
