@@ -44,6 +44,25 @@ FULL_AUTH_HEAD = """\
 <script src="assets/auth-delete-security.js?v=20260903-auth7" defer></script>
 """
 
+ZALO_SUPPORT_BUTTON = (
+    '<a class="sr-zalo-support" href="https://zalo.me/0398696879" '
+    'target="_blank" rel="noopener noreferrer" '
+    'aria-label="Hỗ trợ qua Zalo: 0398696879 (mở tab mới)" '
+    'title="Hỗ trợ qua Zalo · 0398696879">'
+    '<span aria-hidden="true">Zalo</span></a>\n'
+)
+
+
+def inject_zalo_support(source: str) -> str:
+    if 'class="sr-zalo-support"' in source:
+        return source
+    if "</head>" not in source or "</body>" not in source:
+        return source
+    # Inline this small shared style so support also works on nested 404 URLs.
+    style = (WEBSITE / "assets" / "zalo-support.css").read_text(encoding="utf-8")
+    source = source.replace("</head>", f'<style id="sr-zalo-support-style">{style}</style>\n</head>', 1)
+    return source.replace("</body>", ZALO_SUPPORT_BUTTON + "</body>", 1)
+
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
@@ -258,6 +277,7 @@ def build(output: Path) -> None:
         source = page.read_text(encoding="utf-8")
         source = source.replace('data-api-mode="auto"', 'data-api-mode="disabled"')
         source = inject_auth_bundle(source, page, output)
+        source = inject_zalo_support(source)
         if 'name="robots"' not in source:
             source = source.replace("<head>", '<head><meta name="robots" content="noindex,nofollow">', 1)
         page.write_text(source, encoding="utf-8")

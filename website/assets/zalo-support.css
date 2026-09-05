@@ -1,0 +1,33 @@
+/* Shared floating support; left placement keeps the AI launcher accessible. */
+a.sr-zalo-support {
+  position: fixed;
+  left: max(20px, env(safe-area-inset-left));
+  bottom: calc(24px + env(safe-area-inset-bottom));
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #0068ff;
+  color: #fff;
+  font: 700 17px/1 Arial, sans-serif;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgb(0 69 168 / 25%);
+  -webkit-tap-highlight-color: transparent;
+}
+a.sr-zalo-support:hover { background: #0054d1; color: #fff; }
+a.sr-zalo-support:focus-visible { outline: 3px solid #173b66; outline-offset: 3px; }
+@media (max-width: 900px) {
+  a.sr-zalo-support {
+    left: max(12px, env(safe-area-inset-left));
+    bottom: calc(90px + env(safe-area-inset-bottom));
+    width: 52px;
+    height: 52px;
+  }
+}
+@media print { a.sr-zalo-support { display: none; } }
