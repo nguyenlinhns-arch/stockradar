@@ -107,10 +107,8 @@ async function visibleFontViolations(page, selectors, minimumPx) {
           const visibleText = (document.body.innerText || '').replace(/\s+/g, ' ').trim();
           const support = document.querySelector('a.sr-zalo-support');
           const supportRect = support?.getBoundingClientRect();
-          const supportLabel = support?.querySelector('.sr-zalo-label');
-          const labelRect = supportLabel?.getBoundingClientRect();
-          const supportVisible = Boolean(supportRect && labelRect && supportRect.width >= 44 &&
-            labelRect.width > 0 && labelRect.left >= 0 && supportRect.right <= innerWidth &&
+          const supportVisible = Boolean(supportRect && supportRect.width >= 44 && supportRect.height >= 44 &&
+            supportRect.left >= 0 && supportRect.right <= innerWidth &&
             supportRect.bottom <= innerHeight && supportRect.top >= 0 &&
             support.contains(document.elementFromPoint(supportRect.x + supportRect.width / 2, supportRect.y + supportRect.height / 2)));
           const primaryControls = [...document.querySelectorAll(
@@ -145,7 +143,7 @@ async function visibleFontViolations(page, selectors, minimumPx) {
         if (!structural.hasDecisionGuard) routeErrors.push('decision-copy runtime guard missing');
         if (!structural.title) routeErrors.push('empty document title');
         if (structural.overflow) routeErrors.push('horizontal overflow');
-        if (!structural.supportVisible) routeErrors.push('Zalo support button or label is hidden, covered or outside the viewport');
+        if (!structural.supportVisible) routeErrors.push('Zalo support button is hidden, covered or outside the viewport');
         if (structural.supportHref !== 'https://zalo.me/0398696879') routeErrors.push('incorrect Zalo support destination');
 
         const visibleTextLower = structural.visibleText.toLocaleLowerCase('vi');
