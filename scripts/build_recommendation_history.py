@@ -185,12 +185,19 @@ def main():
     p.add_argument("--output", type=Path, default=Path("website/public/data"))
     p.add_argument("--month", default="2026-08")
     p.add_argument("--as-of", required=True)
+    p.add_argument("--skip-replay", action="store_true", help="Refresh evidenced email quote follow-up only; retain the dated historical study")
     args = p.parse_args()
     history, invalid = validate_history(pd.read_csv(args.history))
     history = history[history.date <= args.as_of]
     ledger = json.loads(args.ledger.read_text(encoding="utf-8"))
     now = datetime.now(timezone.utc).isoformat()
     observed = reconcile_alerts(ledger, history, args.as_of)
+    if args.skip_replay:
+        args.output.mkdir(parents=True, exist_ok=True)
+        write_path = args.output / 'recommendation-history.json'
+        write_path.write_text(json.dumps(observed, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+        print(json.dumps({'history': observed['summary'], 'as_of_date': args.as_of, 'invalid_bars_excluded': invalid}))
+        return
     replay = replay_month(history, args.month, args.as_of, now)
     replay["input_sha256"] = hashlib.sha256(args.history.read_bytes()).hexdigest()
     replay["invalid_bars_excluded"] = invalid

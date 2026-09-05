@@ -39,7 +39,7 @@ def _replace_hero(source: str) -> str:
       <div class="plans-hero-inner">
         <span class="panel-label">GÓI DỊCH VỤ</span>
         <h1>Chọn Free hoặc đăng ký Premium</h1>
-        <p>Premium: tạo tài khoản → thanh toán 199.000đ/30 ngày. Không cần tạo Free rồi mới nâng cấp.</p>
+        <p>Free để trải nghiệm AI. Premium 199.000đ/30 ngày; chỉ thu phí khi hệ thống đã đủ điều kiện.</p>
       </div>
     </section>'''
     updated, count = re.subn(
@@ -62,7 +62,7 @@ def _ensure_final_style(source: str) -> str:
 def premium_card() -> str:
     ready = checkout_ready()
     ribbon = 'ĐẦY ĐỦ TÍNH NĂNG' if ready else 'TẠM DỪNG KÍCH HOẠT MỚI'
-    kicker = '199K / 30 NGÀY' if ready else 'PREMIUM · CHỜ PRODUCTION GATE'
+    kicker = '199K / 30 NGÀY' if ready else 'PREMIUM · CHƯA MỞ THANH TOÁN'
     note = (
         'Tạo tài khoản xong chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không có bước OTP hoặc xác minh email và không tự gia hạn.'
         if ready else

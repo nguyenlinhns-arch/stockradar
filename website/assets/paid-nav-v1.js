@@ -75,18 +75,12 @@
   }
 
   function renderNav(nav, signedIn, premium) {
-    const links = signedIn ? [
-      ['./#stockradar-ai', 'AI'],
-      ['radar5/', 'Radar'],
+    const links = [
+      ['./#stockradar-ai', 'AI StockRadar'],
       ['khuyen-nghi/', 'Khuyến nghị'],
       ['hieu-qua/', 'Hiệu quả'],
-      ['tai-khoan/', 'My StockRadar'],
-    ] : [
-      ['./#stockradar-ai', 'AI'],
-      ['radar5/', 'Radar'],
-      ['khuyen-nghi/', 'Khuyến nghị'],
-      ['hieu-qua/', 'Hiệu quả'],
-      ['dang-ky/', 'Gói'],
+      ['tai-khoan/#watchlist', 'Theo dõi'],
+      ['dang-ky/#premium', 'Premium'],
     ];
 
     const currentPath = location.pathname.replace(/\/+$/, '') + '/';
@@ -95,7 +89,7 @@
       const a = document.createElement('a');
       a.href = siteUrl(path);
       a.textContent = label;
-      if (premium && label === 'My StockRadar') a.dataset.premiumNav = '1';
+      if (premium && label === 'Theo dõi') a.dataset.premiumNav = '1';
       try {
         const targetPath = new URL(a.href).pathname.replace(/\/+$/, '') + '/';
         if (targetPath === currentPath) a.setAttribute('aria-current', 'page');
@@ -195,6 +189,8 @@
     });
     runtime.observer.observe(header, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'href', 'class'] });
   }
+
+  window.addEventListener('stockradar-access-changed', () => { renderAll(); });
 
   async function mount() {
     wireHeaderActions();

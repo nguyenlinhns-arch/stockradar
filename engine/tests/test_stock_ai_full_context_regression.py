@@ -30,10 +30,10 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
         self.assertIn("loadResearchQuery(db,query)", source)
         self.assertIn("fetch_stockradar_ai_context", (ROOT / "supabase/functions/_shared/stockradar-query.ts").read_text(encoding="utf-8"))
         self.assertIn("fetch_stockradar_cached_report", source)
-        self.assertIn("ready.length>0", source)
-        self.assertIn("action=ready.map", source)
+        self.assertIn("releasedReport(r.data,Date.now(),message)", source)
+        self.assertIn("action=ready.filter(r=>r.horizon===horizon).map", source)
         self.assertIn("hasReference=contexts.length>0", tight)
-        self.assertIn("stockRadarMode(ready.length>0,hasResearch,hasReference)", tight)
+        self.assertIn("stockRadarMode(action.length>0,hasResearch,hasReference)", tight)
         self.assertIn("MODEL_PLUS_STOCKRADAR_CORE", source)
 
     def test_authenticated_ai_minimizes_single_ticker_context_and_bounds_watchlist(self):
@@ -44,7 +44,7 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
         self.assertIn("requestedTickers=query.tickers", tight)
         self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts", tight)
         self.assertIn("buildResearchSnapshot(tickerContext)", tight)
-        self.assertIn("appendResearchSnapshot(fallback,tickerContext,message)", tight)
+        self.assertIn("appendResearchSnapshot(fallback,tickerContext,message,mode!=='ACTION_READY')", tight)
 
     def test_guest_ai_keeps_three_question_quota_and_same_data_core(self):
         source = GUEST.read_text(encoding="utf-8")

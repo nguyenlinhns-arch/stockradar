@@ -262,6 +262,8 @@
     location.href = siteUrl('./');
   }
 
+  window.addEventListener('stockradar-access-changed', () => { refresh(); });
+
   async function refresh() {
     bridgeSessionStorage();
     await resolveState();

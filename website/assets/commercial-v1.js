@@ -18,7 +18,7 @@ function normalizeCommercialNav(){
 }
 function normalizeHomepage(){
   if(!document.body?.classList.contains('ai-home')) return;
-  document.querySelectorAll('.home-market-bar').forEach(node=>node.remove());
+  // The data status below the AI hero is product evidence and must survive runtime cleanup.
   const kicker=document.querySelector('.workspace-kicker');
   if(kicker) kicker.textContent='STOCKRADAR AI';
 }

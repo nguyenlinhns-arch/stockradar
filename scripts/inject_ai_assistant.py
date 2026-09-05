@@ -11,7 +11,8 @@ import sys
 from pathlib import Path
 
 
-HEAD = '''<link rel="stylesheet" href="assets/ai-assistant.css?v=20260904-ai2">\n<script src="assets/auth-state-v2.js?v=20260905-authstate3" defer></script>\n<script src="assets/ai-assistant.js?v=20260904-ai2" defer></script>\n'''
+HEAD = '''<link rel="stylesheet" href="assets/ai-assistant.css?v=20260904-ai2">\n<script src="assets/auth-state-v2.js?v=20260905-authstate3" defer></script>\n<script src="assets/ai-assistant.js?v=20260905-decision1" defer></script>\n'''
+DECISION_HEAD = '''<link rel="stylesheet" href="assets/ai-decision-view.css?v=20260905-decision1">\n<script src="assets/ai-decision-view.js?v=20260905-decision1" defer></script>\n'''
 SKIP_TOP_ROUTES = {
     "signup",
     "dang-ky",
@@ -120,6 +121,8 @@ def main() -> int:
         if not should_inject(relative):
             continue
         source = page.read_text(encoding="utf-8")
+        if "assets/ai-decision-view.js" not in source:
+            source = source.replace("</head>", DECISION_HEAD + "</head>", 1)
         source = inject_nav(source)
         if relative == Path("index.html"):
             source = transform_home(source)

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import html
+import hashlib
 import re
 from pathlib import Path
 
@@ -165,6 +166,14 @@ def main() -> None:
 
     write_robots(output)
     write_sitemap(output)
+    # Run after all reducers: a changed auth/checkout/AI runtime must not reuse an old browser cache URL.
+    hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest()[:12]
+              for p in (output / 'assets').iterdir() if p.suffix in {'.js', '.css'}}
+    pattern = re.compile(r'''((?:src|href)=["'])(assets/([A-Za-z0-9_.-]+\.(?:js|css)))(?:\?[^"']*)?(["'])''')
+    for path in output.rglob('*.html'):
+        source = path.read_text(encoding='utf-8')
+        source = pattern.sub(lambda m: f'{m[1]}{m[2]}?v={hashes[m[3]]}{m[4]}' if m[3] in hashes else m[0], source)
+        path.write_text(source, encoding='utf-8')
     verify(output)
     print(f"Public SEO: PASS ({len(PUBLIC_ROUTES)} stable indexable routes; private/thin routes noindex)")
 

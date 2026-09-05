@@ -212,7 +212,7 @@ def verify(output: Path) -> None:
         raise RuntimeError("Auth pages still contain marketing intro block")
     if "checkout-help" in pages["thanh-toan"]:
         raise RuntimeError("Checkout still contains duplicated help walkthrough")
-    for marker in ("data-checkout-confirm", "data-checkout-reference", "0934389822", "VPBank"):
+    for marker in ("data-checkout-confirm", "data-checkout-reference", 'data-checkout-ready="false"', "data-checkout-payment hidden"):
         if marker not in pages["thanh-toan"]:
             raise RuntimeError(f"Checkout functional marker missing: {marker}")
     for marker in ("data-auth-signup-form", "email_daily_brief", "email_event_alerts"):

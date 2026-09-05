@@ -7,6 +7,7 @@ const fs=require('node:fs');
   const results=[];
   try {
     for(const tier of ['FREE','PAID']) {
+      let aiRequests=0;
       const context=await browser.newContext();
       const user={id:'11111111-1111-4111-8111-111111111111',aud:'authenticated',role:'authenticated',email:'qa@example.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{provider:'email'},user_metadata:{}};
       const encode=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
@@ -15,6 +16,11 @@ const fs=require('node:fs');
       await context.route('https://xamviatbxufjlpiwhebb.supabase.co/**',async route=>{
         const url=new URL(route.request().url());let body={};
         if(url.pathname.endsWith('/token'))body=session;
+        else if(url.pathname.endsWith('/functions/v1/stock-ai')) {
+          assert.equal(route.request().headers().authorization,`Bearer ${access}`);
+          aiRequests++;
+          body={status:'READY',tier,mode:'METHOD_ONLY',answer:'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH',quota:{remaining:6,limit:10}};
+        }
         else if(url.pathname.endsWith('/user'))body=user;
         else if(url.pathname.includes('get_my_stockradar_access'))body={account_tier:tier,account_status:'ACTIVE',quota:{unlimited:tier==='PAID',limit:tier==='PAID'?null:10,remaining:tier==='PAID'?null:7}};
         else if(url.pathname.includes('/profiles'))body={account_tier:tier,account_status:'ACTIVE'};
@@ -34,6 +40,12 @@ const fs=require('node:fs');
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
       assert.ok(await page.evaluate(()=>Boolean(localStorage.getItem('stockradar-auth'))));
       await page.goto('http://127.0.0.1:8765/radar5/');
+      await page.locator('.sr-ai-launcher').click();
+      await page.locator('.sr-ai-form textarea').fill('FPT mua được chưa?');
+      const answered=page.waitForResponse(r=>r.url().endsWith('/functions/v1/stock-ai') && r.request().method()==='POST');
+      await page.locator('.sr-ai-send').click();
+      assert.equal((await (await answered).json()).status,'READY');
+      assert.equal(aiRequests,1,'route assistant must use the existing authenticated session');
       await page.goto('http://127.0.0.1:8765/');
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
       const logout=page.locator('[data-auth-state-logout],[data-global-auth-logout],[data-auth-logout]').filter({visible:true}).first();
@@ -42,7 +54,7 @@ const fs=require('node:fs');
       await page.goto('http://127.0.0.1:8765/');
       await page.waitForFunction(()=>document.querySelector('[data-tier="guest"]'));
       assert.equal(await page.evaluate(()=>localStorage.getItem('sb-xamviatbxufjlpiwhebb-auth-token')),null);
-      results.push({tier,login_home:true,reload:true,return_home:true,quota_persisted:true,logout:true});
+      results.push({tier,login_home:true,reload:true,return_home:true,route_ai_session:true,quota_persisted:true,logout:true});
       await context.close();
     }
   } finally { await browser.close(); }

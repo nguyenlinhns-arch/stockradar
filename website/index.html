@@ -43,15 +43,6 @@
     </div>
   </header>
 
-  <div class="home-market-bar" aria-label="Trạng thái StockRadar">
-    <div class="container home-market-inner">
-      <div class="market-item"><span class="market-dot is-warn" data-market-dot></span><b>HOSE</b><span data-market-status>Đang kiểm tra</span></div>
-      <div class="market-item"><b>Cập nhật</b><span data-market-updated>Đang tải snapshot…</span></div>
-      <div class="market-item"><b>Phạm vi</b><span data-market-coverage>HOSE</span></div>
-      <div class="market-item"><b>Mốc rà soát</b><span>10:30 · 11:15 · 13:30 · 14:15</span></div>
-    </div>
-  </div>
-
   <main id="content" class="operations-shell">
     <template data-home-contract-compat>RA QUYẾT ĐỊNH TRÊN HOSE · Ngắn hạn · Trung hạn · Dài hạn · Tích sản · operations-search · home-focus-grid · home-radar-sector-list · home-tier-grid · Free và Premium có gì? · Radar HOSE · Full HOSE → Full-Scan Gate → Ranking · Radar động theo snapshot · So sánh theo ngành · Hiệu quả khuyến nghị · Market/Sector · VPA/RVOL · Email &amp; cảnh báo trong phiên · 4 mốc/ngày</template>
 
@@ -59,15 +50,25 @@
       <div class="container">
         <div class="workspace-intro">
           <div class="workspace-intro-copy">
-            <span class="workspace-kicker">STOCKRADAR AI · CỬA VÀO CHÍNH</span>
-            <h1 id="workspace-title">Hỏi một mã cổ phiếu. <span>Nhận câu trả lời để ra quyết định.</span></h1>
-            <p>Premium: email tự động cập nhật điểm mua/bán và thay đổi của cổ phiếu bạn theo dõi.</p>
+            <span class="workspace-kicker">STOCKRADAR AI</span>
+            <h1 id="workspace-title">AI tìm điểm mua/bán cổ phiếu HOSE <span>và gửi email khi có hành động</span></h1>
+            <p>Phân tích doanh nghiệp, định giá, tăng trưởng, dòng tiền và điểm mua. Quét trong phiên theo các mốc vận hành của StockRadar.</p>
           </div>
           <div class="workspace-trust" aria-label="Nguyên tắc StockRadar"><span>Chỉ cổ phiếu HOSE</span><span>Không tự bịa giá</span><span>Không cần tài khoản chứng khoán</span></div>
         </div>
 
+        <div class="workspace-hero-actions"><a class="button button-primary" href="#ai-question">Hỏi AI về một cổ phiếu</a><a class="button button-secondary" href="#home-reco-title">Xem tín hiệu mới nhất</a></div>
+        <div class="home-market-bar" aria-label="Trạng thái StockRadar">
+    <div class="container home-market-inner">
+      <div class="market-item"><span class="market-dot is-warn" data-market-dot></span><b>HOSE</b><span data-market-status>UNAVAILABLE</span></div>
+      <div class="market-item"><b>Cập nhật</b><span data-market-updated>Dữ liệu intraday hiện chưa khả dụng</span></div>
+      <div class="market-item"><b>Rà soát · GMT+7</b><span data-market-reviewed>Chưa xác minh</span></div>
+      <div class="market-item"><b>Phạm vi</b><span data-market-coverage>HOSE</span></div>
+      <div class="market-item"><b>Mốc rà soát</b><span>10:30 · 11:15 · 13:30 · 14:15</span></div>
+    </div>
+  </div>
         <div class="workspace-grid">
-          <section class="workspace-main" aria-labelledby="ai-title">
+          <section class="workspace-main" id="ai-question" aria-labelledby="ai-title">
             <div class="workspace-main-head">
               <div class="workspace-main-title"><span class="ai-live-dot" aria-hidden="true"></span><strong>StockRadar AI</strong><span>Hỏi ngay trong khung bên dưới</span></div>
               <span class="sr-only" id="ai-title">Hỏi StockRadar AI</span>
@@ -109,12 +110,12 @@
     <section class="home-section" data-live-radar-home aria-labelledby="home-reco-title">
       <div class="container">
         <div class="section-head-row">
-          <div><span class="section-eyebrow">KHUYẾN NGHỊ · CÓ DẤU THỜI GIAN</span><h2 id="home-reco-title">TOP CỔ PHIẾU <span>KHUYẾN NGHỊ</span> CỦA STOCKRADAR</h2><p>Điểm mua mới &amp; lịch sử email.</p></div>
+          <div><span class="section-eyebrow">KHUYẾN NGHỊ · CÓ DẤU THỜI GIAN</span><h2 id="home-reco-title">Tín hiệu mới nhất</h2><p>Chỉ hiển thị khi đủ điều kiện phát hành; lịch sử có cả tăng và giảm.</p></div>
           <a href="khuyen-nghi/">Xem toàn bộ khuyến nghị →</a>
         </div>
 
         <div class="reco-shell">
-          <div class="reco-empty" data-home-history><a href="hieu-qua/">Lịch sử →</a></div>
+          <div class="reco-empty" data-home-history><a href="hieu-qua/">Lịch sử email đã đối chiếu →</a></div><div class="home-live-signals" data-home-live-signals hidden></div>
           <div class="reco-table-wrap" data-home-reco-table hidden>
             <table class="reco-table">
               <thead><tr><th>Mã</th><th>Trạng thái</th><th>Giá tham chiếu</th><th>Vùng mua</th><th>Cắt lỗ</th><th>Mục tiêu</th><th>Lãi/lỗ dự kiến</th><th>Xác nhận lúc</th><th>Email cảnh báo</th></tr></thead>

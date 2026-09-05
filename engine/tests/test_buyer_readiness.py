@@ -100,24 +100,23 @@ class BuyerReadinessTests(unittest.TestCase):
             self.assertIn(marker, client)
         self.assertIn("payload?.ranking_valid === true", client)
 
-    def test_checkout_is_open_while_product_email_remains_fail_closed(self):
+    def test_checkout_and_email_start_closed_until_backend_readiness(self):
         checkout_guard = (ROOT / "scripts/enforce_checkout_public_bank_info.py").read_text(encoding="utf-8")
         workflow = (ROOT / ".github/workflows/pages.yml").read_text(encoding="utf-8")
         fast_workflow = (ROOT / ".github/workflows/pages-fast-hotfix.yml").read_text(encoding="utf-8")
         qr = ROOT / "website/assets/vpbank-qr-static.svg"
 
         self.assertIn('STOCKRADAR_PRODUCT_EMAIL_READY: "0"', workflow)
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', workflow)
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', fast_workflow)
-        self.assertIn("Premium checkout opened with owner VPBank QR", checkout_guard)
-        self.assertIn("vpbank-qr-static.svg", checkout_guard)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', fast_workflow)
+        self.assertIn("Premium checkout fail-closed", checkout_guard)
+        self.assertIn("Checkout exposes a QR before server readiness", checkout_guard)
         self.assertIn("0934389822", checkout_guard)
         self.assertNotIn("def paused_page", checkout_guard)
-        self.assertNotIn("Premium checkout fail-closed", checkout_guard)
         self.assertTrue(qr.is_file())
         self.assertIn("VPBank VietQR", qr.read_text(encoding="utf-8"))
-        self.assertIn("Assert live checkout survives final transforms", workflow)
-        self.assertIn("Assert live checkout survives final transforms", fast_workflow)
+        self.assertIn("Verify checkout starts closed", workflow)
+        self.assertIn("Verify checkout starts closed", fast_workflow)
 
 
 if __name__ == "__main__":

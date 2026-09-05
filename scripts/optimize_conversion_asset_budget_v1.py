@@ -12,6 +12,10 @@ import argparse
 import re
 from pathlib import Path
 from urllib.parse import urlsplit
+if __package__:
+    from .optimize_home_asset_budget_v1 import minify_home_css
+else:
+    from optimize_home_asset_budget_v1 import minify_home_css
 
 ROUTES = {
     "signup": {
@@ -125,7 +129,7 @@ def verify_functional_markers(route: str, source: str) -> None:
     required = {
         "signup": ("data-auth-signup-form", "selected_plan", "email_daily_brief", "email_event_alerts", "data-signup-submit-label"),
         "dang-nhap": ("data-auth-login-form", "data-password-toggle"),
-        "thanh-toan": ("data-checkout-qr-image", "data-checkout-reference", "data-checkout-confirm", "0934389822", "VPBank"),
+        "thanh-toan": ("data-checkout-qr-image", "data-checkout-reference", "data-checkout-confirm", 'data-checkout-ready="false"', "data-checkout-payment hidden"),
     }[route]
     for marker in required:
         if marker not in source:
@@ -145,6 +149,7 @@ def process(output: Path, route: str, config: dict) -> None:
 
     rendered = page.read_text(encoding="utf-8")
     css_refs = refs(rendered, "css")
+    minify_home_css(output, css_refs)
     js_refs = refs(rendered, "js")
     css_names = local_names(css_refs)
     js_names = local_names(js_refs)

@@ -64,6 +64,7 @@
     nodes.forEach(node => {
       const parent = node.parentElement;
       if (!parent || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA)$/i.test(parent.tagName)) return;
+      if (parent.closest('[data-stockradar-ai-center],[data-stockradar-ai],[data-stockradar-ai-inline],[data-decision-response]')) return;
       const next = normalizeText(node.nodeValue);
       if (next !== node.nodeValue) node.nodeValue = next;
     });

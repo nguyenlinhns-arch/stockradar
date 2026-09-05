@@ -66,10 +66,10 @@
   }
 
   function sendEvent(eventName, extra = {}, options = {}) {
-    const ticker = String(extra.ticker || currentTicker() || '').trim().toUpperCase();
+    const ticker = String(options.omitTicker ? '' : extra.ticker || currentTicker() || '').trim().toUpperCase();
     const plan = String(extra.plan_interest || currentPlan() || '').trim().toUpperCase();
     const actionName = String(extra.action_name || '').trim().toLowerCase();
-    const dedupeKey = `${PAGE_SEEN_PREFIX}${eventName}:${window.location.pathname}:${ticker}:${plan}`;
+    const dedupeKey = `${PAGE_SEEN_PREFIX}${eventName}:${actionName}:${window.location.pathname}:${ticker}:${plan}`;
 
     if (options.oncePerPage) {
       try {
@@ -99,6 +99,31 @@
       // Analytics is strictly non-blocking. Product behavior must never depend on it.
     });
   }
+
+  // Reuse the versioned event envelope. Never send prompts, answers, holdings or account credentials.
+  window.StockRadarAnalytics = {
+    aiSubmitted() { sendEvent('conversion_click', {action_name:'ai_interaction'}, {omitTicker:true}); },
+    aiResult(data) {
+      const card=data?.scope==='ticker' && data?.decision_cards?.length===1 ? data.decision_cards[0] : null;
+      if (!card || !window.StockRadarDecisionView?.stillFresh(card.data) || !['RESEARCH','DELAYED'].includes(card.data.status)
+          || !['RESEARCH_READY','VERIFIED_RELEASE'].includes(card.data.source_status)) return;
+      sendEvent('conversion_click', {action_name:'meaningful_report',ticker:card.ticker}, {oncePerPage:true});
+      if(data.tier==='FREE') {
+        // Browser-level activation/return diagnostic; never claim server-confirmed user retention.
+        try {
+          const key='sr_meaningful_activation_day_v1',today=Math.floor((Date.now()+7*3600000)/86400000);
+          const saved=localStorage.getItem(key),first=saved===null?null:Number(saved);
+          if(first===null||!Number.isInteger(first)||first>today) {
+            localStorage.setItem(key,String(today));
+            sendEvent('conversion_click',{action_name:'free_activation'},{oncePerPage:true,omitTicker:true});
+          } else if([1,7].includes(today-first)) {
+            sendEvent('conversion_click',{action_name:`meaningful_return_d${today-first}`},{oncePerPage:true,omitTicker:true});
+          }
+        } catch (_) { /* Unavailable storage must not affect analysis. */ }
+      }
+    },
+    checkoutCreated() {sendEvent('conversion_click',{action_name:'checkout_created',plan_interest:'PREMIUM'},{oncePerPage:true,omitTicker:true});}
+  };
 
   function withTicker(href) {
     const ticker = currentTicker();
@@ -130,7 +155,7 @@
     const titleName = document.querySelector('[data-signup-plan-name]');
     if (titleName) titleName.textContent = 'Premium';
     const submit = document.querySelector('[data-signup-submit-label]');
-    if (submit) submit.textContent = 'Tạo tài khoản Premium & gửi mã xác minh';
+    if (submit) submit.textContent = 'Đăng ký quan tâm Premium';
   }
 
   document.querySelectorAll('[data-conversion-action]').forEach((el) => {
@@ -162,6 +187,10 @@
 
   const proposition = String(body?.dataset?.proposition || '');
   const path = window.location.pathname.replace(/\/+$/, '') || '/';
+
+  if(params.get('utm_source')==='stockradar_email'&&['action_alert','daily_brief'].includes(params.get('utm_campaign'))) {
+    sendEvent('conversion_click',{action_name:'email_cta_landing'},{oncePerPage:true,omitTicker:true});
+  }
 
   if (path === '/' || proposition === 'organic') {
     sendEvent('home_view', {}, { oncePerPage: true });

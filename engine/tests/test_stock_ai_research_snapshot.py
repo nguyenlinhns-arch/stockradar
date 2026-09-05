@@ -52,7 +52,7 @@ class StockAiResearchSnapshotTests(unittest.TestCase):
         auth = AUTH.read_text(encoding="utf-8")
         guest = GUEST.read_text(encoding="utf-8")
         self.assertIn("appendResearchSnapshot(appendPosition(modelText", auth)
-        self.assertIn("appendResearchSnapshot(modelText,researchContext,message)", guest)
+        self.assertIn("appendResearchSnapshot(modelText,researchContext,message,mode!=='ACTION_READY')", guest)
 
 
 if __name__ == "__main__":

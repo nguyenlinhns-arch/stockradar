@@ -10,7 +10,7 @@ os.environ['PYTHONIOENCODING']='utf-8'
 os.environ.update(STOCKRADAR_ENABLE_AUTH='1',STOCKRADAR_AUTH_EMAIL_READY='0',
  STOCKRADAR_SUPABASE_URL='https://xamviatbxufjlpiwhebb.supabase.co',
  STOCKRADAR_SUPABASE_PUBLISHABLE_KEY='sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK',
- STOCKRADAR_PRODUCT_EMAIL_READY='0',STOCKRADAR_CHECKOUT_READY='1')
+ STOCKRADAR_PRODUCT_EMAIL_READY='0',STOCKRADAR_CHECKOUT_READY='0')
 
 def run(*args):
  subprocess.run([sys.executable,*args],check=True)

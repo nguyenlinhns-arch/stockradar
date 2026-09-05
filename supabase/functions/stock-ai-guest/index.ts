@@ -4,6 +4,7 @@ import { STOCKRADAR_SYSTEM_CORE, deterministicStockRadarAnswer, normalizeResearc
 import { appendResearchSnapshot, buildResearchSnapshot, analysisContract } from "../_shared/stockradar-research-view.ts";
 
 import { parseResearchQuery, loadResearchQuery, guestQuotaIdentity } from "../_shared/stockradar-query.ts";
+import { buildDecisionCards, decisionResponse, releasedReport, observationFresh } from "../_shared/stockradar-decision.ts";
 
 const ORIGINS = new Set(["https://stockradar.vn","https://www.stockradar.vn","https://nguyenlinhns-arch.github.io","http://localhost:8000","http://127.0.0.1:8000"]);
 const HORIZONS = ["SHORT_TERM","MEDIUM_TERM","LONG_TERM","ACCUMULATION"];
@@ -15,7 +16,7 @@ function cors(origin) {
   if(origin&&ORIGINS.has(origin))Object.assign(h,{"Access-Control-Allow-Origin":origin,"Access-Control-Allow-Headers":"apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"});
   return h;
 }
-function json(body,status,origin,extra={}) { return new Response(JSON.stringify(body),{status,headers:{...cors(origin),...extra,"Content-Type":"application/json; charset=utf-8"}}); }
+function json(body,status,origin,extra={}) { return new Response(JSON.stringify(decisionResponse(body)),{status,headers:{...cors(origin),...extra,"Content-Type":"application/json; charset=utf-8"}}); }
 function validTicker(v){return /^[A-Z0-9]{3}$/.test(v)&&/[A-Z]/.test(v)}
 function validHorizon(v){return HORIZONS.includes(v)}
 function clean(v,max=700){return String(v??"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,max)}
@@ -65,15 +66,15 @@ Deno.serve(async req=>{
     return json({status:'RATE_LIMITED',tier:'GUEST',answer:'Đăng ký miễn phí để tiếp tục sử dụng AI StockRadar.',quota:{limit:3,remaining:0,reset_at:quota.reset_at||null,reset_timezone:quota.daily_reset_timezone||'Asia/Ho_Chi_Minh'}},429,origin,rate);
   }
 
-  const ready=reportRows.filter(r=>!r.error&&r.data?.status==="READY"),actionContext=ready.map(r=>normReport(r.data));
-  const contexts=contextResult;
-  const researchContext=contexts[0]||null,researchReady=researchContext?.context_grade==="RESEARCH_READY",referenceReady=Boolean(researchContext),mode=stockRadarMode(ready.length>0,researchReady,referenceReady);
+  const ready=reportRows.filter(r=>!r.error&&releasedReport(r.data,Date.now(),message)),actionContext=ready.filter(r=>r.horizon===horizon).map(r=>normReport(r.data));
+  const contexts=contextResult.filter(c=>c&&observationFresh(c.as_of_date,c.generated_at,c.data_quality));
+  const researchContext=contexts[0]||null,researchReady=researchContext?.context_grade==="RESEARCH_READY",referenceReady=Boolean(researchContext),mode=stockRadarMode(actionContext.length>0,researchReady,referenceReady);
   const researchData=query.scope==='ticker'?buildResearchSnapshot(researchContext):contexts.map(buildResearchSnapshot);
   const coreAnswer=deterministicStockRadarAnswer({mode,researchContext:query.scope==='ticker'?researchContext:contexts,actionContext,question:message});
-  const fallback=query.scope==='scan'&&!contexts.length?'Chưa có mã HOSE đủ dữ liệu mới và đạt bộ lọc này. Chưa đủ dữ liệu để xác nhận tín hiệu.':query.scope==='ticker'?appendResearchSnapshot(coreAnswer,researchContext,message):coreAnswer;
+  const fallback=query.scope==='scan'&&!contexts.length?'Chưa có mã HOSE đủ dữ liệu mới và đạt bộ lọc này. Chưa đủ dữ liệu để xác nhận tín hiệu.':query.scope==='ticker'?appendResearchSnapshot(coreAnswer,researchContext,message,mode!=='ACTION_READY'):coreAnswer;
   const ids=[...new Set([...actionContext.map(r=>String(r.snapshot_id||'')),String(researchContext?.snapshot_id||'')].filter(Boolean))];
-  const source={action_gate:ready.length?'READY':'PENDING',context_grade:researchContext?.context_grade||null,research_ready:Boolean(researchReady),reference_ready:Boolean(researchContext),snapshot_id:ids.length===1?ids[0]:null,snapshot_count:ids.length,generated_at:[...actionContext.map(r=>String(r.generated_at||'')),String(researchContext?.generated_at||'')].filter(Boolean).sort().at(-1)||null,as_of_date:researchContext?.as_of_date||null,ready_horizons:ready.map(r=>r.horizon)};
-  const base={scope:query.scope,tier:'GUEST',mode,ticker,horizon,quota_consumed:true,source,research_data:researchData,analysis:contexts.map(c=>analysisContract(c,actionContext,horizon)),quota:{limit:3,remaining,reset_at:quota.reset_at||null,reset_timezone:quota.daily_reset_timezone||'Asia/Ho_Chi_Minh'}};
+  const source={action_gate:actionContext.length?'READY':'PENDING',context_grade:researchContext?.context_grade||null,research_ready:Boolean(researchReady),reference_ready:Boolean(researchContext),snapshot_id:ids.length===1?ids[0]:null,snapshot_count:ids.length,generated_at:[...actionContext.map(r=>String(r.generated_at||'')),String(researchContext?.generated_at||'')].filter(Boolean).sort().at(-1)||null,as_of_date:researchContext?.as_of_date||null,ready_horizons:ready.map(r=>r.horizon)};
+  const base={scope:query.scope,tier:'GUEST',mode,ticker,horizon,quota_consumed:true,source,research_data:researchData,analysis:contexts.map(c=>analysisContract(c,actionContext,horizon)),decision_cards:buildDecisionCards(contexts.length?contexts:query.scope==='ticker'?[{ticker}]:[],actionContext,horizon,message),quota:{limit:3,remaining,reset_at:quota.reset_at||null,reset_timezone:quota.daily_reset_timezone||'Asia/Ho_Chi_Minh'}};
 
   if(mode==="METHOD_ONLY")return json({status:'READY',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   const key=Deno.env.get('OPENAI_API_KEY')?.trim();
@@ -92,6 +93,6 @@ Deno.serve(async req=>{
   }
   const candidateText=payload?.status==='completed'?openAIText(payload):'';
   const modelText=(query.scope==='ticker' && mode!=='ACTION_READY' && !hasResearchFramework(candidateText))?'':candidateText;
-  return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer:modelText?(query.scope==='ticker'?appendResearchSnapshot(modelText,researchContext,message):modelText):fallback},200,origin,rate);
+  return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer:modelText?(query.scope==='ticker'?appendResearchSnapshot(modelText,researchContext,message,mode!=='ACTION_READY'):modelText):fallback},200,origin,rate);
   } catch { return json({status:'SERVICE_UNAVAILABLE',answer:'StockRadar AI tạm thời chưa thể phản hồi. Vui lòng thử lại.'},503,req.headers.get('origin')); }
 });

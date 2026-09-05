@@ -18,9 +18,9 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "today-card",
             "data-today-actions",
             "data-home-reco-table",
-            "TOP CỔ PHIẾU",
-            "KHUYẾN NGHỊ",
-            "CỦA STOCKRADAR",
+            "Tín hiệu mới nhất",
+            "Hỏi AI về một cổ phiếu",
+            "data-home-live-signals",
             "buyer-first-section",
             "proof-grid",
             "plan-row",
@@ -43,7 +43,7 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
     def test_workspace_data_renderer_is_fail_closed(self):
         js = self.read("website/assets/home-workspace-v2.js")
         for marker in (
-            "public/data/radar.json",
+            "snapshot.fresh===true",
             "public/data/recommendations.json",
             "public/data/today-changes.json",
             "isBlocked",
@@ -89,9 +89,9 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "thanh-toan/?plan=premium",
             "Nâng Premium",
             "onAuthStateChange",
-            "20260905-email1",
         ):
-            self.assertIn(marker, ai if marker != "20260905-email1" else budget)
+            self.assertIn(marker, ai)
+        self.assertRegex(budget, r'AI_CENTER_CACHE_VERSION = "\d{8}-[a-z0-9]+"')
         self.assertNotIn("PAID · AI KHÔNG GIỚI HẠN", ai)
         self.assertNotIn("TRIAL · AI", ai)
         self.assertNotIn("Xem gói Paid", ai)

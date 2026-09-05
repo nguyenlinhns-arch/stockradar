@@ -18,7 +18,7 @@ class PremiumEmailProductV1Tests(unittest.TestCase):
             "evaluated_at": "2026-09-04T10:30:00+07:00",
             "generated_at": "2026-09-04T10:31:00+07:00",
             "next_review": "11:15",
-            "reference_price": 29.1,
+            "reference_price": 29100,
             "buy_zone": "28.8-29.3",
             "stop": 27.9,
             "target": 32.0,
@@ -29,8 +29,8 @@ class PremiumEmailProductV1Tests(unittest.TestCase):
             "reasons": ["Giá vào vùng hành động", "Điều kiện xác nhận đã đạt"],
         })
         self.assertEqual(result["urgency"], "P2")
-        self.assertEqual(result["subject"], "[StockRadar] HPG · CHỜ → MUA | 10:30")
-        self.assertEqual(result["primary_cta"], "XEM TRẠNG THÁI MỚI NHẤT")
+        self.assertEqual(result["subject"], "[MUA] HPG — 10:30 04/09/2026 — Giá 29.100đ")
+        self.assertEqual(result["primary_cta"], "Phân tích chi tiết bằng AI StockRadar")
         self.assertIn("không mặc định đuổi giá", result["no_chase_notice"])
         self.assertEqual(result["decision_card"]["new_position_decision"], "MUA")
         self.assertEqual(result["decision_card"]["holding_decision"], "GIỮ / có thể TĂNG")

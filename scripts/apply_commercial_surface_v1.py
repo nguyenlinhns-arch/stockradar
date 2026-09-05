@@ -105,7 +105,7 @@ def normalize_nav(source: str, current: str = "") -> str:
     def link(href: str, label: str, route: str = "") -> str:
         current_attr = ' aria-current="page"' if current == route and route else ""
         return f'<a href="{href}"{current_attr}>{label}</a>'
-    nav = '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>' + link("./#stockradar-ai", "AI") + link("hom-nay/", "Hôm nay", "hom-nay") + link("radar5/", "Radar", "radar5") + link("khuyen-nghi/", "Khuyến nghị", "khuyen-nghi") + link("hieu-qua/", "Hiệu quả", "hieu-qua") + "</nav>"
+    nav = '<nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>' + link("./#stockradar-ai", "AI StockRadar") + link("khuyen-nghi/", "Khuyến nghị", "khuyen-nghi") + link("hieu-qua/", "Hiệu quả", "hieu-qua") + link("tai-khoan/#watchlist", "Theo dõi", "tai-khoan") + link("dang-ky/#premium", "Premium", "dang-ky") + "</nav>"
     source, count = re.subn(r'<nav\b[^>]*data-nav-menu[^>]*>.*?</nav>', nav, source, count=1, flags=re.I | re.S)
     if count != 1:
         raise RuntimeError("Commercial surface could not normalize primary navigation")
@@ -127,7 +127,8 @@ def normalize_header_register(source: str) -> str:
 
 def commercial_home(source: str) -> str:
     source = remove_section(source, "buyer-first-section")
-    proof = '<section class="home-section commercial-proof" aria-label="Kiểm chứng StockRadar"><div class="container commercial-proof-bar"><div><span>Đã báo mua</span><strong data-proof-total>—</strong></div><div><span>Chưa có email bán</span><strong data-proof-open>—</strong></div><div><span>Mã đã báo bán</span><strong data-proof-closed>—</strong></div><div><span>Lãi/lỗ đã chốt</span><strong data-proof-return>—</strong></div><a href="hieu-qua/">Hiệu quả →</a><a href="radar5/">Radar →</a></div></section>'
+    source = re.sub(r'<aside class="workspace-side".*?</aside>', "", source, count=1, flags=re.S)
+    proof = '<section class="home-section commercial-proof" aria-label="Kiểm chứng StockRadar"><div class="container commercial-proof-bar"><div><span>Email cũ đã đối chiếu</span><strong data-proof-total>—</strong></div><div><span>Chưa có email bán</span><strong data-proof-open>—</strong></div><div><span>Mã đã báo bán</span><strong data-proof-closed>—</strong></div><div><span>Lãi/lỗ đã chốt</span><strong data-proof-return>—</strong></div><a href="hieu-qua/">Hiệu quả →</a><a href="radar5/">Radar →</a></div></section>'
     source, count = re.subn(r'\s*<section class="home-section" aria-labelledby="proof-title">.*?</section>\s*', proof, source, count=1, flags=re.I | re.S)
     if count != 1:
         raise RuntimeError("Commercial homepage proof section not found")
@@ -174,7 +175,7 @@ def commercial_sectors(source: str) -> str:
 def commercial_performance(source: str) -> str:
     source = remove_section(source, "buyer-first-section")
     source = remove_conversion_rail(source)
-    source = source.replace("Kích hoạt · Entry · Target/Stop · Benchmark. Người mua phải kiểm chứng được cả kết quả tốt lẫn kết quả xấu.", "Lịch sử email và biến động giá từng mã.")
+    source = source.replace("Kích hoạt · Entry · Target/Stop · Benchmark. Người mua phải kiểm chứng được cả kết quả tốt lẫn kết quả xấu.", "Hiệu quả StockRadar: tín hiệu production và lịch sử email đã đối chiếu được trình bày riêng.")
     source = source.replace("KẾT QUẢ · CÓ DẤU THỜI GIAN", "KẾT QUẢ THỰC TẾ")
     audit = '<div class="container commercial-audit-strip"><span>Email đã đối chiếu</span><span>Giờ gửi thực tế</span><span>Biến động giá</span><span>Rà soát tháng 8</span></div>'
     return source.replace('<section class="performance-workspace">', '<section class="performance-workspace">' + audit, 1)
@@ -199,13 +200,13 @@ def commercial_plans(source: str) -> str:
     if free_count != 1:
         raise RuntimeError("Commercial Free plan card not found")
 
-    premium_card = '''<article class="plan-card plan-card-premium conversion-plan-card commercial-plan-card" data-plan-premium id="premium" data-checkout-ready="true">
+    premium_card = '''<article class="plan-card plan-card-premium conversion-plan-card commercial-plan-card" data-plan-premium id="premium" data-checkout-ready="false">
             <span class="plan-ribbon">EMAIL TỰ ĐỘNG</span><span class="plan-kicker">PREMIUM</span><h2>StockRadar Premium</h2>
             <div class="plan-price"><strong>199.000đ</strong><span>/ 30 ngày</span></div>
             <p class="plan-summary">Email cập nhật điểm mua/bán của mã theo dõi.</p>
             <ul class="plan-feature-list"><li>Báo khi đổi trạng thái mua / giữ / giảm / bán</li><li>Kèm mức giá, lý do và giờ xác nhận</li><li>Bản tin 09:00 và cảnh báo trong phiên*</li><li>AI không giới hạn để hỏi sâu</li></ul>
-            <div class="plan-info-box plan-info-box-premium">Chọn mã → bật nhận email → nhận thay đổi đã xác nhận.</div>
-            <a class="button button-primary" href="signup/?plan=premium&amp;next=thanh-toan/%3Fplan%3Dpremium" data-registration-plan="premium" data-premium-conversion-cta data-conversion-action="plans_premium">Đăng ký Premium</a>
+            <div class="plan-info-box plan-info-box-premium">Đang tạm dừng kích hoạt mới; email hành động chưa bật. Đăng ký quan tâm hoặc dùng AI Free.</div>
+            <a class="button button-primary" href="signup/?plan=premium" data-registration-plan="premium" data-premium-conversion-cta data-conversion-action="plans_premium">Đăng ký Premium</a>
           </article>'''
     source, premium_count = re.subn(r'<article\b[^>]*data-plan-premium[^>]*>.*?</article>', premium_card, source, count=1, flags=re.I | re.S)
     if premium_count != 1:
@@ -258,7 +259,7 @@ def process_page(output: Path, route: str) -> None:
 
 def verify(output: Path) -> None:
     pages = {route: read(output / "index.html" if route == "" else output / route / "index.html") for route in CORE_ROUTES}
-    for marker in ("data-stockradar-ai-center", "TOP CỔ PHIẾU", "commercial-proof-bar", "Email tự động báo điểm mua/bán"):
+    for marker in ("data-stockradar-ai-center", "Tín hiệu mới nhất", "commercial-proof-bar", "Email tự động báo điểm mua/bán"):
         if marker not in pages[""]:
             raise RuntimeError(f"Commercial homepage missing: {marker}")
     forbidden = {

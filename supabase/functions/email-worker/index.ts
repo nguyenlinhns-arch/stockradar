@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { actionBody, dailyBody } from "../_shared/email-copy.ts";
+import { actionBody, dailyBody, emailPricePlanError, emailSubject } from "../_shared/email-copy.ts";
 
 const RESEND_ENDPOINT = "https://api.resend.com/emails";
 const KINDS = new Set(["DAILY_BRIEF","EVENT_ALERT","POST_SESSION_DIGEST","WEEKLY_REPORT"]);
@@ -92,16 +92,22 @@ Deno.serve(async (req: Request) => {
   let sent=0,failed=0,suppressed=0;
   for (const item of claimed) {
     const outboxId=String(item.outbox_id||""), userId=String(item.user_id||""), kind=String(item.email_kind||"").toUpperCase(), recipient=String(item.recipient_email||""), idem=String(item.idempotency_key||"");
-    const payload=item.payload && typeof item.payload === "object" ? item.payload as Record<string, unknown> : {};
+    let payload=item.payload && typeof item.payload === "object" ? item.payload as Record<string, unknown> : {};
     if(!outboxId||!userId||!recipient||!KINDS.has(kind)){ failed++; try{await rpc(supabase,admin,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SUPPRESSED",p_error:"INVALID_CLAIM"});}catch(_){} continue; }
     try {
       const preflight=await rpc(supabase,admin,"preflight_stockradar_email_outbox_v1",{p_outbox_id:outboxId});
       if(!preflight?.allowed){ suppressed++; continue; }
+      if (preflight.payload && typeof preflight.payload === 'object') payload = preflight.payload;
+      const pricePlanError = emailPricePlanError(payload,kind);
+      if (pricePlanError) {
+        await rpc(supabase,admin,"finish_stockradar_email_outbox_v1",{p_outbox_id:outboxId,p_result:"SUPPRESSED",p_error:pricePlanError});
+        suppressed++; continue;
+      }
       const kindToken=await rpc(supabase,admin,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:kind,p_ttl_days:90});
       const allToken=await rpc(supabase,admin,"issue_stockradar_unsubscribe_token_v1",{p_user_id:userId,p_scope:"ALL",p_ttl_days:90});
       const unsub=joinUrl(functionsBase,`email-unsubscribe?token=${encodeURIComponent(String(kindToken))}`);
       const allUnsub=joinUrl(functionsBase,`email-unsubscribe?token=${encodeURIComponent(String(allToken))}`);
-      const subject=String(payload.subject || (kind==="EVENT_ALERT"?"[StockRadar] Cảnh báo hành động":"[StockRadar] Báo cáo"));
+      const subject=kind==='EVENT_ALERT'||kind==='DAILY_BRIEF'?emailSubject(payload,kind):String(payload.subject||'[StockRadar] Báo cáo');
       const preheader=String(payload.preheader || "StockRadar · cổ phiếu và thời gian xác nhận.");
       const body=kind==="EVENT_ALERT"?actionBody(payload,website):kind==="DAILY_BRIEF"?dailyBody(payload,website):digestBody(payload,website,kind);
       const res=await fetch(RESEND_ENDPOINT,{method:"POST",headers:{Authorization:`Bearer ${resend}`,"Content-Type":"application/json","Idempotency-Key":idem},body:JSON.stringify({from,to:[recipient],subject,html:shell(preheader,body,unsub,allUnsub),...(replyTo?{reply_to:replyTo}:{}),headers:{"List-Unsubscribe":`<${allUnsub}>`,"List-Unsubscribe-Post":"List-Unsubscribe=One-Click","X-StockRadar-Outbox-ID":outboxId},tags:[{name:"email_kind",value:kind.toLowerCase().replaceAll("_","-")} ]})});

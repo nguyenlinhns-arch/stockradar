@@ -165,7 +165,7 @@ def cleanup_performance(source: str) -> str:
     source = source.replace('<div data-performance-summary>', '<div data-performance-summary hidden>', 1)
     source = source.replace('<div data-performance-summary hidden>', '<div data-alert-history><p>Đang tải lịch sử email và kết quả từng mã…</p></div><div data-performance-summary hidden>', 1)
     source = source.replace('Kết quả thực tế</h2>', 'Theo dõi khuyến nghị</h2>')
-    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=2" defer></script></head>', 1)
+    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=20260905-live1" defer></script></head>', 1)
     return source
 
 
@@ -281,7 +281,7 @@ def verify(output: Path) -> None:
     required = {
         "signup": ("data-auth-signup-form", "data-signup-plan-name", "data-signup-submit-label"),
         "dang-ky": ("data-plan-free", "data-plan-premium", "data-plan-comparison"),
-        "thanh-toan": ("data-checkout-confirm", "vpbank-qr-static.svg", "0934389822", "data-checkout-reference"),
+        "thanh-toan": ("data-checkout-confirm", "data-checkout-payment hidden", 'data-checkout-ready="false"', "data-checkout-reference"),
         "hieu-qua": ("data-performance-summary",),
         "tai-khoan": ("data-product-email-preferences", "data-account-personalization", "data-account-watchlist-form"),
         "hom-nay": ("data-paid-dashboard",),

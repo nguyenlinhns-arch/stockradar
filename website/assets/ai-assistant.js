@@ -74,9 +74,10 @@
     if (!config.configured || !config.supabaseUrl || !config.supabasePublishableKey) return null;
     await loadSupabaseLibrary();
     if (!state.client) {
-      state.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+      state.client = window.StockRadarAuthClient || window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'stockradar-auth' }
       });
+      window.StockRadarAuthClient = state.client;
     }
     const { data } = await state.client.auth.getSession();
     return data?.session || null;
@@ -158,6 +159,7 @@
         return;
       }
       const endpoint = `${String(config.supabaseUrl).replace(/\/$/, '')}/functions/v1/stock-ai`;
+      window.StockRadarAnalytics?.aiSubmitted();
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
@@ -179,10 +181,11 @@
         appendLogin(log);
         return;
       }
+      if(response.ok)window.StockRadarAnalytics?.aiResult(data);
       const answer = data.answer || (response.ok
         ? 'StockRadar AI chưa có nội dung để trả lời.'
         : 'StockRadar AI tạm thời chưa thể phản hồi.');
-      appendMessage(log, 'assistant', answer, sourceMeta(data));
+      if (!window.StockRadarDecisionView?.render(log, data, sourceMeta(data))) appendMessage(log, 'assistant', answer, sourceMeta(data));
       state.history.push({ role: 'user', content: String(message).slice(0, 600) });
       state.history.push({ role: 'assistant', content: String(answer).slice(0, 600) });
       state.history = state.history.slice(-MAX_HISTORY);

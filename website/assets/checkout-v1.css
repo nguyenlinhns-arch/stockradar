@@ -113,3 +113,5 @@
   .checkout-mobile-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 50; display: block; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.97); border-top: 1px solid var(--checkout-line); box-shadow: 0 -7px 22px rgba(18,43,68,.09); }
   .checkout-mobile-bar a, .checkout-mobile-bar button { width: 100%; min-height: 46px; display: flex; align-items: center; justify-content: center; border-radius: 5px; border: 0; background: var(--checkout-red); color: #fff; font-weight: 900; font-size: 13px; }
 }
+
+[data-checkout-payment][hidden], [data-checkout-disabled-fallback][hidden] { display: none !important; }

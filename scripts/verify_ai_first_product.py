@@ -71,8 +71,8 @@ def main() -> None:
             errors.append(f"AI client access model exposes stale state/route: {forbidden}")
 
     require(plans, (
-        "Đăng ký & thanh toán",
-        "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
+        "data-plan-premium",
+        "signup/?plan=premium",
         "không phải đăng ký Free trước",
     ), "Premium registration entry", errors)
 
@@ -118,9 +118,9 @@ def main() -> None:
         "StockRadar Premium",
         "199.000đ",
         "VPBank",
-        "0934389822",
+        'data-checkout-ready="false"',
         "data-checkout-confirm",
-        "vpbank-qr-static.svg",
+        "data-checkout-payment hidden",
     ), "Premium checkout", errors)
 
     require(account, (

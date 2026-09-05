@@ -27,7 +27,7 @@ class CheckoutSurfaceTests(unittest.TestCase):
             "assets/checkout-v1.css",
             "assets/checkout-v1.js",
             "VPBank",
-            "0934389822",
+            'data-checkout-ready="false"',
         ):
             self.assertIn(marker, page)
 
@@ -51,7 +51,7 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertIn("checkout-mobile-bar", styles)
         self.assertIn(".checkout-qr img", styles)
 
-    def test_commercial_checkout_is_opened_by_final_pages_guard(self):
+    def test_commercial_checkout_starts_closed_with_backend_authority(self):
         page = (ROOT / "website" / "thanh-toan" / "index.html").read_text(encoding="utf-8")
         guard = (ROOT / "scripts" / "enforce_checkout_public_bank_info.py").read_text(encoding="utf-8")
         workflow = (ROOT / ".github" / "workflows" / "pages.yml").read_text(encoding="utf-8")
@@ -65,18 +65,13 @@ class CheckoutSurfaceTests(unittest.TestCase):
         ):
             self.assertIn(marker, page)
 
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', workflow)
-        self.assertIn('STOCKRADAR_CHECKOUT_READY: "1"', fast_workflow)
-        for marker in (
-            "Premium checkout opened with owner VPBank QR",
-            "vpbank-qr-static.svg",
-            "VPBank",
-            "0934389822",
-            "Paused checkout leaked into live artifact",
-        ):
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', workflow)
+        self.assertIn('STOCKRADAR_CHECKOUT_READY: "0"', fast_workflow)
+        for marker in ("Premium checkout fail-closed", "data-checkout-payment hidden", "Checkout exposes a QR before server readiness"):
             self.assertIn(marker, guard)
-        self.assertNotIn("def paused_page", guard)
-        self.assertNotIn("Premium checkout fail-closed", guard)
+        self.assertIn("get_stockradar_product_readiness_v1", (ROOT / "website/assets/checkout-v1.js").read_text(encoding="utf-8"))
+        self.assertNotIn("fallbackQr", page)
+        self.assertNotIn("0934389822", page)
         self.assertNotIn("service_role", guard.lower())
         self.assertNotIn("sb_secret_", guard.lower())
 

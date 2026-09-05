@@ -33,6 +33,9 @@ def write_json(path: Path, payload: dict[str, object]) -> None:
     )
 
 
+from engine.stockradar.performance import live_publication_summary
+
+
 def build_public() -> dict[str, object]:
     """Build the fail-closed payloads that are safe to publish with the website."""
 
@@ -68,6 +71,7 @@ def build_public() -> dict[str, object]:
         "average_closed_return_pct": None,
         "excludes_unactivated_from_win_rate": True,
     }
+    performance_summary.update(live_publication_summary([]))
     payloads = {
         "radar.json": {
             "schema_version": "2.1.2",

@@ -2,7 +2,6 @@
   'use strict';
 
   const DATA = {
-    radar: 'public/data/radar.json',
     recommendations: 'public/data/recommendations.json',
     today: 'public/data/today-changes.json',
   };
@@ -111,7 +110,7 @@
 
     table.hidden = false;
     empty.hidden = true;
-    items.slice(0, 5).forEach(item => {
+    items.slice(0, 3).forEach(item => {
       const tr = document.createElement('tr');
       const ticker = text(item?.ticker || item?.symbol);
       const action = readAction(item);
@@ -145,7 +144,7 @@
       body.append(tr);
     });
 
-    setText('[data-home-reco-state]', `${Math.min(5, items.length)} mã được xác nhận mua · giờ Việt Nam.`);
+    setText('[data-home-reco-state]', `${Math.min(3, items.length)} mã được xác nhận mua · giờ Việt Nam.`);
   }
 
   function renderToday(today, recommendations) {
@@ -155,8 +154,8 @@
     const sellCount = ready ? items.filter(item => /BÁN|BAN|SELL|CẮT|CAT|GIẢM|GIAM/i.test(readAction(item))).length : 0;
     const published = Number(recommendations?.performance_summary?.total_published || 0);
 
-    setText('[data-today-actions]', number(actionCount, '0'));
-    setText('[data-today-sells]', number(sellCount, '0'));
+    setText('[data-today-actions]', ready?number(actionCount):'—');
+    setText('[data-today-sells]', ready?number(sellCount):'—');
     setText('[data-today-published]', number(published, '0'));
     setText('[data-today-data]', ready ? 'ĐÃ CÓ' : 'CHỜ');
     setText('[data-today-note]', ready && actionCount > 0
@@ -165,18 +164,17 @@
     setText('[data-today-asof]', fmtTime(today?.as_of || recommendations?.snapshot?.as_of));
   }
 
-  function renderMarket(radar) {
-    const blocked = isBlocked(radar);
-    const regime = String(radar?.market_regime || '').trim().toUpperCase();
-    const status = blocked ? 'Chưa xác nhận' : (regime && regime !== 'UNKNOWN' ? regime : 'Đang theo dõi');
-    const snapshot = radar?.snapshot || {};
-    const items = Array.isArray(radar?.items) ? radar.items : [];
-
-    setText('[data-market-status]', status);
-    setText('[data-market-updated]', fmtTime(snapshot?.as_of));
-    setText('[data-market-coverage]', blocked ? 'HOSE · chờ dữ liệu đủ chuẩn' : `HOSE · ${items.length} mã trong Radar`);
+  function renderMarket(payload) {
+    const snapshot=payload?.snapshot||{},at=Date.parse(snapshot.evaluated_at),now=Date.now();
+    const day=Date.parse(snapshot.as_of_date),today=Date.parse(new Date(now+7*3600000).toISOString().slice(0,10));
+    const fresh=snapshot.fresh===true&&Number.isFinite(at)&&at<=now+300000&&now-at<=96*3600000&&day<=today&&today-day<=96*3600000;
+    setText('[data-market-status]',fresh?'RESEARCH · giá cuối phiên':'UNAVAILABLE');
+    setText('[data-market-updated]',fresh?`Đóng cửa ${String(snapshot.as_of_date).split('-').reverse().join('/')}`:'Dữ liệu intraday hiện chưa khả dụng');
+    setText('[data-market-reviewed]',fresh?fmtTime(snapshot.evaluated_at):'Chưa xác minh');
+    setText('[data-market-coverage]',fresh?`${number(payload.coverage?.reviewed)} mã · nguồn còn hạn`:'Chưa đủ dữ liệu mới');
+    setText('[data-market-intraday]','Dữ liệu intraday hiện chưa khả dụng');
     const dot = qs('[data-market-dot]');
-    if (dot) dot.className = `market-dot ${blocked ? 'is-warn' : 'is-ready'}`;
+    if (dot) dot.className = `market-dot ${fresh ? 'is-ready' : 'is-warn'}`;
   }
 
   function renderPerformance(payload) {
@@ -189,28 +187,20 @@
     const box=qs('[data-home-history]');
     if(!box)return;
     box.replaceChildren();
-    box.className='home-history';
-    const make=(tag,value,parent)=>{const el=document.createElement(tag);if(value!=null)el.textContent=value;parent.append(el);return el;};
-    const labels=['Mã','Thời gian khuyến nghị','Giá khuyến nghị','Giá hiện tại','Lãi/lỗ tạm tính','Trạng thái'];
-    const table=make('table',null,box);table.className='reco-table home-history-table';
-    make('caption',`${s.tickers} mã đã báo mua · mới nhất trước`,table);
-    const head=make('tr',null,make('thead',null,table));
-    labels.forEach(label=>{make('th',label,head).scope='col';});
-    const body=make('tbody',null,table);
-    for(const r of [...payload.items].sort((a,b)=>Date.parse(b.first_sent_at)-Date.parse(a.first_sent_at))){
-      const tr=make('tr',null,body);tr.dataset.historyTicker=r.ticker;
-      const cells=labels.map(label=>{const td=make('td',null,tr);td.dataset.label=label;return td;});
-      const a=make('a',r.ticker,cells[0]);a.href=`hieu-qua/#history-${encodeURIComponent(r.ticker)}`;a.className='reco-ticker';
-      make('b',fmtTime(r.signal_at),cells[1]);make('small',`Gửi email: ${fmtTime(r.first_sent_at)}`,cells[1]);
-      make('b',r.reference_price==null?'—':`${number(r.reference_price)}đ`,cells[2]);
-      make('b',r.latest_price==null?'—':`${number(r.latest_price)}đ`,cells[3]);
-      make('small',`Đóng cửa ${String(r.price_date||'').split('-').reverse().join('/')}`,cells[3]);
-      const gain=r.price_change_pct;
-      const value=make('b',gain==null?'—':`${gain>0?'+':''}${Number(gain).toLocaleString('vi-VN',{maximumFractionDigits:2})}%`,cells[4]);
-      value.className=gain>0?'is-up':gain<0?'is-down':'';
-      const badge=make('span',r.status==='NO_SELL_EMAIL_FOUND'?'Chưa ghi nhận bán':'Đã ghi nhận bán',cells[5]);badge.className='reco-action';
-    }
-    make('p','Lãi/lỗ = thay đổi giá so với giá khuyến nghị đầu tiên; chưa tính phí, thuế và quyền. Chưa phải lãi/lỗ đã chốt.',box).className='home-history-note';
+    const a=document.createElement('a');a.href='hieu-qua/';a.textContent=`Lịch sử email đã đối chiếu: ${number(s.tickers)} mã · đến ${String(payload.mail_search_through||'').split('-').reverse().join('/')} →`;box.append(a);
+    const note=document.createElement('p');note.textContent='Lịch sử email cũ được trình bày riêng, không cộng vào hiệu quả của tín hiệu production mới.';box.append(note);
+  }
+
+  function renderLiveSignals(payload) {
+    const box=qs('[data-home-live-signals]');if(!box)return;
+    box.replaceChildren();
+    const items=payload?.is_mock===false && payload?.data_status==='READY' && Array.isArray(payload.items)
+      ?payload.items.filter(r=>r.record_mode==='LIVE_PUBLISHED'&&r.publish_status==='PUBLISHED'&&r.is_mock===false&&r.data_grade==='DECISION_GRADE'&&Number.isFinite(Date.parse(r.published_at))) : [];
+    const recent=[...items].sort((a,b)=>Date.parse(b.published_at)-Date.parse(a.published_at)).slice(0,3);
+    box.hidden=!recent.length;
+    for(const r of recent){const card=document.createElement('article');const title=document.createElement('h3');title.textContent=r.ticker;card.append(title);
+      for(const value of [`${r.setup||r.recommendation_state} · ${fmtTime(r.published_at)}`,`Giá tín hiệu ${number(r.price_at_publication)}đ · Stop ${number(r.stop_loss)}đ · Target ${number(r.target_price)}đ`,
+        `Trạng thái ${r.recommendation_state} · ${r.final_return_pct!=null?pct(r.final_return_pct):r.current_return_pct!=null?pct(r.current_return_pct):'Chưa kích hoạt'} · Giá đo ${fmtTime(r.close_timestamp||r.price_updated_at)}`]){const p=document.createElement('p');p.textContent=value;card.append(p);}box.append(card);}
   }
 
   async function mount() {
@@ -219,15 +209,19 @@
     setTimeout(normalizeHeaderActions, 1200);
 
     const results = await Promise.allSettled([
-      getJson(DATA.radar), getJson(DATA.recommendations), getJson(DATA.today), recommendationStatus(), getJson('public/data/recommendation-history.json').then(renderPerformance),
+      getJson(DATA.recommendations).then(data=>{renderLiveSignals(data);return data;}), (qs('[data-today-actions]')?getJson(DATA.today):Promise.resolve({})), recommendationStatus(), getJson('public/data/recommendation-history.json').then(renderPerformance),
     ]);
-    const radar = results[0].status === 'fulfilled' ? results[0].value : {};
-    const recommendations = results[1].status === 'fulfilled' ? results[1].value : {};
-    const today = results[2].status === 'fulfilled' ? results[2].value : {};
+    const recommendations = results[0].status === 'fulfilled' ? results[0].value : {};
+    const today = results[1].status === 'fulfilled' ? results[1].value : {};
 
-    renderMarket(radar);
-    renderRecommendations(results[3].status === 'fulfilled' ? results[3].value : null);
+    renderMarket(results[2].status === 'fulfilled' ? results[2].value : null);
+    renderRecommendations(results[2].status === 'fulfilled' ? results[2].value : null);
     renderToday(today, recommendations);
+    setInterval(async()=>{
+      if(document.hidden)return;
+      try { const current=await recommendationStatus();renderMarket(current);renderRecommendations(current); }
+      catch { renderMarket(null);renderRecommendations(null); }
+    },60000);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });

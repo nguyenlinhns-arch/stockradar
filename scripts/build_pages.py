@@ -25,7 +25,7 @@ DEFAULT_OUTPUT = ROOT / ".pages-site"
 AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {"1", "true", "yes", "on"}
 AUTH_ROUTES = {"signup", "dang-nhap", "dat-lai-mat-khau", "tai-khoan"}
 PREMIUM_CLIENT_ROUTES = {"co-phieu"}
-EXCLUDED_NAMES = {"server.py", "__pycache__", "kien-thuc", "demo1", "email", "theo-doi", "pro"}
+EXCLUDED_NAMES = {"server.py", "__pycache__", "kien-thuc", "demo1", "email", "pro"}
 AUTH_CONFIG_TAG = '<script src="assets/auth-config.js?v=20260905-auth8" defer></script>\n'
 AUTH_STATE_TAG = '<script src="assets/auth-state-v2.js?v=20260905-auth8" defer></script>\n'
 SUPABASE_TAG = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>\n'
@@ -64,7 +64,7 @@ def ignore(directory: str, names: list[str]) -> set[str]:
         if "data" in names:
             excluded.add("data")
         if not AUTH_ENABLED:
-            excluded.update(name for name in AUTH_ROUTES if name in names)
+            excluded.update(name for name in AUTH_ROUTES | {"theo-doi"} if name in names)
     return excluded
 
 

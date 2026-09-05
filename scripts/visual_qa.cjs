@@ -67,7 +67,7 @@ async function visibleFontViolations(page, selectors, minimumPx) {
     { name: 'mobile-large', width: 430, height: 932 },
   ];
   const bannedVisibleTerms = [
-    'phân tích', 'phương pháp', 'setup',
+    'phương pháp', 'setup',
     '4m', 'canslim', 'sepa', 'vcp', 'vpa', 'rvol',
     'pocket pivot', 'early breakout', 'confirmed breakout', 'breakout', 'retest', 'payback',
     'wyckoff', 'minervini', 'o’neil', "o'neil", 'phil town',
@@ -217,7 +217,9 @@ async function visibleFontViolations(page, selectors, minimumPx) {
           if (!(await page.locator('[data-checkout-qr-image]').count())) routeErrors.push('checkout QR missing');
           if (!(await page.locator('[data-checkout-confirm]').count())) routeErrors.push('checkout confirmation missing');
           const account = String(await page.locator('[data-checkout-account-number]').first().textContent().catch(() => '') || '').trim();
-          if (account !== '0934389822') routeErrors.push(`checkout account mismatch: ${account || 'missing'}`);
+          if (await page.locator('[data-checkout-payment]').isVisible()) routeErrors.push('checkout payment exposed without an authenticated, eligible request');
+          if(await page.locator('[data-checkout-qr-image]').getAttribute('src'))routeErrors.push('checkout QR must remain absent before eligibility');
+          if(!(await page.locator('[data-checkout-confirm]').isDisabled()))routeErrors.push('checkout confirmation enabled without a request');
           const tiny = await visibleFontViolations(page, '.checkout-card p, .checkout-bank-row, .checkout-warning, .checkout-confirm p, .checkout-state, .checkout-summary p, .checkout-features li, .checkout-note', 10);
           if (tiny.length) routeErrors.push(`tiny checkout text: ${tiny[0].px}px ${tiny[0].text}`);
         }

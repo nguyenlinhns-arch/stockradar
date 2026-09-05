@@ -1,5 +1,6 @@
 import { sanitizeResearchValuation, fourLayerEvidence, fourHorizonEvidence, valuationExplanation } from "./stockradar-framework.ts";
 import { readableResearchFacts, wantsResearchDetail } from "./stockradar-readable.ts";
+import { researchEstimates, withEstimatedPlan } from "./stockradar-estimates.ts";
 
 function obj(value: any): Record<string, any> { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
 function num(value: any): number | null { if (value == null || typeof value === 'boolean' || typeof value === 'object' || String(value).trim() === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
@@ -108,8 +109,8 @@ export function researchSnapshotText(context: any): string {
   return lines.join('\n');
 }
 
-export function appendResearchSnapshot(answer: string, context: any, question = ''): string {
-  const base=txt(answer); if(!wantsResearchDetail(question)||!base||!context||base.includes('DỮ LIỆU NGHIÊN CỨU STOCKRADAR')) return base;
+export function appendResearchSnapshot(answer: string, context: any, question = '', includeEstimates = true): string {
+  const base=context && includeEstimates ? withEstimatedPlan(txt(answer),context) : txt(answer); if(!wantsResearchDetail(question)||!base||!context||base.includes('DỮ LIỆU NGHIÊN CỨU STOCKRADAR')) return base;
   const block=researchSnapshotText(context); return block?`${base}\n\n${block}`:base;
 }
 
@@ -118,7 +119,7 @@ export function analysisContract(context: any, reports: any[] = [], horizon = 'S
   context=sanitizeResearchValuation(context);
   const a=obj(context.analysis), f=obj(context.fundamental_detail), t=obj(context.technical_detail), v=obj(context.valuation_detail);
   const report=reports.find(r=>r.status==='READY'&&r.ticker===s.ticker&&r.horizon===horizon);
-  const p=obj(report?.payload), actionPlan={...obj(p.trade_plan),...obj(p.action),...obj(p.recommendation)};
+  const p=obj(report?.payload), actionPlan={...p,...obj(p.trade_plan),...obj(p.action),...obj(p.recommendation)};
   const ready=Boolean(report);
   const canonicalSignal=ready?firstTxt(actionPlan.action,actionPlan.signal,actionPlan.state,p.action_state,p.recommendation_state):s.setup.new_position_state;
   const evidence=(value:any, source:string)=>({value:value??null,status:value==null?'INSUFFICIENT_DATA':'AVAILABLE',source});
@@ -129,6 +130,7 @@ export function analysisContract(context: any, reports: any[] = [], horizon = 'S
     probability:null,stage:s.setup.stage||null,setup:s.setup.candidate_setup||null,pivot:s.setup.pivot,
     buy_zone:{low:num(selectedPlan.buy_zone_low),high:num(selectedPlan.buy_zone_high)},stop_loss:num(selectedPlan.stop_loss),
     targets:{short_term:num(selectedPlan.target_near),three_to_six_months:num(selectedPlan.target_3_6m),twelve_months:num(selectedPlan.target_12m)},
+    estimated_plan:researchEstimates(context),
     valuation:{...s.valuation,mos:context.valuation_detail?.mos??null,upside:context.valuation_detail?.upside??null,downside:s.trade_plan.downside_to_stop_pct},
     risk_reward:num(selectedPlan.risk_reward_to_base),volume:{current:s.setup.volume,vol20:s.setup.vol20,rvol:s.setup.rvol,max_down_volume_10:s.setup.max_down_volume10,mode:s.setup.volume_mode,same_time_volume:num(t.same_time_volume)},
     technical:{...s.setup,indicators:t.computed_indicators||null},fundamental:s.fundamentals,

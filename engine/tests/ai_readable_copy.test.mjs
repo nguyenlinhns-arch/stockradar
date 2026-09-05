@@ -79,7 +79,9 @@ test('default answer preserves four layers and horizons in plain Vietnamese with
 test('default model answer stays concise, explicit detail still carries source evidence', () => {
   for (const question of ['Phân tích MBB','MBB mua được chưa?','Phân tích chi tiết nhưng đơn giản dễ hiểu']) {
     assert.equal(wantsResearchDetail(question),false);
-    assert.equal(appendResearchSnapshot('KẾT LUẬN: Theo dõi.',context(),question),'KẾT LUẬN: Theo dõi.');
+    const answer=appendResearchSnapshot('KẾT LUẬN: Theo dõi.',context(),question);
+    assert.match(answer,/^KẾT LUẬN: Theo dõi\.\n\nMỤC TIÊU DỰ KIẾN VÀ CẮT LỖ/);
+    assert.doesNotMatch(answer,/DỮ LIỆU NGHIÊN CỨU STOCKRADAR/);
   }
   assert.equal(wantsResearchDetail('Phân tích CHI TIẾT MBB'),true);
   assert.match(appendResearchSnapshot('KẾT LUẬN: Theo dõi.',context(),'Phân tích chuyên sâu MBB'),/DỮ LIỆU NGHIÊN CỨU STOCKRADAR/);

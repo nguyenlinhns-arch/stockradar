@@ -20,11 +20,11 @@ REMOVE_CSS = {
 }
 REMOVE_JS = {
     "buyer-readiness-v1.js",
-    "conversion-v3.js",
     "ai-assistant.js",
 }
 REQUIRED_CSS = {
-    "styles.css",
+    "ai-decision-view.css",
+    "home-base.css",
     "home-ai-center-v1.css",
     "home-workspace-v2.css",
     "professional-v5.css",
@@ -33,6 +33,8 @@ REQUIRED_CSS = {
     "header-notifications.css",
 }
 REQUIRED_JS = {
+    "conversion-v3.js",
+    "ai-decision-view.js",
     "auth-config.js",
     "auth-state-v2.js",
     "ai-center.js",
@@ -45,7 +47,7 @@ REQUIRED_JS = {
 }
 # Keep the performance gate strict. We reduce shipped bytes instead of raising this budget.
 MAX_LOCAL_ASSET_BYTES = 196_000  # Includes the requested six-column recommendation history and mobile layout.
-AI_CENTER_CACHE_VERSION = "20260905-email1"
+AI_CENTER_CACHE_VERSION = "20260905-decision1"
 
 
 def basename(ref: str) -> str:
@@ -223,6 +225,7 @@ def main() -> None:
         raise RuntimeError("Homepage missing from Pages artifact")
 
     source = page.read_text(encoding="utf-8")
+    source = re.sub(r'assets/styles\.css(?:\?[^"\']*)?', 'assets/home-base.css?v=20260905-decision1', source)
     source, ai_count = re.subn(
         r'assets/ai-center\.js(?:\?[^"\']*)?',
         f'assets/ai-center.js?v={AI_CENTER_CACHE_VERSION}',

@@ -257,8 +257,8 @@ class StaticAssetTests(unittest.TestCase):
     def test_public_positioning_matches_current_horizons_and_pricing(self) -> None:
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
         for marker in (
-            "STOCKRADAR AI · CỬA VÀO CHÍNH",
-            "Hỏi một mã cổ phiếu",
+            "STOCKRADAR AI",
+            "AI tìm điểm mua/bán cổ phiếu HOSE",
             "Khách: 3 câu/ngày",
             "10 câu AI/ngày",
             "Email tự động báo điểm mua/bán",

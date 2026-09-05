@@ -12,14 +12,18 @@ import argparse
 import re
 from pathlib import Path
 from urllib.parse import urlsplit
+if __package__:
+    from .optimize_home_asset_budget_v1 import minify_home_css
+else:
+    from optimize_home_asset_budget_v1 import minify_home_css
 
 ROUTES = {
     "tai-khoan": {
         "remove_css": {
-            "conversion-v1.css", "buyer-readiness-v1.css", "conversion-v3.css", "ai-assistant.css",
+            "conversion-v1.css", "buyer-readiness-v1.css", "conversion-v3.css", "ai-assistant.css", "ai-decision-view.css",
         },
         "remove_js": {
-            "buyer-readiness-v1.js", "conversion-v3.js", "ai-assistant.js",
+            "buyer-readiness-v1.js", "conversion-v3.js", "ai-assistant.js", "ai-decision-view.js",
             "public-fallbacks-v4.js", "direct-ticker-nav-v1.js", "conversion-state-v1.js",
         },
         "required_assets": {
@@ -42,18 +46,19 @@ ROUTES = {
     "hom-nay": {
         "remove_css": {"conversion-v1.css", "buyer-readiness-v1.css"},
         "remove_js": {
-            "buyer-readiness-v1.js", "public-fallbacks-v4.js", "direct-ticker-nav-v1.js", "conversion-state-v1.js",
+            "buyer-readiness-v1.js", "public-fallbacks-v4.js", "direct-ticker-nav-v1.js", "conversion-state-v1.js", "public-copy-v7.js",
         },
         "required_assets": {
+            "ai-decision-view.css", "ai-decision-view.js",
             "styles.css", "auth.css", "auth-extra.css", "paid-dashboard-v1.css", "professional-v5.css",
             "public-ux.css", "site-v4.css", "mobile-touch-v1.css", "ai-assistant.css", "commercial-v1.css",
             "header-notifications.css", "app.js", "auth-config.js", "auth.js", "paid-dashboard-v1.js",
             "paid-nav-v1.js", "public-ux.js", "auth-production-gate.js", "header-auth-dedupe-v6.js",
-            "public-copy-v7.js", "decision-copy-guard-v1.js", "auth-state-v2.js", "ai-assistant.js",
+            "decision-copy-guard-v1.js", "auth-state-v2.js", "ai-assistant.js",
             "commercial-v1.js", "header-notifications.js",
         },
         "required_html": {"data-paid-dashboard", "data-paid-actions", "data-paid-owned-list", "data-paid-watch-list"},
-        "max_css": 11,
+        "max_css": 12,
         "max_js": 16,
         "max_bytes": 325_000,
     },
@@ -119,6 +124,7 @@ def process(output: Path, route: str, cfg: dict) -> None:
 
     rendered = page.read_text(encoding="utf-8")
     css = css_refs(rendered)
+    minify_home_css(output, css)
     js = js_refs(rendered)
     names = {
         basename(ref) for ref in css + js

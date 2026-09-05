@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from typing import Any, Mapping, Sequence
 
 
@@ -83,8 +83,9 @@ def build_premium_action_alert(payload: Mapping[str, Any]) -> dict[str, Any]:
         raise ValueError("price-dependent action requires reference_price")
 
     buy_zone = payload.get("buy_zone")
-    stop = payload.get("stop")
-    target = payload.get("target")
+    stop = payload.get("stop_loss", payload.get("stop"))
+    target_key = {"SHORT_TERM": "target_near", "MEDIUM_TERM": "target_3_6m", "LONG_TERM": "target_12m", "ACCUMULATION": "target_price"}.get(horizon)
+    target = payload.get(target_key, payload.get("target"))
     risk_reward = payload.get("risk_reward")
 
     if current_state in {"BUY", "ADD"}:
@@ -97,12 +98,18 @@ def build_premium_action_alert(payload: Mapping[str, Any]) -> dict[str, Any]:
 
     previous_label = STATE_LABELS[previous_state]
     current_label = STATE_LABELS[current_state]
-    evaluated_label = evaluated_at.strftime("%H:%M")
-
-    subject = f"[StockRadar] {ticker} · {previous_label} → {current_label} | {evaluated_label}"
+    if evaluated_at.tzinfo is None or generated_at.tzinfo is None:
+        raise ValueError("action timestamps require timezone")
+    evaluated_label = evaluated_at.astimezone(timezone(timedelta(hours=7))).strftime("%H:%M %d/%m/%Y")
+    setup = str(payload.get("setup") or "").upper()
+    label = {"SELL": "BÁN", "REDUCE": "HẠ TỶ TRỌNG", "ADD": "NHỒI LỆNH"}.get(current_state)
+    label = label or (setup.replace("_", " ") if setup in {"POCKET_PIVOT", "EARLY_BREAKOUT", "CONFIRMED_BREAKOUT", "RETEST"} else current_label)
+    price_label = f"{float(reference_price):,.0f}".replace(",", ".") + "đ" if reference_price else "Chưa xác nhận"
+    subject = f"[{label}] {ticker} — {evaluated_label} — Giá {price_label}"
     preheader = f"{ticker}: trạng thái vừa đổi. Xem việc cần làm và điều kiện làm quyết định không còn đúng."
 
     decision_card = {
+        **{key: payload.get(key) for key in ("setup", "position_initial_pct", "target_near", "target_3_6m", "target_12m", "target_price", "upside_pct", "downside_pct", "as_of_date", "source_updated_at", "data_freshness", "expected_holding_period")},
         "ticker": ticker,
         "horizon": horizon,
         "previous_state": previous_label,
@@ -114,6 +121,7 @@ def build_premium_action_alert(payload: Mapping[str, Any]) -> dict[str, Any]:
         "holding_decision": payload.get("holding_decision"),
         "buy_zone": buy_zone,
         "stop": stop,
+        "stop_loss": stop,
         "target": target,
         "risk_reward": risk_reward,
         "invalidation": invalidation,
@@ -137,7 +145,7 @@ def build_premium_action_alert(payload: Mapping[str, Any]) -> dict[str, Any]:
             if current_state in {"BUY", "ADD"}
             else None
         ),
-        "primary_cta": "XEM TRẠNG THÁI MỚI NHẤT",
+        "primary_cta": "Phân tích chi tiết bằng AI StockRadar",
     }
 
 

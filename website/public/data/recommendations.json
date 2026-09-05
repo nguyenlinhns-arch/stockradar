@@ -15,7 +15,21 @@
     "average_gain_pct": null,
     "average_loss_pct": null,
     "average_closed_return_pct": null,
-    "excludes_unactivated_from_win_rate": true
+    "excludes_unactivated_from_win_rate": true,
+    "record_mode": "LIVE_PUBLISHED",
+    "wins": 0,
+    "losses": 0,
+    "breakeven": 0,
+    "sample_status": "INSUFFICIENT_SAMPLE",
+    "minimum_closed": 20,
+    "win_rate_denominator": 0,
+    "expectancy_pct": null,
+    "payoff_ratio": null,
+    "median_holding_days": null,
+    "average_excess_return_pct": null,
+    "max_drawdown_pct": null,
+    "drawdown_status": "EQUITY_CURVE_REQUIRED",
+    "excluded_records": 0
   },
   "new_recommendation_status": {
     "published": false,

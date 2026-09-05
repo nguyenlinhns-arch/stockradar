@@ -1,13 +1,6 @@
 (() => {
   'use strict';
 
-  const PUBLIC_BANK = Object.freeze({
-    bin: '970432',
-    name: 'VPBank',
-    accountNumber: '0934389822',
-    accountName: 'NGUYỄN TỬ LINH',
-  });
-
   const runtime = {
     amount: 199000,
     durationDays: 30,
@@ -17,7 +10,8 @@
     client: null,
     pollTimer: null,
     countdownTimer: null,
-    paymentMetaObserver: null,
+    readiness: null,
+    accessRefreshed: false,
   };
 
   function config() {
@@ -35,7 +29,7 @@
       if (!Number.isFinite(date.getTime())) return '—';
       return new Intl.DateTimeFormat('vi-VN', {
         day: '2-digit', month: '2-digit', year: 'numeric',
-        hour: '2-digit', minute: '2-digit', hour12: false,
+        hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Ho_Chi_Minh',
       }).format(date);
     } catch (_) {
       return '—';
@@ -50,13 +44,6 @@
     document.querySelectorAll(selector).forEach(node => { node.textContent = value; });
   }
 
-  function renderPublicBank() {
-    setText('[data-checkout-bank]', PUBLIC_BANK.name);
-    setText('[data-checkout-account-number]', PUBLIC_BANK.accountNumber);
-    setText('[data-checkout-account-name]', PUBLIC_BANK.accountName);
-    setCopyValue('[data-copy-account]', PUBLIC_BANK.accountNumber);
-  }
-
   function setState(message, kind = 'warn') {
     document.querySelectorAll('[data-checkout-state]').forEach(node => {
       node.className = `checkout-state is-${kind}`;
@@ -69,7 +56,7 @@
     if (raw.includes('AUTH_REQUIRED')) return 'Vui lòng đăng nhập trước khi thanh toán.';
     if (raw.includes('EMAIL_VERIFICATION_REQUIRED')) return 'Hãy xác minh email tài khoản trước khi thanh toán.';
     if (raw.includes('ACCOUNT_NOT_ACTIVE')) return 'Tài khoản chưa ở trạng thái hoạt động.';
-    if (raw.includes('CHECKOUT_DISABLED')) return 'Thanh toán tạm thời chưa tạo được mã giao dịch. Thông tin tài khoản VPBank vẫn là tài khoản nhận tiền chính thức.';
+    if (raw.includes('CHECKOUT_DISABLED')) return 'Premium tạm dừng kích hoạt mới. Bạn có thể đăng ký quan tâm; chưa chuyển khoản.';
     if (raw.includes('PLAN_NOT_AVAILABLE')) return 'Gói Premium hiện chưa mở bán.';
     if (raw.includes('CHECKOUT_EXPIRED')) return 'Mã thanh toán đã hết hạn. Hãy tạo lại yêu cầu thanh toán.';
     if (raw.includes('CHECKOUT_NOT_FOUND')) return 'Không tìm thấy yêu cầu thanh toán của tài khoản này.';
@@ -138,38 +125,11 @@
     return '';
   }
 
-  function referenceFromQr() {
-    const image = document.querySelector('[data-checkout-qr-image]');
-    if (!image) return '';
-    const candidates = [image.currentSrc, image.src, image.getAttribute('src'), image.alt];
-    for (const candidate of candidates) {
-      const raw = String(candidate || '').trim();
-      if (!raw) continue;
-      try {
-        const parsed = new URL(raw, document.baseURI);
-        const fromQuery = parsed.searchParams.get('addInfo')
-          || parsed.searchParams.get('addinfo')
-          || parsed.searchParams.get('content')
-          || parsed.searchParams.get('description');
-        if (fromQuery && /^SR[-0-9A-Z]{6,32}$/i.test(fromQuery.trim())) return fromQuery.trim().toUpperCase();
-      } catch (_) {}
-      const match = raw.toUpperCase().match(/\bSR[-0-9A-Z]{6,32}\b/);
-      if (match) return match[0];
-    }
-    return '';
-  }
-
-  function referenceFromState() {
-    const raw = String(document.querySelector('[data-checkout-state]')?.textContent || '').toUpperCase();
-    const match = raw.match(/\bSR[-0-9A-Z]{6,32}\b/);
-    return match ? match[0] : '';
-  }
-
   function checkoutReference(request) {
     return firstText(request, [
       'payment_reference', 'paymentReference', 'transfer_content', 'transferContent',
       'transfer_reference', 'transferReference', 'reference', 'payment_code', 'paymentCode', 'code',
-    ]).toUpperCase() || referenceFromQr() || referenceFromState();
+    ]).toUpperCase();
   }
 
   function checkoutExpiry(request) {
@@ -188,9 +148,10 @@
   function qrUrl(request) {
     const reference = checkoutReference(request);
     if (!reference) return '';
-    const bankBin = request?.bank_bin || request?.bankBin || PUBLIC_BANK.bin;
-    const accountNumber = request?.account_number || request?.accountNumber || PUBLIC_BANK.accountNumber;
-    const accountName = request?.account_name || request?.accountName || PUBLIC_BANK.accountName;
+    const bankBin = request?.bank_bin || request?.bankBin;
+    const accountNumber = request?.account_number || request?.accountNumber;
+    const accountName = request?.account_name || request?.accountName;
+    if (!runtime.readiness?.checkout_ready || !bankBin || !accountNumber || !accountName) return '';
     const base = `https://img.vietqr.io/image/${encodeURIComponent(bankBin)}-${encodeURIComponent(accountNumber)}-compact2.png`;
     const params = new URLSearchParams({
       amount: String(request?.amount_vnd || request?.amount || runtime.amount),
@@ -207,7 +168,7 @@
     const reference = checkoutReference(request);
     if (image) {
       image.hidden = !url;
-      image.src = url || '';
+      if (url) image.src = url; else image.removeAttribute('src');
       image.alt = url ? `VietQR thanh toán ${reference}` : '';
     }
     if (placeholder) placeholder.hidden = Boolean(url);
@@ -242,47 +203,12 @@
     document.querySelectorAll('[data-checkout-disabled-fallback]').forEach(node => { node.hidden = !show; });
   }
 
-  function recoverVisiblePaymentMeta() {
-    const referenceTarget = document.querySelector('[data-checkout-reference]');
-    const expiryTarget = document.querySelector('[data-checkout-expiry]');
-    const expiryAtTarget = document.querySelector('[data-checkout-expiry-at]');
-    const currentReference = String(referenceTarget?.textContent || '').trim();
-    const recoveredReference = currentReference && currentReference !== '—'
-      ? currentReference
-      : checkoutReference(runtime.request || {});
-
-    if (referenceTarget && recoveredReference && currentReference !== recoveredReference) {
-      referenceTarget.textContent = recoveredReference;
-      setCopyValue('[data-copy-reference]', recoveredReference);
-    }
-
-    if (!recoveredReference || !expiryTarget) return;
-    const expiryAt = checkoutExpiry(runtime.request || {});
-    const currentExpiry = String(expiryTarget.textContent || '').trim();
-    if (expiryAt) {
-      if (expiryAtTarget && (!expiryAtTarget.textContent.trim() || expiryAtTarget.textContent.trim() === '—')) {
-        expiryAtTarget.textContent = formatDateTime(expiryAt);
-      }
-      if (!currentExpiry || currentExpiry === '—') startCountdown(expiryAt);
-    } else if (!currentExpiry || currentExpiry === '—') {
-      expiryTarget.textContent = 'Tối đa 30 phút từ lúc tạo mã';
-    }
-  }
-
-  function watchPaymentMeta() {
-    if (runtime.paymentMetaObserver) runtime.paymentMetaObserver.disconnect();
-    const root = document.querySelector('#payment') || document.body;
-    runtime.paymentMetaObserver = new MutationObserver(() => recoverVisiblePaymentMeta());
-    runtime.paymentMetaObserver.observe(root, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['src', 'data-copy-value'] });
-    [0, 100, 300, 750, 1500, 3000].forEach(delay => setTimeout(recoverVisiblePaymentMeta, delay));
-  }
-
   function renderRequest(request) {
     const reference = checkoutReference(request || {});
     const expiresAt = checkoutExpiry(request || {});
     const requestId = firstText(request, ['request_id', 'requestId', 'checkout_id', 'checkoutId']);
     const checkoutFlag = request?.checkout_enabled ?? request?.checkoutEnabled;
-    const enabled = Boolean(requestId && checkoutFlag !== false);
+    const enabled = Boolean(runtime.readiness?.checkout_ready === true && requestId && checkoutFlag === true);
     const amount = Number(request?.amount_vnd || request?.amount || runtime.amount);
     const status = firstText(request, ['status']).toUpperCase();
     const normalized = request ? {
@@ -295,16 +221,17 @@
     } : null;
 
     runtime.request = normalized;
+    document.querySelectorAll('[data-checkout-payment]').forEach(node => { node.hidden = !enabled; });
     runtime.amount = amount;
     runtime.durationDays = Number(request?.duration_days || request?.durationDays || 30);
 
     setText('[data-checkout-amount]', formatVnd(amount));
-    setText('[data-checkout-bank]', request?.bank_name || request?.bankName || PUBLIC_BANK.name);
-    setText('[data-checkout-account-number]', request?.account_number || request?.accountNumber || PUBLIC_BANK.accountNumber);
-    setText('[data-checkout-account-name]', request?.account_name || request?.accountName || PUBLIC_BANK.accountName);
+    setText('[data-checkout-bank]', request?.bank_name || request?.bankName || '—');
+    setText('[data-checkout-account-number]', request?.account_number || request?.accountNumber || '—');
+    setText('[data-checkout-account-name]', request?.account_name || request?.accountName || '—');
     setText('[data-checkout-reference]', reference || '—');
     setText('[data-checkout-expiry-at]', expiresAt ? formatDateTime(expiresAt) : (reference ? 'Mã có thời hạn tối đa 30 phút' : '—'));
-    setCopyValue('[data-copy-account]', request?.account_number || request?.accountNumber || PUBLIC_BANK.accountNumber);
+    setCopyValue('[data-copy-account]', request?.account_number || request?.accountNumber);
     setCopyValue('[data-copy-reference]', reference);
     renderQr(enabled ? normalized : null);
     if (expiresAt) startCountdown(expiresAt);
@@ -318,26 +245,29 @@
       const confirmable = enabled && status === 'PENDING';
       confirm.disabled = !confirmable;
       confirm.textContent = status === 'USER_CONFIRMED'
-        ? 'Đã gửi · Chờ xác nhận qua email'
+        ? 'Đã ghi nhận · Chờ đối soát'
         : status === 'PAID'
           ? 'Premium đã được kích hoạt'
           : 'Tôi đã chuyển khoản · Gửi xác nhận';
     }
 
-    showPaymentFallback(!enabled && Boolean(runtime.user));
+    showPaymentFallback(!runtime.readiness?.checkout_ready);
 
-    if (!enabled) {
-      recoverVisiblePaymentMeta();
-      return;
-    }
+    if (!enabled && status !== 'PAID' && status !== 'USER_CONFIRMED') return;
     if (status === 'PENDING') {
       setState(`Mã thanh toán ${reference} đã được cấp riêng cho tài khoản này. Sau khi chuyển khoản, bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị.`, 'ok');
     } else if (status === 'USER_CONFIRMED') {
-      setState('Yêu cầu xác nhận đã được gửi tới email quản trị StockRadar. Premium chỉ được kích hoạt sau khi thanh toán được kiểm tra và xác nhận.', 'warn');
+      setState('Yêu cầu đã được ghi nhận và đang chờ đối soát. Premium chỉ kích hoạt sau khi thanh toán được xác minh.', 'warn');
     } else if (status === 'PAID') {
-      setState(`Thanh toán đã được xác minh. Premium đang hoạt động${request?.paid_until ? ` đến ${formatDateTime(request.paid_until)}` : ''}. Email xác nhận kích hoạt cũng được gửi tới tài khoản của bạn.`, 'ok');
+      setState(`Thanh toán đã được xác minh. Premium đang hoạt động${request?.paid_until ? ` đến ${formatDateTime(request.paid_until)}` : ''}.`, 'ok');
       stopPolling();
       stopCountdown();
+      if (!runtime.accessRefreshed) {
+        runtime.accessRefreshed = true;
+        getClient().rpc('get_my_stockradar_access').then(({data,error}) => {
+          if (!error && data?.account_tier === 'PAID') window.dispatchEvent(new CustomEvent('stockradar-access-changed'));
+        });
+      }
       const mobile = document.querySelector('[data-checkout-mobile-action]');
       if (mobile) {
         mobile.textContent = 'Mở tài khoản Premium';
@@ -348,15 +278,36 @@
       stopPolling();
       stopCountdown();
     }
-    recoverVisiblePaymentMeta();
+  }
+
+  async function loadReadiness() {
+    let data = null;
+    try { const result = await getClient()?.rpc('get_stockradar_product_readiness_v1'); if (!result?.error) data = result?.data; } catch (_) {}
+    runtime.readiness = data?.schema_version === 'STOCKRADAR_PRODUCT_READINESS_V1' ? data : null;
+    const ready = runtime.readiness?.checkout_ready === true;
+    document.body.dataset.checkoutReady = String(ready);
+    if (!ready) {
+      document.querySelectorAll('[data-checkout-payment]').forEach(node => { node.hidden = true; });
+      document.querySelector('[data-checkout-qr-image]')?.removeAttribute('src');
+      setCopyValue('[data-copy-account]', ''); setCopyValue('[data-copy-reference]', '');
+      const confirm = document.querySelector('[data-checkout-confirm]'); if (confirm) confirm.disabled = true;
+      setState(data ? 'Premium tạm dừng kích hoạt mới: dữ liệu, email hoặc thanh toán chưa đủ điều kiện.' : 'Chưa xác minh được trạng thái Premium. Vui lòng thử lại; chưa chuyển khoản.', 'warn');
+      document.querySelectorAll('[data-checkout-login],[data-checkout-mobile-action]').forEach(node => {
+        node.textContent = 'Đăng ký quan tâm Premium'; node.href = 'dang-ky/#premium';
+      });
+    }
+    showPaymentFallback(!ready);
+    return ready;
   }
 
   async function loadRequest() {
     const client = getClient();
     if (!client || !runtime.user) return null;
+    if (!await loadReadiness()) throw new Error('CHECKOUT_DISABLED');
     const { data, error } = await client.rpc('create_my_checkout_request', { p_plan_code: 'ADVANCED_TEST' });
     if (error) throw error;
     renderRequest(data);
+    if(data?.request_id && data?.checkout_enabled===true)window.StockRadarAnalytics?.checkoutCreated();
     return data;
   }
 
@@ -364,9 +315,10 @@
     const client = getClient();
     const id = runtime.request?.request_id;
     if (!client || !id) return;
+    await loadReadiness();
     const { data, error } = await client.rpc('get_my_checkout_request', { p_checkout_id: id });
     if (error) return;
-    renderRequest({ ...runtime.request, ...data, checkout_enabled: true });
+    renderRequest({ ...runtime.request, ...data });
   }
 
   function stopPolling() {
@@ -385,12 +337,13 @@
     const button = document.querySelector('[data-checkout-confirm]');
     const id = runtime.request?.request_id;
     if (!client || !id || !button) return;
+    if (!await loadReadiness()) { renderRequest(runtime.request); return; }
     button.disabled = true;
     button.textContent = 'Đang gửi xác nhận…';
     try {
       const { data, error } = await client.rpc('confirm_my_checkout_request', { p_checkout_id: id });
       if (error) throw error;
-      renderRequest({ ...runtime.request, ...data, checkout_enabled: true });
+      renderRequest({ ...runtime.request, ...data });
       startPolling();
     } catch (error) {
       button.disabled = false;
@@ -409,8 +362,9 @@
     const login = document.querySelector('[data-checkout-login]');
     const mobile = document.querySelector('[data-checkout-mobile-action]');
 
-    renderPublicBank();
     if (target) target.textContent = runtime.user?.email || 'Chưa đăng nhập';
+    const ready = await loadReadiness();
+    if (!ready) { renderRequest(null); return; }
     if (!runtime.user) {
       if (login) {
         login.textContent = 'Đăng nhập để tạo mã thanh toán';
@@ -420,9 +374,8 @@
         mobile.textContent = 'Đăng nhập để tạo mã thanh toán';
         mobile.href = `dang-nhap/?next=${encodeURIComponent('thanh-toan/?plan=premium')}`;
       }
-      setState('VPBank 0934389822 · NGUYỄN TỬ LINH là tài khoản nhận tiền chính thức. Đăng nhập để tạo nội dung chuyển khoản riêng và VietQR.', 'warn');
+      setState('Thanh toán đã đủ điều kiện. Đăng nhập để nhận mã chuyển khoản riêng và VietQR.', 'warn');
       showPaymentFallback(false);
-      recoverVisiblePaymentMeta();
       return;
     }
 
@@ -441,23 +394,19 @@
     } catch (error) {
       renderRequest(null);
       setState(checkoutError(error), 'warn');
-      recoverVisiblePaymentMeta();
     }
   }
 
   async function mount() {
     setText('[data-checkout-amount]', formatVnd(runtime.amount));
-    renderPublicBank();
     wireCopyButtons();
     wireConfirm();
-    watchPaymentMeta();
     await renderAccount();
   }
 
   window.addEventListener('pagehide', () => {
     stopPolling();
     stopCountdown();
-    if (runtime.paymentMetaObserver) runtime.paymentMetaObserver.disconnect();
   });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mount, { once: true });

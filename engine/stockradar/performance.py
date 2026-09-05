@@ -3,6 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from typing import Sequence
+from datetime import datetime
+from statistics import mean, median
+from math import isfinite
 
 
 class PerformanceError(ValueError):
@@ -120,3 +123,49 @@ def calculate_return(
 
 def calculate_excess_return(stock_return_pct: float, benchmark_return_pct: float) -> float:
     return round(stock_return_pct - benchmark_return_pct, 2)
+
+
+def live_publication_summary(records: Sequence[dict], minimum_closed: int = 20) -> dict:
+    """Describe the complete released cohort; never mix replay or email history with live results.
+
+    Twenty closed observations is a display floor, not a claim of statistical significance.
+    Portfolio drawdown needs a marked equity series; independent trade returns cannot supply it.
+    """
+    rows = [r for r in records if r.get('record_mode') == 'LIVE_PUBLISHED'
+            and r.get('publish_status') == 'PUBLISHED' and r.get('data_grade') == 'DECISION_GRADE'
+            and r.get('is_mock') is False and r.get('published_at') and r.get('snapshot_id')]
+    ids = [r.get('recommendation_id') for r in rows]
+    if any(not value for value in ids) or len(set(ids)) != len(ids):
+        raise PerformanceError('Live performance requires unique recommendation IDs')
+    closed = [r for r in rows if r.get('activation_timestamp') and r.get('close_timestamp')
+              and r.get('close_price') is not None and r.get('final_return_pct') is not None]
+    returns = [float(r['final_return_pct']) for r in closed]
+    if not all(isfinite(value) for value in returns):
+        raise PerformanceError('Non-finite realized return')
+    gains = [v for v in returns if v > 0]
+    losses = [v for v in returns if v < 0]
+    holding = []
+    for r in closed:
+        start = datetime.fromisoformat(r['activation_timestamp'].replace('Z', '+00:00'))
+        end = datetime.fromisoformat(r['close_timestamp'].replace('Z', '+00:00'))
+        if start.tzinfo is None or end.tzinfo is None or end < start:
+            raise PerformanceError('Invalid realized holding window')
+        holding.append((end - start).total_seconds() / 86400)
+    enough = len(closed) >= minimum_closed
+    average = lambda values: round(mean(values), 4) if enough and values else None
+    return {
+        'record_mode': 'LIVE_PUBLISHED', 'total_published': len(rows), 'closed': len(closed),
+        'unactivated': sum(not r.get('activation_timestamp') for r in rows),
+        'open': sum(bool(r.get('activation_timestamp')) and not r.get('close_timestamp') for r in rows),
+        'wins': len(gains), 'losses': len(losses), 'breakeven': returns.count(0),
+        'sample_status': 'DESCRIPTIVE_ONLY' if enough else 'INSUFFICIENT_SAMPLE',
+        'minimum_closed': minimum_closed, 'win_rate_denominator': len(closed),
+        'win_rate_pct': round(len(gains) / len(closed) * 100, 2) if enough else None,
+        'average_gain_pct': average(gains), 'average_loss_pct': average(losses),
+        'expectancy_pct': average(returns),
+        'payoff_ratio': round(mean(gains) / abs(mean(losses)), 4) if enough and gains and losses else None,
+        'median_holding_days': round(median(holding), 2) if enough and holding else None,
+        'average_excess_return_pct': average([float(r['excess_return_pct']) for r in closed if r.get('excess_return_pct') is not None]),
+        'max_drawdown_pct': None, 'drawdown_status': 'EQUITY_CURVE_REQUIRED',
+        'excluded_records': len(records) - len(rows),
+    }

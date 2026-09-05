@@ -202,6 +202,7 @@
         ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY), guest_id: guestId()
       };
 
+      window.StockRadarAnalytics?.aiSubmitted();
       const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(35000) });
       let data = {};
       try { data = await response.json(); } catch (_) {}
@@ -211,13 +212,14 @@
         return;
       }
 
+      if(response.ok)window.StockRadarAnalytics?.aiResult(data);
       const answer = data.answer || (response.ok ? 'StockRadar AI chưa có nội dung để trả lời.' : 'StockRadar AI tạm thời chưa thể phản hồi.');
-      addMessage(log, 'assistant', answer, sourceMeta(data));
+      if (!window.StockRadarDecisionView?.render(log, data, sourceMeta(data))) addMessage(log, 'assistant', answer, sourceMeta(data));
       const warning = freshnessNotice(data);
       if (warning) addMessage(log, 'assistant', warning, 'Fail-closed · không dùng dữ liệu cũ để khuyến nghị');
       updatePlan(status, data, account.tier);
 
-      if (response.status === 429) {
+      if (response.status === 429 && data.reason !== 'TECHNICAL_RATE_LIMIT') {
         const responseTier = normalizeTier(data?.tier || account.tier);
         if (responseTier === 'GUEST') addAction(log, 'Đăng ký miễn phí để tiếp tục sử dụng AI StockRadar.', 'dang-ky/?plan=free', 'Đăng ký Free');
         if (responseTier === 'FREE') addAction(log, 'Bạn đã sử dụng hết lượt AI miễn phí. Nâng cấp StockRadar Pro để sử dụng không giới hạn.', 'thanh-toan/?plan=premium', 'Nâng Premium');

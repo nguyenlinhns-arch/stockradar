@@ -251,16 +251,12 @@ def main() -> None:
         raise RuntimeError(f"Pages output does not exist: {output}")
 
     email_ready = enabled("STOCKRADAR_PRODUCT_EMAIL_READY")
-    checkout_ready = enabled("STOCKRADAR_CHECKOUT_READY") or (output / "thanh-toan" / "index.html").is_file()
+    checkout_ready = enabled("STOCKRADAR_CHECKOUT_READY")
 
     for required in ("buyer-readiness-v1.css", "buyer-readiness-v1.js"):
         if not (output / "assets" / required).is_file():
             raise RuntimeError(f"Missing buyer-readiness asset: {required}")
 
-    if not checkout_ready:
-        checkout = output / "thanh-toan"
-        if checkout.exists():
-            shutil.rmtree(checkout)
 
     pages = sorted(output.rglob("*.html"))
     for page in pages:

@@ -4,12 +4,13 @@ import fs from 'node:fs';
 import * as core from '../../supabase/functions/_shared/stockradar-core.ts';
 import * as view from '../../supabase/functions/_shared/stockradar-research-view.ts';
 import * as query from '../../supabase/functions/_shared/stockradar-query.ts';
+import * as decision from '../../supabase/functions/_shared/stockradar-decision.ts';
 
-function harness({guest=false,tier='FREE',quota=true,incomplete=false,watch=[]}={}) {
+function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,incomplete=false,watch=[]}={}) {
   let handler, modelInput, quotaCalls=0;
   const calls=[];
   const context=ticker=>({status:'INTERNAL_RESEARCH_READY',context_grade:'RESEARCH_READY',ticker,
-    snapshot_id:'fixture-observation',as_of_date:'2026-09-04',data_quality:'updated',
+    snapshot_id:'fixture-observation',generated_at:stale?'2020-01-01T00:00:00Z':new Date().toISOString(),as_of_date:new Date(Date.now()+7*3600000).toISOString().slice(0,10),data_quality:'updated',
     payload:{quote:{price:12345},setup:{new_position_state_v5:'WATCH'},technical_detail:{ma20:12000,volume:500000}}});
   const db={auth:{getUser:async()=>({data:{user:{id:'user-a'}}})},
     rpc:async(name,args)=>{
@@ -18,6 +19,7 @@ function harness({guest=false,tier='FREE',quota=true,incomplete=false,watch=[]}=
       if(name==='fetch_stockradar_ai_context')return {data:context(args.p_ticker)};
       if(name==='query_stockradar_research')return {data:{items:[context('HPG'),context('NKG')]}};
       if(name==='fetch_stockradar_cached_report')return {data:{status:'BLOCKED'}};
+      if(args?.p_bucket==='stock_ai_burst')return {data:{allowed:burst,retry_after:60}};
       if(name.includes('consume_')){quotaCalls++;return {data:{allowed:quota,limit:tier==='PAID'?null:guest?3:10,remaining:tier==='PAID'?null:0,unlimited:tier==='PAID'}};}
       return {data:null};
     },
@@ -27,7 +29,7 @@ function harness({guest=false,tier='FREE',quota=true,incomplete=false,watch=[]}=
     }};
   const Deno={serve:fn=>{handler=fn;},env:{get:name=>({SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'test-only',OPENAI_API_KEY:'test-only'}[name])}};
   const fetchMock=async(url,args)=>{modelInput=JSON.parse(JSON.parse(args.body).input);return new Response(JSON.stringify({status:incomplete?'incomplete':'completed',output_text:'KẾT LUẬN: THEO DÕI. DỮ LIỆU: 04/09/2026.'}));};
-  const bindings={...core,...view,...query,Deno,createClient:()=>db,fetch:fetchMock};
+  const bindings={...core,...view,...query,...decision,Deno,createClient:()=>db,fetch:fetchMock};
   const source=fs.readFileSync(new URL(`../../supabase/functions/${guest?'stock-ai-guest':'stock-ai'}/index.ts`,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
   new Function(...Object.keys(bindings),source.replace("} catch { return json({status:'SERVICE_UNAVAILABLE',answer:","} catch (error) { throw error; return json({status:'SERVICE_UNAVAILABLE',answer:"))(...Object.values(bindings));
   return {calls,get modelInput(){return modelInput},get quotaCalls(){return quotaCalls},async ask(message,extra={}){
@@ -81,4 +83,15 @@ test('guest and signed-in answers append full research only on a detailed reques
     const detailed=await h.ask('Phân tích chi tiết HPG');
     assert.match(detailed.body.answer,/DỮ LIỆU NGHIÊN CỨU STOCKRADAR/);
   }
+});
+
+test('paid technical burst denial preserves daily unlimited entitlement and never calls inference',async()=>{
+ const h=harness({tier:'PAID',burst:false});const r=await h.ask('Phân tích HPG');
+ assert.equal(r.status,429);assert.equal(r.body.reason,'TECHNICAL_RATE_LIMIT');assert.equal(r.body.quota_consumed,false);assert.equal(h.quotaCalls,0);assert.equal(h.modelInput,undefined);
+ assert.ok(!h.calls.some(x=>x.name==='fetch_stockradar_ai_context'));
+});
+
+test('stale observations cannot reach a provider or a scenario price even if a cache labels them research ready',async()=>{
+ for(const guest of [false,true]){const h=harness({guest,stale:true});const r=await h.ask('FPT mua được chưa?');
+ assert.equal(r.body.mode,'METHOD_ONLY');assert.equal(h.modelInput,undefined);assert.equal(r.body.decision_cards[0].public_action_allowed,false);assert.equal(r.body.decision_cards[0].price,null);assert.match(r.body.answer,/CHƯA ĐỦ DỮ LIỆU/);}
 });

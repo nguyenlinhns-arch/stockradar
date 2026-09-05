@@ -39,7 +39,7 @@ export function technicalEvidence(context:Data):Data {
   const bands=num(t.bollinger_lower)!=null&&num(t.bollinger_upper)!=null?`Dải biến động giá: ${money(t.bollinger_lower)}–${money(t.bollinger_upper)}; đây không tự động là vùng mua.`:'';
   const cloud=t.ichimoku_state==='BELOW_KUMO'?'Giá còn dưới vùng cản của mây Ichimoku.':t.ichimoku_state==='ABOVE_KUMO'?'Giá đã ở trên vùng mây Ichimoku.':'';
   return {stage,ma20,ma50,ma200,pivot:facts.pivot,trend,summary:[trend,ma?`Giá trung bình ${ma}.`:'Chưa đủ dữ liệu đường trung bình.',below.length?`Giá hiện tại thấp hơn đường trung bình ${below.join('/')} phiên.`:'',...checks].filter(Boolean).join(' '),bands,cloud,
-    invalidation: facts.pivot!=null?`Chưa có điểm mua xác nhận. Nếu có tín hiệu vượt ${money(facts.pivot)} rồi giá quay xuống dưới mốc này, phải đánh giá lại; chưa tự đặt giá cắt lỗ khi hệ thống chưa phát hành.`:'Chưa đủ dữ liệu để xác định mốc hủy tín hiệu.'};
+    invalidation: facts.pivot!=null?`Chưa có điểm mua xác nhận. Nếu có tín hiệu vượt ${money(facts.pivot)} rồi giá quay xuống dưới mốc này, phải đánh giá lại. Cắt lỗ dự kiến ở phần kết luận chỉ áp dụng khi điều kiện của kịch bản được kích hoạt; chưa phải lệnh bán chính thức.`:'Chưa đủ dữ liệu để xác định mốc hủy tín hiệu.'};
 }
 
 export function fourLayerEvidence(context:Data):Data[] {
@@ -72,7 +72,7 @@ export function valuationExplanation(context:Data):string {
   if(num(v.pe)!=null)bits.push(`Giá bằng ${n(v.pe,2)} lần lợi nhuận mỗi cổ phiếu${num(f.pe_median_8q_provider)!=null?`, so với mức tham chiếu của 8 quý gần nhất là ${n(f.pe_median_8q_provider,2)} lần`:''}`);
   if(num(v.pb)!=null)bits.push(`giá bằng ${n(v.pb,2)} lần giá trị sổ sách${num(f.pb_median_8q_provider)!=null?`, so với lịch sử ${n(f.pb_median_8q_provider,2)} lần`:''}`);
   if(v.forecast_ready===true)return `Phương pháp: ${v.method}. Giả định: ${JSON.stringify(v.assumptions)}. Nguồn: ${v.source_ref}. Mức cơ sở ${money(v.base??v.fair_value)}; cần đọc cùng thời hạn của dự báo.`;
-  return `${bits.length?bits.join('; ')+'. ':''}${bits.length?'Đây là so sánh với lịch sử, chưa đủ để kết luận cổ phiếu rẻ.':'Chưa đủ dữ liệu định giá.'} Chưa có dự báo đã kiểm chứng để đưa mục tiêu giá 3–6 tháng hoặc 12 tháng.${context.business_bucket==='BANK'?' Với ngân hàng, còn phải kiểm tra nợ xấu, dự phòng, khả năng sinh lời và giả định tăng trưởng.':''}`;
+  return `${bits.length?bits.join('; ')+'. ':''}${bits.length?'Đây là so sánh với lịch sử, chưa đủ để kết luận cổ phiếu rẻ.':'Chưa đủ dữ liệu định giá.'} Các mức dự kiến ở phần kết luận là kịch bản mô hình với giả định công khai, chưa phải dự báo đã kiểm chứng.${context.business_bucket==='BANK'?' Với ngân hàng, còn phải kiểm tra nợ xấu, dự phòng, khả năng sinh lời và giả định tăng trưởng.':''}`;
 }
 
 export function fourHorizonEvidence(context:Data,reports:Data[]=[]):Data[] {
@@ -82,8 +82,8 @@ export function fourHorizonEvidence(context:Data,reports:Data[]=[]):Data[] {
   const longRoe=num(f.roe_ttm_avg_8q_pct)!=null?`Lợi nhuận trên vốn chủ sở hữu bình quân 8 quý ${pct(f.roe_ttm_avg_8q_pct)}. `:'';
   const rows=[
     {horizon:'SHORT_TERM',label:'Ngắn hạn',text:`${tech.trend} ${tech.ma20!=null?`Giá trung bình 20 phiên ${money(tech.ma20)}; 50 phiên ${money(tech.ma50)}.`:''} ${facts.pivot!=null?`Theo dõi mốc ${money(facts.pivot)}; chạm mốc chưa đủ để mua.`:''} ${tech.cloud} ${tech.bands} ${facts.earlyVolumeText}`},
-    {horizon:'MEDIUM_TERM',label:'3–6 tháng',text:growth+(v.forecast_ready?'Đọc kịch bản tăng trưởng và định giá đã kiểm chứng, kết hợp xác nhận xu hướng.':'Theo dõi tăng trưởng lợi nhuận, sức mạnh ngành và khả năng vượt nền giá. Chưa xác nhận vùng mua hoặc mục tiêu cho thời hạn này.')},
-    {horizon:'LONG_TERM',label:'12 tháng',text:roe+(v.forecast_ready?'Đối chiếu dự báo năm, chất lượng lợi nhuận và các kịch bản định giá.':'Cần dự báo lợi nhuận năm và kịch bản định giá có căn cứ. Chưa đủ cơ sở đặt mục tiêu giá 12 tháng.')},
+    {horizon:'MEDIUM_TERM',label:'3–6 tháng',text:growth+(v.forecast_ready?'Đọc kịch bản tăng trưởng và định giá đã kiểm chứng, kết hợp xác nhận xu hướng.':'Theo dõi tăng trưởng lợi nhuận, sức mạnh ngành và khả năng vượt nền giá. Đối chiếu mục tiêu dự kiến và giả định ở phần kết luận; vùng mua chưa được xác nhận.')},
+    {horizon:'LONG_TERM',label:'12 tháng',text:roe+(v.forecast_ready?'Đối chiếu dự báo năm, chất lượng lợi nhuận và các kịch bản định giá.':'Mục tiêu dự kiến ở phần kết luận cần được cập nhật khi có dự báo lợi nhuận năm và giả định định giá đã kiểm chứng.')},
     {horizon:'ACCUMULATION',label:'Tích sản',text:longRoe+'Ưu tiên lợi thế cạnh tranh, quản trị, sức khỏe tài chính và biên an toàn. Chưa xác nhận mức giá tích lũy; không dùng biến động vài phiên làm lý do duy nhất để bán.'},
   ];
   return rows.map(row=>{const r=reports.find(x=>x.status==='READY'&&x.ticker===context.ticker&&x.horizon===row.horizon);return {...row,status:r?'ACTION_READY':'RESEARCH_ONLY',report:r?{generated_at:r.generated_at,expires_at:r.expires_at,payload:r.payload}:null};});

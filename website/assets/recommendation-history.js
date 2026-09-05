@@ -24,7 +24,7 @@
   function renderObserved(data) {
     if (data.schema_version !== 'STOCKRADAR_VERIFIED_HISTORY_V1') throw new Error('Sai định dạng lịch sử');
     const s = data.summary;
-    target.innerHTML = `<header><span class="panel-label">ĐÃ ĐỐI CHIẾU EMAIL GỐC</span><h2>Những mã AI đã báo mua</h2>
+    target.innerHTML = `<section data-live-performance><h2>HIỆU QUẢ STOCKRADAR</h2><p>Đang đối chiếu các tín hiệu production đã phát hành…</p></section><header><span class="panel-label">ĐÃ ĐỐI CHIẾU EMAIL GỐC</span><h2>Lịch sử email đã đối chiếu</h2>
       <p>${s.tickers} mã · ${s.alerts} lần gửi · ${s.without_sell_email} mã chưa tìm thấy email bán đến ${day(data.mail_search_through)}.</p></header>
       <div class="history-cards">${[...data.items].sort((a,b)=>Date.parse(b.first_sent_at)-Date.parse(a.first_sent_at)).map(r => `<article class="history-card" id="history-${esc(r.ticker)}"><header><h3>${esc(r.ticker)}</h3><span class="history-badge">${r.status==='NO_SELL_EMAIL_FOUND'?'Chưa có email bán':'Đã ghi nhận email bán'}</span></header>
         <p>Báo mua đầu tiên: <b>${time(r.first_sent_at)}</b></p>
@@ -53,10 +53,23 @@
     }
     mount.querySelectorAll('select').forEach(e=>e.addEventListener('change',rows)); rows();
   }
+  async function renderLivePerformance() {
+    const box=target.querySelector('[data-live-performance]');if(!box)return;
+    const data=await get('recommendations.json'),s=data.performance_summary||{};
+    const ready=data.is_mock===false&&data.data_status==='READY';
+    const rows=ready?(data.items||[]).filter(r=>r.record_mode==='LIVE_PUBLISHED'&&r.publish_status==='PUBLISHED'&&r.is_mock===false&&r.data_grade==='DECISION_GRADE'):[];
+    const cohortValid=ready&&rows.length===(data.items||[]).length&&s.record_mode==='LIVE_PUBLISHED';
+    box.innerHTML=`<h2>HIỆU QUẢ STOCKRADAR</h2><p>${rows.length} tín hiệu production đã công bố · ${cohortValid?s.closed||0:0} đã đóng.</p><p>${cohortValid&&s.sample_status==='DESCRIPTIVE_ONLY'?'Thống kê mô tả của toàn bộ mẫu, gồm cả WIN và LOSS.':'Chưa đủ dữ liệu thống kê. Không gộp email lịch sử hoặc kết quả rà soát lại vào tỷ lệ thắng.'}</p>`;
+    if(cohortValid){const dl=document.createElement('dl');
+      for(const [label,value] of [['Tỷ lệ thắng',pct(s.win_rate_pct)],['Lãi trung bình',pct(s.average_gain_pct)],['Lỗ trung bình',pct(s.average_loss_pct)],['Kỳ vọng mỗi giao dịch',pct(s.expectancy_pct)],['Tỷ lệ lãi/lỗ',s.payoff_ratio??'Chưa đủ mẫu'],['Thời gian nắm giữ trung vị',s.median_holding_days==null?'Chưa đủ mẫu':`${s.median_holding_days} ngày`],['So với VN-Index',pct(s.average_excess_return_pct)],['Sụt giảm tối đa','Chưa có chuỗi giá trị danh mục']]){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;dl.append(dt,dd);}box.append(dl);}
+    for(const r of rows){const detail=document.createElement('details'),summary=document.createElement('summary');summary.textContent=`${r.ticker} · ${time(r.published_at)} · ${r.recommendation_state} · ${pct(r.final_return_pct??r.current_return_pct)}`;detail.append(summary);
+      const p=document.createElement('p');p.textContent=`${r.setup||'Tín hiệu'} · Giá phát ${price(r.price_at_publication)} · Buy Zone ${price(r.recommended_buy_low)}–${price(r.recommended_buy_high)} · Stop ${price(r.stop_loss)} · Target ${price(r.target_price)} · Giá đóng ${price(r.close_price)} · Đóng lúc ${r.close_timestamp?time(r.close_timestamp):'Chưa đóng'} · VN-Index ${pct(r.benchmark_return_pct)}`;detail.append(p);box.append(detail);}
+  }
   async function load() {
     try {
       renderObserved(await get('recommendation-history.json'));
     } catch (_) {target.innerHTML='<p role="alert">Chưa tải được lịch sử. <button type="button" data-retry-history>Thử lại</button></p>';target.querySelector('button').onclick=load;return;}
+    try {await renderLivePerformance();} catch (_) {target.querySelector('[data-live-performance]').textContent='Chưa xác minh được thống kê production; lịch sử email bên dưới không thay thế thống kê này.';}
     try {renderReview(await get('recommendation-review-2026-08.json'));}
     catch (_) {target.querySelector('[data-month-review]').textContent='Chưa tải được kết quả tháng 8. Vui lòng tải lại trang.';}
   }

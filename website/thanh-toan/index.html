@@ -7,8 +7,8 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="description" content="Thanh toán StockRadar Premium 199.000đ/30 ngày bằng VietQR/chuyển khoản VPBank, mã giao dịch riêng và kích hoạt sau khi quản trị xác nhận thanh toán qua email.">
-  <title>Thanh toán Premium — StockRadar</title>
+  <meta name="description" content="Đăng ký Premium StockRadar. Thanh toán chỉ mở khi dữ liệu, email và điều kiện vận hành được xác nhận; quyền Premium chỉ kích hoạt sau đối soát.">
+  <title>Đăng ký Premium — StockRadar</title>
   <link rel="icon" href="assets/logo.svg">
   <link rel="stylesheet" href="assets/styles.css?v=20260904-checkout3">
   <link rel="stylesheet" href="assets/checkout-v1.css?v=20260904-checkout3">
@@ -17,9 +17,9 @@
   <script src="assets/auth-config.js?v=20260904-checkout3" defer></script>
   <script src="assets/app.js?v=20260904-checkout3" defer></script>
   <script src="assets/email-interest.js?v=20260904-privacy1" defer></script>
-  <script src="assets/checkout-v1.js?v=20260905-checkout6" defer></script>
+  <script src="assets/checkout-v1.js?v=20260905-readiness1" defer></script>
 </head>
-<body data-proposition="checkout">
+<body data-proposition="checkout" data-checkout-ready="false">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
   <header class="site-header">
     <div class="container nav">
@@ -33,8 +33,7 @@
     <section class="checkout-hero">
       <div class="checkout-hero-inner">
         <span class="checkout-eyebrow">STOCKRADAR PREMIUM · 30 NGÀY</span>
-        <h1>Thanh toán một lần.<br>Kích hoạt đúng 30 ngày Premium.</h1>
-        <p>Giá 199.000đ/30 ngày. Không tự gia hạn. Tài khoản nhận tiền chính thức là VPBank · 0934389822 · NGUYỄN TỬ LINH. QR tài khoản hiển thị ngay; sau khi đăng nhập hệ thống tạo mã chuyển khoản riêng cho đúng tài khoản Premium.</p>
+        <h1>Đăng ký StockRadar Premium</h1><p>199.000đ / 30 ngày. Không tự gia hạn. Trạng thái thanh toán được kiểm tra trực tiếp từ hệ thống.</p>
         <div class="checkout-steps" aria-label="Quy trình thanh toán">
           <span class="checkout-step"><b>1</b>Tài khoản</span>
           <span class="checkout-step is-active"><b>2</b>Thanh toán</span>
@@ -46,48 +45,40 @@
     <section class="checkout-main">
       <div class="checkout-grid">
         <article class="checkout-card" id="payment">
-          <header class="checkout-card-head">
-            <span class="checkout-section-label">VIETQR / CHUYỂN KHOẢN</span>
-            <h2>Thông tin thanh toán StockRadar Premium</h2>
-            <p>Tài khoản nhận tiền chính thức: <strong>VPBank · 0934389822 · NGUYỄN TỬ LINH</strong>. QR hiển thị ngay để quét; hãy đăng nhập trước khi chuyển tiền để lấy đúng nội dung chuyển khoản SR riêng.</p>
-          </header>
+          <header class="checkout-card-head"><span class="checkout-section-label">TRẠNG THÁI PREMIUM</span><h2>Kiểm tra điều kiện nâng cấp</h2><p data-checkout-state aria-live="polite">Đang kiểm tra. Chưa chuyển khoản khi chưa có yêu cầu thanh toán hợp lệ.</p><a class="checkout-secondary-link" href="dang-ky/#premium" data-checkout-login>Đăng ký quan tâm Premium</a></header>
 
-          <div class="checkout-methods">
+          <div class="checkout-methods" data-checkout-payment hidden>
             <section class="checkout-method">
               <div class="checkout-method-title"><strong>Chuyển khoản ngân hàng</strong><span class="checkout-badge">VietQR</span></div>
               <div class="checkout-payment-body">
                 <div class="checkout-qr" aria-label="Mã VietQR VPBank">
-                  <img data-checkout-qr-image src="https://img.vietqr.io/image/970432-0934389822-compact2.png?amount=199000&accountName=NGUYEN%20TU%20LINH" alt="Mã QR thanh toán VPBank 0934389822 - NGUYỄN TỬ LINH - 199.000đ" referrerpolicy="no-referrer">
-                  <div data-checkout-qr-placeholder hidden><div class="checkout-qr-icon">QR</div><strong>VietQR</strong><span>QR VPBank 0934389822</span></div>
+                  <img data-checkout-qr-image hidden alt="VietQR cho yêu cầu thanh toán đã xác nhận">
+                  <div data-checkout-qr-placeholder><div class="checkout-qr-icon">QR</div><strong>VietQR</strong><span>QR chỉ hiển thị khi thanh toán được mở</span></div>
                 </div>
                 <div>
                   <div class="checkout-bank-list">
-                    <div class="checkout-bank-row"><span>Ngân hàng</span><strong data-checkout-bank>VPBank</strong></div>
-                    <div class="checkout-bank-row"><span>Số tài khoản</span><strong data-checkout-account-number>0934389822</strong><button class="checkout-copy" type="button" data-copy-account data-copy-value="0934389822">Sao chép</button></div>
-                    <div class="checkout-bank-row"><span>Chủ tài khoản</span><strong data-checkout-account-name>NGUYỄN TỬ LINH</strong></div>
+                    <div class="checkout-bank-row"><span>Ngân hàng</span><strong data-checkout-bank>—</strong></div>
+                    <div class="checkout-bank-row"><span>Số tài khoản</span><strong data-checkout-account-number>—</strong><button class="checkout-copy" type="button" data-copy-account data-copy-value="" disabled>Sao chép</button></div>
+                    <div class="checkout-bank-row"><span>Chủ tài khoản</span><strong data-checkout-account-name>—</strong></div>
                     <div class="checkout-bank-row"><span>Số tiền</span><strong data-checkout-amount>199.000đ</strong></div>
                     <div class="checkout-bank-row"><span>Nội dung chuyển khoản</span><strong data-checkout-reference>—</strong><button class="checkout-copy" type="button" data-copy-reference data-copy-value="" disabled>Sao chép</button></div>
                     <div class="checkout-bank-row"><span>Mã còn hiệu lực</span><strong data-checkout-expiry>—</strong><small data-checkout-expiry-at>—</small></div>
                   </div>
-                  <div class="checkout-warning"><strong>Quan trọng:</strong> QR trên chuyển đúng tới VPBank 0934389822 và số tiền 199.000đ. Trước khi chuyển, đăng nhập để hệ thống cấp <strong>nội dung chuyển khoản SR riêng</strong>; nhập đúng mã SR đó để StockRadar đối soát chính xác.</div>
+                  <div class="checkout-warning">Chỉ dùng mã chuyển khoản riêng được cấp cho tài khoản này khi yêu cầu còn hiệu lực.</div>
                 </div>
               </div>
             </section>
 
             <section class="checkout-confirm">
               <h3>Sau khi đã chuyển khoản</h3>
-              <p>Bấm xác nhận để StockRadar gửi yêu cầu duyệt tới email quản trị. Sau khi tiền thực nhận được kiểm tra và xác nhận, tài khoản tự chuyển sang Premium, cộng đúng 30 ngày và gửi email kết quả cho khách hàng.</p>
+              <p>Xác nhận đã chuyển khoản chỉ tạo yêu cầu đối soát. Premium chỉ được kích hoạt khi tiền thực nhận đã được xác minh.</p>
               <button class="checkout-primary" type="button" data-checkout-confirm disabled>Tôi đã chuyển khoản · Gửi xác nhận</button>
-              <div class="checkout-state is-warn" data-checkout-state aria-live="polite">QR VPBank đã sẵn sàng. Đăng nhập để tạo mã SR riêng trước khi chuyển khoản.</div>
-              <a class="checkout-secondary-link" href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-login>Đăng nhập để tạo mã thanh toán</a>
+
+
             </section>
           </div>
 
-          <section class="checkout-confirm" data-checkout-disabled-fallback hidden>
-            <span class="checkout-section-label">KHÔNG TẠO ĐƯỢC MÃ GIAO DỊCH</span>
-            <h3>Tài khoản nhận tiền vẫn là VPBank 0934389822</h3>
-            <p>Nếu hệ thống tạm thời chưa tạo được mã SR riêng, chưa chuyển khoản cho đến khi mã được hiển thị. Điều này giúp StockRadar đối soát đúng tài khoản Premium.</p>
-          </section>
+          <section class="checkout-confirm" data-checkout-disabled-fallback><h3>Premium tạm dừng kích hoạt mới</h3><p>Chưa thu phí khi dữ liệu và email hành động chưa đủ điều kiện. Bạn vẫn có thể dùng AI Free và đăng ký quan tâm Premium.</p><a class="checkout-secondary-link" href="dang-ky/#premium">Đăng ký quan tâm Premium</a></section>
         </article>
 
         <aside class="checkout-card checkout-summary" aria-labelledby="checkout-summary-title">
@@ -96,7 +87,7 @@
             <p>Lớp quyết định, kế hoạch giao dịch và cảnh báo hành động dành cho tài khoản trả phí.</p>
             <div class="checkout-price"><strong data-checkout-amount>199.000đ</strong><span>/ 30 ngày</span></div>
             <ul class="checkout-features">
-              <li>Toàn bộ quyền Free + báo cáo Premium 09:00.</li>
+              <li>Toàn bộ quyền Free; bản tin Premium 09:00 khi hệ thống gửi đã sẵn sàng.</li>
               <li>MUA/CHỜ và GIỮ/TĂNG/GIẢM/BÁN theo dữ liệu đủ chuẩn.</li>
               <li>Buy Zone · Stop-loss · Target · Upside/Downside · Risk/Reward.</li>
               <li>Cảnh báo tại 10:30 · 11:15 · 13:30 · 14:15 khi trạng thái hành động thay đổi đủ điều kiện.</li>
@@ -104,36 +95,14 @@
             </ul>
             <div class="checkout-total"><div class="checkout-total-row"><span>Gói</span><strong>Premium 30 ngày</strong></div><div class="checkout-total-row"><span>Tự gia hạn</span><strong>Không</strong></div><div class="checkout-total-row is-total"><span>Tổng thanh toán</span><strong data-checkout-amount>199.000đ</strong></div></div>
             <div class="checkout-account"><span>Tài khoản nhận Premium</span><strong data-checkout-account-email>Chưa đăng nhập</strong></div>
-            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span><b>Tài khoản nhận tiền:</b> VPBank · 0934389822 · NGUYỄN TỬ LINH.</span></div><div class="checkout-note"><span>✓</span><span><b>Kích hoạt:</b> chỉ sau khi quản trị xác nhận tiền thực nhận qua email.</span></div><div class="checkout-note"><span>✓</span><span><b>Gia hạn:</b> nếu còn Premium, 30 ngày mới được cộng tiếp từ ngày hết hạn hiện tại.</span></div><div class="checkout-note"><span>✓</span><span><b>Hết hạn:</b> trở về Free, không xóa tài khoản, watchlist hay lịch sử.</span></div></div>
-          </div>
-        </aside>
+            <div class="checkout-notes"><div class="checkout-note"><span>✓</span><span>Quyền Premium chỉ cấp sau đối soát. Hết hạn trở về Free; giữ lại tài khoản và danh sách theo dõi.</span></div></div></div></aside>
       </div>
 
-      <div class="checkout-help"><article><strong>1 · Quét QR</strong><span>QR VPBank hiển thị ngay. Đăng nhập để lấy mã SR riêng trước khi xác nhận chuyển khoản.</span></article><article><strong>2 · Chuyển đúng nội dung</strong><span>Dùng đúng mã SR hệ thống cấp riêng để giao dịch gắn với đúng tài khoản Premium.</span></article><article><strong>3 · Xác nhận và kích hoạt</strong><span>Sau khi chuyển khoản, gửi yêu cầu xác nhận; Premium chỉ kích hoạt khi quản trị kiểm tra tiền thực nhận.</span></article></div>
+
     </section>
   </main>
-  <div class="checkout-mobile-bar"><a href="dang-nhap/?next=thanh-toan/%3Fplan%3Dpremium" data-checkout-mobile-action>Đăng nhập để tạo mã thanh toán</a></div>
+  <div class="checkout-mobile-bar"><a href="dang-ky/#premium" data-checkout-mobile-action>Đăng ký quan tâm Premium</a></div>
   <footer class="site-footer"><div class="container"><div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a><a href="dang-ky/">So sánh gói</a></div></div><p class="disclaimer">Thanh toán không đồng nghĩa cam kết lợi nhuận. StockRadar là công cụ nghiên cứu và sàng lọc; quyết định đầu tư thuộc người dùng.</p></div></footer>
 
-  <script>
-  (() => {
-    const fallbackQr = 'https://img.vietqr.io/image/970432-0934389822-compact2.png?amount=199000&accountName=NGUYEN%20TU%20LINH';
-    const ensureFallbackQr = () => {
-      const image = document.querySelector('[data-checkout-qr-image]');
-      const placeholder = document.querySelector('[data-checkout-qr-placeholder]');
-      const reference = String(document.querySelector('[data-checkout-reference]')?.textContent || '').trim();
-      const hasPersonalReference = reference && reference !== '—';
-      if (!image || hasPersonalReference) return;
-      image.src = fallbackQr;
-      image.hidden = false;
-      image.alt = 'Mã QR thanh toán VPBank 0934389822 - NGUYỄN TỬ LINH - 199.000đ';
-      if (placeholder) placeholder.hidden = true;
-    };
-    document.addEventListener('DOMContentLoaded', () => {
-      ensureFallbackQr();
-      [250, 750, 1500, 3000].forEach(delay => setTimeout(ensureFallbackQr, delay));
-    }, { once: true });
-  })();
-  </script>
 </body>
 </html>

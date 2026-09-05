@@ -11,7 +11,7 @@ begin
      has_function_privilege('anon','public.verify_stockradar_email_diagnostic_token_v1(text)','execute') or
      has_function_privilege('authenticated','private.enqueue_stockradar_daily_briefs_v1(timestamptz)','execute') then raise exception 'Private email capability exposed'; end if;
   p := jsonb_build_object('data_status','READY','data_grade','DECISION_GRADE','data_freshness','FRESH','public_release_allowed',true,
-    'current_price',20000,'buy_zone',jsonb_build_array(19800,20100),'stop_loss',18500,'target_near',24000,'risk_reward',2.5,
+    'current_price',20000,'buy_zone',jsonb_build_array(19800,20100),'stop_loss',18500,'target_near',24000,'target_3_6m',28000,'target_12m',32000,'risk_reward',2.5,
     'private_context','PRIVATE_SENTINEL_NOT_FOR_CLIENTS',
     'action_contract',jsonb_build_object('schema_version','STOCKRADAR_ACTION_V1','alert_eligible',true,
       'new_position',jsonb_build_object('state','BUY','reasons',jsonb_build_array('Approved fixture')),'holding',jsonb_build_object('state','HOLD')));
@@ -38,6 +38,9 @@ begin
     evidence_ref='ROLLBACK_TEST_ONLY',active_manifest_ref='test-reco-manifest',active_snapshot_id='test-reco-snapshot' where singleton;
   v:=public.get_stockradar_recommendation_status_v1();
   if jsonb_array_length(v->'items')<>1 or v#>>'{items,0,ticker}'<>'ZZZ' or v#>>'{items,0,target}'<>'24000' then raise exception 'Approved buy missing'; end if;
+  if v#>>'{items,0,target_3_6m}'<>'28000' or v#>>'{items,0,target_12m}'<>'32000' or v#>>'{items,0,stop_loss}'<>'18500' then raise exception 'Horizon prices lost in publication'; end if;
+  if private.stockradar_email_price_plan_v1('{"target_near":null,"target_price":25000}','SHORT_TERM')->>'target'<>'25000' then raise exception 'JSON null blocked valid fallback'; end if;
+  if private.stockradar_email_price_plan_v1('{"target_near":24000}','LONG_TERM')->>'target' is not null then raise exception 'Short target mislabeled as long target'; end if;
   if v::text like '%PRIVATE_SENTINEL%' or v::text like '%user_id%' or v::text like '%recipient_email%' then raise exception 'Private fields leaked'; end if;
   update private.stock_report_cache set source_manifest_ref='wrong-manifest' where ticker='ZZZ' and horizon='SHORT_TERM';
   if jsonb_array_length(public.get_stockradar_recommendation_status_v1()->'items')<>0 then raise exception 'Wrong manifest released'; end if;
@@ -71,6 +74,16 @@ begin
   update private.email_outbox set status='PROCESSING' where id=v_id;
   v:=public.preflight_stockradar_email_outbox_v1(v_id);
   if v->>'allowed'<>'true' then raise exception 'Valid no-buy bulletin failed preflight'; end if;
+  update private.stock_api_gate set api_enabled=true where singleton;
+  update private.stock_report_cache set generated_at=now()-interval '1 minute',expires_at=now()+interval '1 hour' where ticker='ZZZ' and horizon='SHORT_TERM';
+  v:=public.get_stockradar_recommendation_status_v1();
+  update private.email_outbox set payload=payload || jsonb_build_object('opportunities',v->'items',
+    'action_snapshot_id','test-reco-snapshot','action_manifest_ref','test-reco-manifest') where id=v_id;
+  update private.email_outbox set payload=jsonb_set(payload,'{opportunities,0,target_12m}','999999') where id=v_id;
+  v:=public.preflight_stockradar_email_outbox_v1(v_id);
+  if v->>'allowed'<>'true' or v#>>'{payload,opportunities,0,target_12m}'<>'32000' or v#>>'{payload,opportunities,0,target_3_6m}'<>'28000' or v#>>'{payload,opportunities,0,stop_loss}'<>'18500' then raise exception 'Preflight did not restore canonical prices: %',v; end if;
+  if v::text like '%PRIVATE_SENTINEL%' then raise exception 'Canonical report leaked private context'; end if;
+  update private.stock_api_gate set api_enabled=false where singleton;
   update private.email_outbox set payload=jsonb_set(payload,'{opportunities}','[{"ticker":"ZZZ","horizon":"SHORT_TERM","confirmed_at":"2026-09-04T03:30:00Z"}]') where id=v_id;
   v:=public.preflight_stockradar_email_outbox_v1(v_id);
   if v->>'allowed'<>'false' or v->>'reason'<>'DAILY_REPORT_CHANGED_OR_UNRELEASED' then raise exception 'Unreleased daily buy passed preflight'; end if;

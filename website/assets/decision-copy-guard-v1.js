@@ -65,13 +65,13 @@
     nodes.forEach(node => {
       const parent = node.parentElement;
       if (!parent || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|CODE|PRE)$/i.test(parent.tagName)) return;
-      if (parent.closest('[data-stockradar-ai-center]')) return;
+      if (parent.closest('[data-stockradar-ai-center],[data-stockradar-ai],[data-stockradar-ai-inline],[data-decision-response]')) return;
       const next = normalize(node.nodeValue);
       if (next !== node.nodeValue) node.nodeValue = next;
     });
 
     root.querySelectorAll?.('[aria-label],[title]').forEach(node => {
-      if (node.closest('[data-stockradar-ai-center]')) return;
+      if (node.closest('[data-stockradar-ai-center],[data-stockradar-ai],[data-stockradar-ai-inline],[data-decision-response]')) return;
       for (const attr of ['aria-label', 'title']) {
         const value = node.getAttribute(attr);
         if (!value) continue;

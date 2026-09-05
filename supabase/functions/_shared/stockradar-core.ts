@@ -1,4 +1,5 @@
 import { sanitizeResearchValuation, frameworkText } from "./stockradar-framework.ts";
+import { researchEstimates, withEstimatedPlan } from "./stockradar-estimates.ts";
 import { readableResearchFacts, observationDate, wantsResearchDetail } from "./stockradar-readable.ts";
 
 export const STOCKRADAR_SYSTEM_CORE = `Bạn là StockRadar AI, trợ lý ra quyết định cổ phiếu HOSE dựa trên dữ liệu StockRadar.
@@ -31,6 +32,7 @@ CÁCH TRẢ LỜI — BẮT BUỘC
 - Với danh mục: việc cần xem trước, mã đang giữ, mã đang theo dõi và rủi ro chính. Không phơi bày danh mục người khác.
 - Với RESEARCH_ONLY, kết thúc bằng “Thông tin tham khảo từ dữ liệu ngày …; chưa có tín hiệu mua/bán được xác nhận.” Với REFERENCE_ONLY, nói rõ dữ liệu còn thiếu để đánh giá mua/bán.
 - Nếu data_quality là stale/error, mở đầu cảnh báo dữ liệu cũ hoặc có lỗi; không xác nhận mua/bán từ dữ liệu đó.
+- estimated_plan là kịch bản tham khảo được máy chủ tính riêng, không phải dự báo đã kiểm chứng hay tín hiệu mua. Máy chủ sẽ đặt khối mục tiêu/cắt lỗ dự kiến ngay sau kết luận. Không tự tính lại, sửa, bổ sung hoặc khẳng định khả năng đạt các mức này. Không dùng kịch bản để mở điều kiện mua/bán chính thức.
 - Giá, mức cắt lỗ, mục tiêu hay xác suất không có dữ liệu phải ghi chưa đủ dữ liệu khi người dùng hỏi; không bịa số. Điểm tin cậy không phải xác suất thành công.
 - Không lặp lại cùng một trạng thái bằng nhiều câu.`;
 
@@ -131,7 +133,7 @@ export function normalizeResearchContext(raw) {
     context.technical_detail.max_down_volume10 = facts.downMax;
     context.technical_detail.rvol = facts.rvol;
   }
-  return { ...context, readable_facts: facts };
+  return { ...context, readable_facts: facts, estimated_plan: researchEstimates(context) };
 }
 
 function singleResearch(context, question = '', reference = false) {
@@ -165,7 +167,7 @@ function singleResearch(context, question = '', reference = false) {
   }
   if (intent === 'RISK' || detail) {
     const bits = riskReasons.slice(0, 3);
-    if (num(plan.stop_loss) == null) bits.push('chưa có mức cắt lỗ cụ thể để tính khoản lỗ dự kiến');
+    if (num(plan.stop_loss) == null && !researchEstimates(context).short_term) bits.push('chưa có mức cắt lỗ cụ thể để tính khoản lỗ dự kiến');
     if (corp.review_required_v2 === true) bits.push('cần kiểm tra sự kiện doanh nghiệp sắp tới');
     if (bits.length) lines.push(`RỦI RO: ${bits.join('; ')}.`);
   }
@@ -176,13 +178,13 @@ function singleResearch(context, question = '', reference = false) {
     else if (intent === 'CATALYST') lines.push('TIN DOANH NGHIỆP: Chưa có tin chính thức đủ rõ trong dữ liệu hiện có.');
   }
   lines.push(`Thông tin tham khảo từ dữ liệu ngày ${facts.date}; ${reference ? 'còn thiếu dữ liệu để đánh giá mua/bán' : 'chưa có tín hiệu mua/bán được xác nhận'}.`);
-  return lines.join('\n\n');
+  return withEstimatedPlan(lines.join('\n\n'), context);
 }
 
 function actionAnswer(list) {
   const rows = [];
   for (const report of list.slice(0, 6)) {
-    const p = obj(report.payload), plan = merge(p.trade_plan, p.action, p.recommendation), ticker = txt(report.ticker), horizon = txt(report.horizon);
+    const p = obj(report.payload), plan = merge(p, p.trade_plan, p.action, p.recommendation), ticker = txt(report.ticker), horizon = txt(report.horizon);
     const bits = [];
     const action = state(plan.action || plan.signal || plan.state || p.action_state || p.recommendation_state);
     if (action) bits.push(action);
@@ -210,7 +212,7 @@ export function deterministicStockRadarAnswer({ mode, researchContext, actionCon
     return `VIỆC CẦN LÀM TRƯỚC: xem các mã có đủ dữ liệu nghiên cứu trước. Danh sách dưới đây dùng để so sánh, chưa phải danh sách nên mua.\n\n${rows.join('\n')}\n\nMã chỉ có dữ liệu tham chiếu cần bổ sung thông tin trước khi đánh giá mua/bán.`;
   }
   if (mode === 'ACTION_READY' && Array.isArray(actionContext) && actionContext.length) return actionAnswer(actionContext);
-  return 'KẾT LUẬN: chưa có dữ liệu đủ mới cho mã này. StockRadar AI không dùng giá hoặc tín hiệu cũ để suy đoán.';
+  return 'KẾT LUẬN: CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH. Chưa có dữ liệu đủ mới cho mã này. StockRadar AI không dùng giá hoặc tín hiệu cũ để suy đoán.';
 }
 
 export function hasResearchFramework(answer) {
