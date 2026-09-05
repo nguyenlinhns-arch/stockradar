@@ -79,5 +79,5 @@ Deno.serve(async req=>{
     if(response.status===429&&/CREDIT|QUOTA|BALANCE/.test(code))providerDisabledUntil=Date.now()+15*60*1000;
     return json({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   }
-  return json({status:'READY',...base,answer_engine:'MODEL_PLUS_STOCKRADAR_CORE',answer:openAIText(payload)||fallback},200,origin,rate);
+  return json({status:"READY",...base,answer_engine:"MODEL_PLUS_STOCKRADAR_CORE",answer:openAIText(payload)||fallback},200,origin,rate);
 });
