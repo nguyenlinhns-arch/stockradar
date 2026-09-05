@@ -1,0 +1,68 @@
+name: Hotfix AI Null Numeric Handling
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/hotfix-ai-null-numeric.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Patch null numeric handling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          patches = {
+              Path('supabase/functions/_shared/stockradar-core.ts'): (
+                  "function num(value) { const n = Number(value); return Number.isFinite(n) ? n : null; }",
+                  "function num(value) { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }",
+              ),
+              Path('supabase/functions/_shared/stockradar-research-view.ts'): (
+                  "function num(value: any): number | null { const n = Number(value); return Number.isFinite(n) ? n : null; }",
+                  "function num(value: any): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }",
+              ),
+          }
+
+          for path, (old, new) in patches.items():
+              text = path.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one old num helper, found {count}')
+              path.write_text(text.replace(old, new), encoding='utf-8')
+              verify = path.read_text(encoding='utf-8')
+              if old in verify or new not in verify:
+                  raise SystemExit(f'{path}: hotfix verification failed')
+              print(f'patched {path}')
+          PY
+
+      - name: Validate hotfix diff
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -F "value === null || value === undefined || value === ''" supabase/functions/_shared/stockradar-core.ts
+          grep -F "value === null || value === undefined || value === ''" supabase/functions/_shared/stockradar-research-view.ts
+
+      - name: Commit hotfix
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "StockRadar Automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add supabase/functions/_shared/stockradar-core.ts supabase/functions/_shared/stockradar-research-view.ts
+          git diff --cached --quiet && exit 0
+          git commit -m "Fix null numeric rendering in StockRadar AI"
+          git push origin HEAD:main
