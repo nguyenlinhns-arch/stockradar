@@ -35,6 +35,16 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
         self.assertIn("stockRadarMode(ready.length>0,hasResearch,hasReference)", tight)
         self.assertIn("MODEL_PLUS_STOCKRADAR_CORE", source)
 
+    def test_authenticated_ai_minimizes_single_ticker_context_and_bounds_watchlist(self):
+        source = AUTH.read_text(encoding="utf-8")
+        tight = compact(source)
+        self.assertIn(".from('watchlist_items')", source)
+        self.assertIn(".limit(20)", tight)
+        self.assertIn("requestedTickers=scope==='ticker'?[ticker]", tight)
+        self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?(contexts[0]||null):contexts", tight)
+        self.assertIn("buildResearchSnapshot(tickerContext)", tight)
+        self.assertIn("appendResearchSnapshot(fallback,tickerContext)", tight)
+
     def test_guest_ai_keeps_three_question_quota_and_same_data_core(self):
         source = GUEST.read_text(encoding="utf-8")
         self.assertIn("fetch_stockradar_ai_context", source)
