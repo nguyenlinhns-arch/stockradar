@@ -33,6 +33,25 @@ HOMEPAGE_LEGACY_AUTH_UX = (
     "assets/header-auth-dedupe-v6.js",
     "assets/public-copy-v7.js",
 )
+HOMEPAGE_CORE_REQUIRED = (
+    "mountNavigation",
+    "data-nav-toggle",
+    "data-nav-menu",
+)
+HOMEPAGE_CORE_LEGACY = (
+    "emailDeliveryReady",
+    "registrationUrl",
+    "leadUrl",
+    "premiumUrl",
+    "mountTickerSearch",
+    "mountEmailLead",
+    "emailInterestEndpoint",
+    "nhan-ban-tin/",
+    "thanh-toan/?plan=premium",
+    "ai-assistant.js",
+    "ai-assistant.css",
+    "window.location.assign",
+)
 
 
 def require(path: Path) -> str:
@@ -80,6 +99,8 @@ def main() -> None:
         "assets/auth-extra.js",
         "assets/auth-delete-security.js",
         "assets/signup-link-v1.js",
+        "assets/auth-state-v2.js",
+        "assets/paid-nav-v1.js",
         "assets/home-core-v1.js",
         "signup/index.html",
         "dang-nhap/index.html",
@@ -101,6 +122,8 @@ def main() -> None:
     stock = require(site / "co-phieu" / "index.html")
     home = require(site / "index.html")
     home_core = require(site / "assets" / "home-core-v1.js")
+    auth_state = require(site / "assets" / "auth-state-v2.js")
+    paid_nav = require(site / "assets" / "paid-nav-v1.js")
     email_gate = require(site / "assets" / "auth-email-gate.js")
     policy = require(site / "assets" / "auth-policy.js")
     account_security = require(site / "assets" / "auth-account-security.js")
@@ -162,22 +185,52 @@ def main() -> None:
     require_all(stock, (SUPABASE_CDN, "assets/auth-config.js", "assets/stock-api-client.js"), "stock analysis")
     reject_all(stock, HEAVY_AUTH_ASSETS, "stock analysis")
 
-    require_all(home, ("assets/auth-config.js", "assets/home-core-v1.js"), "homepage")
+    # Homepage auth is intentionally lightweight. home-core owns only mobile
+    # navigation; account/session rendering lives in auth-state-v2 / paid-nav-v1.
     require_all(
-        home_core,
+        home,
         (
-            "emailDeliveryReady",
-            "registrationUrl",
-            "leadUrl",
-            "premiumUrl",
-            "mountEmailLead",
-            "nhan-ban-tin/",
-            "thanh-toan/?plan=premium",
+            "assets/auth-config.js",
+            "assets/auth-state-v2.js",
+            "assets/paid-nav-v1.js",
+            "assets/home-core-v1.js",
         ),
-        "homepage core",
+        "homepage",
     )
+    require_all(home_core, HOMEPAGE_CORE_REQUIRED, "homepage core")
+    reject_all(home_core, HOMEPAGE_CORE_LEGACY, "homepage core")
+    if len(home_core.encode("utf-8")) >= 2500:
+        raise SystemExit("homepage core is no longer lightweight/navigation-only")
+
+    require_all(
+        auth_state,
+        (
+            "STORAGE_KEY = 'stockradar-auth'",
+            "data-header-auth-actions",
+            "profiles",
+            "Nâng Premium",
+            "Đăng xuất",
+        ),
+        "homepage auth state",
+    )
+    require_all(
+        paid_nav,
+        (
+            "STORAGE_KEY = 'stockradar-auth'",
+            "data-header-auth-actions",
+            "profiles",
+            "Khuyến nghị",
+            "My StockRadar",
+            "Bắt đầu miễn phí",
+            "Đăng xuất",
+        ),
+        "account-aware navigation",
+    )
+    if "['hom-nay/', 'Hôm nay']" in paid_nav or "['kiem-tra-co-phieu/', 'Tra cứu mã']" in paid_nav:
+        raise SystemExit("account-aware navigation restored retired public menu items")
+
     if SUPABASE_CDN in home:
-        raise SystemExit("homepage must not load Supabase browser SDK")
+        raise SystemExit("homepage must not statically load Supabase browser SDK")
     reject_all(home, (*HEAVY_AUTH_ASSETS, *HOMEPAGE_LEGACY_AUTH_UX), "homepage")
 
     for path in [*site.rglob("*.js"), *site.rglob("*.html")]:
@@ -188,7 +241,7 @@ def main() -> None:
     state = "READY" if '"emailDeliveryReady":true' in config else "GATED"
     print(
         "StockRadar production auth verification: PASS "
-        f"(email delivery {state}; signup creates and signs in accounts directly; auth bundles route-scoped)"
+        f"(email delivery {state}; lightweight homepage auth; signup direct; auth bundles route-scoped)"
     )
 
 
