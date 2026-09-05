@@ -77,12 +77,47 @@ def local_asset_size(output: Path, refs: list[str]) -> int:
     return total
 
 
-def minify_css(source: str) -> str:
-    """Conservatively remove CSS comments and collapse whitespace outside strings.
+def _colon_starts_custom_property(out: list[str]) -> bool:
+    """Return True when the last emitted ':' belongs to a --custom-property name."""
+    if not out or out[-1] != ":":
+        return False
+    idx = len(out) - 2
+    while idx >= 0 and out[idx] not in "{};":
+        idx -= 1
+    token = "".join(out[idx + 1 : -1]).strip()
+    return bool(re.fullmatch(r"--[A-Za-z0-9_-]+", token))
 
-    This deliberately does not rewrite operators or declaration punctuation. Keeping one
-    whitespace token where source whitespace existed preserves descendant selectors and
-    calc() grammar while still removing indentation/newlines and ordinary comments.
+
+def _keep_pending_space(out: list[str], current: str) -> bool:
+    """Keep one whitespace token only where removing it can change CSS tokenization."""
+    if not out:
+        return False
+    previous = out[-1]
+    if previous.isspace():
+        return False
+
+    # Whitespace around structural punctuation is not significant. Deliberately do not
+    # strip around + / - because calc() requires whitespace around arithmetic operators.
+    if current in {"{", "}", ";", ",", ")", "]", "!"}:
+        return False
+    if previous in {"{", "}", ";", ",", "(", "[", "!"}:
+        return False
+
+    # Normal declarations do not need the common `property: value` space. Custom
+    # properties are the exception: leading whitespace is part of their token stream and
+    # may be observable through var(), so preserve one whitespace token there.
+    if previous == ":" and not _colon_starts_custom_property(out):
+        return False
+    return True
+
+
+def minify_css(source: str) -> str:
+    """Conservatively minify CSS without changing selectors, calc() math, or strings.
+
+    Ordinary comments are removed exactly as CSS preprocessing removes them. Whitespace is
+    collapsed to one token only when it can affect tokenization, while structural
+    punctuation and normal declaration colons are compacted. Custom-property leading
+    whitespace and calc() operator spacing remain intact.
     """
     out: list[str] = []
     i = 0
@@ -90,6 +125,15 @@ def minify_css(source: str) -> str:
     escaped = False
     pending_space = False
     length = len(source)
+
+    def emit(current: str) -> None:
+        nonlocal pending_space
+        if pending_space and _keep_pending_space(out, current):
+            out.append(" ")
+        pending_space = False
+        if current == "}" and out and out[-1] == ";":
+            out.pop()
+        out.append(current)
 
     while i < length:
         ch = source[i]
@@ -106,11 +150,8 @@ def minify_css(source: str) -> str:
             continue
 
         if ch in {"'", '"'}:
-            if pending_space and out and not out[-1].isspace():
-                out.append(" ")
-            pending_space = False
+            emit(ch)
             quote = ch
-            out.append(ch)
             i += 1
             continue
 
@@ -119,15 +160,13 @@ def minify_css(source: str) -> str:
             if end < 0:
                 raise RuntimeError("Unterminated CSS comment during homepage minification")
             comment = source[i : end + 2]
-            # Preserve explicit license comments but collapse ordinary comments to one
-            # whitespace boundary so tokens separated only by a comment never merge.
             if comment.startswith("/*!"):
-                if pending_space and out and not out[-1].isspace():
+                if pending_space and _keep_pending_space(out, "/"):
                     out.append(" ")
                 pending_space = False
-                out.append(comment)
-            else:
-                pending_space = True
+                out.extend(comment)
+            # Ordinary CSS comments disappear without inventing whitespace. Existing
+            # whitespace before/after the comment is still represented by pending_space.
             i = end + 2
             continue
 
@@ -136,11 +175,7 @@ def minify_css(source: str) -> str:
             i += 1
             continue
 
-        if pending_space:
-            if out and not out[-1].isspace():
-                out.append(" ")
-            pending_space = False
-        out.append(ch)
+        emit(ch)
         i += 1
 
     return "".join(out).strip() + "\n"
