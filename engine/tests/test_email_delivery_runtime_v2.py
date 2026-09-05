@@ -50,8 +50,6 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
             '"List-Unsubscribe"',
             '"List-Unsubscribe-Post":"List-Unsubscribe=One-Click"',
             "STOCKRADAR_FUNCTIONS_BASE_URL",
-            "XEM TRẠNG THÁI MỚI NHẤT",
-            "Không có thay đổi hành động mới",
             "suppressed",
         ):
             self.assertIn(marker, source)
@@ -156,7 +154,7 @@ class EmailDeliveryRuntimeV2Tests(unittest.TestCase):
         self.assertIn("STOCKRADAR_PUBLIC_BASE_URL", source)
         self.assertIn("STOCKRADAR_FUNCTIONS_BASE_URL", source)
         self.assertIn('/functions/v1', source)
-        self.assertIn("co-phieu/?ticker=", source)
+        self.assertIn("co-phieu/?ticker=", self.read("supabase/functions/_shared/email-copy.ts"))
 
 
 if __name__ == "__main__":

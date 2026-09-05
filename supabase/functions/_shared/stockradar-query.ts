@@ -1,6 +1,6 @@
 import { normalizeResearchContext } from './stockradar-core.ts';
 
-const STOP = new Set(['CHI','DON','GON','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','MAI','HOM','CAC','CUA','VOI','TAI']);
+const STOP = new Set(['VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR','CHI','DON','GON','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','MAI','HOM','CAC','CUA','VOI','TAI']);
 export function parseResearchQuery(message: string, requestedTicker = '') {
   const q = message.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
   // Accented Vietnamese words such as “đạt” must not become ticker DAT.

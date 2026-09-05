@@ -10,7 +10,7 @@ const context = (overrides = {}) => ({ticker:'MBB',as_of_date:'2026-09-04',volum
   setup:{holding_state_v5:'GIU_QUAN_SAT'}, ...overrides});
 
 test('natural Vietnamese detail questions do not introduce phantom tickers', () => {
-  for (const q of ['Phân tích chi tiết MBB','MBB điểm mua sớm khối lượng đạt chưa?','Giải thích đơn giản rủi ro của mbb']) {
+  for (const q of ['Phân tích chi tiết MBB','MBB điểm mua sớm khối lượng đạt chưa?','Giải thích đơn giản rủi ro của mbb','Phân tích MBB theo 4M, CANSLIM, SEPA/VCP, VPA và ROE']) {
     assert.deepEqual(parseResearchQuery(q).tickers,['MBB']);
     assert.equal(parseResearchQuery(q).scope,'ticker');
   }
@@ -67,12 +67,13 @@ test('passing one volume condition never claims a confirmed buy; missing is not 
   assert.match(readableResearchFacts(context()).earlyVolumeText,/Chưa đủ dữ liệu/);
 });
 
-test('default answer is plain, concise and does not invent a stop or success probability', () => {
+test('default answer preserves four layers and horizons in plain Vietnamese without invented stops', () => {
   const answer=deterministicStockRadarAnswer({mode:'RESEARCH_ONLY',researchContext:context(),question:'Phân tích MBB'});
   for (const word of ['setup','RVOL','Pivot','Target','catalyst','drawdown','free-float','turnover','Radar Score','research-ready']) assert.equal(answer.includes(word),false,word);
   assert.match(answer,/CHƯA MUA MỚI/); assert.match(answer,/NẾU ĐANG NẮM GIỮ/);
-  assert.match(answer,/chưa tự động đủ điều kiện mua/);
-  assert.ok(answer.split(/\s+/).length < 250);
+  assert.match(answer,/chạm mốc chưa đủ để mua/);
+  for(const section of ['4M','CANSLIM','SEPA/VCP','VPA','Ngắn hạn','3–6 tháng','12 tháng','Tích sản']) assert.ok(answer.includes(section),section);
+  assert.doesNotMatch(answer,/xác suất.*\d+%/);
 });
 
 test('default model answer stays concise, explicit detail still carries source evidence', () => {

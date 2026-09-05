@@ -1,3 +1,4 @@
+import { sanitizeResearchValuation, frameworkText } from "./stockradar-framework.ts";
 import { readableResearchFacts, observationDate, wantsResearchDetail } from "./stockradar-readable.ts";
 
 export const STOCKRADAR_SYSTEM_CORE = `Bạn là StockRadar AI, trợ lý ra quyết định cổ phiếu HOSE dựa trên dữ liệu StockRadar.
@@ -17,11 +18,12 @@ CHẾ ĐỘ DỮ LIỆU
 - METHOD_ONLY: chưa đủ dữ liệu hiện tại; nói rõ dữ liệu nào còn thiếu, không tự suy đoán.
 
 CÁCH TRẢ LỜI — BẮT BUỘC
-- Tiếng Việt thông dụng, câu ngắn. Với một mã, dòng đầu tiên phải là “KẾT LUẬN: ...”. Mặc định khoảng 150–250 từ, tối đa 3 lý do chính, không liệt kê hàng loạt điểm số.
+- Tiếng Việt thông dụng, câu ngắn. Với một mã, dòng đầu tiên phải là “KẾT LUẬN: ...”. Phân tích một mã phải có đủ bốn lớp bằng ngôn ngữ dễ hiểu: 4M (doanh nghiệp), CANSLIM (tăng trưởng), SEPA/VCP (kỹ thuật), VPA (giá và khối lượng). Mỗi lớp nêu kết quả, bằng chứng cụ thể và phần còn thiếu; không thay phân tích bằng một điểm số.
 - Không dùng ký hiệu Markdown như ** vì giao diện hiển thị văn bản thuần.
 - Không dùng thuật ngữ nội bộ “Action Gate”, “Data Gate”, research-ready, snapshot, setup. Dùng “điều kiện mua”, “dữ liệu ngày…”.
 - Dùng “khối lượng giao dịch”, “mốc giá theo dõi”, “mức giá tham khảo”, “mức cắt lỗ”, “lợi nhuận kỳ vọng so với rủi ro”. Tránh RVOL, Pivot, Target, Stop, Risk/Reward, catalyst, drawdown, free-float, turnover. Nếu người dùng hỏi một thuật ngữ, giải thích bằng tiếng Việt trước.
-- Trả lời đúng câu hỏi trước. Với câu hỏi mua hoặc nhận định chung: kết luận, “VÌ SAO:”, “NẾU ĐANG NẮM GIỮ:”, “CẦN CHỜ:”. Chỉ thêm mức giá tham khảo khi hữu ích; ghi rõ đó là ước tính, không phải giá chắc chắn đạt được. Chỉ đưa bảng điểm và chỉ số chuyên sâu khi được hỏi.
+- Trả lời đúng câu hỏi trước, sau đó thể hiện bốn lớp và bốn khung: Ngắn hạn, 3–6 tháng, 12 tháng, Tích sản. Ngắn hạn phải dùng đường trung bình, nền giá, mốc theo dõi, khối lượng, xu hướng, dải biến động, điều kiện đánh giá lại nếu có dữ liệu. Không dùng cùng một mục tiêu và mức cắt lỗ cho cả bốn khung. Có thể viết ngắn, nhưng không được xóa các lớp phân tích.
+- Định giá phải nêu phương pháp, số liệu đầu vào, kỳ báo cáo và giả định. Khi forecast_ready không phải true, không nêu giá trị hợp lý, mục tiêu hoặc phần trăm tăng kỳ vọng từ phép so sánh lịch sử. Không gắn giá cơ sở thành mục tiêu 3–6 tháng hoặc giá kịch bản tốt thành mục tiêu 12 tháng. Giá cũ trong hội thoại không thay thế dữ liệu đã xác minh. Không tự tạo giả định để điền chỗ trống.
 - Mọi so sánh giá phải ghi giá quan sát, ngày, mốc so sánh, chênh lệch bằng đồng và phần trăm tính theo mốc. Không viết “hiện dưới khoảng…”. Ưu tiên readable_facts đã tính từ cùng dữ liệu; không suy ngược giá từ phần trăm làm tròn.
 - Khối lượng phải ghi so với mức nào, trong phiên hay cuối phiên. 0,73 lần trung bình 20 phiên nghĩa là khoảng 73% trung bình, thấp hơn khoảng 27%. Chỉ điều kiện khối lượng đạt chưa có nghĩa là điểm mua đã được xác nhận. Không dùng cờ ước tính trong phiên để kết luận về cuối phiên; ưu tiên readable_facts.earlyVolumePass.
 - Mốc theo dõi không tự động là giá mua. Không tự đặt thêm ngưỡng giá, khối lượng hay điều kiện mua/bán. Nêu rõ điều đang thiếu từ dữ liệu; không khẳng định lợi nhuận/rủi ro dưới 2 nếu thiếu mức cắt lỗ hoặc tỷ lệ cụ thể.
@@ -107,7 +109,7 @@ export function normalizeResearchContext(raw) {
   const p = obj(raw.payload);
   const rv7 = obj(p.research_v7), quote = obj(p.quote), setup = obj(p.setup), scores = obj(p.scores), risk = obj(p.risk), market = obj(p.market_context), plan = obj(p.trade_plan), fv = obj(p.fundamental_valuation);
   const contextGrade = txt(raw.context_grade) || (raw.status === 'INTERNAL_RESEARCH_READY' ? 'RESEARCH_READY' : 'REFERENCE_ONLY');
-  const context = {
+  const context = sanitizeResearchValuation({
     status: 'CONTEXT_READY', context_grade: contextGrade, ticker: raw.ticker, snapshot_id: raw.snapshot_id,
     generated_at: raw.generated_at, as_of_date: raw.as_of_date,
     data_quality: raw.data_quality || 'updated', volume_mode: p.volume_mode || 'UNKNOWN', history: obj(p.history),
@@ -122,7 +124,7 @@ export function normalizeResearchContext(raw) {
     catalyst: obj(p.catalyst), corporate_action: obj(p.corporate_action),
     supply_institutional: obj(p.supply_institutional), fundamental_valuation: fv,
     release: obj(p.release), research_v7: rv7,
-  };
+  });
   const facts = readableResearchFacts(context);
   if (context.volume_mode === 'EOD') {
     context.technical_detail.pocket_pivot_volume_pass = facts.earlyVolumePass;
@@ -142,25 +144,17 @@ function singleResearch(context, question = '', reference = false) {
   const rr = num(plan.risk_reward_to_base ?? a.rr_to_base_v5);
   const riskReasons = reasonArray(rawReasons, corporateActionClear)
     .filter(r => r !== REASONS.RR_BELOW_2 || (rr != null && rr < 2))
+    .filter(r => r !== REASONS.UPSIDE_TOO_LOW || obj(context.valuation_detail).forecast_ready === true)
     .filter(r => Object.values(REASONS).includes(r));
-  const t36 = num(plan.target_3_6m ?? a.target_3_6m_v5), t12 = num(plan.target_12m ?? a.target_12m_v5);
-  const up36 = pctFrom(facts.price, t36), up12 = pctFrom(facts.price, t12);
   let conclusion = `KẾT LUẬN: ${ticker} CHƯA MUA MỚI theo dữ liệu hiện có.`;
   if (reference) conclusion = `KẾT LUẬN: ${ticker} còn thiếu dữ liệu để đánh giá mua/bán.`;
   else if (intent === 'HOLD') conclusion = `KẾT LUẬN: Nếu đang nắm giữ ${ticker}, ${holdState === 'GIỮ VÀ QUAN SÁT' || holdState === 'GIỮ' ? 'tiếp tục giữ và theo dõi; chưa mua thêm theo dữ liệu hiện có.' : 'cần xem lại rủi ro và kế hoạch nắm giữ; chưa có tín hiệu mua/bán được xác nhận.'}`;
   else if (intent === 'RISK') conclusion = `KẾT LUẬN: Rủi ro chính của ${ticker}: ${riskReasons[0] || 'chưa đủ dữ liệu để xác nhận mức rủi ro'}.`;
-  else if (intent === 'MEDIUM' && up36 != null) conclusion = `KẾT LUẬN: ${ticker} trong 3–6 tháng có mức giá tham khảo ${fmtPrice(t36)}, ${up36 >= 0 ? 'cao hơn' : 'thấp hơn'} giá đang ghi nhận khoảng ${fmtPct(Math.abs(up36))}. Đây là ước tính, chưa phải lý do đủ để mua.`;
-  else if (intent === 'LONG' && up12 != null) conclusion = `KẾT LUẬN: ${ticker} có mức giá tham khảo 12 tháng là ${fmtPrice(t12)}, ${up12 >= 0 ? 'cao hơn' : 'thấp hơn'} giá đang ghi nhận khoảng ${fmtPct(Math.abs(up12))}. Đây là ước tính, chưa phải lý do đủ để mua.`;
+  else if (intent === 'MEDIUM' || intent === 'LONG') conclusion = `KẾT LUẬN: ${ticker} CHƯA MUA MỚI; cần đối chiếu doanh nghiệp, tăng trưởng, định giá và thời điểm mua trong từng khung đầu tư.`;
   const quality = txt(context.data_quality);
   const lines = [quality === 'stale' ? `KẾT LUẬN: ${ticker} đang có dữ liệu cũ; chưa dùng để xác nhận mua/bán.` : quality === 'error' ? `KẾT LUẬN: Dữ liệu ${ticker} đang có lỗi; chưa dùng để xác nhận mua/bán.` : conclusion];
-  const why = [facts.priceText];
-  if (facts.volumeText) why.push(facts.volumeText);
-  const sectorState = state(market.sector_regime || a.sector_regime), marketState = state(market.market_regime || a.market_regime);
-  const backdrop = [];
-  if (sectorState === 'YẾU' || sectorState === 'YẾU HƠN THỊ TRƯỜNG') backdrop.push(`Nhóm ngành ${txt(context.sector).toLowerCase() || 'của cổ phiếu'} đang yếu`);
-  if (marketState === 'PHÂN HÓA, THẬN TRỌNG') backdrop.push('thị trường chưa tăng đồng đều giữa các nhóm cổ phiếu');
-  if (backdrop.length) why.push(`${backdrop.join('; ')}.`);
-  lines.push(`VÌ SAO:\n${why.map(x => `- ${x}`).join('\n')}`);
+  lines.push(facts.priceText);
+  lines.push(frameworkText(context,question));
   if (holdState && !reference && !['stale','error'].includes(quality) && intent !== 'HOLD') {
     const holding = holdState === 'GIỮ VÀ QUAN SÁT' || holdState === 'GIỮ'
       ? 'Theo đánh giá hiện có, tiếp tục giữ và theo dõi; chưa mua thêm.'
@@ -168,17 +162,6 @@ function singleResearch(context, question = '', reference = false) {
         ? 'Đánh giá hiện có nghiêng về giảm số cổ phiếu đang giữ; cần kiểm tra điều kiện bán cụ thể trước khi thực hiện.'
         : 'Cần xem lại rủi ro và kế hoạch nắm giữ; chưa đủ thông tin để đưa ra hướng xử lý cụ thể.';
     lines.push(`NẾU ĐANG NẮM GIỮ: ${holding}`);
-  }
-  if (!reference && !['stale','error'].includes(quality) && (intent === 'GENERAL' || intent === 'BUY' || intent === 'HOLD')) {
-    lines.push(`CẦN CHỜ: ${facts.pivot != null && facts.pivot > 0 ? `Theo dõi phản ứng của giá tại mốc ${fmtPrice(facts.pivot)} và khối lượng giao dịch. Chạm hoặc vượt mốc này chưa tự động đủ điều kiện mua.` : 'Cần có thêm dữ liệu giá và khối lượng để xác nhận điều kiện mua.'}`);
-  }
-  if (/volume|khối lượng|khoi luong|thanh khoản|thanh khoan|pocket|điểm mua sớm|diem mua som/i.test(question) || detail) lines.push(`KHỐI LƯỢNG VÀ ĐIỂM MUA: ${facts.earlyVolumeText}`);
-  if (['VALUE','MEDIUM','LONG','GENERAL'].includes(intent) || detail) {
-    const refs = [];
-    if (t36 != null && intent !== 'LONG') refs.push(`3–6 tháng: ${fmtPrice(t36)}${up36 != null ? ` (${up36 >= 0 ? '+' : ''}${fmtPct(up36)} so với giá ghi nhận)` : ''}`);
-    if (t12 != null && intent !== 'MEDIUM') refs.push(`12 tháng: ${fmtPrice(t12)}${up12 != null ? ` (${up12 >= 0 ? '+' : ''}${fmtPct(up12)} so với giá ghi nhận)` : ''}`);
-    if (refs.length) lines.push(`GIÁ THAM KHẢO: ${refs.join('; ')}. Đây là ước tính${obj(context.valuation_detail).assumptions_verified === false ? ' với giả định chưa được xác minh' : ''}, không bảo đảm giá sẽ đạt tới.`);
-    else if (intent !== 'GENERAL') lines.push('GIÁ THAM KHẢO: Chưa đủ dữ liệu để xác định.');
   }
   if (intent === 'RISK' || detail) {
     const bits = riskReasons.slice(0, 3);
@@ -228,4 +211,9 @@ export function deterministicStockRadarAnswer({ mode, researchContext, actionCon
   }
   if (mode === 'ACTION_READY' && Array.isArray(actionContext) && actionContext.length) return actionAnswer(actionContext);
   return 'KẾT LUẬN: chưa có dữ liệu đủ mới cho mã này. StockRadar AI không dùng giá hoặc tín hiệu cũ để suy đoán.';
+}
+
+export function hasResearchFramework(answer) {
+  return /4M/i.test(answer) && /CANSLIM/i.test(answer) && /SEPA/i.test(answer) && /VPA/i.test(answer)
+    && /ngắn hạn/i.test(answer) && /3\s*[-–]\s*6/.test(answer) && /12\s*tháng/.test(answer) && /tích sản/i.test(answer);
 }

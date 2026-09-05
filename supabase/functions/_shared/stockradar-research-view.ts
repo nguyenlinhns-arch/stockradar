@@ -1,3 +1,4 @@
+import { sanitizeResearchValuation, fourLayerEvidence, fourHorizonEvidence, valuationExplanation } from "./stockradar-framework.ts";
 import { readableResearchFacts, wantsResearchDetail } from "./stockradar-readable.ts";
 
 function obj(value: any): Record<string, any> { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
@@ -40,6 +41,7 @@ function pushMetric(list: string[], label: string, value: any, kind: 'number'|'p
 
 export function buildResearchSnapshot(context: any): any {
   if (!context) return null;
+  context=sanitizeResearchValuation(context);
   const a=obj(context.analysis), tech=obj(context.technical_detail), post=obj(context.scanner_postclose), val=obj(context.valuation_detail), fund=obj(context.fundamental_detail), plan=obj(context.trade_plan), scores=obj(context.scores), risk=obj(context.risk), market=obj(context.market_context), supply=obj(context.supply_institutional), catalyst=obj(context.catalyst), corp=obj(context.corporate_action), quote=obj(context.quote), setup=obj(context.setup);
   const price=firstNum(quote.price,a.price,post.price);
   const targetNear=firstNum(plan.target_near,a.target_near_rr2_v5), target36=firstNum(plan.target_3_6m,a.target_3_6m_v5), target12=firstNum(plan.target_12m,a.target_12m_v5);
@@ -52,7 +54,7 @@ export function buildResearchSnapshot(context: any): any {
       radar_status:state(firstTxt(setup.radar_status_v7,a.radar_status_v7,a.radar_status_v6)),
       new_position_state:state(firstTxt(setup.new_position_state_v5,a.new_position_state_v5)),
       holding_state:state(firstTxt(setup.holding_state_v5,a.holding_state_v5)),
-      stage:state(firstTxt(tech.stage,tech.stage_analysis,tech.stage_label,a.stage,a.stage_analysis)),
+      stage:state(firstTxt(tech.computed_indicators?.stage,tech.stage,tech.stage_analysis,tech.stage_label,a.stage,a.stage_analysis)),
       pivot:firstNum(tech.pivot20,tech.pivot,post.pivot20,post.pivot), distance_to_pivot_pct:firstNum(tech.distance_to_pivot_pct,post.distance_to_pivot_pct),
       rvol:context.volume_mode==='EOD'?facts.rvol:firstNum(tech.rvol_progress_adjusted,tech.rvol,post.rvol_progress_adjusted,post.rvol), pocket_pivot_volume_pass:facts.earlyVolumePass,
       ma10:firstNum(tech.ma10,a.ma10,post.ma10), ma50:firstNum(tech.ma50,a.ma50,post.ma50), ma150:firstNum(tech.ma150,a.ma150,post.ma150), ma200:firstNum(tech.ma200,a.ma200,post.ma200),
@@ -113,6 +115,7 @@ export function appendResearchSnapshot(answer: string, context: any, question = 
 
 export function analysisContract(context: any, reports: any[] = [], horizon = 'SHORT_TERM'): any {
   const s=buildResearchSnapshot(context); if(!s) return null;
+  context=sanitizeResearchValuation(context);
   const a=obj(context.analysis), f=obj(context.fundamental_detail), t=obj(context.technical_detail), v=obj(context.valuation_detail);
   const report=reports.find(r=>r.status==='READY'&&r.ticker===s.ticker&&r.horizon===horizon);
   const p=obj(report?.payload), actionPlan={...obj(p.trade_plan),...obj(p.action),...obj(p.recommendation)};
@@ -120,7 +123,7 @@ export function analysisContract(context: any, reports: any[] = [], horizon = 'S
   const canonicalSignal=ready?firstTxt(actionPlan.action,actionPlan.signal,actionPlan.state,p.action_state,p.recommendation_state):s.setup.new_position_state;
   const evidence=(value:any, source:string)=>({value:value??null,status:value==null?'INSUFFICIENT_DATA':'AVAILABLE',source});
   const selectedPlan=ready?actionPlan:s.trade_plan;
-  return {symbol:s.ticker,exchange:'HOSE',price:s.price,updated_at:s.generated_at,as_of_date:s.as_of_date,
+  return {four_layers:fourLayerEvidence(context),horizons:fourHorizonEvidence(context,reports),valuation_explanation:valuationExplanation(context),symbol:s.ticker,exchange:'HOSE',price:s.price,updated_at:s.generated_at,as_of_date:s.as_of_date,
     source:'StockRadar Data Layer',snapshot_id:context.snapshot_id,data_quality:context.data_quality||'updated',
     signal:context.data_quality==='stale'?'CHƯA ĐỦ DỮ LIỆU MỚI':state(canonicalSignal)||'Chưa đủ dữ liệu để xác nhận',signal_status:ready?'ACTION_READY':s.context_grade==='RESEARCH_READY'?'RESEARCH_ONLY':'REFERENCE_ONLY',confidence:s.coverage.decision_confidence,
     probability:null,stage:s.setup.stage||null,setup:s.setup.candidate_setup||null,pivot:s.setup.pivot,

@@ -55,6 +55,13 @@ def visible_main(source: str) -> str:
     if not match:
         raise RuntimeError("Missing <main>")
     text = match.group(1)
+    # Closed disclosure panels expose their summary in the initial page, not their body.
+    def disclosure(match):
+        if re.search(r'(?:^|\s)open(?:\s|=|$)', match.group(1), flags=re.I):
+            return match.group(2)
+        summary = re.search(r'<summary\b[^>]*>.*?</summary>', match.group(2), flags=re.I | re.S)
+        return summary.group(0) if summary else ''
+    text = re.sub(r'<details\b([^>]*)>(.*?)</details>', disclosure, text, flags=re.I | re.S)
     # Template/script/style/noscript content is not buyer-visible and must not inflate copy budgets.
     text = re.sub(
         r'<(?:script|style|noscript|template)\b.*?</(?:script|style|noscript|template)>',

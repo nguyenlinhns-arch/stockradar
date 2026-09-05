@@ -11,6 +11,15 @@ def n(x): return pd.to_numeric(x, errors='coerce')
 def setup_family(value): return str(value or '').strip().upper().removesuffix('_CANDIDATE')
 def position_pct(setup): return {'POCKET_PIVOT':17.5,'EARLY_BREAKOUT':25.0,'CONFIRMED_BREAKOUT':50.0}.get(setup_family(setup),0.0)
 
+def horizon_forecasts(frame):
+    """A valuation scenario is not a forecast for a holding period."""
+    result={}
+    for horizon in ('3_6m','12m'):
+        verified=frame.get('forecast_'+horizon+'_verified',pd.Series(False,index=frame.index)).eq(True)
+        values=n(frame.get('forecast_'+horizon,pd.Series(np.nan,index=frame.index)))
+        result['target_'+horizon+'_v5']=values.where(verified & values.gt(0))
+    return pd.DataFrame(result,index=frame.index)
+
 def setup_buy_zone(row):
     setup=setup_family(row.candidate_setup)
     price=float(row.price) if pd.notna(row.price) else np.nan
@@ -50,10 +59,13 @@ def build(args):
     d['stop_loss_v5']=d.entry_reference_v5*(1-d.stop_pct_v5)
     d['downside_to_stop_pct_v5']=(d.stop_loss_v5/d.entry_reference_v5-1)*100
     d['target_near_rr2_v5']=d.entry_reference_v5+2*(d.entry_reference_v5-d.stop_loss_v5)
-    d['target_3_6m_v5']=n(d.fair_value_domain_base_v4); d['target_12m_v5']=n(d.fair_value_domain_bull_v4)
+    d['research_value_base_v5']=n(d.fair_value_domain_base_v4)
+    d['research_value_bull_v5']=n(d.fair_value_domain_bull_v4)
+    forecasts=horizon_forecasts(d)
+    d['target_3_6m_v5']=forecasts.target_3_6m_v5; d['target_12m_v5']=forecasts.target_12m_v5
     risk=d.entry_reference_v5-d.stop_loss_v5
-    d['rr_to_base_v5']=(d.target_3_6m_v5-d.entry_reference_v5)/risk.replace(0,np.nan)
-    d['upside_from_entry_to_base_pct_v5']=(d.target_3_6m_v5/d.entry_reference_v5-1)*100
+    d['rr_to_base_v5']=(d.research_value_base_v5-d.entry_reference_v5)/risk.replace(0,np.nan)
+    d['upside_from_entry_to_base_pct_v5']=(d.research_value_base_v5/d.entry_reference_v5-1)*100
     d['position_initial_pct_v5']=d.candidate_setup.map(position_pct).fillna(0)
     d['holding_state_v5']=d.apply(holding_state,axis=1)
     d['new_position_state_v5']='THEO_DOI'; reasons=[]
@@ -80,6 +92,7 @@ def build(args):
     d['publication_state_v5']='BLOCKED_PENDING_CURRENT_CORPORATE_ACTIONS_DATA_RIGHTS_COMPLIANCE'; d['public_action_allowed_v5']=False
     d['decision_confidence_v5']=(.35*n(d.fundamental_confidence_v4).fillna(0)+.35*n(d.valuation_score_confidence_v4).fillna(0)+.30*n(d.data_quality_score).fillna(0)).round(2)
     keep=['ticker','company_type','business_bucket','sector_v4','price','candidate_setup','radar_rank_score_v4','decision_confidence_v5','new_position_state_v5','holding_state_v5','buy_zone_low_v5','buy_zone_high_v5','position_initial_pct_v5','stop_loss_v5','downside_to_stop_pct_v5','target_near_rr2_v5','target_3_6m_v5','target_12m_v5','upside_from_entry_to_base_pct_v5','rr_to_base_v5','rvol_progress_adjusted','same_time_volume_ratio','stage','market_regime','sector_regime','risk_score','internal_research_candidate_v4','private_action_candidate_v5','decision_block_reasons_v5','publication_state_v5','public_action_allowed_v5']
+    keep += ['research_value_base_v5','research_value_bull_v5']
     out=d[keep].sort_values(['private_action_candidate_v5','radar_rank_score_v4'],ascending=[False,False]); Path(args.output).parent.mkdir(parents=True,exist_ok=True); out.to_csv(args.output,index=False,encoding='utf-8-sig')
     summary={'schema_version':'STOCKRADAR_DECISION_V5','canonical_hose':405,'private_action_candidates':int(out.private_action_candidate_v5.sum()),'new_position_states':out.new_position_state_v5.value_counts().to_dict(),'holding_states':out.holding_state_v5.value_counts().to_dict(),'public_action_allowed':False,'required_public_gates':['CURRENT_CORPORATE_ACTIONS','DATA_RIGHTS','COMPLIANCE','ACTIVE_PRODUCTION_MANIFEST'],'risk_policy':'Stop 5-8% adjusted by 1.5x ATR; buy requires R:R to Base Fair Value >=2 and >=10% upside from entry.','position_policy':{'POCKET_PIVOT':'15-20%','EARLY_BREAKOUT':'20-30%','CONFIRMED_BREAKOUT':'40-60%'}}
     Path(args.manifest).write_text(json.dumps(summary,ensure_ascii=False,indent=2)+'\n',encoding='utf-8'); print(json.dumps(summary,ensure_ascii=False))

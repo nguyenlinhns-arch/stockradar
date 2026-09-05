@@ -20,11 +20,11 @@
   <link rel="stylesheet" href="assets/home-focus-v1.css?v=20260904-ai2">
   <link rel="stylesheet" href="assets/home-conversion-v2.css?v=20260904-ai2">
   <link rel="stylesheet" href="assets/home-ai-center-v1.css?v=20260904-ai2">
-  <link rel="stylesheet" href="assets/home-workspace-v2.css?v=20260904-workspace2">
+  <link rel="stylesheet" href="assets/home-workspace-v2.css?v=20260905-reco3">
   <script src="assets/auth-config.js?v=20260904-ai2"></script>
   <script src="assets/app.js?v=20260904-ai2" defer></script>
   <script src="assets/ai-center.js?v=20260904-ai4" defer></script>
-  <script src="assets/home-workspace-v2.js?v=20260904-workspace2" defer></script>
+  <script src="assets/home-workspace-v2.js?v=20260905-reco3" defer></script>
 </head>
 <body class="ai-home" data-proposition="ai-first">
   <a class="skip-link" href="#content">Bỏ qua điều hướng</a>
@@ -116,11 +116,18 @@
         <div class="reco-shell">
           <div class="reco-table-wrap" data-home-reco-table hidden>
             <table class="reco-table">
-              <thead><tr><th>Mã</th><th>Trạng thái</th><th>Giá tham chiếu</th><th>Buy Zone</th><th>Stop</th><th>Target</th><th>R/R</th></tr></thead>
+              <thead><tr><th>Mã</th><th>Trạng thái</th><th>Giá tham chiếu</th><th>Vùng mua</th><th>Cắt lỗ</th><th>Mục tiêu</th><th>Lãi/lỗ dự kiến</th><th>Xác nhận lúc</th><th>Email cảnh báo</th></tr></thead>
               <tbody data-home-reco-body></tbody>
             </table>
           </div>
-          <div class="reco-empty" data-home-reco-empty><strong>Chưa có cổ phiếu đạt điều kiện phát hành.</strong><span>StockRadar sẽ không lấp bảng bằng mã chưa đủ chuẩn.</span></div>
+          <div class="reco-empty" data-home-reco-empty><strong>Đang kiểm tra khuyến nghị mua.</strong><span data-home-reco-reason>Đang tải kết quả.</span></div>
+          <div class="reco-schedule">
+            <div><span>Dữ liệu giá</span><strong data-reco-price-date>—</strong></div>
+            <div><span>Rà soát gần nhất · giờ VN</span><strong data-reco-reviewed-at>—</strong></div>
+            <div><span>Rà soát tiếp · dự kiến</span><strong data-reco-next-review>—</strong></div>
+            <div><span>Email Premium</span><strong data-reco-email-state>Đang kiểm tra</strong></div>
+          </div>
+          <details class="reco-criteria"><summary>Tiêu chí mua và lịch email</summary><p>Dữ liệu, giá và khối lượng đạt chuẩn; có vùng mua/cắt lỗ; dư địa tăng ≥10%; lãi kỳ vọng ≥2 lần lỗ dự kiến.</p><p data-reco-email-schedule>Thứ Hai–thứ Sáu: bản tin 09:00; cảnh báo sau các lượt rà soát 10:30 · 11:15 · 13:30 · 14:15.</p><a href="tai-khoan/#email-preferences-title">Cài đặt nhận email →</a></details>
           <div class="reco-foot"><span data-home-reco-state>Đang kiểm tra snapshot hiện tại.</span><a href="hieu-qua/">Kiểm chứng hiệu quả →</a></div>
         </div>
       </div>

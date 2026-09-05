@@ -192,7 +192,7 @@ def inject_runtime_guard(source: str, page: Path, output: Path) -> str:
     if "</head>" not in source:
         raise RuntimeError(f"Cannot inject decision copy guard: {page.relative_to(output)} has no </head>")
     src = guard_src(source, page, output)
-    tag = f'<script src="{src}?v=20260904-decision1" defer {RUNTIME_MARKER}></script>\n'
+    tag = f'<script src="{src}?v=20260905-framework1" defer {RUNTIME_MARKER}></script>\n'
     return source.replace("</head>", tag + "</head>", 1)
 
 

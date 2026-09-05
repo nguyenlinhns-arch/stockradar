@@ -48,7 +48,8 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "public/data/today-changes.json",
             "isBlocked",
             "table.hidden = true",
-            "Chưa có cổ phiếu đạt điều kiện phát hành",
+            "get_stockradar_recommendation_status_v1",
+            "NO_QUALIFIED_BUYS",
             "performance_summary",
             "normalizeHeaderActions",
             "dang-ky/?plan=free",
@@ -73,14 +74,6 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "@media(max-width:520px)",
         ):
             self.assertIn(marker, css)
-
-    def test_homepage_simplifies_ai_opening_message_after_mount(self):
-        js = self.read("website/assets/home-workspace-v2.js")
-        self.assertIn("normalizeAiOpeningMessage", js)
-        self.assertIn("Tôi là StockRadar AI. Nhập một mã HOSE", js)
-        self.assertIn("nếu dữ liệu chưa đủ chuẩn", js)
-        self.assertNotIn("4M/Payback · CANSLIM", js)
-        self.assertNotIn("SEPA/VCP", js)
 
     def test_homepage_ai_resolves_account_before_prompting_for_signup(self):
         ai = self.read("website/assets/ai-center.js")

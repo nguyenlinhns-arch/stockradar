@@ -152,7 +152,7 @@ jobs:
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
           npx playwright install --with-deps chromium
-          node --test engine/tests/ai_runtime.test.mjs engine/tests/ai_handlers.test.mjs
+          node --test engine/tests/*.test.mjs
       - name: Run multi-viewport visual QA
         run: |
           python -m http.server 8765 --bind 127.0.0.1 --directory .pages-site >/tmp/stockradar-http.log 2>&1 &

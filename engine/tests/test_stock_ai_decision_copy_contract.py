@@ -45,14 +45,13 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
     def test_research_answer_is_decision_first_and_rich(self):
         source = self.source
         self.assertIn("KẾT LUẬN: ${ticker} CHƯA MUA MỚI", source)
-        self.assertIn("CẦN CHỜ:", source)
+        self.assertIn("frameworkText(context,question)", source)
         self.assertIn("NẾU ĐANG NẮM GIỮ:", source)
-        self.assertIn("VÌ SAO:", source)
-        self.assertIn("GIÁ THAM KHẢO:", source)
+        self.assertIn("sanitizeResearchValuation", source)
         self.assertIn("TIN DOANH NGHIỆP:", source)
         self.assertIn("RỦI RO:", source)
         self.assertIn("Thông tin tham khảo từ dữ liệu ngày", source)
-        self.assertIn("không liệt kê hàng loạt điểm số", source)
+        self.assertIn("không thay phân tích bằng một điểm số", source)
         self.assertIn("target_3_6m", source)
         self.assertIn("target_12m", source)
 
@@ -65,7 +64,7 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn("return 'HOLD'", source)
         self.assertIn("return 'BUY'", source)
         self.assertIn("Rủi ro chính của ${ticker}", source)
-        self.assertIn("${ticker} trong 3–6 tháng", source)
+        self.assertIn("từng khung đầu tư", source)
         self.assertIn("Nếu đang nắm giữ ${ticker}", source)
         self.assertIn("singleResearch(list[0], question)", source)
 

@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
-import { STOCKRADAR_SYSTEM_CORE, deterministicStockRadarAnswer, normalizeResearchContext, stockRadarMode } from "../_shared/stockradar-core.ts";
+import { STOCKRADAR_SYSTEM_CORE, deterministicStockRadarAnswer, normalizeResearchContext, stockRadarMode, hasResearchFramework } from "../_shared/stockradar-core.ts";
 import { appendResearchSnapshot, buildResearchSnapshot, analysisContract } from "../_shared/stockradar-research-view.ts";
 
 import { parseResearchQuery, loadResearchQuery, guestQuotaIdentity } from "../_shared/stockradar-query.ts";
@@ -118,11 +118,12 @@ Deno.serve(async req=>{
   if(!key||Date.now()<providerDisabledUntil)return json({status:'READY_FALLBACK',reason:!key?'OPENAI_KEY_MISSING':'OPENAI_CIRCUIT_OPEN',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   const context={...fullResearchContext,RESPONSE_MODE:mode,ACCESS_TIER:tier,REQUEST_SCOPE:scope,REQUESTED_TICKER:scope==='ticker'?ticker:null,REQUESTED_HORIZON:horizon,USER_QUESTION:message,RECENT_CONVERSATION:hist,USER_CONTEXT:userContext,ACTION_CONTEXT:action,RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts};
   let response;
-  try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')?.trim()||'gpt-5-mini',instructions:STOCKRADAR_SYSTEM_CORE,input:JSON.stringify(context),max_output_tokens:scope==='portfolio'?1200:1000,store:false,reasoning:{effort:"minimal"}})})}
+  try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')?.trim()||'gpt-5-mini',instructions:STOCKRADAR_SYSTEM_CORE,input:JSON.stringify(context),max_output_tokens:scope==='ticker'?2800:1400,store:false,reasoning:{effort:"minimal"}})})}
   catch{return json({status:'READY_FALLBACK',reason:'OPENAI_NETWORK_ERROR',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
   let payload=null;try{payload=await response.json()}catch{}
   if(!response.ok){const code=errCode(payload);if(response.status===429&&/CREDIT|QUOTA|BALANCE/.test(code))providerDisabledUntil=Date.now()+15*60*1000;return json({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
-  const modelText=payload?.status==='completed'?openAIText(payload):'';
+  const candidateText=payload?.status==='completed'?openAIText(payload):'';
+  const modelText=(scope==='ticker' && mode!=='ACTION_READY' && !hasResearchFramework(candidateText))?'':candidateText;
   const answer=modelText?(scope==='ticker'?appendResearchSnapshot(appendPosition(modelText,scope,ticker,watch),tickerContext,message):appendPosition(modelText,scope,ticker,watch)):fallback;
   await audit(db,user.id,scope==='ticker'?ticker:'',horizon,'AI_READY',scope==='portfolio'?'MODEL_PLUS_STOCKRADAR_CORE_PORTFOLIO':'MODEL_PLUS_STOCKRADAR_CORE',200,started,remaining);
   return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer},200,origin,rate);
