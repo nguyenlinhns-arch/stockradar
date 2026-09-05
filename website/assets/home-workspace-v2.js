@@ -191,7 +191,7 @@
     box.replaceChildren();
     const title=document.createElement('strong');title.textContent=`Đã báo mua ${s.tickers} mã · ${s.alerts} email đã đối chiếu`;box.append(title);
     for(const r of payload.items){
-      const a=document.createElement('a');a.href=`hieu-qua/#history-${encodeURIComponent(r.ticker)}`;
+      const a=document.createElement('a');a.style.display='block';a.href=`hieu-qua/#history-${encodeURIComponent(r.ticker)}`;
       a.textContent=`${r.ticker} · ${fmtTime(r.first_sent_at)} · ${r.status==='NO_SELL_EMAIL_FOUND'?'Chưa có email bán':'Đã ghi nhận email bán'} · Xem hiệu quả →`;box.append(a);
     }
   }
