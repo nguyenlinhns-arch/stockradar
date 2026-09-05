@@ -189,11 +189,28 @@
     const box=qs('[data-home-history]');
     if(!box)return;
     box.replaceChildren();
-    const title=document.createElement('strong');title.textContent=`Đã báo mua ${s.tickers} mã · ${s.alerts} email đã đối chiếu`;box.append(title);
-    for(const r of payload.items){
-      const a=document.createElement('a');a.style.display='block';a.href=`hieu-qua/#history-${encodeURIComponent(r.ticker)}`;
-      a.textContent=`${r.ticker} · ${fmtTime(r.first_sent_at)} · ${r.status==='NO_SELL_EMAIL_FOUND'?'Chưa có email bán':'Đã ghi nhận email bán'} · Xem hiệu quả →`;box.append(a);
+    box.className='home-history';
+    const make=(tag,value,parent)=>{const el=document.createElement(tag);if(value!=null)el.textContent=value;parent.append(el);return el;};
+    const labels=['Mã','Thời gian khuyến nghị','Giá khuyến nghị','Giá hiện tại','Lãi/lỗ tạm tính','Trạng thái'];
+    const table=make('table',null,box);table.className='reco-table home-history-table';
+    make('caption',`${s.tickers} mã đã báo mua · mới nhất trước`,table);
+    const head=make('tr',null,make('thead',null,table));
+    labels.forEach(label=>{make('th',label,head).scope='col';});
+    const body=make('tbody',null,table);
+    for(const r of [...payload.items].sort((a,b)=>Date.parse(b.first_sent_at)-Date.parse(a.first_sent_at))){
+      const tr=make('tr',null,body);tr.dataset.historyTicker=r.ticker;
+      const cells=labels.map(label=>{const td=make('td',null,tr);td.dataset.label=label;return td;});
+      const a=make('a',r.ticker,cells[0]);a.href=`hieu-qua/#history-${encodeURIComponent(r.ticker)}`;a.className='reco-ticker';
+      make('b',fmtTime(r.signal_at),cells[1]);make('small',`Gửi email: ${fmtTime(r.first_sent_at)}`,cells[1]);
+      make('b',r.reference_price==null?'—':`${number(r.reference_price)}đ`,cells[2]);
+      make('b',r.latest_price==null?'—':`${number(r.latest_price)}đ`,cells[3]);
+      make('small',`Đóng cửa ${String(r.price_date||'').split('-').reverse().join('/')}`,cells[3]);
+      const gain=r.price_change_pct;
+      const value=make('b',gain==null?'—':`${gain>0?'+':''}${Number(gain).toLocaleString('vi-VN',{maximumFractionDigits:2})}%`,cells[4]);
+      value.className=gain>0?'is-up':gain<0?'is-down':'';
+      const badge=make('span',r.status==='NO_SELL_EMAIL_FOUND'?'Chưa ghi nhận bán':'Đã ghi nhận bán',cells[5]);badge.className='reco-action';
     }
+    make('p','Lãi/lỗ = thay đổi giá so với giá khuyến nghị đầu tiên; chưa tính phí, thuế và quyền. Chưa phải lãi/lỗ đã chốt.',box).className='home-history-note';
   }
 
   async function mount() {

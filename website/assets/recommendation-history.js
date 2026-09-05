@@ -26,7 +26,7 @@
     const s = data.summary;
     target.innerHTML = `<header><span class="panel-label">ĐÃ ĐỐI CHIẾU EMAIL GỐC</span><h2>Những mã AI đã báo mua</h2>
       <p>${s.tickers} mã · ${s.alerts} lần gửi · ${s.without_sell_email} mã chưa tìm thấy email bán đến ${day(data.mail_search_through)}.</p></header>
-      <div class="history-cards">${data.items.map(r => `<article class="history-card" id="history-${esc(r.ticker)}"><header><h3>${esc(r.ticker)}</h3><span class="history-badge">${r.status==='NO_SELL_EMAIL_FOUND'?'Chưa có email bán':'Đã ghi nhận email bán'}</span></header>
+      <div class="history-cards">${[...data.items].sort((a,b)=>Date.parse(b.first_sent_at)-Date.parse(a.first_sent_at)).map(r => `<article class="history-card" id="history-${esc(r.ticker)}"><header><h3>${esc(r.ticker)}</h3><span class="history-badge">${r.status==='NO_SELL_EMAIL_FOUND'?'Chưa có email bán':'Đã ghi nhận email bán'}</span></header>
         <p>Báo mua đầu tiên: <b>${time(r.first_sent_at)}</b></p>
         <div class="history-prices"><div><span>Giá tham chiếu trong thư đầu</span><b>${price(r.reference_price)}</b></div><div><span>Giá đóng cửa ${day(r.price_date)}</span><b>${price(r.latest_price)}</b></div><div><span>Biến động so với giá báo tin</span><b class="${tone(r.price_change_pct)}">${pct(r.price_change_pct)}</b></div></div>
         <details><summary>Xem các lần gửi và điều chỉnh</summary><ol>${timeline(r.timeline)}</ol></details></article>`).join('')}</div>

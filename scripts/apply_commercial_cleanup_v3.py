@@ -165,7 +165,7 @@ def cleanup_performance(source: str) -> str:
     source = source.replace('<div data-performance-summary>', '<div data-performance-summary hidden>', 1)
     source = source.replace('<div data-performance-summary hidden>', '<div data-alert-history><p>Đang tải lịch sử email và kết quả từng mã…</p></div><div data-performance-summary hidden>', 1)
     source = source.replace('Kết quả thực tế</h2>', 'Theo dõi khuyến nghị</h2>')
-    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=1" defer></script></head>', 1)
+    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=2" defer></script></head>', 1)
     return source
 
 

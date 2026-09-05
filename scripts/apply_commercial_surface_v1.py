@@ -182,7 +182,7 @@ def commercial_recommendations(source: str) -> str:
     for before, after in replacements:
         source = source.replace(before, after)
     source = source.replace('</main>', '<section class="container"><div data-alert-history><p>Đang tải lịch sử email…</p></div></section></main>', 1)
-    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=1" defer></script></head>', 1)
+    source = source.replace('</head>', '<link rel="stylesheet" href="assets/recommendation-history.css?v=1"><script src="assets/recommendation-history.js?v=2" defer></script></head>', 1)
     source = source.replace('Tín hiệu hiện tại</span>', 'Điểm mua mới</span>')
     return source
 
