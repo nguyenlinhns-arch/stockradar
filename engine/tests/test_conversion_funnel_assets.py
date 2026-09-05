@@ -30,7 +30,6 @@ class ConversionFunnelAssetTests(unittest.TestCase):
         styles = self.read("website/assets/account-upgrade-v1.css")
         injector = self.read("scripts/inject_public_ux.py")
 
-        # Trial/Paid/Premium are all normalized to the buyer-facing Premium state.
         for marker in (
             "normalized === 'PAID'",
             "normalized === 'TRIAL'",
@@ -53,18 +52,33 @@ class ConversionFunnelAssetTests(unittest.TestCase):
 
     def test_lead_capture_uses_private_session_prefill_and_campaign_attribution(self):
         lead = self.read("website/assets/email-interest.js")
-        home = self.read("website/assets/home-core-v1.js")
+        home_core = self.read("website/assets/home-core-v1.js")
         signup = self.read("website/assets/signup-email-intent.js")
-        for source in (lead, home):
-            self.assertIn("sr_pending_lead_email", source)
-            self.assertIn("utm_source", source)
-            self.assertIn("utm_campaign", source)
-            self.assertIn("referrer_host", source)
-            self.assertIn("source_path", source)
+
+        for marker in (
+            "sr_pending_lead_email",
+            "utm_source",
+            "utm_campaign",
+            "referrer_host",
+            "source_path",
+        ):
+            self.assertIn(marker, lead)
+        self.assertIn("sessionStorage.setItem(PENDING_LEAD_EMAIL_KEY, email)", lead)
         self.assertIn("sessionStorage.getItem(PENDING_LEAD_EMAIL_KEY)", signup)
         self.assertIn("params.delete('email')", signup)
         self.assertNotIn("searchParams.set('email'", lead)
-        self.assertNotIn("searchParams.set('email'", home)
+
+        # Homepage core is intentionally navigation-only. Lead capture lives on
+        # the dedicated email-interest client and must not grow back into home.
+        for legacy in (
+            "sr_pending_lead_email",
+            "utm_source",
+            "utm_campaign",
+            "referrer_host",
+            "source_path",
+            "mountEmailLead",
+        ):
+            self.assertNotIn(legacy, home_core)
 
 
 if __name__ == "__main__":
