@@ -16,10 +16,17 @@ function normalizeCommercialNav(){
     }
   });
 }
+function normalizeHomepage(){
+  if(!document.body?.classList.contains('ai-home')) return;
+  document.querySelectorAll('.home-market-bar').forEach(node=>node.remove());
+  const kicker=document.querySelector('.workspace-kicker');
+  if(kicker) kicker.textContent='STOCKRADAR AI';
+}
 function normalizeCommercialChrome(){
   document.querySelectorAll('.header-register-cta').forEach(l=>{l.href=siteUrl('dang-ky/?plan=free');l.textContent='Bắt đầu miễn phí';l.setAttribute('aria-label','Bắt đầu với StockRadar Free')});
   document.querySelectorAll('.conversion-mobile-cta,.mobile-newsletter-bar').forEach(n=>n.remove());
   normalizeCommercialNav();
+  normalizeHomepage();
 }
 function mount(){normalizeCommercialChrome();setTimeout(normalizeCommercialChrome,50);setTimeout(normalizeCommercialChrome,500)}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',mount,{once:true}):mount();
