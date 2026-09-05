@@ -29,6 +29,7 @@ on:
       - 'scripts/normalize_commercial_home_preflight_v1.py'
       - 'scripts/apply_commercial_surface_v1.py'
       - 'scripts/render_verified_recommendations_page.py'
+      - 'scripts/render_live_radar_page.py'
       - 'scripts/apply_commercial_surface_v2.py'
       - 'scripts/fix_commercial_auth_headings.py'
       - 'scripts/apply_commercial_runtime_v2.py'
@@ -41,6 +42,7 @@ on:
       - 'scripts/verify_commercial_density_v1.py'
       - 'scripts/verify*.py'
       - 'scripts/visual_qa.cjs'
+      - 'scripts/radar_session_qa.cjs'
       - 'package.json'
       - 'package-lock.json'
       - '.github/workflows/pages.yml'
@@ -167,6 +169,7 @@ jobs:
           if [ "$ready" != "1" ]; then cat /tmp/stockradar-http.log; exit 1; fi
           STOCKRADAR_QA_URL=http://127.0.0.1:8765 npm run visual-qa
           node scripts/auth_session_qa.cjs
+          node scripts/radar_session_qa.cjs
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:

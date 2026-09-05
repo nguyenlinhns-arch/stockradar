@@ -1,4 +1,5 @@
 (() => {
+  if (document.querySelector('[data-live-research-radar]')) return;
   const proposition = document.body?.dataset?.proposition || '';
   const fallbackRoutes = new Set([
     'radar5', 'breakout', 'risk', 'track-record', 'today-changes',

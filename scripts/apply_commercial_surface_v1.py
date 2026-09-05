@@ -9,8 +9,10 @@ from pathlib import Path
 
 if __package__:
     from .render_verified_recommendations_page import render_page
+    from .render_live_radar_page import render_radar_page
 else:
     from render_verified_recommendations_page import render_page
+    from render_live_radar_page import render_radar_page
 
 STYLE_NAME = "commercial-v1.css"
 STYLE_MARKER = "data-commercial-v1"
@@ -150,21 +152,7 @@ def commercial_today(source: str) -> str:
 
 
 def commercial_radar(source: str) -> str:
-    source = remove_section(source, "radar-methodology")
-    source = remove_section(source, "operations-shortcuts", required=False)
-    source = remove_conversion_rail(source)
-    replacements = (
-        ("Radar toàn bộ cổ phiếu HOSE", "Radar HOSE"),
-        ("Quét full-universe → kiểm tra dữ liệu/thanh khoản → chấm điểm đa lớp → xếp hạng → Action Gate. Không đủ chuẩn thì không đưa vào danh sách hành động.", "Toàn HOSE. Chỉ hiển thị mã đủ điều kiện."),
-        ("FULL HOSE · GATED RADAR", "TOÀN HOSE"),
-        ("NGẮN HẠN · 5–20 PHIÊN", "RADAR HOSE"),
-        ("Radar theo trạng thái hành động", "Cơ hội theo trạng thái"),
-        ("Dữ liệu · thanh khoản · bối cảnh · rủi ro", "Đủ điều kiện"),
-        ("khối lượng tương đối và volume được so cùng tiến độ phiên, không dùng volume cả ngày máy móc.", "4 mốc rà soát trong phiên."),
-    )
-    for before, after in replacements:
-        source = source.replace(before, after)
-    return re.sub(r'<a\b[^>]*href=["\']#(?:cach-dung-radar|phuong-phap)["\'][^>]*>.*?</a>', "", source, flags=re.I | re.S)
+    return render_radar_page(source)
 
 
 def commercial_lookup(source: str) -> str:

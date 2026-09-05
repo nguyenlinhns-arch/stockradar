@@ -117,7 +117,7 @@
   }
 
   function mountPortalShell() {
-    if (document.querySelector('[data-verified-recommendations]')) return;
+    if (document.querySelector('[data-verified-recommendations], [data-live-research-radar]')) return;
     const header = document.querySelector('.site-header');
     if (!header || document.querySelector('.portal-utility')) return;
 
@@ -525,7 +525,7 @@
   }
 
   async function loadRecommendations() {
-    if (document.querySelector('[data-verified-recommendations]')) return;
+    if (document.querySelector('[data-verified-recommendations], [data-live-research-radar]')) return;
     const tables = document.querySelectorAll('[data-recommendations]');
     const reports = document.querySelectorAll('[data-stock-report]');
     const performanceTargets = document.querySelectorAll('[data-performance-summary]');
@@ -736,7 +736,7 @@
   }
 
   async function loadRecommendationJournal() {
-    if (document.querySelector('[data-verified-recommendations]')) return;
+    if (document.querySelector('[data-verified-recommendations], [data-live-research-radar]')) return;
     const target = document.querySelector('[data-recommendation-journal]');
     if (!target) return;
     try {
@@ -825,6 +825,7 @@
   }
 
   async function loadRadar() {
+    if (document.querySelector('[data-live-research-radar]')) return;
     const hasRankedSurface = Boolean(document.querySelector('[data-radar-list], [data-radar-table]'));
     const targets = document.querySelectorAll('[data-radar-list], [data-radar-table], [data-market], [data-coverage], [data-snapshot], [data-grade], [data-status]');
     if (!targets.length) return;
