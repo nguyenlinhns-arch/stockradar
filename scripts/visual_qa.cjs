@@ -19,6 +19,20 @@ function isBenignThirdPartyConsoleError(message) {
   return benignThirdPartyConsoleErrors.has(String(message || '').trim());
 }
 
+async function visibleFontViolations(page, selectors, minimumPx) {
+  return page.locator(selectors).evaluateAll((nodes, min) => nodes
+    .filter(node => {
+      const style = getComputedStyle(node);
+      const rect = node.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0 && (node.textContent || '').trim();
+    })
+    .map(node => ({
+      text: (node.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 70),
+      px: parseFloat(getComputedStyle(node).fontSize || '0'),
+    }))
+    .filter(item => Number.isFinite(item.px) && item.px < min), minimumPx);
+}
+
 (async () => {
   const base = process.env.STOCKRADAR_QA_URL || 'http://127.0.0.1:8765';
   const out = path.resolve(__dirname, '..', 'artifacts', 'screenshots');
@@ -122,44 +136,53 @@ function isBenignThirdPartyConsoleError(message) {
 
         const visibleTextLower = structural.visibleText.toLocaleLowerCase('vi');
         for (const term of bannedVisibleTerms) {
-          if (visibleTextLower.includes(term.toLocaleLowerCase('vi'))) {
-            routeErrors.push(`visible analysis jargon: ${term}`);
-          }
+          if (visibleTextLower.includes(term.toLocaleLowerCase('vi'))) routeErrors.push(`visible analysis jargon: ${term}`);
         }
 
         if (viewport.name !== 'desktop') {
           for (const control of structural.primaryControls) {
-            if (control.height < 36 && control.width < 36) {
-              routeErrors.push(`small primary control ${control.width}x${control.height}: ${control.text}`);
-            }
+            if (control.height < 36 && control.width < 36) routeErrors.push(`small primary control ${control.width}x${control.height}: ${control.text}`);
           }
         }
 
-        if (target.name === 'home' && viewport.name !== 'desktop') {
-          const toggle = page.locator('[data-nav-toggle]').first();
-          if (await toggle.count()) {
-            await toggle.click();
-            const expanded = await toggle.getAttribute('aria-expanded');
-            if (expanded !== 'true') routeErrors.push('mobile nav toggle did not expand');
-            await toggle.click();
-          } else {
-            routeErrors.push('mobile nav toggle missing');
+        if (target.name === 'home') {
+          const sideVisible = await page.locator('.workspace-side').evaluateAll(nodes => nodes.some(node => {
+            const style = getComputedStyle(node); const rect = node.getBoundingClientRect();
+            return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+          }));
+          if (sideVisible) routeErrors.push('homepage duplicate workspace sidebar is visible');
+          const widths = await page.locator('.workspace-grid, .workspace-main').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().width)));
+          if (widths.length >= 2 && widths[1] < widths[0] * 0.9) routeErrors.push(`AI workspace is not full width: ${widths.join('/')}`);
+          if (viewport.name !== 'desktop') {
+            const toggle = page.locator('[data-nav-toggle]').first();
+            if (await toggle.count()) {
+              await toggle.click();
+              const expanded = await toggle.getAttribute('aria-expanded');
+              if (expanded !== 'true') routeErrors.push('mobile nav toggle did not expand');
+              await toggle.click();
+            } else routeErrors.push('mobile nav toggle missing');
           }
         }
 
         if (target.name === 'plans') {
           if (!(await page.locator('[data-plan-free]').count())) routeErrors.push('Free plan card missing');
           if (!(await page.locator('[data-plan-premium]').count())) routeErrors.push('Premium plan card missing');
+          const tiny = await visibleFontViolations(page, '.plan-card p, .plan-card li, .plan-card .button, .plan-price-note', 10);
+          if (tiny.length) routeErrors.push(`tiny plan text: ${tiny[0].px}px ${tiny[0].text}`);
         }
 
         if (target.name === 'signup') {
           if (!(await page.locator('[data-auth-signup-form]').count())) routeErrors.push('signup form missing');
           if ((await page.locator('input[name="selected_plan"]').count()) < 2) routeErrors.push('signup plan selector incomplete');
           if (!(await page.locator('[data-signup-submit-label]').count())) routeErrors.push('signup submit missing');
+          const tiny = await visibleFontViolations(page, '.auth-card p, .auth-card label, .auth-card legend, .auth-card .auth-check, .auth-card .auth-security-note, .auth-card .button', 10);
+          if (tiny.length) routeErrors.push(`tiny signup text: ${tiny[0].px}px ${tiny[0].text}`);
         }
 
         if (target.name === 'login') {
           if (!(await page.locator('[data-auth-login-form]').count())) routeErrors.push('login form missing');
+          const tiny = await visibleFontViolations(page, '.auth-card p, .auth-card label, .auth-card .auth-security-note, .auth-card .auth-recovery, .auth-card .button', 10);
+          if (tiny.length) routeErrors.push(`tiny login text: ${tiny[0].px}px ${tiny[0].text}`);
         }
 
         if (target.name === 'checkout') {
@@ -167,12 +190,16 @@ function isBenignThirdPartyConsoleError(message) {
           if (!(await page.locator('[data-checkout-confirm]').count())) routeErrors.push('checkout confirmation missing');
           const account = String(await page.locator('[data-checkout-account-number]').first().textContent().catch(() => '') || '').trim();
           if (account !== '0934389822') routeErrors.push(`checkout account mismatch: ${account || 'missing'}`);
+          const tiny = await visibleFontViolations(page, '.checkout-card p, .checkout-bank-row, .checkout-warning, .checkout-confirm p, .checkout-state, .checkout-summary p, .checkout-features li, .checkout-note', 10);
+          if (tiny.length) routeErrors.push(`tiny checkout text: ${tiny[0].px}px ${tiny[0].text}`);
         }
 
         if (target.name === 'stock') {
           if (!(await page.locator('[data-dynamic-stock-report]').count())) routeErrors.push('Free stock report target missing');
           if (!(await page.locator('[data-premium-stock-report]').count())) routeErrors.push('Premium stock report target missing');
           if (!(await page.locator('[data-premium-gate-copy]').count())) routeErrors.push('Premium gate copy missing');
+          const tiny = await visibleFontViolations(page, '.commercial-stock-page .buyer-decision-strip span, .commercial-stock-page .analysis-tier-head p, .commercial-premium-row span, .commercial-premium-row strong', 10);
+          if (tiny.length) routeErrors.push(`tiny stock text: ${tiny[0].px}px ${tiny[0].text}`);
         }
 
         checks.push({ route: target.route, viewport: viewport.name, status: routeErrors.length ? 'FAIL' : 'PASS' });
@@ -183,9 +210,7 @@ function isBenignThirdPartyConsoleError(message) {
 
       if (routeErrors.length) {
         routeErrors.forEach(error => errors.push(`${prefix}: ${error}`));
-        try {
-          await page.screenshot({ path: path.join(out, `${target.name}-${viewport.name}-ERROR.png`), fullPage: true });
-        } catch (_) {}
+        try { await page.screenshot({ path: path.join(out, `${target.name}-${viewport.name}-ERROR.png`), fullPage: true }); } catch (_) {}
       }
       await page.close();
     }
