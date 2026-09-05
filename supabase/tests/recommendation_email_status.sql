@@ -19,6 +19,17 @@ begin
     values('ZZZ','SHORT_TERM','test-reco-snapshot','test-reco-manifest',now()-interval '1 minute',now()+interval '1 hour',p)
     on conflict(ticker,horizon) do update set snapshot_id=excluded.snapshot_id,source_manifest_ref=excluded.source_manifest_ref,generated_at=excluded.generated_at,expires_at=excluded.expires_at,payload=excluded.payload;
   update private.stock_api_gate set api_enabled=false where singleton;
+  update private.email_delivery_gate set provider_name='RESEND',sending_enabled=false where singleton;
+  insert into private.email_delivery_approval_events(approval_type,provider_name,granted,evidence_ref,recorded_at)
+    values('SENDER_DOMAIN','RESEND',true,'ROLLBACK_TEST_ONLY',clock_timestamp());
+  v:=public.get_stockradar_recommendation_status_v1();
+  if v#>>'{email,sender_domain_verified}'<>'true' or v#>>'{email,status}'<>'NOT_ENABLED' or v#>>'{email,ready}'<>'false' then
+    raise exception 'Verified domain must not enable product delivery'; end if;
+  insert into private.email_delivery_approval_events(approval_type,provider_name,granted,evidence_ref,recorded_at)
+    values('SENDER_DOMAIN','RESEND',false,'ROLLBACK_TEST_ONLY',clock_timestamp());
+  v:=public.get_stockradar_recommendation_status_v1();
+  if v#>>'{email,sender_domain_verified}'<>'false' or v#>>'{email,status}'<>'DOMAIN_UNVERIFIED' then
+    raise exception 'Latest sender revocation must be reflected'; end if;
   v:=public.get_stockradar_recommendation_status_v1();
   if jsonb_array_length(v->'items')<>0 then raise exception 'Closed gate released buy'; end if;
   v:=private.process_stockradar_alert_transitions_v1(false,false);
