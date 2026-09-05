@@ -36,6 +36,18 @@ const fs=require('node:fs');
       const expected=tier==='PAID'?'premium':'free';
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
       if(tier==='FREE')assert.match(await page.locator('[data-tier="free"]').first().innerText(),/7\/10/);
+      for (const width of [320,390,768]) {
+        await page.setViewportSize({width,height:844});
+        assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth + 2),false,'signed-in mobile header must fit the viewport');
+        const toggle=page.locator('[data-nav-toggle]');
+        assert.ok(await toggle.isVisible());
+        assert.ok(await page.locator('.site-header .auth-account-link').isVisible(),'account must remain reachable on mobile');
+        await toggle.click();
+        assert.ok(await page.locator('[data-nav-menu]').isVisible(),'mobile menu must open for signed-in users');
+        await toggle.click();
+        assert.ok(await page.locator('.sr-zalo-support').isVisible());
+      }
+      await page.setViewportSize({width:1280,height:844});
       await page.reload();
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
       assert.ok(await page.evaluate(()=>Boolean(localStorage.getItem('stockradar-auth'))));

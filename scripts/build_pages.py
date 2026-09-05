@@ -49,7 +49,9 @@ ZALO_SUPPORT_BUTTON = (
     'target="_blank" rel="noopener noreferrer" '
     'aria-label="Hỗ trợ qua Zalo: 0398696879 (mở tab mới)" '
     'title="Hỗ trợ qua Zalo · 0398696879">'
-    '<span aria-hidden="true">Zalo</span></a>\n'
+    '<span class="sr-zalo-label" aria-hidden="true">Hỗ trợ Zalo'
+    '<small>0398 696 879</small></span>'
+    '<span class="sr-zalo-icon" aria-hidden="true">Zalo</span></a>\n'
 )
 
 

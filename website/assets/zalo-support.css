@@ -1,15 +1,17 @@
-/* Shared floating support; left placement keeps the AI launcher accessible. */
+/* Visible without JavaScript; keep support and the AI launcher in separate rows. */
+body { --sr-support-bottom: 24px; }
 a.sr-zalo-support {
   position: fixed;
-  left: max(20px, env(safe-area-inset-left));
-  bottom: calc(24px + env(safe-area-inset-bottom));
-  z-index: 90;
+  right: max(20px, env(safe-area-inset-right));
+  left: auto;
+  bottom: calc(var(--sr-support-bottom) + env(safe-area-inset-bottom));
+  z-index: 10001;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 56px;
-  height: 56px;
+  width: 60px;
+  height: 60px;
   padding: 0;
   border: 2px solid #fff;
   border-radius: 50%;
@@ -20,14 +22,42 @@ a.sr-zalo-support {
   box-shadow: 0 4px 16px rgb(0 69 168 / 25%);
   -webkit-tap-highlight-color: transparent;
 }
+.sr-zalo-label {
+  position: absolute;
+  right: calc(100% + 10px);
+  padding: 10px 13px;
+  border: 1px solid #cfe0f5;
+  border-radius: 12px;
+  background: #fff;
+  color: #0d2b49;
+  box-shadow: 0 4px 16px rgb(0 45 110 / 12%);
+  white-space: nowrap;
+  font: 700 14px/1.4 Arial, sans-serif;
+}
+.sr-zalo-label small { display: block; margin-top: 2px; color: #52657d; font-size: 12px; font-weight: 400; }
 a.sr-zalo-support:hover { background: #0054d1; color: #fff; }
 a.sr-zalo-support:focus-visible { outline: 3px solid #173b66; outline-offset: 3px; }
+body .sr-ai-root { bottom: calc(var(--sr-support-bottom) + 76px + env(safe-area-inset-bottom)); }
+body .sr-ai-panel { max-height: calc(100dvh - var(--sr-support-bottom) - 150px - env(safe-area-inset-bottom)); }
 @media (max-width: 900px) {
-  a.sr-zalo-support {
-    left: max(12px, env(safe-area-inset-left));
-    bottom: calc(90px + env(safe-area-inset-bottom));
-    width: 52px;
-    height: 52px;
+  body { --sr-support-bottom: 16px; }
+  body:has(.checkout-mobile-bar), body:has(.conversion-mobile-cta), body:has(.mobile-newsletter-bar) {
+    --sr-support-bottom: 88px;
   }
+  a.sr-zalo-support {
+    right: max(14px, env(safe-area-inset-right));
+    width: 54px;
+    height: 54px;
+  }
+  .sr-zalo-label { padding: 8px 10px; font-size: 13px; }
+  .sr-zalo-label small { display: none; }
+}
+@media (max-width: 640px) {
+  body .sr-ai-panel {
+    bottom: calc(var(--sr-support-bottom) + 134px + env(safe-area-inset-bottom));
+    max-height: calc(100dvh - var(--sr-support-bottom) - 154px - env(safe-area-inset-bottom));
+  }
+  /* Keep the keyboard and the focused form clear while typing on a phone. */
+  body:has(input:focus, textarea:focus, select:focus) .sr-zalo-label { display: none; }
 }
 @media print { a.sr-zalo-support { display: none; } }

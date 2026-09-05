@@ -391,7 +391,7 @@ body.app-home{background:#eef3f7}
 }
 
 @media(max-width:760px){
-  .container,.narrow{width:calc(100% - 20px)}
+  .container,.narrow{width:calc(100% - 28px)}
   .site-header .nav,.app-home .site-header .nav{min-height:56px;gap:7px}
   .site-header .brand img,.app-home .brand img{width:138px}
   .header-login-cta,.header-register-cta,.app-home .header-login-cta,.app-home .header-register-cta{min-height:34px!important;padding:0 9px!important;font-size:9px!important}
@@ -414,7 +414,7 @@ body.app-home{background:#eef3f7}
 }
 
 @media(max-width:520px){
-  .container,.narrow{width:calc(100% - 14px)}
+  .container,.narrow{width:calc(100% - 28px)}
   .site-header .brand img,.app-home .brand img{width:118px}
   .header-login-cta,.header-register-cta,.app-home .header-login-cta,.app-home .header-register-cta{padding:0 7px!important;font-size:8px!important}
   .app-home .compact-home-toolbar .operations-title-row{align-items:flex-end}

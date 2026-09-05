@@ -1,5 +1,40 @@
 /* Mobile-first interaction polish. Keep desktop density while making touch actions easier. */
+/* Apply the same header layout to public, auth and checkout pages. */
+body.commercial-auth-page :is(.portal-utility,.market-tape,.product-subnav),
+body.commercial-checkout-page :is(.portal-utility,.market-tape,.product-subnav){display:none}
+html body .site-header .header-login-cta,
+html body .site-header .header-register-cta { font-size:13px!important;min-height:44px!important }
+@media(max-width:1050px){
+  html body .site-header .nav{flex-wrap:nowrap;gap:8px;min-height:64px}
+  html body .site-header .brand{order:0;flex:0 0 auto}
+  html body .site-header [data-header-auth-actions]{order:1;margin-left:auto;flex:0 0 auto}
+  html body .site-header .header-notification-bell{order:2;margin:0;min-width:44px;min-height:44px}
+  html body .site-header .nav-toggle{order:3;display:inline-flex;flex:0 0 auto;min-width:44px;min-height:44px;padding:0 10px;font-size:13px}
+  html body .site-header .nav-links{display:none;position:absolute;left:0;right:0;top:100%!important;width:100%;max-height:calc(100dvh - 90px);overflow-y:auto;box-sizing:border-box}
+  html body .site-header .nav-links.is-open{display:grid;gap:4px;padding:10px}
+  html body .site-header .nav-links>a{min-height:44px!important;padding:10px 12px!important;font-size:14px}
+}
+@media(max-width:720px){
+  html body .site-header .header-register-cta,
+  html body .site-header .header-account-upgrade,
+  html body .site-header .header-account-tier,
+  html body .site-header .auth-account-email,
+  html body .site-header .auth-logout{display:none!important}
+  html body .site-header .auth-account-link,
+  html body .site-header .header-login-cta{display:inline-flex;align-items:center;justify-content:center;min-width:44px;min-height:44px!important}
+  html body .site-header .header-login-cta{padding:0 6px!important}
+  html body .site-header .brand img{width:128px}
+}
+@media(max-width:380px){
+  html body .site-header .nav-toggle>span:last-child:not(.nav-toggle-bars){position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+}
 @media(max-width:760px){
+  /* 16px fields stay readable when the mobile keyboard opens. */
+  html body main input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]),
+  html body main textarea,html body main select{font-size:16px!important}
+  html body .auth-card .auth-field label{font-size:14px!important}
+  html body .auth-card .auth-check,html body .auth-card .auth-switch{font-size:13px!important;line-height:1.6!important}
+  html body .sr-center-chips button,html body .sr-ai-chips button{min-height:44px;font-size:13px}
   .nav-toggle,
   .header-login-cta,
   .header-register-cta,

@@ -105,6 +105,14 @@ async function visibleFontViolations(page, selectors, minimumPx) {
           const overflow = document.documentElement.scrollWidth > document.documentElement.clientWidth + 2;
           const title = document.title.trim();
           const visibleText = (document.body.innerText || '').replace(/\s+/g, ' ').trim();
+          const support = document.querySelector('a.sr-zalo-support');
+          const supportRect = support?.getBoundingClientRect();
+          const supportLabel = support?.querySelector('.sr-zalo-label');
+          const labelRect = supportLabel?.getBoundingClientRect();
+          const supportVisible = Boolean(supportRect && labelRect && supportRect.width >= 44 &&
+            labelRect.width > 0 && labelRect.left >= 0 && supportRect.right <= innerWidth &&
+            supportRect.bottom <= innerHeight && supportRect.top >= 0 &&
+            support.contains(document.elementFromPoint(supportRect.x + supportRect.width / 2, supportRect.y + supportRect.height / 2)));
           const primaryControls = [...document.querySelectorAll(
             'button, .button, .lead-submit, .checkout-primary, .checkout-mobile-bar a, .nav-toggle, input[type="submit"]'
           )].filter(node => {
@@ -127,6 +135,8 @@ async function visibleFontViolations(page, selectors, minimumPx) {
             overflow,
             visibleText,
             primaryControls,
+            supportVisible,
+            supportHref: support?.getAttribute('href'),
           };
         });
 
@@ -135,6 +145,8 @@ async function visibleFontViolations(page, selectors, minimumPx) {
         if (!structural.hasDecisionGuard) routeErrors.push('decision-copy runtime guard missing');
         if (!structural.title) routeErrors.push('empty document title');
         if (structural.overflow) routeErrors.push('horizontal overflow');
+        if (!structural.supportVisible) routeErrors.push('Zalo support button or label is hidden, covered or outside the viewport');
+        if (structural.supportHref !== 'https://zalo.me/0398696879') routeErrors.push('incorrect Zalo support destination');
 
         const visibleTextLower = structural.visibleText.toLocaleLowerCase('vi');
         for (const term of bannedVisibleTerms) {
