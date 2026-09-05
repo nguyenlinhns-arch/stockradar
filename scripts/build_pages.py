@@ -26,18 +26,16 @@ AUTH_ENABLED = os.environ.get("STOCKRADAR_ENABLE_AUTH", "").strip().lower() in {
 AUTH_ROUTES = {"signup", "dang-nhap", "dat-lai-mat-khau", "tai-khoan"}
 PREMIUM_CLIENT_ROUTES = {"co-phieu"}
 EXCLUDED_NAMES = {"server.py", "__pycache__", "kien-thuc", "demo1", "email", "theo-doi", "pro"}
-PUBLIC_AUTH_HEAD = """\
-<script src="assets/auth-config.js?v=20260903-auth7" defer></script>
-"""
-PREMIUM_CLIENT_HEAD = """\
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth7" defer></script>
-"""
+AUTH_CONFIG_TAG = '<script src="assets/auth-config.js?v=20260905-auth8" defer></script>\n'
+AUTH_STATE_TAG = '<script src="assets/auth-state-v2.js?v=20260905-auth8" defer></script>\n'
+SUPABASE_TAG = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>\n'
+PUBLIC_AUTH_HEAD = AUTH_CONFIG_TAG + AUTH_STATE_TAG
+PREMIUM_CLIENT_HEAD = SUPABASE_TAG + AUTH_CONFIG_TAG + AUTH_STATE_TAG
 FULL_AUTH_HEAD = """\
 <link rel="stylesheet" href="assets/auth.css?v=20260903-auth7">
 <link rel="stylesheet" href="assets/auth-extra.css?v=20260903-auth7">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
-<script src="assets/auth-config.js?v=20260903-auth7" defer></script>
+<script src="assets/auth-config.js?v=20260905-auth8" defer></script>
 <script src="assets/auth-email-gate.js?v=20260903-auth7" defer></script>
 <script src="assets/auth-policy.js?v=20260903-auth7" defer></script>
 <script src="assets/auth-account-security.js?v=20260903-auth7" defer></script>
@@ -101,17 +99,28 @@ def page_route(page: Path, output: Path) -> str:
 
 
 def inject_auth_bundle(source: str, page: Path, output: Path) -> str:
-    if not AUTH_ENABLED or "assets/auth-config.js" in source:
+    if not AUTH_ENABLED:
         return source
     if "</head>" not in source:
         raise RuntimeError("HTML page has no closing head tag")
+
     route = page_route(page, output)
     if route in AUTH_ROUTES:
+        if "assets/auth.js" in source:
+            return source
         head = FULL_AUTH_HEAD
-    elif route in PREMIUM_CLIENT_ROUTES:
-        head = PREMIUM_CLIENT_HEAD
     else:
-        head = PUBLIC_AUTH_HEAD
+        parts: list[str] = []
+        if route in PREMIUM_CLIENT_ROUTES and "@supabase/supabase-js" not in source:
+            parts.append(SUPABASE_TAG)
+        if "assets/auth-config.js" not in source:
+            parts.append(AUTH_CONFIG_TAG)
+        if "assets/auth-state-v2.js" not in source:
+            parts.append(AUTH_STATE_TAG)
+        head = "".join(parts)
+        if not head:
+            return source
+
     return source.replace("</head>", head + "</head>", 1)
 
 
@@ -274,7 +283,7 @@ def build(output: Path) -> None:
             output / "assets" / "auth-email-gate.js", output / "assets" / "auth-policy.js",
             output / "assets" / "auth-account-security.js", output / "assets" / "auth.js",
             output / "assets" / "auth-extra.js", output / "assets" / "auth-delete-security.js",
-            output / "assets" / "auth-config.js", output / "signup" / "index.html",
+            output / "assets" / "auth-state-v2.js", output / "assets" / "auth-config.js", output / "signup" / "index.html",
             output / "dang-nhap" / "index.html", output / "dat-lai-mat-khau" / "index.html",
             output / "tai-khoan" / "index.html",
         ])

@@ -17,9 +17,9 @@
     <div class="container auth-layout">
       <section class="auth-intro">
         <span class="panel-label">ĐĂNG NHẬP</span>
-        <h1>Quay lại bảng Hôm nay của StockRadar.</h1>
-        <p>Dùng đúng email và mật khẩu đã đăng ký. Sau khi đăng nhập, StockRadar đưa bạn thẳng tới các mã đang sở hữu, watchlist và hành động cần chú ý.</p>
-        <ul class="auth-benefits"><li>Ưu tiên việc cần làm thay vì quay lại trang cài đặt.</li><li>Giữ phiên đăng nhập trên thiết bị hiện tại.</li><li>Gửi lại OTP hoặc khôi phục mật khẩu khi cần.</li></ul>
+        <h1>Quay lại trang chủ StockRadar.</h1>
+        <p>Dùng đúng email và mật khẩu đã đăng ký. Sau khi đăng nhập, StockRadar đưa bạn về trang chủ với AI, trạng thái tài khoản và các công cụ theo đúng quyền Free/Premium.</p>
+        <ul class="auth-benefits"><li>Giữ phiên đăng nhập trên thiết bị hiện tại.</li><li>Không bị đưa về trạng thái khách khi quay lại trang chủ.</li><li>Gửi lại OTP hoặc khôi phục mật khẩu khi cần.</li></ul>
       </section>
       <section class="auth-card" aria-labelledby="login-title">
         <div class="auth-card-header"><span class="auth-config-pill">SECURE AUTH</span><h2 id="login-title">Đăng nhập</h2><p>Nhập thông tin tài khoản StockRadar.</p></div>
@@ -40,7 +40,8 @@
     (() => {
       const url = new URL(location.href);
       if (!url.searchParams.has('next')) {
-        url.searchParams.set('next', 'hom-nay/');
+        const base = new URL(document.baseURI);
+        url.searchParams.set('next', base.pathname || '/');
         history.replaceState(null, '', url);
       }
     })();
