@@ -58,12 +58,22 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         self.assertNotIn("Nhận bản tin 09:00 miễn phí", home)
         self.assertNotIn("Nhận bản rà soát thị trường mỗi sáng", home)
 
-    def test_home_lead_routes_interest_to_premium_signup(self):
-        client = self.read("website/assets/home-core-v1.js")
-        self.assertIn("url.searchParams.set('plan', 'premium')", client)
-        self.assertIn("Đã ghi nhận nhu cầu Premium", client)
-        self.assertIn("không kích hoạt gửi email hoặc thanh toán", client)
+    def test_premium_interest_routes_through_dedicated_lead_client(self):
+        page = self.read("website/nhan-ban-tin/index.html")
+        client = self.read("website/assets/email-interest.js")
+        home_core = self.read("website/assets/home-core-v1.js")
+
+        self.assertIn('data-next-href="signup/?plan=premium"', page)
+        self.assertIn("renderNextStep", client)
+        self.assertIn("data-email-interest-next", client)
+        self.assertIn("sr_pending_lead_email", client)
+        self.assertIn("Đã ghi nhận nhu cầu email Premium", client)
+        self.assertIn("chưa tạo quyền nhận email", client)
         self.assertNotIn("Hoàn tất tạo tài khoản Free để kích hoạt bản tin 09:00", client)
+
+        # Homepage no longer owns product-email lead submission logic.
+        self.assertNotIn("sr_pending_lead_email", home_core)
+        self.assertNotIn("mountEmailLead", home_core)
 
     def test_pages_transform_corrects_legacy_signup_copy_before_publish(self):
         transformer = self.read("scripts/apply_premium_email_product_v1.py")
