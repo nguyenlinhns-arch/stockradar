@@ -70,7 +70,7 @@ Deno.serve(async req=>{
   const researchContext=contexts[0]||null,researchReady=researchContext?.context_grade==="RESEARCH_READY",referenceReady=Boolean(researchContext),mode=stockRadarMode(ready.length>0,researchReady,referenceReady);
   const researchData=query.scope==='ticker'?buildResearchSnapshot(researchContext):contexts.map(buildResearchSnapshot);
   const coreAnswer=deterministicStockRadarAnswer({mode,researchContext:query.scope==='ticker'?researchContext:contexts,actionContext,question:message});
-  const fallback=query.scope==='scan'&&!contexts.length?'Chưa có mã HOSE đủ dữ liệu mới và đạt bộ lọc này. Chưa đủ dữ liệu để xác nhận tín hiệu.':query.scope==='ticker'?appendResearchSnapshot(coreAnswer,researchContext):coreAnswer;
+  const fallback=query.scope==='scan'&&!contexts.length?'Chưa có mã HOSE đủ dữ liệu mới và đạt bộ lọc này. Chưa đủ dữ liệu để xác nhận tín hiệu.':query.scope==='ticker'?appendResearchSnapshot(coreAnswer,researchContext,message):coreAnswer;
   const ids=[...new Set([...actionContext.map(r=>String(r.snapshot_id||'')),String(researchContext?.snapshot_id||'')].filter(Boolean))];
   const source={action_gate:ready.length?'READY':'PENDING',context_grade:researchContext?.context_grade||null,research_ready:Boolean(researchReady),reference_ready:Boolean(researchContext),snapshot_id:ids.length===1?ids[0]:null,snapshot_count:ids.length,generated_at:[...actionContext.map(r=>String(r.generated_at||'')),String(researchContext?.generated_at||'')].filter(Boolean).sort().at(-1)||null,as_of_date:researchContext?.as_of_date||null,ready_horizons:ready.map(r=>r.horizon)};
   const base={scope:query.scope,tier:'GUEST',mode,ticker,horizon,quota_consumed:true,source,research_data:researchData,analysis:contexts.map(c=>analysisContract(c,actionContext,horizon)),quota:{limit:3,remaining,reset_at:quota.reset_at||null,reset_timezone:quota.daily_reset_timezone||'Asia/Ho_Chi_Minh'}};
@@ -91,6 +91,6 @@ Deno.serve(async req=>{
     return json({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   }
   const modelText=payload?.status==='completed'?openAIText(payload):'';
-  return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer:modelText?(query.scope==='ticker'?appendResearchSnapshot(modelText,researchContext):modelText):fallback},200,origin,rate);
+  return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer:modelText?(query.scope==='ticker'?appendResearchSnapshot(modelText,researchContext,message):modelText):fallback},200,origin,rate);
   } catch { return json({status:'SERVICE_UNAVAILABLE',answer:'StockRadar AI tạm thời chưa thể phản hồi. Vui lòng thử lại.'},503,req.headers.get('origin')); }
 });

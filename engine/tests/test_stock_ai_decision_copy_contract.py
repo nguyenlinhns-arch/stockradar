@@ -21,7 +21,7 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn("dòng đầu tiên phải là “KẾT LUẬN: ...”", source)
         self.assertIn("Không dùng ký hiệu Markdown như **", source)
         self.assertIn("Không dùng thuật ngữ nội bộ “Action Gate”, “Data Gate”", source)
-        self.assertIn("Góc nhìn nghiên cứu — chưa phải tín hiệu hành động đã được xác nhận.", source)
+        self.assertIn("chưa có tín hiệu mua/bán được xác nhận", source)
 
     def test_current_internal_research_bundle_is_mapped(self):
         source = self.source
@@ -45,14 +45,14 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
     def test_research_answer_is_decision_first_and_rich(self):
         source = self.source
         self.assertIn("KẾT LUẬN: ${ticker} CHƯA MUA MỚI", source)
-        self.assertIn("MUA MỚI:", source)
+        self.assertIn("CẦN CHỜ:", source)
         self.assertIn("NẾU ĐANG NẮM GIỮ:", source)
         self.assertIn("VÌ SAO:", source)
-        self.assertIn("THAM CHIẾU NGHIÊN CỨU:", source)
-        self.assertIn("CATALYST:", source)
-        self.assertIn("RỦI RO / ĐIỀU KIỆN ĐỔI:", source)
-        self.assertIn("DỮ LIỆU:", source)
-        self.assertIn("Radar Score", source)
+        self.assertIn("GIÁ THAM KHẢO:", source)
+        self.assertIn("TIN DOANH NGHIỆP:", source)
+        self.assertIn("RỦI RO:", source)
+        self.assertIn("Thông tin tham khảo từ dữ liệu ngày", source)
+        self.assertIn("không liệt kê hàng loạt điểm số", source)
         self.assertIn("target_3_6m", source)
         self.assertIn("target_12m", source)
 
@@ -78,8 +78,8 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         self.assertIn("'LAGGING': 'YẾU HƠN THỊ TRƯỜNG'", source)
         self.assertIn("'WEAK': 'YẾU'", source)
         self.assertIn("'NEUTRAL': 'TRUNG TÍNH'", source)
-        self.assertIn("NO_BUY_SETUP: 'chưa có setup mua đạt chuẩn'", source)
-        self.assertIn("RR_BELOW_2: 'Risk/Reward dưới 2'", source)
+        self.assertIn("NO_BUY_SETUP: 'giá và khối lượng chưa đáp ứng đủ điều kiện mua'", source)
+        self.assertIn("RR_BELOW_2: 'lợi nhuận kỳ vọng chưa đạt gấp đôi khoản lỗ dự kiến'", source)
 
     def test_corporate_action_conflict_is_reconciled_before_showing_risk(self):
         source = self.source

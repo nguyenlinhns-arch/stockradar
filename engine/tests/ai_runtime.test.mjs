@@ -16,7 +16,7 @@ test('source zero volume is preserved and alias fallback works',()=>{
 test('EOD volume never selects an intraday projection',()=>{
   const context={ticker:'HPG',context_grade:'RESEARCH_READY',volume_mode:'EOD',technical_detail:{rvol:0.68,rvol_progress_adjusted:1.4},quote:{price:100}};
   assert.equal(buildResearchSnapshot(context).setup.rvol,0.68);
-  assert.match(deterministicStockRadarAnswer({mode:'RESEARCH_ONLY',researchContext:context}),/cuối phiên 0,68x/);
+  assert.match(deterministicStockRadarAnswer({mode:'RESEARCH_ONLY',researchContext:context}),/cuối phiên, thấp hơn khoảng 32% so với mức trung bình 20 phiên trước/);
 });
 test('ticker, comparison, scans and sector intents route separately',()=>{
   assert.deepEqual(parseResearchQuery('So sánh HPG và NKG').tickers,['HPG','NKG']);
@@ -33,7 +33,7 @@ test('rotating guest id cannot rotate the database quota identity',async()=>{
 });
 test('stale data has an explicit warning and never a probability claim',()=>{
   const c=normalizeResearchContext({status:'INTERNAL_REFERENCE_READY',ticker:'HPG',data_quality:'stale',payload:{quote:{price:100}}});
-  assert.match(deterministicStockRadarAnswer({mode:'REFERENCE_ONLY',researchContext:c}),/snapshot cũ/);
+  assert.match(deterministicStockRadarAnswer({mode:'REFERENCE_ONLY',researchContext:c}),/dữ liệu cũ/);
   assert.equal(analysisContract(c).probability,null);
   assert.equal(analysisContract(c).public_action_allowed,false);
 });

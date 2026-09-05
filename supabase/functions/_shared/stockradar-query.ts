@@ -1,9 +1,10 @@
 import { normalizeResearchContext } from './stockradar-core.ts';
 
-const STOP = new Set(['TOP','MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','MAI','HOM','CAC','CUA','VOI','TAI']);
+const STOP = new Set(['CHI','DON','GON','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','MAI','HOM','CAC','CUA','VOI','TAI']);
 export function parseResearchQuery(message: string, requestedTicker = '') {
   const q = message.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
-  const tokens = (q.toUpperCase().match(/\b[A-Z0-9]{3}\b/g)||[]).filter(t=>/[A-Z]/.test(t)&&!STOP.has(t));
+  // Accented Vietnamese words such as “đạt” must not become ticker DAT.
+  const tokens = (message.toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu)||[]).filter(t=>/[A-Z]/.test(t)&&!STOP.has(t));
   const tickers = [...new Set([requestedTicker.toUpperCase(),...tokens].filter(Boolean))].slice(0,4);
   const scan = /\b(top|quet|nganh|ma nao|co phieu nao)\b/.test(q);
   const filter = /pocket/.test(q)?'pocket_pivot':/(gan|chuan bi|near).*breakout|gan.*pivot/.test(q)?'near_pivot':/breakout/.test(q)?'breakout':'top';

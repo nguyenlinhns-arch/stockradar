@@ -22,19 +22,18 @@ class StockAiResearchSnapshotTests(unittest.TestCase):
             "Dòng tiền",
             "Cung/cầu",
             "Thanh khoản",
-            "Pivot",
-            "RVOL",
-            "MA50",
-            "MA200",
-            "Pocket Pivot volume",
-            "Buy Zone",
-            "Stop",
-            "Target 3–6 tháng",
-            "Target 12 tháng",
-            "R/R",
+            "readableResearchFacts",
+            "Giá trung bình 50 phiên",
+            "Giá trung bình 200 phiên",
+            "earlyVolumeText",
+            "Vùng giá mua tham khảo",
+            "Mức cắt lỗ",
+            "Giá tham khảo 3–6 tháng",
+            "Giá tham khảo 12 tháng",
+            "Lợi nhuận kỳ vọng / khoản lỗ dự kiến",
             "ATR20",
-            "Market Direction",
-            "Catalyst chính thức",
+            "Thị trường và ngành",
+            "Tin doanh nghiệp chính thức",
             "Chất lượng dữ liệu",
             "Điểm chặn hiện tại",
         ):
@@ -48,11 +47,12 @@ class StockAiResearchSnapshotTests(unittest.TestCase):
             self.assertIn("appendResearchSnapshot", source)
             self.assertIn("research_data", source)
 
-    def test_model_output_cannot_suppress_research_snapshot(self):
+    def test_model_output_appends_detail_only_when_requested(self):
+        self.assertIn("!wantsResearchDetail(question)", VIEW.read_text(encoding="utf-8"))
         auth = AUTH.read_text(encoding="utf-8")
         guest = GUEST.read_text(encoding="utf-8")
         self.assertIn("appendResearchSnapshot(appendPosition(modelText", auth)
-        self.assertIn("appendResearchSnapshot(modelText,researchContext)", guest)
+        self.assertIn("appendResearchSnapshot(modelText,researchContext,message)", guest)
 
 
 if __name__ == "__main__":

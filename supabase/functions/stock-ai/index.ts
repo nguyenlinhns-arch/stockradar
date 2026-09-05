@@ -101,7 +101,7 @@ Deno.serve(async req=>{
   const researchForAnswer=scope==='ticker'?tickerContext:contexts;
   let fallback=scope==='scan'&&!contexts.length?'Chưa có mã HOSE đủ dữ liệu mới và đạt bộ lọc này. Chưa đủ dữ liệu để xác nhận tín hiệu.':deterministicStockRadarAnswer({mode,researchContext:researchForAnswer,actionContext:action,question:message});
   fallback=appendPosition(fallback,scope,ticker,watch);
-  if(scope==='ticker')fallback=appendResearchSnapshot(fallback,tickerContext);
+  if(scope==='ticker')fallback=appendResearchSnapshot(fallback,tickerContext,message);
   const modelWatch=(scope==='ticker'?watch.filter(x=>x.ticker===query.tickers[0]):scope==='portfolio'?watch:[]).map(x=>({...x,cost_basis:x.owns_stock&&Number.isFinite(x.cost_basis)?x.cost_basis:null,portfolio_weight_pct:x.owns_stock&&Number.isFinite(x.portfolio_weight_pct)?x.portfolio_weight_pct:null}));
   const userContext={watchlist:modelWatch,owned_count:modelWatch.filter(x=>x.owns_stock).length};
   const ids=[...new Set([...action.map(x=>String(x.snapshot_id||'')),...contexts.map(x=>String(x.snapshot_id||''))].filter(Boolean))];
@@ -123,7 +123,7 @@ Deno.serve(async req=>{
   let payload=null;try{payload=await response.json()}catch{}
   if(!response.ok){const code=errCode(payload);if(response.status===429&&/CREDIT|QUOTA|BALANCE/.test(code))providerDisabledUntil=Date.now()+15*60*1000;return json({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
   const modelText=payload?.status==='completed'?openAIText(payload):'';
-  const answer=modelText?(scope==='ticker'?appendResearchSnapshot(appendPosition(modelText,scope,ticker,watch),tickerContext):appendPosition(modelText,scope,ticker,watch)):fallback;
+  const answer=modelText?(scope==='ticker'?appendResearchSnapshot(appendPosition(modelText,scope,ticker,watch),tickerContext,message):appendPosition(modelText,scope,ticker,watch)):fallback;
   await audit(db,user.id,scope==='ticker'?ticker:'',horizon,'AI_READY',scope==='portfolio'?'MODEL_PLUS_STOCKRADAR_CORE_PORTFOLIO':'MODEL_PLUS_STOCKRADAR_CORE',200,started,remaining);
   return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer},200,origin,rate);
   } catch { return json({status:'SERVICE_UNAVAILABLE',answer:'StockRadar AI tạm thời chưa thể phản hồi. Vui lòng thử lại.'},503,req.headers.get('origin')); }

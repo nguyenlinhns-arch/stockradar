@@ -21,8 +21,8 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
         self.assertIn("if (referenceReady) return 'REFERENCE_ONLY'", source)
         self.assertIn("INTERNAL_REFERENCE_READY", source)
         self.assertIn("function actionAnswer", source)
-        self.assertIn("Góc nhìn nghiên cứu — chưa phải tín hiệu hành động đã được xác nhận.", source)
-        self.assertIn("Dữ liệu tham chiếu — mã chưa đạt research-ready", source)
+        self.assertIn("chưa có tín hiệu mua/bán được xác nhận", source)
+        self.assertIn("còn thiếu dữ liệu để đánh giá mua/bán", source)
 
     def test_authenticated_ai_combines_full_hose_context_with_published_action_reports(self):
         source = AUTH.read_text(encoding="utf-8")
@@ -44,7 +44,7 @@ class StockAiFullContextRegressionTests(unittest.TestCase):
         self.assertIn("requestedTickers=query.tickers", tight)
         self.assertIn("RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts", tight)
         self.assertIn("buildResearchSnapshot(tickerContext)", tight)
-        self.assertIn("appendResearchSnapshot(fallback,tickerContext)", tight)
+        self.assertIn("appendResearchSnapshot(fallback,tickerContext,message)", tight)
 
     def test_guest_ai_keeps_three_question_quota_and_same_data_core(self):
         source = GUEST.read_text(encoding="utf-8")

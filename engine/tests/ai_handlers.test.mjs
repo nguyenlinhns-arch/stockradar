@@ -71,3 +71,14 @@ test('incomplete provider response uses accurately labelled deterministic fallba
   const h=harness({incomplete:true});const r=await h.ask('Phân tích HPG');
   assert.equal(r.body.answer_engine,'STOCKRADAR_CORE');assert.equal(r.body.status,'READY_FALLBACK');
 });
+
+test('guest and signed-in answers append full research only on a detailed request',async()=>{
+  for(const guest of [false,true]) for(const incomplete of [false,true]){
+    const h=harness({guest,incomplete});
+    const simple=await h.ask('Phân tích HPG');
+    assert.doesNotMatch(simple.body.answer,/DỮ LIỆU NGHIÊN CỨU STOCKRADAR/);
+    assert.ok(simple.body.research_data);
+    const detailed=await h.ask('Phân tích chi tiết HPG');
+    assert.match(detailed.body.answer,/DỮ LIỆU NGHIÊN CỨU STOCKRADAR/);
+  }
+});
