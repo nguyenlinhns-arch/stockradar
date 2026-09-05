@@ -43,8 +43,7 @@ REQUIRED_JS = {
     "commercial-v1.js",
     "header-notifications.js",
 }
-# Account-aware AI added session/tier synchronization without adding a new asset.
-# Keep the budget tight, with a small reviewed allowance for that runtime logic.
+# Keep the performance gate strict. We reduce shipped bytes instead of raising this budget.
 MAX_LOCAL_ASSET_BYTES = 192_000
 AI_CENTER_CACHE_VERSION = "20260905-ai5"
 
@@ -76,6 +75,107 @@ def local_asset_size(output: Path, refs: list[str]) -> int:
             raise RuntimeError(f"Homepage local asset missing: {ref}")
         total += target.stat().st_size
     return total
+
+
+def minify_css(source: str) -> str:
+    """Conservatively remove CSS comments and collapse whitespace outside strings.
+
+    This deliberately does not rewrite operators or declaration punctuation. Keeping one
+    whitespace token where source whitespace existed preserves descendant selectors and
+    calc() grammar while still removing indentation/newlines and ordinary comments.
+    """
+    out: list[str] = []
+    i = 0
+    quote = ""
+    escaped = False
+    pending_space = False
+    length = len(source)
+
+    while i < length:
+        ch = source[i]
+
+        if quote:
+            out.append(ch)
+            if escaped:
+                escaped = False
+            elif ch == "\\":
+                escaped = True
+            elif ch == quote:
+                quote = ""
+            i += 1
+            continue
+
+        if ch in {"'", '"'}:
+            if pending_space and out and not out[-1].isspace():
+                out.append(" ")
+            pending_space = False
+            quote = ch
+            out.append(ch)
+            i += 1
+            continue
+
+        if ch == "/" and i + 1 < length and source[i + 1] == "*":
+            end = source.find("*/", i + 2)
+            if end < 0:
+                raise RuntimeError("Unterminated CSS comment during homepage minification")
+            comment = source[i : end + 2]
+            # Preserve explicit license comments but collapse ordinary comments to one
+            # whitespace boundary so tokens separated only by a comment never merge.
+            if comment.startswith("/*!"):
+                if pending_space and out and not out[-1].isspace():
+                    out.append(" ")
+                pending_space = False
+                out.append(comment)
+            else:
+                pending_space = True
+            i = end + 2
+            continue
+
+        if ch.isspace():
+            pending_space = True
+            i += 1
+            continue
+
+        if pending_space:
+            if out and not out[-1].isspace():
+                out.append(" ")
+            pending_space = False
+        out.append(ch)
+        i += 1
+
+    return "".join(out).strip() + "\n"
+
+
+def minify_home_css(output: Path, refs: list[str]) -> tuple[int, int]:
+    """Minify only CSS actually referenced by the final homepage.
+
+    The files live in the Pages artifact, not the repository source tree. Other pages may
+    share them, so the transform must remain semantics-preserving. Return before/after
+    byte totals for observability and a regression-friendly performance signal.
+    """
+    before = 0
+    after = 0
+    seen: set[str] = set()
+    for ref in refs:
+        if ref.startswith(("http://", "https://", "//")):
+            continue
+        name = basename(ref)
+        if name in seen:
+            continue
+        seen.add(name)
+        target = output / "assets" / name
+        if not target.is_file():
+            raise RuntimeError(f"Homepage local CSS missing before minification: {ref}")
+        raw = target.read_text(encoding="utf-8")
+        raw_bytes = len(raw.encode("utf-8"))
+        compact = minify_css(raw)
+        compact_bytes = len(compact.encode("utf-8"))
+        if compact_bytes > raw_bytes:
+            raise RuntimeError(f"Homepage CSS minification grew asset: {name}")
+        target.write_text(compact, encoding="utf-8")
+        before += raw_bytes
+        after += compact_bytes
+    return before, after
 
 
 def main() -> None:
@@ -149,13 +249,18 @@ def main() -> None:
     if local_js_count != len(REQUIRED_JS):
         raise RuntimeError(f"Homepage JS allowlist mismatch: {local_js_count} != {len(REQUIRED_JS)}")
 
+    css_before, css_after = minify_home_css(output, css_refs)
     total_bytes = local_asset_size(output, css_refs) + local_asset_size(output, js_refs)
     if total_bytes > MAX_LOCAL_ASSET_BYTES:
-        raise RuntimeError(f"Homepage local CSS/JS budget exceeded: {total_bytes} > {MAX_LOCAL_ASSET_BYTES}")
+        raise RuntimeError(
+            f"Homepage local CSS/JS budget exceeded after CSS minification: {total_bytes} > {MAX_LOCAL_ASSET_BYTES} "
+            f"(CSS {css_before} -> {css_after})"
+        )
 
     print(
         "Homepage asset budget: PASS "
-        f"({local_css_count} CSS + {local_js_count} JS; {total_bytes} local bytes; exact allowlist; legacy layers pruned)"
+        f"({local_css_count} CSS + {local_js_count} JS; {total_bytes} local bytes; "
+        f"CSS {css_before}->{css_after}; exact allowlist; legacy layers pruned)"
     )
 
 
