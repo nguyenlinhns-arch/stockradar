@@ -32,7 +32,7 @@ export function stockRadarMode(actionReady, researchReady, referenceReady = fals
 }
 
 function obj(value) { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
-function num(value) { const n = Number(value); return Number.isFinite(n) ? n : null; }
+function num(value) { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
 function txt(value) { return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim(); }
 function fmtNumber(value, digits = 2) { const n = num(value); return n == null ? '' : n.toLocaleString('vi-VN', { maximumFractionDigits: digits }); }
 function fmtPrice(value) { const n = num(value); return n == null ? '' : `${Math.round(n).toLocaleString('vi-VN')}đ`; }

@@ -1,5 +1,5 @@
 function obj(value: any): Record<string, any> { return value && typeof value === 'object' && !Array.isArray(value) ? value : {}; }
-function num(value: any): number | null { const n = Number(value); return Number.isFinite(n) ? n : null; }
+function num(value: any): number | null { if (value === null || value === undefined || value === '') return null; const n = Number(value); return Number.isFinite(n) ? n : null; }
 function txt(value: any): string { return typeof value === 'string' ? value.trim() : value == null ? '' : String(value).trim(); }
 function fmtNumber(value: any, digits = 2): string { const n = num(value); return n == null ? '' : n.toLocaleString('vi-VN', { maximumFractionDigits: digits }); }
 function fmtPrice(value: any): string { const n = num(value); return n == null ? '' : `${Math.round(n).toLocaleString('vi-VN')}đ`; }
