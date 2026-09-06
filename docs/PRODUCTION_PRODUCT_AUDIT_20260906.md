@@ -44,8 +44,8 @@ Master405 vẫn là invariant của universe hiện hành; trạng thái listing
 
 | Kiểm thử | Kết quả |
 |---|---|
-| python -m unittest discover -s engine/tests -v | 460 PASS |
-| python -m pytest engine/tests -q | 462 PASS +22 subtests; gồm hai function tests unittest không discover |
+| python -m unittest discover -s engine/tests -v | 463 PASS |
+| python -m pytest engine/tests -q | 465 PASS +28 subtests; gồm hai function tests unittest không discover |
 | node --test engine/tests/*.test.mjs | 66 PASS, gồm auth/payment handlers và RSA OIDC signatures với issuer fixture |
 | python scripts/build_production.py | PASS artifact guards |
 | npm run visual-qa | 85/85 PASS |
@@ -81,3 +81,11 @@ OIDC dùng workflow_ref theo [GitHub claims](https://github.blog/changelog/2023-
 ## Xác minh sau release
 
 TESTING: bổ sung SHA main, Pages run, pipeline và production smoke sau khi thực sự hoàn tất; không dùng baseline thay bằng chứng release mới.
+
+### Phát hiện runtime sau Pages release 4d165c7
+
+- Pages [34004657025](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/34004657025): build/deploy SUCCESS; asset signup thực chứa verification_required. Browser production QA thật: login→Home→reload→HPG AI→Radar→Home→logout PASS, Free10→9 giữ qua reload/đổi trang; Radar RPC405 items,0 ngoài HOSE. Một probe chẩn đoán tiếp theo dùng thêm1 lượt (còn8).
+- **OpenAI model BLOCKED:** response READY_FALLBACK, reason OPENAI_429_CREDIT_BALANCE_EXHAUSTED. STOCKRADAR_CORE/RESEARCH_ONLY trả nội dung dự phòng; không coi đây là model E2E PASS. Cần chủ tài khoản xử lý [API billing](https://platform.openai.com/settings/organization/billing); không tự nạp tiền/đổi key. [Error-code guidance](https://developers.openai.com/api/docs/guides/error-codes). Khi thử nghiệm sau xử lý billing có thể cân nhắc gpt-5.4-mini; không đổi model production trong đợt này.
+- Backend Require current password when updating đã bật và lưu. API thật với QA từ chối request thiếu mật khẩu hiện tại:400 current_password_required. Thư recovery thật đã nhận; redirect_to đúng https://stockradar.vn/dat-lai-mat-khau/. Không đổi mật khẩu thật của chủ dự án.
+- Collector [34004657032](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/34004657032) SUCCESS:405 master,394 full_scan_eligible,110 thanh khoản≥500k,405 WATCH; SLA EOD_RESEARCH/internal_research_ready=true/internal_scan_ready=false/public_action_allowed=false. Đây là kiểm chứng đóng đúng cổng cuối tuần, không phải4 mốc intraday PASS.
+- Research [34004885755](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/34004885755) SUCCESS nhưng bundle [34004932067](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/34004932067) bị legacy validator từ chối vì0 INTERNAL_RESEARCH_READY. Không khôi phục volume phiên cũ để nâng grade. Sửa riêng chế độ --dry-run --full-reference: bắt đủ405 ticker duy nhất, identity từng row, boolean grade/count khớp và mọi public/alpha gate false. Legacy research-only writer vẫn từ chối0 research; Edge sync vốn hỗ trợ405 reference + prune research cũ về0 sau import thành công. Ba regression mới chứng minh incomplete/overclaimed/identity/action/alpha sai đều bị chặn.

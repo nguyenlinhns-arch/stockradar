@@ -83,7 +83,7 @@ jobs:
           PY
 
       - name: Validate bundle locally
-        run: python scripts/sync_internal_research_cache.py /tmp/stockradar-research-bundle.json --dry-run
+        run: python scripts/sync_internal_research_cache.py /tmp/stockradar-research-bundle.json --dry-run --full-reference
 
       - name: Obtain GitHub OIDC token
         id: oidc

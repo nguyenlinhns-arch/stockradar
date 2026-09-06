@@ -58,7 +58,7 @@ def _load_bundle(path: Path) -> tuple[dict[str, Any], str]:
     return payload, digest
 
 
-def _validate_bundle(bundle: dict[str, Any]) -> dict[str, dict[str, Any]]:
+def _validate_bundle(bundle: dict[str, Any], *, full_reference: bool = False) -> dict[str, dict[str, Any]]:
     if str(bundle.get("exchange") or "").upper() != "HOSE":
         raise SyncError("Only HOSE bundles are accepted")
     if str(bundle.get("data_role") or "").upper() not in {
@@ -76,6 +76,12 @@ def _validate_bundle(bundle: dict[str, Any]) -> dict[str, dict[str, Any]]:
     expected = int(bundle.get("universe_count") or 0)
     if expected != len(tickers):
         raise SyncError(f"Universe mismatch: expected {expected}, found {len(tickers)}")
+    if full_reference:
+        if expected != 405 or len({str(t).strip().upper() for t in tickers}) != 405:
+            raise SyncError("Full reference validation requires exactly 405 unique HOSE tickers")
+        for gate in ("public_release_allowed", "public_action_allowed", "catalyst_alpha_weight_allowed", "institutional_alpha_weight_allowed"):
+            if bundle.get(gate) is not False:
+                raise SyncError(f"Full reference bundle must explicitly close {gate}")
 
     clean: dict[str, dict[str, Any]] = {}
     for raw_ticker, row in tickers.items():
@@ -84,16 +90,22 @@ def _validate_bundle(bundle: dict[str, Any]) -> dict[str, dict[str, Any]]:
             raise SyncError(f"Invalid HOSE ticker in bundle: {raw_ticker!r}")
         if not isinstance(row, dict):
             raise SyncError(f"Ticker {ticker} payload must be an object")
+        if full_reference and (not ticker.isascii() or str(row.get("ticker") or "") != ticker):
+            raise SyncError(f"Ticker identity mismatch: {ticker}")
         release = row.get("release") or {}
         if not isinstance(release, dict):
             raise SyncError(f"Ticker {ticker} release block must be an object")
         if release.get("public_action_allowed") is not False:
             raise SyncError(f"Ticker {ticker} is not explicitly fail-closed for public action")
+        if full_reference and not isinstance(release.get("internal_research_ready"), bool):
+            raise SyncError(f"Ticker {ticker} needs an explicit research grade")
         if release.get("internal_research_ready") is not True:
             continue
         clean[ticker] = row
 
-    if not clean:
+    if full_reference and bundle.get("internal_research_ready_count") != len(clean):
+        raise SyncError("Declared research grade count does not match rows")
+    if not clean and not full_reference:
         raise SyncError("No INTERNAL_RESEARCH_READY ticker rows found")
     return clean
 
@@ -137,9 +149,11 @@ def _post_rpc(url: str, headers: dict[str, str], body: dict[str, Any], retries: 
         time.sleep(min(2**attempt, 8))
 
 
-def sync(path: Path, dry_run: bool = False, limit: int | None = None) -> dict[str, Any]:
+def sync(path: Path, dry_run: bool = False, limit: int | None = None, full_reference: bool = False) -> dict[str, Any]:
+    if full_reference and not dry_run:
+        raise SyncError("Full reference validation is dry-run only; use the OIDC Edge sync for cache replacement")
     bundle, digest = _load_bundle(path)
-    rows = _validate_bundle(bundle)
+    rows = _validate_bundle(bundle, full_reference=full_reference)
     ordered = _ordered_tickers(rows)
     if limit is not None:
         ordered = ordered[: max(0, limit)]
@@ -160,6 +174,7 @@ def sync(path: Path, dry_run: bool = False, limit: int | None = None) -> dict[st
         "selected_rows": len(ordered),
         "priority_first": ordered[:3],
         "dry_run": dry_run,
+        "validated_reference_rows": len(bundle["tickers"]) if full_reference else None,
     }
     if dry_run:
         return result
@@ -195,11 +210,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Sync internal StockRadar research cache")
     parser.add_argument("bundle", type=Path, help="Path to stockradar_ticker_lookup_latest.json")
     parser.add_argument("--dry-run", action="store_true", help="Validate only; do not contact Supabase")
+    parser.add_argument("--full-reference", action="store_true", help="With --dry-run, validate a complete 405-ticker reference bundle even when no row qualifies as research")
     parser.add_argument("--limit", type=int, default=None, help="Optional number of rows to sync")
     args = parser.parse_args()
 
     try:
-        result = sync(args.bundle, dry_run=args.dry_run, limit=args.limit)
+        result = sync(args.bundle, dry_run=args.dry_run, limit=args.limit, full_reference=args.full_reference)
     except (OSError, SyncError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2

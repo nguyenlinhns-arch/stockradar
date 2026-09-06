@@ -85,7 +85,7 @@ jobs:
           set -euo pipefail
           bundle="$(find artifacts/internal-research-bundle -name 'stockradar_ticker_lookup_internal_405_*.json' ! -name '*_manifest.json' -print -quit)"
           test -n "$bundle"
-          python scripts/sync_internal_research_cache.py "$bundle" --dry-run | tee /tmp/bundle-validation.json
+          python scripts/sync_internal_research_cache.py "$bundle" --dry-run --full-reference | tee /tmp/bundle-validation.json
           python - "$bundle" <<'PY'
           import json, sys
           p=sys.argv[1]

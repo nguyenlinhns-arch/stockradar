@@ -141,4 +141,3 @@ do $$ begin
   perform cron.schedule('stockradar-checkout-notification-retry-v1','*/5 * * * *',
     $cron$select private.retry_stockradar_checkout_notifications_v1();$cron$);
 end $$;
-

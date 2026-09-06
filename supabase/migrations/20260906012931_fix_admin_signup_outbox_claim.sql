@@ -150,5 +150,3 @@ $$;
 
 revoke all on function public.preflight_stockradar_admin_signup_outbox_v1(uuid) from public, anon, authenticated;
 grant execute on function public.preflight_stockradar_admin_signup_outbox_v1(uuid) to service_role;
-
-
