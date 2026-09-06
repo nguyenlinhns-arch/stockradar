@@ -343,6 +343,7 @@
     try {
       const { data, error } = await client.rpc('confirm_my_checkout_request', { p_checkout_id: id });
       if (error) throw error;
+      if (data?.status === 'USER_CONFIRMED') window.StockRadarAnalytics?.paymentSubmitted();
       renderRequest({ ...runtime.request, ...data });
       startPolling();
     } catch (error) {

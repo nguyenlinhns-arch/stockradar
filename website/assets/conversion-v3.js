@@ -122,6 +122,8 @@
         } catch (_) { /* Unavailable storage must not affect analysis. */ }
       }
     },
+    signupVerificationRequested() {sendEvent('conversion_click',{action_name:'signup_verification_requested'},{oncePerPage:true,omitTicker:true});},
+    paymentSubmitted() {sendEvent('conversion_click',{action_name:'payment_submitted',plan_interest:'PREMIUM'},{oncePerPage:true,omitTicker:true});},
     checkoutCreated() {sendEvent('conversion_click',{action_name:'checkout_created',plan_interest:'PREMIUM'},{oncePerPage:true,omitTicker:true});}
   };
 

@@ -80,7 +80,7 @@ async function verifyGithubOidc(token: string): Promise<JsonObject> {
   if (!iat || Math.abs(now - iat) > 900) throw new Error("TOKEN_TOO_OLD");
   if (claims.repository !== EXPECTED_REPOSITORY) throw new Error("REPOSITORY_MISMATCH");
   if (claims.ref !== EXPECTED_REF) throw new Error("REF_MISMATCH");
-  if (claims.job_workflow_ref !== EXPECTED_WORKFLOW) throw new Error("WORKFLOW_MISMATCH");
+  if ((claims.workflow_ref !== EXPECTED_WORKFLOW || (claims.job_workflow_ref != null && claims.job_workflow_ref !== EXPECTED_WORKFLOW))) throw new Error("WORKFLOW_MISMATCH");
   return claims;
 }
 

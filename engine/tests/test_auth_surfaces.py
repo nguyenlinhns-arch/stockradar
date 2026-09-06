@@ -7,7 +7,7 @@ WEBSITE = ROOT / "website"
 
 
 class AuthSurfaceTests(unittest.TestCase):
-    def test_signup_requires_email_password_and_legal_consent_without_verification(self) -> None:
+    def test_signup_requires_email_password_legal_consent_and_email_verification(self) -> None:
         signup = (WEBSITE / "signup" / "index.html").read_text(encoding="utf-8")
         signup_client = (WEBSITE / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
         function = (ROOT / "supabase" / "functions" / "signup-link" / "index.ts").read_text(encoding="utf-8")
@@ -28,12 +28,16 @@ class AuthSurfaceTests(unittest.TestCase):
 
         self.assertIn('/functions/v1/signup-link', signup_client)
         self.assertIn('event.stopImmediatePropagation()', signup_client)
-        self.assertIn('signInWithPassword', signup_client)
+        self.assertNotIn('signInWithPassword', signup_client)
+        self.assertIn('data.verification_required !== true', signup_client)
         self.assertIn("'thanh-toan/?plan=premium'", signup_client)
         self.assertNotIn('showEmailSent', signup_client)
 
-        self.assertIn('auth.admin.createUser', function)
-        self.assertIn('email_confirm: true', function)
+        self.assertIn('client.auth.signUp', function)
+        self.assertIn('settings.mailer_autoconfirm !== false', function)
+        self.assertNotIn('auth.admin.createUser', function)
+        self.assertNotIn('email_confirm: true', function)
+        self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', function)
         self.assertNotIn('auth.admin.generateLink', function)
         self.assertNotIn('RESEND_API_KEY', function)
 

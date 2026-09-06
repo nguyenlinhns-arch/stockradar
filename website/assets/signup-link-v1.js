@@ -29,24 +29,26 @@
   }
 
   function destinationFor(plan) {
-    return new URL(plan === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/', document.baseURI).toString();
+    return new URL(plan === 'premium' ? 'thanh-toan/?plan=premium' : './', document.baseURI).toString();
   }
 
   function syncExistingLogin(form) {
     const link = document.querySelector('[data-signup-existing-login]');
     if (!link) return;
-    const next = selectedPlan(form) === 'premium' ? 'thanh-toan/?plan=premium' : 'tai-khoan/';
+    const next = selectedPlan(form) === 'premium' ? 'thanh-toan/?plan=premium' : './';
     link.href = `dang-nhap/?next=${encodeURIComponent(next)}`;
   }
 
   function authClient() {
     const cfg = window.STOCKRADAR_AUTH_CONFIG || {};
     if (!cfg.configured || !cfg.supabaseUrl || !cfg.supabasePublishableKey || !window.supabase?.createClient) return null;
-    return window.supabase.createClient(
+    if (window.StockRadarAuthClient) return window.StockRadarAuthClient;
+    window.StockRadarAuthClient = window.supabase.createClient(
       String(cfg.supabaseUrl).replace(/\/$/, ''),
       String(cfg.supabasePublishableKey),
       { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: 'stockradar-auth' } },
     );
+    return window.StockRadarAuthClient;
   }
 
   async function redirectExistingPremiumUser(form) {
@@ -61,17 +63,6 @@
       }
     } catch (_) {}
     return false;
-  }
-
-  async function signInCreatedAccount(client, email, password) {
-    let lastError = null;
-    for (let attempt = 0; attempt < 3; attempt += 1) {
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
-      if (!error && data?.session) return data;
-      lastError = error || new Error('missing session');
-      if (attempt < 2) await new Promise(resolve => setTimeout(resolve, 300 * (attempt + 1)));
-    }
-    throw lastError || new Error('sign in failed');
   }
 
   async function submitSignup(event, form) {
@@ -134,18 +125,15 @@
         return setMessage(message, text, 'error');
       }
 
-      setMessage(message, plan === 'premium'
-        ? 'Tạo tài khoản thành công. Đang mở thanh toán Premium…'
-        : 'Tạo tài khoản thành công. Đang mở tài khoản Free…', 'success');
-
-      await signInCreatedAccount(client, email, password);
+      if (data.verification_required !== true) throw new Error('verification state missing');
+      window.StockRadarAnalytics?.signupVerificationRequested();
       form.elements.password.value = '';
       form.elements.password_confirm.value = '';
-      window.location.replace(destinationFor(plan));
+      setMessage(message, 'Kiểm tra email để xác minh tài khoản. Nếu đã có tài khoản, hãy dùng nút Đăng nhập bên dưới.', 'success');
     } catch (_) {
       form.elements.password.value = '';
       form.elements.password_confirm.value = '';
-      setMessage(message, 'Tài khoản có thể đã được tạo nhưng chưa thể tự đăng nhập. Hãy dùng nút Đăng nhập bên dưới.', 'error');
+      setMessage(message, 'Chưa xác nhận được yêu cầu đăng ký. Kiểm tra email hoặc thử lại sau.', 'error');
     } finally {
       setBusy(form, false);
     }

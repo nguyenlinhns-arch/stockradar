@@ -105,12 +105,12 @@ def main() -> None:
     require(signup_client, (
         "/functions/v1/signup-link",
         "event.stopImmediatePropagation()",
-        "signInWithPassword",
+        "data.verification_required !== true",
         "thanh-toan/?plan=premium",
-        "window.location.replace(destinationFor(plan))",
+        "Kiểm tra email để xác minh tài khoản",
     ), "direct signup client", errors)
 
-    for forbidden in ('showEmailSent', 'data-signup-email-sent', 'sr_pending_signup_email'):
+    for forbidden in ('signInWithPassword', 'signInCreatedAccount'):
         if forbidden in signup_client:
             errors.append(f"direct signup client contains legacy verification flow: {forbidden}")
 

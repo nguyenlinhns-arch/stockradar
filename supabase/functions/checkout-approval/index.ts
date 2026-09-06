@@ -45,8 +45,9 @@ async function sha256Hex(value: string) {
   return Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("");
 }
 
-function randomToken() {
-  const bytes = crypto.getRandomValues(new Uint8Array(32));
+async function approvalToken(checkoutId: string, hookToken: string) {
+  const key = await crypto.subtle.importKey("raw", encoder.encode(hookToken), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const bytes = new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(`stockradar-checkout-approval:v1:${checkoutId}`)));
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
@@ -69,26 +70,33 @@ async function rpc(base: string, admin: AdminCredential, name: string, body: Rec
   return text ? JSON.parse(text) : null;
 }
 
-async function sendResend(payload: Record<string, unknown>) {
-  const key = String(Deno.env.get("RESEND_API_KEY") || "").trim();
-  const from = String(Deno.env.get("STOCKRADAR_EMAIL_FROM") || "").trim();
+async function sendResend(payload: Record<string, unknown>, idempotencyKey: string, supabase: string, admin: AdminCredential) {
+  let key = String(Deno.env.get("RESEND_API_KEY") || "").trim();
+  let from = String(Deno.env.get("STOCKRADAR_EMAIL_FROM") || "").trim();
   const replyTo = String(Deno.env.get("STOCKRADAR_EMAIL_REPLY_TO") || "").trim();
+  if (!key || !from) {
+    const provider = await rpc(supabase, admin, "get_stockradar_email_provider_config_v1", {});
+    key ||= String(provider?.api_key || "").trim();
+    from ||= String(provider?.from_address || "").trim();
+  }
   if (!key || !from) throw new Error("EMAIL_PROVIDER_NOT_CONFIGURED");
   let lastError = "SEND_FAILED";
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
       const response = await fetch(RESEND_ENDPOINT, {
         method: "POST",
-        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+        headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "Idempotency-Key": idempotencyKey },
+        signal: AbortSignal.timeout(10000),
         body: JSON.stringify({ from, ...(replyTo ? { reply_to: replyTo } : {}), ...payload }),
       });
       const text = await response.text();
-      if (!response.ok) throw new Error(`RESEND_${response.status}:${text.slice(0, 300)}`);
+      if (!response.ok) throw new Error(`RESEND_${response.status}`);
       const data = text ? JSON.parse(text) : {};
       if (!data?.id) throw new Error("RESEND_MISSING_ID");
       return String(data.id);
     } catch (error) {
-      lastError = String(error);
+      lastError = error instanceof Error && /^RESEND_\d+$/.test(error.message) ? error.message : "EMAIL_DELIVERY_UNCERTAIN";
+      if (/^RESEND_4(?!29)/.test(lastError)) break;
       if (attempt < 3) await new Promise(resolve => setTimeout(resolve, attempt * 500));
     }
   }
@@ -102,12 +110,15 @@ function baseHtml(title: string, body: string) {
 function responseHtml(title: string, body: string, status = 200) {
   return new Response(baseHtml(title, body), {
     status,
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store",
+      "Referrer-Policy": "no-referrer", "X-Content-Type-Options": "nosniff", "X-Frame-Options": "DENY",
+      "X-Robots-Tag": "noindex, nofollow", "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'" },
   });
 }
 
 function approvalEmail(data: Record<string, unknown>, approveUrl: string, rejectUrl: string) {
-  return `<!doctype html><html lang="vi"><body style="margin:0;background:#f3f6f9;font-family:Arial,sans-serif;color:#0f172a"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border:1px solid #dbe4ee;border-radius:16px;overflow:hidden"><tr><td style="padding:20px 24px;background:#0b1f33;color:#fff"><strong style="font-size:19px">STOCKRADAR</strong><div style="font-size:12px;opacity:.8;margin-top:4px">Yêu cầu xác nhận thanh toán Premium</div></td></tr><tr><td style="padding:24px"><h1 style="font-size:24px;margin:0 0 16px">Khách báo đã chuyển khoản</h1><p style="font-size:14px;line-height:1.6;color:#475569">Chỉ xác nhận sau khi anh đã kiểm tra tiền thực nhận trong tài khoản ngân hàng. Việc mở email hoặc mở liên kết không tự kích hoạt Premium.</p><table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;margin:18px 0"><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Khách hàng</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(data.customer_email)}</td></tr><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Số tiền</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(money(data.amount_vnd))}</td></tr><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Nội dung CK</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(data.payment_reference)}</td></tr><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Gói</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(data.plan_code)} · ${esc(data.duration_days)} ngày</td></tr><tr><td style="padding:9px;color:#64748b">Hạn duyệt</td><td style="padding:9px;font-weight:700">${esc(dateTime(data.approval_expires_at))}</td></tr></table><p style="margin:24px 0 10px"><a href="${esc(approveUrl)}" style="display:inline-block;background:#0b6b3a;color:#fff;text-decoration:none;padding:13px 18px;border-radius:9px;font-weight:700">KIỂM TRA & XÁC NHẬN ĐÃ NHẬN TIỀN</a></p><p style="margin:10px 0"><a href="${esc(rejectUrl)}" style="display:inline-block;background:#fff;color:#991b1b;text-decoration:none;padding:11px 16px;border:1px solid #fecaca;border-radius:9px;font-weight:700">CHƯA XÁC MINH / TỪ CHỐI</a></p><p style="font-size:12px;color:#64748b;margin-top:22px">Hai nút trên chỉ mở trang xác nhận cuối. Premium chỉ được kích hoạt sau thao tác xác nhận cuối của anh.</p></td></tr></table></td></tr></table></body></html>`;
+  const receipt = `<p style="font-size:14px">Thời gian khách báo chuyển khoản: <strong>${esc(dateTime(data.confirmed_at))}</strong><br>Trạng thái: <strong>CHỜ QUẢN TRỊ XÁC NHẬN TIỀN</strong></p>`;
+  return `<!doctype html><html lang="vi"><body style="margin:0;background:#f3f6f9;font-family:Arial,sans-serif;color:#0f172a"><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 12px"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fff;border:1px solid #dbe4ee;border-radius:16px;overflow:hidden"><tr><td style="padding:20px 24px;background:#0b1f33;color:#fff"><strong style="font-size:19px">STOCKRADAR</strong><div style="font-size:12px;opacity:.8;margin-top:4px">Yêu cầu xác nhận thanh toán Premium</div></td></tr><tr><td style="padding:24px"><h1 style="font-size:24px;margin:0 0 16px">Khách báo đã chuyển khoản</h1>${receipt}<p style="font-size:14px;line-height:1.6;color:#475569">Chỉ xác nhận sau khi anh đã kiểm tra tiền thực nhận trong tài khoản ngân hàng. Việc mở email hoặc mở liên kết không tự kích hoạt Premium.</p><table width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;font-size:14px;margin:18px 0"><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Khách hàng</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(data.customer_email)}</td></tr><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Số tiền</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(money(data.amount_vnd))}</td></tr><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Nội dung CK</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(data.payment_reference)}</td></tr><tr><td style="padding:9px;border-bottom:1px solid #e2e8f0;color:#64748b">Gói</td><td style="padding:9px;border-bottom:1px solid #e2e8f0;font-weight:700">${esc(data.plan_code)} · ${esc(data.duration_days)} ngày</td></tr><tr><td style="padding:9px;color:#64748b">Hạn duyệt</td><td style="padding:9px;font-weight:700">${esc(dateTime(data.approval_expires_at))}</td></tr></table><p style="margin:24px 0 10px"><a href="${esc(approveUrl)}" style="display:inline-block;background:#0b6b3a;color:#fff;text-decoration:none;padding:13px 18px;border-radius:9px;font-weight:700">KIỂM TRA & XÁC NHẬN ĐÃ NHẬN TIỀN</a></p><p style="margin:10px 0"><a href="${esc(rejectUrl)}" style="display:inline-block;background:#fff;color:#991b1b;text-decoration:none;padding:11px 16px;border:1px solid #fecaca;border-radius:9px;font-weight:700">CHƯA XÁC MINH / TỪ CHỐI</a></p><p style="font-size:12px;color:#64748b;margin-top:22px">Hai nút trên chỉ mở trang xác nhận cuối. Premium chỉ được kích hoạt sau thao tác xác nhận cuối của anh.</p></td></tr></table></td></tr></table></body></html>`;
 }
 
 function customerEmail(result: Record<string, unknown>) {
@@ -141,7 +152,7 @@ Deno.serve(async (req: Request) => {
   if (req.method === "GET") {
     const token = String(url.searchParams.get("token") || "").trim();
     const decision = String(url.searchParams.get("decision") || "").trim().toUpperCase();
-    if (!token || !["APPROVE", "REJECT"].includes(decision)) return responseHtml("Liên kết không hợp lệ", "<p>Liên kết xác nhận không hợp lệ.</p>", 400);
+    if (!/^[A-Za-z0-9_-]{43}$/.test(token) || !["APPROVE", "REJECT"].includes(decision)) return responseHtml("Liên kết không hợp lệ", "<p>Liên kết xác nhận không hợp lệ.</p>", 400);
     try {
       const tokenHash = await sha256Hex(token);
       const data = await rpc(supabase, admin, "inspect_stockradar_checkout_approval_v1", { p_token_hash: tokenHash });
@@ -160,15 +171,15 @@ Deno.serve(async (req: Request) => {
       if (String(form.get("action") || "") !== "decision") return responseHtml("Yêu cầu không hợp lệ", "<p>Yêu cầu không hợp lệ.</p>", 400);
       const token = String(form.get("token") || "").trim();
       const decision = String(form.get("decision") || "").trim().toUpperCase();
-      if (!token || !["APPROVE", "REJECT"].includes(decision)) return responseHtml("Yêu cầu không hợp lệ", "<p>Yêu cầu không hợp lệ.</p>", 400);
+      if (!/^[A-Za-z0-9_-]{43}$/.test(token) || !["APPROVE", "REJECT"].includes(decision)) return responseHtml("Yêu cầu không hợp lệ", "<p>Yêu cầu không hợp lệ.</p>", 400);
       const tokenHash = await sha256Hex(token);
       const result = await rpc(supabase, admin, "resolve_stockradar_checkout_approval_v1", { p_token_hash: tokenHash, p_decision: decision });
       const approved = String(result?.approval_status || "") === "APPROVED";
       let customerMail = "";
-      if (result?.customer_email) {
+      if (result?.customer_email && result.idempotent !== true) {
         try {
           const mail = customerEmail(result || {});
-          await sendResend({ to: [String(result.customer_email)], subject: `[StockRadar] ${mail.title}`, html: mail.html });
+          await sendResend({ to: [String(result.customer_email)], subject: `[StockRadar] ${mail.title}`, html: mail.html }, `checkout-result:${result.checkout_id}:${result.approval_status}`, supabase, admin);
           customerMail = " Email xác nhận đã được gửi cho khách.";
         } catch (_) {
           customerMail = " Premium đã được xử lý; email khách có thể gửi chậm.";
@@ -194,7 +205,7 @@ Deno.serve(async (req: Request) => {
     if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(checkoutId)) {
       return new Response(JSON.stringify({ ok: false, reason: "INVALID_CHECKOUT_ID" }), { status: 400, headers: { "content-type": "application/json" } });
     }
-    const rawToken = randomToken();
+    const rawToken = await approvalToken(checkoutId, hookToken);
     const tokenHash = await sha256Hex(rawToken);
     const data = await rpc(supabase, admin, "prepare_stockradar_checkout_approval_v1", { p_checkout_id: checkoutId, p_token_hash: tokenHash, p_ttl_minutes: 1440 });
     if (!data?.should_send) return new Response(JSON.stringify({ ok: true, idempotent: true, status: data?.approval_status || data?.status }), { status: 200, headers: { "content-type": "application/json" } });
@@ -206,14 +217,14 @@ Deno.serve(async (req: Request) => {
         to: [String(data.approver_email)],
         subject: `[StockRadar] Xác nhận thanh toán ${String(data.payment_reference || "")}`,
         html: approvalEmail(data, approveUrl, rejectUrl),
-      });
+      }, `checkout-approval:${checkoutId}`, supabase, admin);
       await rpc(supabase, admin, "mark_stockradar_checkout_approval_delivery_v1", {
         p_checkout_id: checkoutId, p_token_hash: tokenHash, p_sent: true, p_message_id: messageId, p_error: null,
       });
       return new Response(JSON.stringify({ ok: true, sent: true }), { status: 202, headers: { "content-type": "application/json" } });
     } catch (error) {
       await rpc(supabase, admin, "mark_stockradar_checkout_approval_delivery_v1", {
-        p_checkout_id: checkoutId, p_token_hash: tokenHash, p_sent: false, p_message_id: null, p_error: String(error),
+        p_checkout_id: checkoutId, p_token_hash: tokenHash, p_sent: false, p_message_id: null, p_error: error instanceof Error && /^RESEND_\d+$/.test(error.message) ? error.message : "EMAIL_DELIVERY_UNCERTAIN",
       });
       return new Response(JSON.stringify({ ok: false, reason: "EMAIL_SEND_FAILED" }), { status: 503, headers: { "content-type": "application/json" } });
     }

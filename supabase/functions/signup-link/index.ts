@@ -1,15 +1,15 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
 const ALLOWED_ORIGINS = new Set(["https://stockradar.vn", "https://www.stockradar.vn"]);
 
-function adminKey() {
+function publicKey() {
   try {
-    const keys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") || "{}");
+    const keys = JSON.parse(Deno.env.get("SUPABASE_PUBLISHABLE_KEYS") || "{}");
     const current = String(keys?.default || "").trim();
-    if (current.startsWith("sb_secret_")) return current;
+    if (current.startsWith("sb_publishable_")) return current;
   } catch (_) {}
-  return String(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "").trim();
+  return String(Deno.env.get("SUPABASE_ANON_KEY") || "").trim();
 }
 
 function cors(origin: string) {
@@ -39,8 +39,8 @@ Deno.serve(async (req: Request) => {
   if (origin && !ALLOWED_ORIGINS.has(origin)) return json(origin, { ok: false, reason: "ORIGIN_NOT_ALLOWED" }, 403);
 
   const supabaseUrl = String(Deno.env.get("SUPABASE_URL") || "").trim();
-  const secret = adminKey();
-  if (!supabaseUrl || !secret) return json(origin, { ok: false, reason: "AUTH_BACKEND_NOT_READY" }, 503);
+  const key = publicKey();
+  if (!supabaseUrl || !key) return json(origin, { ok: false, reason: "AUTH_BACKEND_NOT_READY" }, 503);
 
   try {
     const body = await req.json();
@@ -55,7 +55,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const metadata = {
-      signup_source: "stockradar_web_direct_v1",
+      signup_source: "stockradar_web_verified_v2",
       selected_plan_interest: plan,
       terms_accepted: true,
       terms_version: "2026-09-03",
@@ -67,23 +67,30 @@ Deno.serve(async (req: Request) => {
       product_email_event_alerts: plan === "premium" && body?.product_email_event_alerts === true,
     };
 
-    const admin = createClient(supabaseUrl, secret, {
+    const settingsResponse = await fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: key } });
+    const settings = settingsResponse.ok ? await settingsResponse.json() : {};
+    if (settings.mailer_autoconfirm !== false || settings.disable_signup === true) {
+      return json(origin, { ok: false, reason: "EMAIL_VERIFICATION_NOT_READY" }, 503);
+    }
+    const client = createClient(supabaseUrl, key, {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
     });
 
-    const { data, error } = await admin.auth.admin.createUser({
+    const { data, error } = await client.auth.signUp({
       email,
       password,
-      email_confirm: true,
-      user_metadata: metadata,
+      options: {
+        data: metadata,
+        emailRedirectTo: plan === "premium" ? "https://stockradar.vn/thanh-toan/?plan=premium" : "https://stockradar.vn/",
+      },
     });
 
-    if (error || !data?.user?.id) {
+    if (error || !data?.user?.id || data?.session) {
       // Keep response generic to reduce account enumeration.
-      return json(origin, { ok: false, reason: "SIGNUP_UNAVAILABLE" }, 409);
+      return json(origin, { ok: false, reason: "SIGNUP_UNAVAILABLE" }, error?.status === 429 ? 429 : 409);
     }
 
-    return json(origin, { ok: true, created: true, plan }, 201);
+    return json(origin, { ok: true, verification_required: true, plan }, 202);
   } catch (_) {
     return json(origin, { ok: false, reason: "REQUEST_FAILED" }, 500);
   }

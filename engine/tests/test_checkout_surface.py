@@ -75,7 +75,7 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertNotIn("service_role", guard.lower())
         self.assertNotIn("sb_secret_", guard.lower())
 
-    def test_premium_registration_routes_directly_to_payment_without_verification(self):
+    def test_premium_registration_preserves_payment_intent_after_email_verification(self):
         plans = (ROOT / "website" / "dang-ky" / "index.html").read_text(encoding="utf-8")
         signup = (ROOT / "website" / "signup" / "index.html").read_text(encoding="utf-8")
         signup_client = (ROOT / "website" / "assets" / "signup-link-v1.js").read_text(encoding="utf-8")
@@ -92,10 +92,13 @@ class CheckoutSurfaceTests(unittest.TestCase):
         self.assertNotIn('data-auth-signup-otp-form', signup)
         self.assertNotIn('xac-minh-email/', signup)
         self.assertIn("'thanh-toan/?plan=premium'", signup_client)
-        self.assertIn('signInWithPassword', signup_client)
+        self.assertNotIn('signInWithPassword', signup_client)
+        self.assertIn('verification_required', signup_client)
         self.assertIn('data-signup-existing-login', registration_guard)
-        self.assertIn('auth.admin.createUser', function)
-        self.assertIn('email_confirm: true', function)
+        self.assertIn('client.auth.signUp', function)
+        self.assertIn('emailRedirectTo', function)
+        self.assertNotIn('auth.admin.createUser', function)
+        self.assertNotIn('email_confirm: true', function)
         self.assertIn('Legacy Premium CTA leaked into final registration page', registration_guard)
 
 

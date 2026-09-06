@@ -53,7 +53,7 @@
   }
 
   function normalizeOtp(value) {
-    return String(value || '').replace(/\D/g, '').slice(0, 6);
+    return String(value || '').replace(/\D/g, '').slice(0, 8);
   }
 
   function passwordProblem(value) {
@@ -66,7 +66,7 @@
   function friendlyError(error) {
     const raw = String(error?.message || '').toLowerCase();
     if (raw.includes('invalid login credentials')) return 'Email hoặc mật khẩu không đúng.';
-    if (raw.includes('email not confirmed')) return 'Email chưa được xác minh. Hãy nhập OTP 6 số hoặc kiểm tra email xác minh.';
+    if (raw.includes('email not confirmed')) return 'Email chưa được xác minh. Hãy nhập OTP 6–8 số hoặc kiểm tra email xác minh.';
     if (raw.includes('user already registered') || raw.includes('already been registered')) return 'Email này đã được đăng ký. Hãy đăng nhập hoặc dùng chức năng quên mật khẩu.';
     if (raw.includes('token') && (raw.includes('expired') || raw.includes('invalid'))) return 'Mã OTP không đúng hoặc đã hết hạn. Hãy kiểm tra lại hoặc gửi mã mới.';
     if (raw.includes('otp') && raw.includes('expired')) return 'Mã OTP đã hết hạn. Hãy gửi mã mới.';
@@ -261,7 +261,7 @@
         const email = pendingSignupEmail();
         const token = normalizeOtp(otpForm.elements.otp?.value);
         if (!email) return showSignupStep(form, otpForm);
-        if (!/^\d{6}$/.test(token)) return setMessage(message, 'Nhập đúng mã OTP gồm 6 chữ số.', 'error');
+        if (!/^\d{6,8}$/.test(token)) return setMessage(message, 'Nhập đúng mã OTP gồm 6–8 chữ số.', 'error');
         setBusy(otpForm, true, 'Đang xác minh…');
         try {
           const { data, error } = await authClient.auth.verifyOtp({ email, token, type: 'email' });
@@ -343,7 +343,7 @@
         }
         if (otpForm) {
           showOtpStep(form, otpForm, email, { cooldown: true });
-          setMessage(otpForm.querySelector('[data-auth-message]'), 'Mã xác minh đã được gửi. Nhập OTP 6 số từ email StockRadar.', 'success');
+          setMessage(otpForm.querySelector('[data-auth-message]'), 'Mã xác minh đã được gửi. Nhập OTP 6–8 số từ email StockRadar.', 'success');
         } else {
           setMessage(message, 'Đã tạo tài khoản. Kiểm tra email để xác minh.', 'success');
         }

@@ -2,9 +2,9 @@
 """Lock final StockRadar plan cards and direct signup flow after Pages transforms.
 
 Commercial rule:
-- Free: create account -> open Free account.
-- Premium: create account -> pay 199,000 VND.
-- Signup does not ask for OTP or email verification.
+- Free: create account -> verify email -> Home.
+- Premium: verify email -> gated manual checkout at 199,000 VND.
+- Verification uses the email link; no extra OTP panel is required.
 """
 
 from __future__ import annotations
@@ -64,7 +64,7 @@ def premium_card() -> str:
     ribbon = 'ĐẦY ĐỦ TÍNH NĂNG' if ready else 'TẠM DỪNG KÍCH HOẠT MỚI'
     kicker = '199K / 30 NGÀY' if ready else 'PREMIUM · CHƯA MỞ THANH TOÁN'
     note = (
-        'Tạo tài khoản xong chuyển thẳng sang thanh toán 199.000đ/30 ngày. Không có bước OTP hoặc xác minh email và không tự gia hạn.'
+        'Xác minh email rồi chuyển sang thanh toán 199.000đ/30 ngày. Quản trị xác nhận tiền thực nhận; không tự gia hạn.'
         if ready else
         'StockRadar đang tạm dừng nhận thanh toán Premium mới. Bạn vẫn có thể tạo tài khoản để ghi nhận nhu cầu Premium.'
     )
@@ -161,18 +161,8 @@ def enforce_signup_direct_flow(output: Path) -> Path:
     source = source.replace('Tạo tài khoản Free & gửi mã xác minh', 'Tạo tài khoản Free')
     source = source.replace('Tạo tài khoản Premium & gửi email xác minh', 'Tạo tài khoản Premium & thanh toán')
     source = source.replace('Tạo tài khoản Free & gửi email xác minh', 'Tạo tài khoản Free')
-    source = source.replace('Bấm xác minh trong email', 'Tạo tài khoản')
-    source = source.replace('bấm xác minh trong email', 'tạo tài khoản')
-    source = source.replace(
-        'Bước này chỉ tạo và xác minh tài khoản. Không tự thu phí, không tự gia hạn.',
-        'Tạo tài khoản xong sẽ chuyển thẳng sang thanh toán Premium. Không tự gia hạn.',
-    )
-    source = source.replace(
-        'Thanh toán chỉ ở bước riêng sau khi tài khoản được xác minh.',
-        'Thanh toán chỉ ở bước riêng sau khi tạo tài khoản.',
-    )
-    source = source.replace('tài khoản được xác minh', 'tài khoản được tạo')
-    source = source.replace('xác minh tài khoản', 'tạo tài khoản')
+    source = source.replace('Tạo tài khoản xong sẽ chuyển thẳng sang thanh toán Premium. Không tự gia hạn.',
+        'Xác minh email trước khi đăng nhập. Thanh toán Premium là bước riêng, không tự gia hạn.')
 
     source = source.replace(
         '<p class="auth-switch">Đã có tài khoản? <a href="dang-nhap/">Đăng nhập</a></p>',
@@ -196,21 +186,17 @@ def enforce_signup_direct_flow(output: Path) -> Path:
         'data-signup-email-sent',
         'autocomplete="one-time-code"',
         'Nhập mã OTP 6 số',
-        'Kiểm tra email để xác minh tài khoản',
-        'Đã xác minh? Đăng nhập',
         'xac-minh-email/',
-        'gửi email xác minh',
-        'Bước này chỉ tạo và xác minh tài khoản',
-        'tài khoản được xác minh',
+        'Không có bước OTP hoặc xác minh email',
     ):
         if forbidden in source:
-            raise RuntimeError(f"Verification UI leaked into final signup artifact: {forbidden}")
+            raise RuntimeError(f"Obsolete signup flow leaked into artifact: {forbidden}")
 
     client = signup_client.read_text(encoding="utf-8")
     for marker in (
         '/functions/v1/signup-link',
-        'signInWithPassword',
-        'window.location.replace(destinationFor(plan))',
+        'data.verification_required !== true',
+        'Kiểm tra email để xác minh tài khoản',
         "'thanh-toan/?plan=premium'",
     ):
         if marker not in client:
@@ -233,7 +219,7 @@ def main() -> int:
     args = parser.parse_args()
     plans, signup = enforce(args.output)
     print(f"Locked registration plans (checkout_ready={checkout_ready()}): {plans}")
-    print(f"Locked direct signup without verification: {signup}")
+    print(f"Verified-email signup contract: {signup}")
     return 0
 
 

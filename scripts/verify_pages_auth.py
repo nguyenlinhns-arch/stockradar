@@ -135,7 +135,8 @@ def main() -> None:
         "signup password field": ('type="password"', signup),
         "signup direct client": ("assets/signup-link-v1.js", signup),
         "signup edge call": ("/functions/v1/signup-link", signup_client),
-        "signup automatic sign in": ("signInWithPassword", signup_client),
+        "signup email verification required": ("data.verification_required !== true", signup_client),
+        "signup verification guidance": ("Kiểm tra email để xác minh tài khoản", signup_client),
         "signup direct Premium continuation": ("thanh-toan/?plan=premium", signup_client),
         "terms link": ("dieu-khoan/", signup),
         "privacy link": ("quyen-rieng-tu/", signup),
@@ -161,15 +162,13 @@ def main() -> None:
         'data-signup-email-sent',
         'autocomplete="one-time-code"',
         'Nhập mã OTP 6 số',
-        'Kiểm tra email để xác minh tài khoản',
-        'Đã xác minh? Đăng nhập',
         'xac-minh-email/',
-        'gửi email xác minh',
+        'Không có bước OTP hoặc xác minh email',
     ):
         if forbidden in signup:
             raise SystemExit(f"signup verification UI leaked into production artifact: {forbidden}")
 
-    for forbidden in ('showEmailSent', 'data-signup-email-sent', 'sr_pending_signup_email'):
+    for forbidden in ('signInCreatedAccount', 'signInWithPassword'):
         if forbidden in signup_client:
             raise SystemExit(f"legacy signup verification client leaked: {forbidden}")
 

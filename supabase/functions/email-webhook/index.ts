@@ -99,6 +99,7 @@ Deno.serve(async (req: Request) => {
   const contentLength = Number(req.headers.get("content-length") || "0");
   if (contentLength > 131072) return new Response("Payload Too Large", { status: 413 });
   const rawBody = await req.text();
+  if (new TextEncoder().encode(rawBody).byteLength > 131072) return new Response("Payload Too Large", { status: 413 });
   if (!(await verifySvix(rawBody, req.headers, secret))) {
     return new Response(JSON.stringify({ ok: false, reason: "INVALID_SIGNATURE" }), { status: 401, headers: { "content-type": "application/json" } });
   }

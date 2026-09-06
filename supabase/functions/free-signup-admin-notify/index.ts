@@ -143,6 +143,7 @@ Deno.serve(async (req: Request) => {
 
       const response = await fetch(RESEND_ENDPOINT, {
         method: "POST",
+        signal: AbortSignal.timeout(10000),
         headers: {
           Authorization: `Bearer ${resend}`,
           "Content-Type": "application/json",
@@ -160,7 +161,7 @@ Deno.serve(async (req: Request) => {
       });
 
       const text = await response.text();
-      if (!response.ok) throw new Error(`RESEND_${response.status}:${text.slice(0, 300)}`);
+      if (!response.ok) throw new Error(`RESEND_${response.status}`);
       const result = text ? JSON.parse(text) : {};
       if (!result?.id) throw new Error("RESEND_MISSING_MESSAGE_ID");
 
@@ -173,13 +174,14 @@ Deno.serve(async (req: Request) => {
       sent += 1;
     } catch (error) {
       failed += 1;
-      console.error("admin signup email failed", outboxId, String(error).slice(0, 300));
+      const errorCode = error instanceof Error && /^RESEND_\d+$/.test(error.message) ? error.message : "EMAIL_DELIVERY_UNCERTAIN";
+      console.error("admin signup email failed", outboxId, errorCode);
       try {
         await rpc(supabase, admin, "finish_stockradar_email_outbox_v1", {
           p_outbox_id: outboxId,
           p_result: "FAILED",
           p_provider_message_id: null,
-          p_error: String(error).slice(0, 900),
+          p_error: errorCode,
         });
       } catch (_) {}
     }

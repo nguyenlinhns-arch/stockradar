@@ -26,6 +26,10 @@ permissions:
   contents: read
   actions: read
 
+concurrency:
+  group: stockradar-hose-collector
+  cancel-in-progress: false
+
 jobs:
   market:
     runs-on: ubuntu-latest
@@ -105,13 +109,22 @@ jobs:
           artifact_id="$(gh api \
             -H 'Accept: application/vnd.github+json' \
             "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-hose-fundamentals-bootstrap&per_page=100" \
-            --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+            --jq '.artifacts | map(select(.expired == false and .workflow_run.head_branch == "main" and .workflow_run.repository_id == .workflow_run.head_repository_id)) | sort_by(.created_at) | reverse | .[0].id // empty')"
           if [ -z "$artifact_id" ]; then
             echo 'No reusable fundamentals artifact found; scanner remains fail-closed.' >&2
             exit 1
           fi
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > /tmp/fundamentals.zip
           unzip -q -o /tmp/fundamentals.zip -d artifacts/fundamentals
+
+      - name: Preserve the exact reused fundamentals for downstream research
+        if: ${{ needs.fundamentals.result != 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: stockradar-hose-fundamentals-bootstrap
+          path: artifacts/fundamentals/
+          retention-days: 7
+          if-no-files-found: error
 
       - name: Derive fundamental, relative-strength and valuation features
         run: |
@@ -174,12 +187,23 @@ jobs:
           PY
 
       - name: Enforce 4-checkpoint freshness and liquidity SLA
+        env:
+          SCAN_SCHEDULE: ${{ github.event.schedule }}
         shell: bash
         run: |
           set -euo pipefail
           qa_file="$(ls artifacts/scanner/stockradar_scanner_qa_v2_*.json | head -n 1)"
           scanner_file="$(ls artifacts/scanner/stockradar_scanner_master_v2_405_*.csv | head -n 1)"
+          checkpoint=EOD_RESEARCH
+          case "$SCAN_SCHEDULE" in
+            '30 3 * * 1-5') checkpoint=10:30 ;;
+            '15 4 * * 1-5') checkpoint=11:15 ;;
+            '30 6 * * 1-5') checkpoint=13:30 ;;
+            '15 7 * * 1-5') checkpoint=14:15 ;;
+          esac
           python scripts/validate_intraday_scan_sla.py \
+            --checkpoint "$checkpoint" \
+            --security-master artifacts/market/security_master.csv \
             --market-coverage artifacts/market/market_coverage.json \
             --fundamental-coverage artifacts/fundamentals/fundamentals_coverage.json \
             --scanner-qa "$qa_file" \
@@ -188,6 +212,7 @@ jobs:
             --output artifacts/scanner/stockradar_intraday_sla_v1.json
 
       - name: Upload internal scanner artifact
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: stockradar-hose-scanner-v2

@@ -77,6 +77,9 @@ def build(args):
     p = load_unique(args.company_profile, "company_profile") if args.company_profile else None
 
     canonical = set(u.ticker)
+    for name, frame in (("universe", u), ("security_master", s)):
+        if "exchange" not in frame or not frame.exchange.eq("HOSE").all():
+            raise ValueError(f"{name} must explicitly identify every ticker as HOSE")
     if len(canonical) != EXPECTED_HOSE:
         raise ValueError(f"canonical HOSE must be {EXPECTED_HOSE}, got {len(canonical)}")
 
@@ -85,6 +88,8 @@ def build(args):
         covered = set(df.ticker) & canonical
         missing = sorted(canonical - covered)
         extra = sorted(set(df.ticker) - canonical)
+        if extra:
+            raise ValueError(f"{name} contains tickers outside the canonical HOSE master: {extra}")
         coverage[name] = {"covered": len(covered), "missing": missing, "extra": extra}
 
     base_cols = [c for c in ["ticker", "company_name_vi", "tradable_eligibility", "listing_status_semantics", "row_quality_flags"] if c in u.columns]
@@ -95,7 +100,7 @@ def build(args):
         out = out.merge(p[profile_cols], on="ticker", how="left")
 
     tech_cols = [
-        "ticker", "price", "pct_change", "daily_bar_count", "ma10", "ma20", "ma50", "ma150", "ma200", "vol20",
+        "ticker", "price", "price_as_of", "price_snapshot_kind", "intraday_quote_fresh", "evaluated_at", "pct_change", "daily_bar_count", "ma10", "ma20", "ma50", "ma150", "ma200", "vol20",
         "current_cum_volume", "same_time_volume_ratio", "rvol_progress_adjusted", "max_down_volume_10", "same_time_max_down_volume_10",
         "pocket_pivot_volume_pass", "pivot20", "distance_to_pivot_pct", "stage", "ma200_slope_20d", "ichimoku_state",
         "bollinger_width_pct", "bollinger_squeeze", "volume_dry_up_5d", "vcp_contraction_score", "technical_history_eligible", "rights_publication"
@@ -166,19 +171,20 @@ def build(args):
     ).round(2)
 
     stage_ok = out["stage"].isin(["STAGE_1_TO_2", "STAGE_2"])
+    observed_intraday = out.get("intraday_quote_fresh", pd.Series(False, index=out.index)).map(boolish)
     price_near_ma = ((out["price"] / out["ma10"] - 1).abs() <= 0.08) | ((out["price"] / out["ma50"] - 1).abs() <= 0.08)
     not_extended = (out["price"] / out["ma50"] - 1) <= 0.10
     pp = (
-        out["full_scan_eligible"] & stage_ok & out["pocket_pivot_volume_pass"].map(boolish)
+        out["full_scan_eligible"] & observed_intraday & stage_ok & out["pocket_pivot_volume_pass"].map(boolish)
         & (out["pct_change"] >= 2.0) & price_near_ma & not_extended
     )
     early = (
-        out["full_scan_eligible"] & stage_ok & (out["pct_change"] >= 2.0)
+        out["full_scan_eligible"] & observed_intraday & stage_ok & (out["pct_change"] >= 2.0)
         & (out["distance_to_pivot_pct"] >= -1.5) & (out["distance_to_pivot_pct"] <= 2.5)
         & (out["rvol_progress_adjusted"] >= 1.10) & not_extended
     )
     confirmed = (
-        out["full_scan_eligible"] & out["stage"].eq("STAGE_2") & (out["price"] >= out["pivot20"])
+        out["full_scan_eligible"] & observed_intraday & out["stage"].eq("STAGE_2") & (out["price"] >= out["pivot20"])
         & (out["pct_change"] >= 2.0) & (out["rvol_progress_adjusted"] >= 1.40) & not_extended
     )
     out["setup_internal"] = "WATCH"

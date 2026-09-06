@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   sync:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -55,7 +55,7 @@ jobs:
           if [ "$EVENT_NAME" = "workflow_run" ] && [ -n "${EVENT_RUN_ID:-}" ]; then
             artifact_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${EVENT_RUN_ID}/artifacts?per_page=100" --jq '.artifacts | map(select(.name == "stockradar-ticker-lookup-internal-v1" and .expired == false)) | .[0].id // empty')"
           else
-            artifact_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-ticker-lookup-internal-v1&per_page=100" --jq '.artifacts | map(select(.expired == false)) | sort_by(.created_at) | reverse | .[0].id // empty')"
+            artifact_id="$(gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts?name=stockradar-ticker-lookup-internal-v1&per_page=100" --jq '.artifacts | map(select(.expired == false and .workflow_run.head_branch == "main" and .workflow_run.repository_id == .workflow_run.head_repository_id)) | sort_by(.created_at) | reverse | .[0].id // empty')"
           fi
           if [ -z "$artifact_id" ]; then
             echo 'No validated internal StockRadar bundle artifact found.' >&2
@@ -92,6 +92,7 @@ jobs:
           set -euo pipefail
           RESPONSE="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=stockradar-supabase-sync")"
           TOKEN="$(python -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"${RESPONSE}")"
+          echo "::add-mask::${TOKEN}"
           echo "token=${TOKEN}" >> "${GITHUB_OUTPUT}"
 
       - name: Sync bundle into private StockRadar research cache

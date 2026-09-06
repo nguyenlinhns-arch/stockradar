@@ -50,7 +50,7 @@ async function verifyGithubOidc(token: string): Promise<void> {
   if (!exp || exp < now - 30) throw new Error("TOKEN_EXPIRED");
   if (nbf && nbf > now + 30) throw new Error("TOKEN_NOT_YET_VALID");
   if (!iat || Math.abs(now - iat) > 900) throw new Error("TOKEN_TOO_OLD");
-  if (claims.repository !== EXPECTED_REPOSITORY || claims.ref !== EXPECTED_REF || claims.job_workflow_ref !== EXPECTED_WORKFLOW) throw new Error("WORKFLOW_IDENTITY_MISMATCH");
+  if (claims.repository !== EXPECTED_REPOSITORY || claims.ref !== EXPECTED_REF || (claims.workflow_ref !== EXPECTED_WORKFLOW || (claims.job_workflow_ref != null && claims.job_workflow_ref !== EXPECTED_WORKFLOW))) throw new Error("WORKFLOW_IDENTITY_MISMATCH");
 }
 async function sha256Hex(value: Uint8Array): Promise<string> {
   const digest = await crypto.subtle.digest("SHA-256", value);

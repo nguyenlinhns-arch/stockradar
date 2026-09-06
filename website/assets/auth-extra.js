@@ -17,7 +17,7 @@
   }
 
   function normalizeOtp(value) {
-    return String(value || '').replace(/\D/g, '').slice(0, 6);
+    return String(value || '').replace(/\D/g, '').slice(0, 8);
   }
 
   function maskEmail(value) {
@@ -143,13 +143,13 @@
         const { error } = await client.auth.resend({
           type: 'signup',
           email,
-          options: { emailRedirectTo: new URL('tai-khoan/?verified=1', document.baseURI).toString() },
+          options: { emailRedirectTo: new URL('./', document.baseURI).toString() },
         });
         if (error) throw error;
         try { sessionStorage.setItem(LOGIN_VERIFY_EMAIL_KEY, email); } catch (_) {}
         setDeadline(LOGIN_OTP_DEADLINE_KEY);
         runPersistentCooldown(sendButton, LOGIN_OTP_DEADLINE_KEY);
-        setMessage(message, 'Đã gửi OTP xác minh. Kiểm tra cả Inbox và Spam.', 'success');
+        setMessage(message, 'Đã gửi email xác minh. Mở liên kết trong thư hoặc nhập mã nếu thư có mã. Kiểm tra cả Inbox và Spam.', 'success');
         otpInput?.focus();
       } catch (_) {
         sendButton.disabled = false;
@@ -162,7 +162,7 @@
       const email = normalizeEmail(emailInput.value);
       const token = normalizeOtp(otpInput.value);
       if (!email || !email.includes('@')) return setMessage(message, 'Nhập email hợp lệ.', 'error');
-      if (!/^\d{6}$/.test(token)) return setMessage(message, 'Nhập đúng mã OTP gồm 6 chữ số.', 'error');
+      if (!/^\d{6,8}$/.test(token)) return setMessage(message, 'Nhập đúng mã OTP gồm 6–8 chữ số.', 'error');
       const client = getClient();
       if (!client) return setMessage(message, 'Dịch vụ xác thực chưa sẵn sàng.', 'error');
       const submit = form.querySelector('button[type="submit"]');
@@ -174,8 +174,8 @@
         if (error || !data?.session) throw error || new Error('missing session');
         clearDeadline(LOGIN_OTP_DEADLINE_KEY);
         try { sessionStorage.removeItem(LOGIN_VERIFY_EMAIL_KEY); } catch (_) {}
-        setMessage(message, 'Xác minh thành công. Đang mở tài khoản…', 'success');
-        location.href = new URL('tai-khoan/?verified=1', document.baseURI).toString();
+        setMessage(message, 'Xác minh thành công. Đang mở trang chủ…', 'success');
+        location.href = new URL('./', document.baseURI).toString();
       } catch (_) {
         submit.disabled = false;
         submit.textContent = label;

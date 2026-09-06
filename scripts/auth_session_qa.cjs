@@ -8,6 +8,7 @@ const fs=require('node:fs');
   try {
     for(const tier of ['FREE','PAID']) {
       let aiRequests=0;
+      let backendTier=tier;
       const context=await browser.newContext();
       const user={id:'11111111-1111-4111-8111-111111111111',aud:'authenticated',role:'authenticated',email:'qa@example.invalid',email_confirmed_at:new Date().toISOString(),app_metadata:{provider:'email'},user_metadata:{}};
       const encode=x=>Buffer.from(JSON.stringify(x)).toString('base64url');
@@ -22,8 +23,8 @@ const fs=require('node:fs');
           body={status:'READY',tier,mode:'METHOD_ONLY',answer:'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH',quota:{remaining:6,limit:10}};
         }
         else if(url.pathname.endsWith('/user'))body=user;
-        else if(url.pathname.includes('get_my_stockradar_access'))body={account_tier:tier,account_status:'ACTIVE',quota:{unlimited:tier==='PAID',limit:tier==='PAID'?null:10,remaining:tier==='PAID'?null:7}};
-        else if(url.pathname.includes('/profiles'))body={account_tier:tier,account_status:'ACTIVE'};
+        else if(url.pathname.includes('get_my_stockradar_access'))body={account_tier:backendTier,account_status:'ACTIVE',quota:{unlimited:backendTier==='PAID',limit:backendTier==='PAID'?null:10,remaining:backendTier==='PAID'?null:7}};
+        else if(url.pathname.includes('/profiles'))body={account_tier:backendTier,account_status:'ACTIVE'};
         else if(url.pathname.includes('/rest/'))body=[];
         await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
       });
@@ -60,6 +61,13 @@ const fs=require('node:fs');
       assert.equal(aiRequests,1,'route assistant must use the existing authenticated session');
       await page.goto('http://127.0.0.1:8765/');
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
+      if(tier==='FREE') {
+        backendTier='PAID'; // Isolated HTTP fixture of a server-confirmed entitlement change.
+        await page.evaluate(()=>window.dispatchEvent(new CustomEvent('stockradar-access-changed')));
+        await page.waitForFunction(()=>document.querySelector('.site-header [data-account-state="premium"]'));
+        assert.ok(await page.evaluate(()=>Boolean(localStorage.getItem('stockradar-auth'))),'upgrade must keep the session');
+        results.push({fixture:true,premium_refresh_without_login:true});
+      }
       const logout=page.locator('[data-auth-state-logout],[data-global-auth-logout],[data-auth-logout]').filter({visible:true}).first();
       await logout.click();
       await page.waitForFunction(()=>!localStorage.getItem('stockradar-auth'));

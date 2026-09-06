@@ -15,3 +15,12 @@ verify_jwt = false
 
 [functions.signup-link]
 verify_jwt = false
+
+[functions.free-signup-admin-notify]
+verify_jwt = false
+
+[functions.stock-research-sync]
+verify_jwt = false
+
+[functions.stock-alert-orchestrator]
+verify_jwt = false

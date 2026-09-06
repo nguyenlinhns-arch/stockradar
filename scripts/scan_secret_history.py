@@ -10,6 +10,7 @@ PATTERNS={
  'private_key':rb'-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----',
  'openai_key':rb'\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{30,}',
  'resend_key':rb'\bre_[A-Za-z0-9]{25,}',
+ 'supabase_secret':rb'\bsb_secret_[A-Za-z0-9_-]{20,}',
  'aws_access_key':rb'\bAKIA[0-9A-Z]{16}\b',
  'github_token':rb'\bgh[pousr]_[A-Za-z0-9]{30,}',
 }

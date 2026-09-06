@@ -7,8 +7,10 @@ from datetime import date, datetime, timedelta, timezone
 import json
 from pathlib import Path
 import statistics
+import math
 import time
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import requests
@@ -23,6 +25,17 @@ HEADERS = {
 TIMEOUT = 30
 MAX_WORKERS = 10
 SOURCE_ID = "KBS_PUBLIC_BOOTSTRAP_INTERNAL_ONLY"
+TZ = ZoneInfo("Asia/Ho_Chi_Minh")
+
+
+def local_timestamp(value):
+    try:
+        ts = pd.Timestamp(value)
+        if pd.isna(ts):
+            return pd.NaT
+        return ts.tz_localize(TZ) if ts.tzinfo is None else ts.tz_convert(TZ)
+    except (ValueError, TypeError):
+        return pd.NaT
 
 
 def get_json(session: requests.Session, path: str, params: dict[str, Any] | None = None, retries: int = 4) -> Any:
@@ -182,16 +195,26 @@ def sma(s: pd.Series, n: int) -> float | None:
     return float(s.tail(n).mean()) if len(s) >= n else None
 
 
-def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.DataFrame) -> pd.DataFrame:
+def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.DataFrame, *, now=None) -> pd.DataFrame:
+    evaluated_at = local_timestamp(now) if now is not None else pd.Timestamp.now(tz=TZ)
+    if pd.isna(evaluated_at):
+        raise ValueError("Invalid evaluation timestamp")
     board_map = board.set_index("ticker").to_dict("index") if not board.empty and "ticker" in board else {}
     rows=[]
     for ticker, g in daily.groupby("ticker"):
         g=g.copy()
-        g["timestamp"]=pd.to_datetime(g["timestamp"], errors="coerce")
+        g["timestamp"]=g["timestamp"].map(local_timestamp)
         g=g.dropna(subset=["timestamp"]).sort_values("timestamp")
+        g=g[g["timestamp"] <= evaluated_at].drop_duplicates("timestamp", keep=False)
+        # During the session the current daily bar is incomplete; never put it in Vol20/MA history.
+        if evaluated_at.hour < 15:
+            g=g[g["timestamp"].dt.date < evaluated_at.date()]
         for c in ["open","high","low","close","volume"]:
             g[c]=pd.to_numeric(g[c], errors="coerce")
-        g=g.dropna(subset=["close","volume"])
+        g=g.dropna(subset=["open","high","low","close","volume"])
+        g=g[(g[["open","high","low","close"]] > 0).all(axis=1) & (g.volume >= 0)
+            & (g.high >= g[["open","close","low"]].max(axis=1))
+            & (g.low <= g[["open","close","high"]].min(axis=1))]
         if g.empty: continue
         close=g["close"]
         volume=g["volume"]
@@ -199,37 +222,50 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
         vol20=sma(volume,20)
         last=float(close.iloc[-1])
         b=board_map.get(ticker,{})
+        quote_at=pd.to_datetime(b.get("source_time_ms"), unit="ms", errors="coerce", utc=True)
+        quote_at=quote_at.tz_convert(TZ) if pd.notna(quote_at) else pd.NaT
+        quote_current=bool(pd.notna(quote_at) and quote_at.date()==evaluated_at.date()
+                           and 0 <= (evaluated_at-quote_at).total_seconds() <= 1200)
         current_price=pd.to_numeric(pd.Series([b.get("price")]),errors="coerce").iloc[0]
-        current_price=float(current_price) if pd.notna(current_price) and current_price>0 else last
-        current_vol=pd.to_numeric(pd.Series([b.get("total_volume")]),errors="coerce").iloc[0]
+        use_quote=bool(pd.notna(quote_at) and quote_at <= evaluated_at and pd.notna(current_price) and math.isfinite(current_price) and current_price>0)
+        quote_current=quote_current and use_quote
+        current_price=float(current_price) if use_quote else last
+        price_as_of=quote_at if use_quote else g["timestamp"].iloc[-1]
         daily_bar_count=int(len(g))
         board_pct_change=pd.to_numeric(pd.Series([b.get("pct_change")]),errors="coerce").iloc[0]
-        if pd.notna(board_pct_change):
+        if use_quote and pd.notna(board_pct_change):
             pct_change=float(board_pct_change)
-        elif len(close)>=2 and float(close.iloc[-2]) != 0:
-            pct_change=(current_price/float(close.iloc[-2])-1.0)*100.0
+        elif len(close)>=2 and float(close.iloc[-1] if use_quote and quote_at.date()>g["timestamp"].iloc[-1].date() else close.iloc[-2]) != 0:
+            prior_close=float(close.iloc[-1] if use_quote and quote_at.date()>g["timestamp"].iloc[-1].date() else close.iloc[-2])
+            pct_change=(current_price/prior_close-1.0)*100.0
         else:
-            pct_change=0.0
-        down_for_pp=g[g["close"].diff()<0].tail(10)
+            pct_change=None
+        previous=g[g["timestamp"].dt.date < price_as_of.date()].copy()
+        previous["down_session"]=previous["close"].diff()<0
+        prior10=previous.tail(10)
+        down_for_pp=prior10[prior10["down_session"]]
         down_date_set={ts.date() for ts in down_for_pp["timestamp"] if pd.notna(ts)}
         ig=intraday[intraday["ticker"]==ticker].copy() if not intraday.empty else pd.DataFrame()
         same_time_ratio=None; current_cum=None; projected_vol=None; same_time_down_cums=[]
         if not ig.empty:
-            ig["timestamp"]=pd.to_datetime(ig["timestamp"],errors="coerce")
+            ig["timestamp"]=ig["timestamp"].map(local_timestamp)
             ig["volume"]=pd.to_numeric(ig["volume"],errors="coerce")
             ig=ig.dropna(subset=["timestamp","volume"]).sort_values("timestamp")
+            ig=ig[(ig.timestamp <= evaluated_at) & (ig.volume >= 0)].drop_duplicates("timestamp", keep=False)
             if not ig.empty:
                 ig["session"]=ig["timestamp"].dt.date
                 sessions=sorted(ig["session"].unique())
-                cur=sessions[-1]
+                cur=evaluated_at.date()
                 curg=ig[ig["session"]==cur].copy()
+                if not curg.empty and (evaluated_at-curg["timestamp"].iloc[-1]).total_seconds()>1200:
+                    curg=curg.iloc[:0]
                 curg["cumvol"]=curg["volume"].cumsum()
                 current_cum=float(curg["cumvol"].iloc[-1]) if not curg.empty else None
                 cur_time=curg["timestamp"].iloc[-1].time() if not curg.empty else None
                 pri=[]
                 progress=[]
                 daily_by_date={ts.date(): float(v) for ts,v in zip(g["timestamp"],g["volume"]) if pd.notna(ts) and pd.notna(v)}
-                for d in sessions[-21:-1]:
+                for d in [d for d in sessions if d < cur][-20:]:
                     dg=ig[ig["session"]==d].copy()
                     if cur_time is not None:
                         dg=dg[dg["timestamp"].dt.time<=cur_time]
@@ -241,24 +277,23 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
                         full=daily_by_date.get(d)
                         if full and full>0:
                             frac=cum/full
-                            if 0 < frac <= 1.25:
+                            if 0 < frac <= 1:
                                 progress.append(frac)
-                if current_cum is not None and pri and statistics.fmean(pri)>0:
+                if current_cum is not None and len(pri)>=10 and statistics.fmean(pri)>0:
                     same_time_ratio=current_cum/statistics.fmean(pri)
-                if current_cum is not None and progress:
+                if current_cum is not None and len(progress)>=10:
                     frac=float(statistics.median(progress))
                     projected_vol=current_cum/frac if frac>0 else None
-        if current_cum is None and pd.notna(current_vol): current_cum=float(current_vol)
+        # Board volume cannot replace incomplete/missing intraday history for a same-time comparison.
         rvol=(current_cum/vol20) if current_cum is not None and vol20 and vol20>0 else None
-        rvol_progress_adjusted=(projected_vol/vol20) if projected_vol is not None and vol20 and vol20>0 else rvol
+        rvol_progress_adjusted=(projected_vol/vol20) if projected_vol is not None and vol20 and vol20>0 else None
         down=down_for_pp
         max_down_vol10=float(down["volume"].max()) if not down.empty else None
         same_time_max_down=max(same_time_down_cums) if same_time_down_cums else None
-        if current_cum is not None and same_time_max_down is not None:
-            pocket_vol_pass=bool(current_cum>same_time_max_down)
-        else:
-            pocket_vol_pass=bool(projected_vol and max_down_vol10 and projected_vol>max_down_vol10)
-        pivot20=float(g["high"].iloc[-21:-1].max()) if len(g)>=21 else None
+        # Same-time and projected comparisons are candidates, not confirmed Pocket Pivots.
+        pocket_vol_pass=bool(quote_current and current_cum is not None and len(prior10)==10
+                             and max_down_vol10 is not None and current_cum>max_down_vol10)
+        pivot20=float(previous["high"].tail(20).max()) if len(previous)>=20 else None
         dist=((current_price/pivot20)-1)*100 if pivot20 else None
         ma200_slope=None
         if len(g)>=220:
@@ -293,9 +328,12 @@ def compute_technical(daily: pd.DataFrame, intraday: pd.DataFrame, board: pd.Dat
                 w=g.tail(n); base=float(w["close"].mean()); ranges.append((float(w["high"].max())-float(w["low"].min()))/base if base else 0)
             vcp_score=max(0.0,min(100.0,100*(1-(ranges[2]/ranges[0] if ranges[0] else 1)))) if ranges[0]>0 else 0
         rows.append({
-            "ticker":ticker,"price":current_price,"pct_change":pct_change,"daily_bar_count":daily_bar_count,"last_daily_close":last,"ma10":ma10,"ma20":ma20,"ma50":ma50,"ma150":ma150,"ma200":ma200,
+            "ticker":ticker,"price":current_price,"price_as_of":price_as_of.isoformat(),
+            "price_snapshot_kind":"INTRADAY" if quote_current else "STALE_INTRADAY" if price_as_of.date()==evaluated_at.date() else "EOD_REFERENCE",
+            "intraday_quote_fresh":quote_current,"evaluated_at":evaluated_at.isoformat(),
+            "pct_change":pct_change,"daily_bar_count":daily_bar_count,"last_daily_close":last,"ma10":ma10,"ma20":ma20,"ma50":ma50,"ma150":ma150,"ma200":ma200,
             "vol20":vol20,"current_cum_volume":current_cum,"rvol_vs_full_day_vol20":rvol,"rvol_progress_adjusted":rvol_progress_adjusted,"same_time_volume_ratio":same_time_ratio,"projected_full_day_volume":projected_vol,
-            "max_down_volume_10":max_down_vol10,"same_time_max_down_volume_10":same_time_max_down,"pocket_pivot_volume_pass":pocket_vol_pass,"pocket_pivot_volume_pass_intraday_projection":pocket_vol_pass,"pivot20":pivot20,"distance_to_pivot_pct":dist,
+            "max_down_volume_10":max_down_vol10,"same_time_max_down_volume_10":same_time_max_down,"pocket_pivot_volume_pass":pocket_vol_pass,"pocket_pivot_volume_pass_intraday_projection":bool(projected_vol and max_down_vol10 and projected_vol>max_down_vol10),"pivot20":pivot20,"distance_to_pivot_pct":dist,
             "stage":stage,"ma200_slope_20d":ma200_slope,"tenkan":tenkan,"kijun":kijun,"kumo_span_a":span_a,"kumo_span_b":span_b,"ichimoku_state":ichimoku,
             "bollinger_width_pct":bb_width,"bollinger_squeeze":squeeze,"volume_dry_up_5d":vol_dry,"vcp_contraction_score":vcp_score,
             "technical_history_eligible":bool(daily_bar_count>=210),

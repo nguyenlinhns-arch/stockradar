@@ -1,6 +1,9 @@
 name: Process StockRadar Action Alerts
 
 on:
+  workflow_run:
+    workflows: ["Sync StockRadar Research Cache"]
+    types: [completed]
   workflow_dispatch:
   push:
     branches: [main]
@@ -29,6 +32,7 @@ concurrency:
 
 jobs:
   process:
+    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -48,6 +52,7 @@ jobs:
           set -euo pipefail
           RESPONSE="$(curl -fsS -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=stockradar-alert-orchestrator")"
           TOKEN="$(python -c 'import json,sys; print(json.load(sys.stdin)["value"])' <<<"${RESPONSE}")"
+          echo "::add-mask::${TOKEN}"
           echo "token=${TOKEN}" >> "${GITHUB_OUTPUT}"
 
       - name: Process approved StockRadar report transitions

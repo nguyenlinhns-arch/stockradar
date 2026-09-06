@@ -16,6 +16,13 @@ function harness({firstDay=null,search=''}={}) {
   return {events,analytics:window.StockRadarAnalytics,local};
 }
 const answer=()=>({tier:'FREE',scope:'ticker',message:'private question',holdings:{ZZZ:123},decision_cards:[{ticker:'ZZZ',data:{fresh:true,status:'RESEARCH',source_status:'RESEARCH_READY'}}]});
+test('transactional funnel emits only bounded actions, without payment or account contents',()=>{
+  const h=harness();
+  for(let i=0;i<2;i++){h.analytics.signupVerificationRequested({email:'private@example.invalid'});h.analytics.paymentSubmitted({bank:'private'});}
+  for(const action of ['signup_verification_requested','payment_submitted'])assert.equal(h.events.filter(e=>e.action_name===action).length,1);
+  assert.ok(!JSON.stringify(h.events).includes('private'));
+  assert.ok(!h.events.some(e=>e.action_name==='admin_approved'||e.action_name==='premium_activated'));
+});
 test('activation requires a useful fresh single-ticker report and never sends conversation or portfolio',()=>{
   const h=harness();assert.deepEqual(h.events.map(e=>e.event_name),['home_view']);
   const stale=answer();stale.decision_cards[0].data.fresh=false;h.analytics.aiResult(stale);
