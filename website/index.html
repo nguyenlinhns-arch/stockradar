@@ -20,10 +20,11 @@
   <link rel="stylesheet" href="assets/home-focus-v1.css?v=20260904-ai2">
   <link rel="stylesheet" href="assets/home-conversion-v2.css?v=20260904-ai2">
   <link rel="stylesheet" href="assets/home-ai-center-v1.css?v=20260904-ai2">
+  <link rel="stylesheet" href="assets/ai-conversation-v2.css?v=20260906-chat2">
   <link rel="stylesheet" href="assets/home-workspace-v2.css?v=20260905-history-table1">
   <script src="assets/auth-config.js?v=20260904-ai2"></script>
   <script src="assets/app.js?v=20260904-ai2" defer></script>
-  <script src="assets/ai-center.js?v=20260905-email1" defer></script>
+  <script src="assets/ai-center.js?v=20260906-chat2" defer></script>
   <script src="assets/home-workspace-v2.js?v=20260905-history-table1" defer></script>
 </head>
 <body class="ai-home" data-proposition="ai-first">
@@ -34,7 +35,7 @@
       <a class="brand" href="./" aria-label="Trang chủ StockRadar"><img src="assets/logo.svg" alt="StockRadar"></a>
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-menu" data-nav-toggle><span class="nav-toggle-bars" aria-hidden="true"></span><span>Danh mục</span></button>
       <nav class="nav-links" id="site-menu" aria-label="Điều hướng chính" data-nav-menu>
-        <a class="sr-ai-nav-link" href="#stockradar-ai">StockRadar AI</a>
+        <a class="sr-ai-nav-link" href="ai/">StockRadar AI</a>
         <a href="hom-nay/">Hôm nay</a>
         <a href="radar5/">Radar</a>
         <a href="khuyen-nghi/">Khuyến nghị</a>
@@ -52,12 +53,12 @@
           <div class="workspace-intro-copy">
             <span class="workspace-kicker">STOCKRADAR AI</span>
             <h1 id="workspace-title">AI phân tích cổ phiếu HOSE. <span data-home-readiness-claim>Theo dõi điểm mua/bán khi dữ liệu đủ điều kiện.</span></h1>
-            <p>Nhập mã cổ phiếu HOSE bạn đang quan tâm. Thử miễn phí · Không cần đăng nhập.</p>
+            <p>Hỏi một mã rồi tiếp tục trao đổi tự nhiên. Đăng nhập để lưu và mở lại lịch sử phân tích.</p>
           </div>
           <div class="workspace-trust" aria-label="Nguyên tắc StockRadar"><span>Chỉ cổ phiếu HOSE</span><span>Không tự bịa giá</span><span>Không cần tài khoản chứng khoán</span></div>
         </div>
 
-        <div class="workspace-hero-actions"><a class="button button-primary" href="#ai-question">Hỏi AI về một cổ phiếu</a><a class="button button-secondary" href="#home-reco-title">Xem tín hiệu mới nhất</a></div>
+        <div class="workspace-hero-actions"><a class="button button-primary" href="ai/">Mở StockRadar AI</a><a class="button button-secondary" href="#home-reco-title">Xem tín hiệu mới nhất</a></div>
         <div class="home-market-bar" aria-label="Trạng thái StockRadar">
     <div class="container home-market-inner">
       <div class="market-item"><span class="market-dot is-warn" data-market-dot></span><b>Dữ liệu HOSE</b><span data-market-status>Đang kiểm tra cập nhật</span></div>
@@ -174,7 +175,7 @@
             <div class="plan-head"><div><span class="plan-tag">FREE · 0Đ</span><h3>10 câu AI/ngày</h3></div><span class="plan-price">Khách: 3 câu/ngày</span></div>
             <p>Dành cho người muốn tự hỏi AI, tra cứu mã và lưu danh sách theo dõi cơ bản.</p>
             <div class="plan-bullets"><span>StockRadar AI</span><span>Tra cứu HOSE</span><span>Watchlist cơ bản</span><span>Không Daily 09:00</span></div>
-            <div class="plan-actions"><a class="primary" href="signup/?plan=free">Đăng ký Free</a><a class="secondary" href="#stockradar-ai">Hỏi thử ngay</a></div>
+            <div class="plan-actions"><a class="primary" href="signup/?plan=free">Đăng ký Free</a><a class="secondary" href="ai/">Mở AI</a></div>
           </article>
 
           <article class="plan-compact premium" id="nhan-ban-tin" data-email-conversion>
@@ -204,7 +205,7 @@
 
   <footer class="site-footer">
     <div class="container">
-      <div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="radar5/">Radar</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a></div></div>
+      <div class="footer-grid"><strong>STOCKRADAR.VN</strong><div class="footer-links"><a href="ai/">StockRadar AI</a><a href="radar5/">Radar</a><a href="khuyen-nghi/">Khuyến nghị</a><a href="hieu-qua/">Hiệu quả</a><a href="dieu-khoan/">Điều khoản</a><a href="quyen-rieng-tu/">Quyền riêng tư</a></div></div>
       <p class="disclaimer">StockRadar là công cụ hỗ trợ nghiên cứu và quản trị quyết định; không cam kết lợi nhuận và không tự đặt lệnh giao dịch.</p>
     </div>
   </footer>
