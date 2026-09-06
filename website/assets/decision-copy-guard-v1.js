@@ -13,7 +13,7 @@
     ['Pocket Pivot · Early Breakout · Confirmed Breakout', 'Mua · chờ · theo dõi'],
     ['Pocket Pivot · Breakout · Retest', 'Mua · chờ · theo dõi · bỏ qua'],
     ['Bear / Base / Bull', 'Thận trọng / Cơ sở / Tích cực'],
-    ['Bear · Base · Bull', 'Thận trọng · Cơ sở · Tích cực'],
+    ['Bear · Base · Bull', 'Thận trọng / Cơ sở / Tích cực'],
     ['Bear/Base/Bull', 'Thận trọng/Cơ sở/Tích cực'],
   ];
 
@@ -57,6 +57,14 @@
     return next;
   }
 
+  function shouldSkip(parent) {
+    if (!parent) return true;
+    if (parent.closest('[data-stockradar-ai],[data-stockradar-ai-inline],[data-decision-response]')) return true;
+    const center = parent.closest('[data-stockradar-ai-center]');
+    if (center && !parent.closest('.sr-center-chips')) return true;
+    return false;
+  }
+
   function clean(root = document.body) {
     if (!root) return;
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
@@ -65,13 +73,13 @@
     nodes.forEach(node => {
       const parent = node.parentElement;
       if (!parent || /^(SCRIPT|STYLE|NOSCRIPT|TEXTAREA|CODE|PRE)$/i.test(parent.tagName)) return;
-      if (parent.closest('[data-stockradar-ai-center],[data-stockradar-ai],[data-stockradar-ai-inline],[data-decision-response]')) return;
+      if (shouldSkip(parent)) return;
       const next = normalize(node.nodeValue);
       if (next !== node.nodeValue) node.nodeValue = next;
     });
 
     root.querySelectorAll?.('[aria-label],[title]').forEach(node => {
-      if (node.closest('[data-stockradar-ai-center],[data-stockradar-ai],[data-stockradar-ai-inline],[data-decision-response]')) return;
+      if (shouldSkip(node)) return;
       for (const attr of ['aria-label', 'title']) {
         const value = node.getAttribute(attr);
         if (!value) continue;
