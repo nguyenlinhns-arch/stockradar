@@ -150,6 +150,7 @@
   }
 
   async function renderAll() {
+    if (window.StockRadarAuthRedirectPending) return;
     const nav = document.querySelector('[data-nav-menu]');
     await resolveAccount();
     syncAiAuthStorageFromPrimary();

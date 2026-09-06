@@ -92,7 +92,7 @@
   }
 
   async function refresh({ quiet = true } = {}) {
-    if (!client || refreshInFlight) return;
+    if (!client || refreshInFlight || window.StockRadarAuthRedirectPending) return;
     refreshInFlight = true;
     try {
       const { data, error } = await client.auth.getSession();

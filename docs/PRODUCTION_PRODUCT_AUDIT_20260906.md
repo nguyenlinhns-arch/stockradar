@@ -31,7 +31,7 @@ Advisors:0 ERROR; các WARN hiện có về RPC có chủ đích và HIBP còn. 
 
 Blocker để mở Ads: Pixel ID + CompleteRegistration thật đúng một lần trong Events Manager; OpenAI credit; SMTP Auth và email ngoài team; kiểm thử app/thiết bị thật. Action/data rights/compliance/email sản phẩm/checkout vẫn theo gate PAUSED. Không coi cảnh báo này là đã giải quyết. Cấu hình, event definitions, KPI SQL, privacy và checklist ở [META_ADS_MEASUREMENT.md](META_ADS_MEASUREMENT.md).
 
-Deployment frontend của đợt này được ghi sau khi Pages hoàn tất; các release bên dưới là lịch sử.
+CI đầu tiên [34012730997](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/34012730997) dừng đúng tại lỗi WebKit khi listener tài khoản/thông báo bắt đầu request trong lúc login chuyển trang. Đã thêm trạng thái chuyển trang để hoãn các request này; lỗi đăng nhập hoặc quay lại trang qua browser cache sẽ bỏ trạng thái chờ. Không bỏ kiểm thử pageerror, không bỏ WebKit. Deployment frontend được ghi sau khi Pages chạy lại hoàn tất; các release bên dưới là lịch sử.
 
 ## P0/P1/P2
 

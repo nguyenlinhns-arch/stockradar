@@ -169,6 +169,7 @@
   }
 
   async function refreshNav() {
+    if (window.StockRadarAuthRedirectPending) return;
     const target = document.querySelector('[data-auth-nav]');
     if (!target) return;
     target.innerHTML = navMarkup(providerReady ? await currentUser() : null);
@@ -379,6 +380,8 @@
       const password = String(form.elements.password?.value || '');
       if (!email || !password) return setMessage(message, 'Nhập đầy đủ email và mật khẩu.', 'error');
       setBusy(form, true, 'Đang đăng nhập…');
+      // Auth listeners must not start account requests in the document we are leaving.
+      window.StockRadarAuthRedirectPending = true;
       try {
         const { error } = await authClient.auth.signInWithPassword({ email, password });
         form.elements.password.value = '';
@@ -389,6 +392,7 @@
         setMessage(message, 'Đăng nhập thành công.', 'success');
         location.href = safeNext(params.get('next'));
       } catch (error) {
+        window.StockRadarAuthRedirectPending = false;
         form.elements.password.value = '';
         setMessage(message, friendlyError(error), 'error');
       } finally {
@@ -544,4 +548,10 @@
   }
 
   document.addEventListener('DOMContentLoaded', init);
+  window.addEventListener('pageshow', event => {
+    if (!event.persisted) return;
+    window.StockRadarAuthRedirectPending = false;
+    window.dispatchEvent(new CustomEvent('stockradar-access-changed'));
+    refreshNav();
+  });
 })();
