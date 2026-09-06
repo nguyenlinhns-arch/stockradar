@@ -5,8 +5,19 @@
   const STORAGE_KEY = 'stockradar-auth';
   const THREAD_KEY = 'stockradar_ai_thread_id_v1';
   const MAX_GUEST_HISTORY = 6;
-  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI']);
-  const state = { client: null, sending: false, history: [], tier: 'GUEST', quota: null, threadId: loadThreadId() };
+  const STOPWORDS = new Set([
+    'MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI',
+    'VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR'
+  ]);
+  const state = {
+    client: null,
+    sending: false,
+    history: [],
+    tier: 'GUEST',
+    quota: null,
+    threadId: loadThreadId(),
+    ui: {}
+  };
 
   function node(tag, className, text = '') {
     const el = document.createElement(tag);
@@ -97,7 +108,7 @@
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storageKey: STORAGE_KEY,
+        storageKey: STORAGE_KEY
       }
     });
     window.StockRadarAuthClient = state.client;
@@ -136,8 +147,8 @@
   function showIntro(log, authenticated = false) {
     log.replaceChildren();
     addMessage(log, 'assistant', authenticated
-      ? 'Bạn có thể trò chuyện liên tục với StockRadar AI như trong một phiên phân tích. Hỏi một mã HOSE, rồi hỏi tiếp “mua được chưa?”, “3–6 tháng thì sao?” hoặc “rủi ro chính?” mà không cần gõ lại mã. Lịch sử được lưu theo tài khoản của bạn.'
-      : 'Hỏi tôi về một mã HOSE. Guest có 3 câu/ngày; tạo tài khoản Free để có 10 câu/ngày và giữ ngữ cảnh phân tích trên tài khoản.');
+      ? 'Đây là cuộc trò chuyện phân tích của bạn. Hãy hỏi một mã HOSE, rồi hỏi tiếp tự nhiên như “mua được chưa?”, “3–6 tháng thì sao?”, “rủi ro chính?” hoặc chuyển sang mã khác. StockRadar sẽ giữ ngữ cảnh của cuộc trò chuyện này.'
+      : 'Hỏi tôi về một mã HOSE. Guest có 3 câu/ngày; tạo tài khoản Free để có 10 câu/ngày và lưu lại từng cuộc trò chuyện.');
   }
 
   function addAction(log, text, href, label) {
@@ -153,14 +164,16 @@
   function guestFreeCta(log, kind = 'first') {
     if (state.tier !== 'GUEST' || !window.StockRadarAnalytics?.guestCta(kind, state.tier)) return;
     log.parentElement.querySelectorAll('[data-guest-free-cta]').forEach(el => el.remove());
-    const card = node('aside', 'sr-guest-free-cta'); card.dataset.guestFreeCta = kind;
-    card.append(node('strong', '', kind === 'exhausted' ? 'Bạn đã dùng hết 3 lượt Guest hôm nay.' : kind === 'last' ? 'Bạn còn 1 lượt Guest hôm nay.' : 'Muốn hỏi tiếp và giữ ngữ cảnh?'));
-    card.append(node('p', '', 'Tạo tài khoản Free để dùng StockRadar AI 10 câu/ngày và tiếp tục cuộc phân tích trên tài khoản.'));
+    const card = node('aside', 'sr-guest-free-cta');
+    card.dataset.guestFreeCta = kind;
+    card.append(node('strong', '', kind === 'exhausted' ? 'Bạn đã dùng hết 3 lượt Guest hôm nay.' : kind === 'last' ? 'Bạn còn 1 lượt Guest hôm nay.' : 'Muốn hỏi tiếp và lưu cuộc trò chuyện?'));
+    card.append(node('p', '', 'Tạo tài khoản Free để dùng StockRadar AI 10 câu/ngày và mở lại lịch sử phân tích trên mọi thiết bị.'));
     card.append(node('small', '', '0đ · Không cần thẻ · Chỉ cần email'));
     const link = node('a', 'button button-primary', 'Đăng ký Free');
     link.href = new URL('signup/?plan=free', document.baseURI).toString();
     link.addEventListener('click', () => window.StockRadarAnalytics?.guestCtaClick());
-    card.append(link); log.after(card);
+    card.append(link);
+    log.after(card);
   }
 
   function sourceMeta(data) {
@@ -204,14 +217,18 @@
 
   function freshnessNotice(data) {
     if (data?.mode !== 'METHOD_ONLY') return '';
-    return 'Chưa đủ dữ liệu hiện tại để xác nhận hành động mua/bán. StockRadar vẫn có thể giải thích phần phương pháp và dữ liệu đang có.';
+    return 'Chưa đủ dữ liệu hiện tại để xác nhận hành động mua/bán. StockRadar vẫn có thể giải thích phương pháp và phần dữ liệu đang có.';
   }
 
   async function callAuthenticated(session, payload) {
     const url = `${String(config.supabaseUrl).replace(/\/$/, '')}/functions/v1/stock-ai-chat`;
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey, 'Authorization': `Bearer ${session.access_token}` },
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.supabasePublishableKey,
+        'Authorization': `Bearer ${session.access_token}`
+      },
       body: JSON.stringify(payload),
       signal: AbortSignal.timeout(40000)
     });
@@ -220,9 +237,12 @@
     return { response, data };
   }
 
-  async function hydrateHistory(session, log) {
+  async function hydrateHistory(session, log, requestedThreadId = state.threadId) {
     if (!session?.access_token) return false;
-    const { response, data } = await callAuthenticated(session, { operation: 'history', thread_id: state.threadId || null });
+    const { response, data } = await callAuthenticated(session, {
+      operation: 'history',
+      thread_id: requestedThreadId || null
+    });
     if (!response.ok) return false;
     if (data.thread_id) saveThreadId(data.thread_id);
     const messages = Array.isArray(data.messages) ? data.messages : [];
@@ -232,8 +252,91 @@
     }
     log.replaceChildren();
     messages.forEach(item => addMessage(log, item.role === 'user' ? 'user' : 'assistant', String(item.content || '')));
-    state.history = messages.slice(-MAX_GUEST_HISTORY).map(item => ({ role: item.role, content: String(item.content || '').slice(0, 600) }));
+    state.history = messages.slice(-MAX_GUEST_HISTORY).map(item => ({
+      role: item.role,
+      content: String(item.content || '').slice(0, 600)
+    }));
     return true;
+  }
+
+  function threadLabel(row) {
+    const title = String(row?.title || '').trim();
+    if (title) return title;
+    const ticker = validTicker(row?.last_ticker) ? String(row.last_ticker).toUpperCase() : '';
+    return ticker ? `${ticker} · Phân tích` : 'Cuộc trò chuyện';
+  }
+
+  function threadMeta(row) {
+    const bits = [];
+    if (validTicker(row?.last_ticker)) bits.push(String(row.last_ticker).toUpperCase());
+    const labels = {
+      SHORT_TERM: 'Ngắn hạn',
+      MEDIUM_TERM: '3–6 tháng',
+      LONG_TERM: '12 tháng',
+      ACCUMULATION: 'Tích sản'
+    };
+    if (labels[row?.last_horizon]) bits.push(labels[row.last_horizon]);
+    if (row?.last_message_at) {
+      try {
+        bits.push(new Date(row.last_message_at).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' }));
+      } catch (_) {}
+    }
+    return bits.join(' · ');
+  }
+
+  async function renderThreads(session, list, log) {
+    if (!list) return;
+    list.replaceChildren();
+    if (!session?.access_token) {
+      const empty = node('div', 'sr-thread-empty');
+      empty.append(node('strong', '', 'Lịch sử phân tích'));
+      empty.append(node('p', '', 'Đăng ký Free để lưu và mở lại các cuộc trò chuyện.'));
+      const link = node('a', 'sr-thread-signup', 'Đăng ký Free');
+      link.href = new URL('signup/?plan=free', document.baseURI).toString();
+      empty.append(link);
+      list.append(empty);
+      return;
+    }
+
+    const client = await authClient();
+    const { data, error } = await client.rpc('get_my_stockradar_ai_threads', { p_limit: 30 });
+    if (error) {
+      list.append(node('div', 'sr-thread-empty', 'Chưa tải được lịch sử trò chuyện.'));
+      return;
+    }
+    const rows = Array.isArray(data) ? data : [];
+    if (!rows.length) {
+      list.append(node('div', 'sr-thread-empty', 'Chưa có cuộc trò chuyện nào.'));
+      return;
+    }
+    rows.forEach(row => {
+      const button = node('button', 'sr-thread-item');
+      button.type = 'button';
+      if (String(row.thread_id) === state.threadId) button.classList.add('is-active');
+      const title = node('strong', '', threadLabel(row));
+      const meta = node('small', '', threadMeta(row));
+      button.append(title, meta);
+      button.addEventListener('click', async () => {
+        if (state.sending || String(row.thread_id) === state.threadId) return;
+        list.querySelectorAll('.sr-thread-item').forEach(el => el.classList.remove('is-active'));
+        button.classList.add('is-active');
+        saveThreadId(row.thread_id);
+        await hydrateHistory(session, log, row.thread_id);
+        closeThreadDrawer();
+      });
+      list.append(button);
+    });
+  }
+
+  function closeThreadDrawer() {
+    state.ui.host?.classList.remove('threads-open');
+    state.ui.threadToggle?.setAttribute('aria-expanded', 'false');
+  }
+
+  function toggleThreadDrawer() {
+    const open = !state.ui.host?.classList.contains('threads-open');
+    state.ui.host?.classList.toggle('threads-open', open);
+    state.ui.threadToggle?.setAttribute('aria-expanded', String(open));
   }
 
   async function startNewThread(session, log, button) {
@@ -247,6 +350,8 @@
       saveThreadId(data.thread_id);
       state.history = [];
       showIntro(log, true);
+      await renderThreads(session, state.ui.threadList, log);
+      closeThreadDrawer();
     } catch (_) {
       addMessage(log, 'assistant', 'Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại.');
     } finally {
@@ -269,14 +374,23 @@
       const ticker = explicitTicker(message);
       const horizon = horizonFromText(message);
       const authenticated = Boolean(session?.access_token);
-      updatePlan(status, state.quota ? {quota: state.quota, tier: account.tier} : null, account.tier);
+      updatePlan(status, state.quota ? { quota: state.quota, tier: account.tier } : null, account.tier);
 
-      if (!authenticated && !ticker && portfolioIntent(message)) {
-        addAction(log, 'Danh mục và lịch sử hội thoại theo tài khoản cần đăng nhập. Bạn vẫn có thể hỏi trực tiếp một mã HOSE ở chế độ Guest.', 'signup/?plan=free', 'Đăng ký Free');
+      if (!authenticated && !ticker) {
+        addAction(
+          log,
+          portfolioIntent(message)
+            ? 'Danh mục và lịch sử hội thoại theo tài khoản cần đăng nhập. Bạn vẫn có thể hỏi trực tiếp một mã HOSE ở chế độ Guest.'
+            : 'Guest dùng để hỏi nhanh một mã HOSE. Tạo tài khoản Free để hỏi nối tiếp, hỏi phương pháp và lưu lịch sử phân tích.',
+          'signup/?plan=free',
+          'Đăng ký Free'
+        );
         return;
       }
 
       let response, data;
+      window.StockRadarAnalytics?.aiSubmitted({ tier: account.tier, ticker, horizon: horizon || 'SHORT_TERM' });
+
       if (authenticated) {
         ({ response, data } = await callAuthenticated(session, {
           operation: 'ask',
@@ -291,7 +405,13 @@
         response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey },
-          body: JSON.stringify({ ticker, horizon: horizon || 'SHORT_TERM', message: String(message).slice(0, 700), history: state.history.slice(-MAX_GUEST_HISTORY), guest_id: guestId() }),
+          body: JSON.stringify({
+            ticker,
+            horizon: horizon || 'SHORT_TERM',
+            message: String(message).slice(0, 700),
+            history: state.history.slice(-MAX_GUEST_HISTORY),
+            guest_id: guestId()
+          }),
           signal: AbortSignal.timeout(35000)
         });
         data = {};
@@ -299,20 +419,21 @@
       }
 
       if (response.status === 401 && authenticated) {
-        window.StockRadarAnalytics?.aiFailed({tier: account.tier});
+        window.StockRadarAnalytics?.aiFailed({ tier: account.tier });
         addAction(log, 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục cuộc trò chuyện.', 'dang-nhap/', 'Đăng nhập lại');
         return;
       }
 
       if (data?.thread_id) saveThreadId(data.thread_id);
-      window.StockRadarAnalytics?.aiSubmitted({tier: account.tier, ticker, horizon: horizon || 'SHORT_TERM'});
       window.StockRadarAnalytics?.returnedToAI(account.tier);
       const success = response.ok && window.StockRadarAnalytics?.aiResult(data) === true;
-      if (!response.ok) window.StockRadarAnalytics?.aiFailed({tier: account.tier, ...data});
+      if (!response.ok) window.StockRadarAnalytics?.aiFailed({ tier: account.tier, ...data });
+
       const answer = data.answer || (response.ok ? 'StockRadar AI chưa có nội dung để trả lời.' : 'StockRadar AI tạm thời chưa thể phản hồi.');
       const modelState = window.StockRadarAnalytics?.modelStatus(data);
       if (response.ok && modelState && modelState !== 'MODEL_READY' && data.model_notice) addMessage(log, 'assistant', data.model_notice);
       if (!window.StockRadarDecisionView?.render(log, data, sourceMeta(data))) addMessage(log, 'assistant', answer, sourceMeta(data));
+
       const warning = freshnessNotice(data);
       if (warning && !data.decision_cards?.length) addMessage(log, 'assistant', warning);
       updatePlan(status, data, account.tier);
@@ -328,37 +449,71 @@
         state.history.push({ role: 'user', content: String(message).slice(0, 600) });
         state.history.push({ role: 'assistant', content: String(answer).slice(0, 600) });
         state.history = state.history.slice(-MAX_GUEST_HISTORY);
+        if (authenticated) await renderThreads(session, state.ui.threadList, log);
       }
+
       if (success && !authenticated && state.tier === 'GUEST') {
         guestFreeCta(log, 'first');
         if (Number(data.quota?.remaining) === 1 && !log.parentElement.querySelector('[data-guest-free-cta]')) guestFreeCta(log, 'last');
         if (Number(data.quota?.remaining) === 0) guestFreeCta(log, 'exhausted');
       }
     } catch (error) {
-      window.StockRadarAnalytics?.aiFailed({tier: state.tier, model_status: error?.name === 'TimeoutError' ? 'MODEL_TIMEOUT' : 'MODEL_ERROR'});
+      window.StockRadarAnalytics?.aiFailed({
+        tier: state.tier,
+        model_status: error?.name === 'TimeoutError' ? 'MODEL_TIMEOUT' : 'MODEL_ERROR'
+      });
       addMessage(log, 'assistant', 'Không thể kết nối StockRadar AI lúc này. Vui lòng thử lại.');
     } finally {
       state.sending = false;
       input.disabled = false;
       send.disabled = false;
       send.textContent = oldLabel;
-      if (!matchMedia('(pointer: coarse)').matches) input.focus({preventScroll: true});
+      if (!matchMedia('(pointer: coarse)').matches) input.focus({ preventScroll: true });
     }
   }
 
+  function ensureConversationStyles() {
+    if (document.querySelector('link[data-stockradar-conversation-css]')) return;
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.dataset.stockradarConversationCss = '';
+    link.href = new URL('assets/ai-conversation-v2.css?v=20260906-chat2', document.baseURI).toString();
+    document.head.append(link);
+  }
+
   async function mount() {
+    ensureConversationStyles();
     const host = document.querySelector('[data-stockradar-ai-center]');
     if (!host || host.dataset.mounted === 'true') return;
     host.dataset.mounted = 'true';
+    host.classList.add('sr-conversation-shell');
 
+    const sidebar = node('aside', 'sr-thread-sidebar');
+    const sidebarHead = node('div', 'sr-thread-sidebar-head');
+    const sidebarTitle = node('div', 'sr-thread-sidebar-title');
+    sidebarTitle.append(node('strong', '', 'Cuộc trò chuyện'), node('span', '', 'Lịch sử phân tích theo tài khoản'));
+    const fullPage = node('a', 'sr-thread-fullpage', 'Mở AI toàn màn hình →');
+    fullPage.href = new URL('ai/', document.baseURI).toString();
+    const sideNewChat = node('button', 'sr-thread-new-chat', '+ Chat mới');
+    sideNewChat.type = 'button';
+    sideNewChat.hidden = true;
+    sidebarHead.append(sidebarTitle, fullPage, sideNewChat);
+    const threadList = node('div', 'sr-thread-list');
+    sidebar.append(sidebarHead, threadList);
+
+    const main = node('div', 'sr-conversation-main');
     const top = node('div', 'sr-center-top');
     const topLeft = node('div', 'sr-center-top-left');
+    const threadToggle = node('button', 'sr-thread-toggle', 'Lịch sử');
+    threadToggle.type = 'button';
+    threadToggle.setAttribute('aria-expanded', 'false');
     const status = node('span', 'sr-center-plan', 'ĐANG KIỂM TRA TÀI KHOẢN…');
     const continuity = node('span', 'sr-center-continuity', 'Hội thoại liên tục');
-    topLeft.append(status, continuity);
+    topLeft.append(threadToggle, status, continuity);
+
     const topRight = node('div', 'sr-center-top-actions');
     const privacy = node('span', 'sr-center-privacy', 'Không nhập mật khẩu · OTP · mã giao dịch');
-    const newChat = node('button', 'sr-center-new-chat', 'Cuộc trò chuyện mới');
+    const newChat = node('button', 'sr-center-new-chat', 'Chat mới');
     newChat.type = 'button';
     newChat.hidden = true;
     topRight.append(privacy, newChat);
@@ -379,20 +534,26 @@
     const input = document.createElement('textarea');
     input.rows = 2;
     input.maxLength = 700;
-    input.placeholder = 'VD: Phân tích FPT; sau đó hỏi tiếp “mua được chưa?”';
+    input.placeholder = 'Hỏi tự nhiên, ví dụ: “Phân tích FPT” rồi “mua được chưa?”';
     input.setAttribute('aria-label', 'Hỏi StockRadar AI');
     const send = node('button', 'sr-center-send', 'Gửi');
     send.type = 'submit';
     form.append(input, send);
 
     const foot = node('div', 'sr-center-foot');
-    foot.innerHTML = '<span>Guest · 3 câu/ngày</span><span>Free · 10 câu/ngày + lưu ngữ cảnh</span><span>Premium · AI không giới hạn + email cảnh báo</span>';
-    host.replaceChildren(top, log, chips, form, foot);
+    foot.innerHTML = '<span>Guest · 3 câu/ngày</span><span>Free · 10 câu/ngày + lưu lịch sử</span><span>Premium · AI không giới hạn + email cảnh báo</span>';
+
+    main.append(top, log, chips, form, foot);
+    host.replaceChildren(sidebar, main);
+
+    state.ui = { host, threadList, threadToggle, log, sideNewChat, newChat };
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
       input.value = button.textContent || '';
       input.focus();
     }));
+
+    threadToggle.addEventListener('click', toggleThreadDrawer);
 
     form.addEventListener('submit', event => {
       event.preventDefault();
@@ -410,33 +571,40 @@
       }
     });
 
-    newChat.addEventListener('click', async () => {
+    const newThreadHandler = async button => {
       try {
         const current = await currentAccountTier();
-        if (current.session?.access_token) await startNewThread(current.session, log, newChat);
+        if (current.session?.access_token) await startNewThread(current.session, log, button);
       } catch (_) {
         addMessage(log, 'assistant', 'Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại.');
       }
-    });
+    };
+    newChat.addEventListener('click', () => newThreadHandler(newChat));
+    sideNewChat.addEventListener('click', () => newThreadHandler(sideNewChat));
 
     try {
       const account = await currentAccountTier();
-      updatePlan(status, {quota:state.quota}, account.tier);
+      updatePlan(status, { quota: state.quota }, account.tier);
       const authenticated = Boolean(account.session?.access_token);
       newChat.hidden = !authenticated;
+      sideNewChat.hidden = !authenticated;
       continuity.textContent = authenticated ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
       if (authenticated) await hydrateHistory(account.session, log);
+      await renderThreads(account.session, threadList, log);
 
       const client = await authClient();
       client?.auth?.onAuthStateChange?.(() => {
         setTimeout(async () => {
           try {
             const next = await currentAccountTier();
-            updatePlan(status, {quota:state.quota}, next.tier);
+            updatePlan(status, { quota: state.quota }, next.tier);
             const nextAuth = Boolean(next.session?.access_token);
             newChat.hidden = !nextAuth;
+            sideNewChat.hidden = !nextAuth;
             continuity.textContent = nextAuth ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
             if (nextAuth) await hydrateHistory(next.session, log);
+            else showIntro(log, false);
+            await renderThreads(next.session, threadList, log);
           } catch (_) {
             status.textContent = 'Đang chờ xác nhận phiên tài khoản. Vui lòng thử lại.';
           }
@@ -444,6 +612,7 @@
       });
     } catch (_) {
       status.textContent = 'Đang chờ xác nhận phiên tài khoản. Vui lòng thử lại.';
+      await renderThreads(null, threadList, log);
     }
   }
 
