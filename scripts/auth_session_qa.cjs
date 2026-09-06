@@ -19,8 +19,16 @@ const fs=require('node:fs');
         if(url.pathname.endsWith('/token'))body=session;
         else if(url.pathname.endsWith('/functions/v1/stock-ai-chat')) {
           assert.equal(route.request().headers().authorization,`Bearer ${access}`);
-          aiRequests++;
-          body={status:'READY',tier,mode:'METHOD_ONLY',answer:'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH',quota:{remaining:6,limit:10}};
+          let requestBody={};
+          try { requestBody=JSON.parse(route.request().postData()||'{}'); } catch {}
+          if(requestBody.operation==='history') {
+            body={status:'READY',thread_id:'22222222-2222-4222-8222-222222222222',knowledge_version:'AI_CORE_QA',messages:[]};
+          } else if(requestBody.operation==='new_thread') {
+            body={status:'READY',thread_id:'33333333-3333-4333-8333-333333333333',knowledge_version:'AI_CORE_QA',messages:[]};
+          } else {
+            aiRequests++;
+            body={status:'READY',tier,mode:'METHOD_ONLY',thread_id:'22222222-2222-4222-8222-222222222222',knowledge_version:'AI_CORE_QA',conversation_persisted:true,answer:'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH',quota:{remaining:6,limit:10}};
+          }
         }
         else if(url.pathname.endsWith('/user'))body=user;
         else if(url.pathname.includes('get_my_stockradar_access'))body={account_tier:backendTier,account_status:'ACTIVE',quota:{unlimited:backendTier==='PAID',limit:backendTier==='PAID'?null:10,remaining:backendTier==='PAID'?null:7}};
