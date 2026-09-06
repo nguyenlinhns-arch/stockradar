@@ -5,7 +5,7 @@
   const STORAGE_KEY = 'stockradar-auth';
   const THREAD_KEY = 'stockradar_ai_thread_id_v1';
   const MAX_GUEST_HISTORY = 6;
-  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI','VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR']);
+  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI']);
   const state = { client: null, sending: false, history: [], tier: 'GUEST', quota: null, threadId: loadThreadId() };
 
   function node(tag, className, text = '') {
@@ -45,11 +45,11 @@
     if (/(tích sản|tich san|2\s*[-–]\s*5\s*năm)/.test(value)) return 'ACCUMULATION';
     if (/(12\s*tháng|12\s*thang|6\s*[-–]\s*18\s*tháng|dài hạn|dai han)/.test(value)) return 'LONG_TERM';
     if (/(3\s*[-–]\s*6\s*tháng|1\s*[-–]\s*6\s*tháng|trung hạn|trung han|6\s*tháng|6\s*thang)/.test(value)) return 'MEDIUM_TERM';
-    return 'SHORT_TERM';
+    return '';
   }
 
   function portfolioIntent(text) {
-    return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|mã đang giữ|ma dang giu|hôm nay.*(làm gì|lam gi|chú ý|chu y))/i.test(String(text || ''));
+    return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|mã đang giữ|ma dang giu|hôm nay.*(làm gì|lam gi|chú ý|chu y)|mã nào|ma nao)/i.test(String(text || ''));
   }
 
   function guestId() {
@@ -93,7 +93,12 @@
       return state.client;
     }
     state.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: STORAGE_KEY }
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: STORAGE_KEY,
+      }
     });
     window.StockRadarAuthClient = state.client;
     return state.client;
@@ -278,7 +283,7 @@
           thread_id: state.threadId || null,
           scope: ticker ? 'auto' : (portfolioIntent(message) ? 'portfolio' : 'auto'),
           ticker: ticker || '',
-          horizon,
+          horizon: horizon || '',
           message: String(message).slice(0, 700)
         }));
       } else {
@@ -286,7 +291,7 @@
         response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey },
-          body: JSON.stringify({ ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_GUEST_HISTORY), guest_id: guestId() }),
+          body: JSON.stringify({ ticker, horizon: horizon || 'SHORT_TERM', message: String(message).slice(0, 700), history: state.history.slice(-MAX_GUEST_HISTORY), guest_id: guestId() }),
           signal: AbortSignal.timeout(35000)
         });
         data = {};
@@ -300,7 +305,7 @@
       }
 
       if (data?.thread_id) saveThreadId(data.thread_id);
-      window.StockRadarAnalytics?.aiSubmitted({tier: account.tier, ticker, horizon});
+      window.StockRadarAnalytics?.aiSubmitted({tier: account.tier, ticker, horizon: horizon || 'SHORT_TERM'});
       window.StockRadarAnalytics?.returnedToAI(account.tier);
       const success = response.ok && window.StockRadarAnalytics?.aiResult(data) === true;
       if (!response.ok) window.StockRadarAnalytics?.aiFailed({tier: account.tier, ...data});
@@ -405,6 +410,15 @@
       }
     });
 
+    newChat.addEventListener('click', async () => {
+      try {
+        const current = await currentAccountTier();
+        if (current.session?.access_token) await startNewThread(current.session, log, newChat);
+      } catch (_) {
+        addMessage(log, 'assistant', 'Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại.');
+      }
+    });
+
     try {
       const account = await currentAccountTier();
       updatePlan(status, {quota:state.quota}, account.tier);
@@ -412,7 +426,6 @@
       newChat.hidden = !authenticated;
       continuity.textContent = authenticated ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
       if (authenticated) await hydrateHistory(account.session, log);
-      newChat.addEventListener('click', () => startNewThread(account.session, log, newChat));
 
       const client = await authClient();
       client?.auth?.onAuthStateChange?.(() => {
