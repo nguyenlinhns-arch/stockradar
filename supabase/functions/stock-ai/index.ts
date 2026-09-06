@@ -11,7 +11,6 @@ const ORIGINS = new Set(["https://stockradar.vn","https://www.stockradar.vn","ht
 const HORIZONS = ["SHORT_TERM","MEDIUM_TERM","LONG_TERM","ACCUMULATION"];
 const TIERS = new Set(["FREE","TRIAL","PAID"]);
 const MAX_WATCH = 20;
-const MAX_PERSISTED_HISTORY = 24;
 let providerDisabledUntil = 0;
 
 function cors(origin){
@@ -24,15 +23,6 @@ function validTicker(v){return /^[A-Z0-9]{3}$/.test(v)&&/[A-Z]/.test(v)}
 function validHorizon(v){return HORIZONS.includes(v)}
 function clean(v,max=700){return String(v??"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,max)}
 function history(v){if(!Array.isArray(v))return[];return v.slice(-6).flatMap(x=>{if(!x||typeof x!=="object")return[];const role=x.role==="assistant"?"assistant":x.role==="user"?"user":null,content=clean(x.content,600);return role&&content?[{role,content}]:[]})}
-function persistedHistory(v){if(!Array.isArray(v))return[];return v.slice(-MAX_PERSISTED_HISTORY).flatMap(x=>{if(!x||typeof x!=="object")return[];const role=x.role==="assistant"?"assistant":x.role==="user"?"user":null,content=clean(x.content,1200);return role&&content?[{role,content}]:[]})}
-function rememberedTicker(rows){
-  for(let i=rows.length-1;i>=0;i--){
-    const tokens=String(rows[i]?.content||'').toUpperCase().match(/\b[A-Z0-9]{3}\b/g)||[];
-    const hit=tokens.find(validTicker);
-    if(hit)return hit;
-  }
-  return '';
-}
 function normReport(r){return{status:r.status,ticker:r.ticker,horizon:r.horizon,snapshot_id:r.snapshot_id,generated_at:r.generated_at,expires_at:r.expires_at,payload:r.payload}}
 function openAIText(p){if(typeof p?.output_text==='string'&&p.output_text.trim())return p.output_text.trim();const a=[];for(const i of Array.isArray(p?.output)?p.output:[])for(const c of Array.isArray(i?.content)?i.content:[])if(c?.type==='output_text'&&typeof c.text==='string')a.push(c.text);return a.join('\n').trim()}
 function errCode(p){const e=p&&typeof p==="object"?p.error:null;return String(e?.code||e?.type||"UNKNOWN").toUpperCase().replace(/[^A-Z0-9_]+/g,"_").slice(0,80)}
@@ -49,17 +39,6 @@ function appendPosition(answer,scope,ticker,watch){
 async function audit(client,userId,ticker,horizon,outcome,reason,httpStatus,started,remaining=null){
   try{await client.rpc('record_stockradar_api_request_event',{p_user_id:userId,p_ticker:ticker,p_horizon:horizon,p_outcome:outcome,p_reason:reason,p_http_status:httpStatus,p_latency_ms:Math.max(0,Math.round(performance.now()-started)),p_rate_limit_remaining:remaining})}catch{console.error('stock-ai audit failed')}
 }
-async function memoryContext(db,userId,title){
-  try{
-    const {data,error}=await db.rpc('stockradar_ai_memory_context',{p_user_id:userId,p_title:clean(title,120),p_limit:MAX_PERSISTED_HISTORY});
-    if(error||!data)return{thread_id:null,history:[],knowledge:{}};
-    return{thread_id:data.thread_id||null,history:persistedHistory(data.history),knowledge:data.knowledge&&typeof data.knowledge==='object'?data.knowledge:{}};
-  }catch{return{thread_id:null,history:[],knowledge:{}}}
-}
-async function persistMessage(db,userId,threadId,role,content,metadata={}){
-  if(!threadId||!content)return;
-  try{await db.rpc('stockradar_ai_append_message',{p_user_id:userId,p_thread_id:threadId,p_role:role,p_content:String(content).slice(0,12000),p_metadata:metadata})}catch{console.error('stock-ai memory write failed')}
-}
 
 Deno.serve(async req=>{
   try {
@@ -75,12 +54,8 @@ Deno.serve(async req=>{
   const {data:userData,error:userError}=await auth.auth.getUser(token),user=userData?.user;
   if(userError||!user)return json({status:'UNAUTHORIZED'},401,origin);
   let body;try{body=await req.json()}catch{return json({status:'INVALID_REQUEST',reason:'INVALID_JSON'},400,origin)}
-  const requestedTickerRaw=String(body.ticker||'').trim().toUpperCase(),scopeRaw=String(body.scope||'auto').trim().toLowerCase(),horizon=String(body.horizon||'SHORT_TERM').trim().toUpperCase(),message=clean(body.message),hist=history(body.history);
+  const requestedTicker=String(body.ticker||'').trim().toUpperCase(),scopeRaw=String(body.scope||'auto').trim().toLowerCase(),horizon=String(body.horizon||'SHORT_TERM').trim().toUpperCase(),message=clean(body.message),hist=history(body.history);
   if(!validHorizon(horizon)||!message||!['auto','ticker','portfolio','scan','compare'].includes(scopeRaw))return json({status:'INVALID_REQUEST'},400,origin);
-
-  const memory=await memoryContext(db,user.id,message);
-  const conversation=memory.history.length?memory.history:hist;
-  const requestedTicker=requestedTickerRaw||rememberedTicker(conversation);
   const query=parseResearchQuery(message,requestedTicker);
   const ticker=query.scope==='ticker'?query.tickers[0]:'';
   const scope=scopeRaw==='portfolio'?'portfolio':query.scope;
@@ -129,12 +104,6 @@ Deno.serve(async req=>{
     return json({status:'RATE_LIMITED',tier,answer:tier==='FREE'?'Bạn đã sử dụng hết lượt AI miễn phí. Nâng cấp StockRadar Pro để sử dụng không giới hạn.':'Hạn mức hiện tại đã dùng hết.',quota:{remaining:0,limit,reset_at:quotaData.reset_at||null}},429,origin,rate);
   }
 
-  await persistMessage(db,user.id,memory.thread_id,'user',message,{scope,ticker:ticker||null,horizon});
-  const finish=async(body,status=200,extra=rate)=>{
-    if(body?.answer)await persistMessage(db,user.id,memory.thread_id,'assistant',body.answer,{status:body.status||null,answer_engine:body.answer_engine||null,scope,ticker:ticker||null,horizon});
-    return json({...body,thread_id:memory.thread_id||null,knowledge_version:memory.knowledge?.version||null},status,origin,extra);
-  };
-
   const researchForAnswer=scope==='ticker'?tickerContext:contexts;
   let fallback=scope==='scan'&&!contexts.length?'Chưa có mã HOSE đủ dữ liệu mới và đạt bộ lọc này. Chưa đủ dữ liệu để xác nhận tín hiệu.':deterministicStockRadarAnswer({mode,researchContext:researchForAnswer,actionContext:action,question:message});
   fallback=appendPosition(fallback,scope,ticker,watch);
@@ -149,22 +118,20 @@ Deno.serve(async req=>{
 
   if(mode==="METHOD_ONLY"){
     await audit(db,user.id,scope==='ticker'?ticker:'',horizon,'AI_READY','STOCKRADAR_CORE_METHOD_ONLY',200,started,remaining);
-    return await finish({status:'READY',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback});
+    return json({status:'READY',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
   }
   const key=Deno.env.get('OPENAI_API_KEY')?.trim();
-  if(!key||Date.now()<providerDisabledUntil)return await finish({status:'READY_FALLBACK',reason:!key?'OPENAI_KEY_MISSING':'OPENAI_CIRCUIT_OPEN',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback});
-  const dynamicKnowledge=clean(memory.knowledge?.content||'',12000);
-  const instructions=dynamicKnowledge?`${STOCKRADAR_SYSTEM_CORE}\n\nSTOCKRADAR SHARED KNOWLEDGE CORE (${memory.knowledge?.version||'current'}):\n${dynamicKnowledge}`:STOCKRADAR_SYSTEM_CORE;
-  const context={...fullResearchContext,RESPONSE_MODE:mode,ACCESS_TIER:tier,REQUEST_SCOPE:scope,REQUESTED_TICKER:scope==='ticker'?ticker:null,REQUESTED_HORIZON:horizon,USER_QUESTION:message,RECENT_CONVERSATION:conversation,USER_CONTEXT:userContext,ACTION_CONTEXT:action,RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts};
+  if(!key||Date.now()<providerDisabledUntil)return json({status:'READY_FALLBACK',reason:!key?'OPENAI_KEY_MISSING':'OPENAI_CIRCUIT_OPEN',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate);
+  const context={...fullResearchContext,RESPONSE_MODE:mode,ACCESS_TIER:tier,REQUEST_SCOPE:scope,REQUESTED_TICKER:scope==='ticker'?ticker:null,REQUESTED_HORIZON:horizon,USER_QUESTION:message,RECENT_CONVERSATION:hist,USER_CONTEXT:userContext,ACTION_CONTEXT:action,RESEARCH_CONTEXT:scope==='ticker'?tickerContext:contexts};
   let response;
-  try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')?.trim()||'gpt-5-mini',instructions,input:JSON.stringify(context),max_output_tokens:scope==='ticker'?2800:1400,store:false,reasoning:{effort:"minimal"}})})}
-  catch(error){return await finish({status:'READY_FALLBACK',reason:error?.name==='TimeoutError'?'OPENAI_TIMEOUT':'OPENAI_NETWORK_ERROR',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback})}
+  try{response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')?.trim()||'gpt-5-mini',instructions:STOCKRADAR_SYSTEM_CORE,input:JSON.stringify(context),max_output_tokens:scope==='ticker'?2800:1400,store:false,reasoning:{effort:"minimal"}})})}
+  catch(error){return json({status:'READY_FALLBACK',reason:error?.name==='TimeoutError'?'OPENAI_TIMEOUT':'OPENAI_NETWORK_ERROR',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
   let payload=null;try{payload=await response.json()}catch{}
-  if(!response.ok){const code=errCode(payload);if(response.status===429&&/CREDIT|QUOTA|BALANCE/.test(code))providerDisabledUntil=Date.now()+15*60*1000;return await finish({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback})}
+  if(!response.ok){const code=errCode(payload);if(response.status===429&&/CREDIT|QUOTA|BALANCE/.test(code))providerDisabledUntil=Date.now()+15*60*1000;return json({status:'READY_FALLBACK',reason:`OPENAI_${response.status}_${code}`,...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
   const candidateText=payload?.status==='completed'?openAIText(payload):'';
   const modelText=(scope==='ticker' && mode!=='ACTION_READY' && !hasResearchFramework(candidateText))?'':candidateText;
   const answer=modelText?(scope==='ticker'?appendResearchSnapshot(appendPosition(modelText,scope,ticker,watch),tickerContext,message,mode!=='ACTION_READY'):appendPosition(modelText,scope,ticker,watch)):fallback;
   await audit(db,user.id,scope==='ticker'?ticker:'',horizon,modelText?'AI_READY':'AI_FALLBACK',modelText?'MODEL_READY':'MODEL_ERROR',200,started,remaining);
-  return await finish({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer});
+  return json({status:modelText?"READY":"READY_FALLBACK",...base,answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE",answer},200,origin,rate);
   } catch { return json({status:'SERVICE_UNAVAILABLE',answer:'StockRadar AI tạm thời chưa thể phản hồi. Vui lòng thử lại.'},503,req.headers.get('origin')); }
 });
