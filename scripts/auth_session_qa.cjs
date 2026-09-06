@@ -42,7 +42,7 @@ const fs=require('node:fs');
       await page.locator('#login-password').fill('test-only-password-123');
       await page.locator('[data-auth-login-form] button[type=submit]').click();
       await page.waitForURL('http://127.0.0.1:8765/',{timeout:20000});
-      const expected=tier==='PAID'?'premium':'free';
+      const expected=tier==='PAID'?'paid':'free'; // ai-center DOM contract uses data-tier="paid" while account state uses "premium".
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
       if(tier==='FREE')assert.match(await page.locator('[data-tier="free"]').first().innerText(),/7\/10/);
       for (const width of [320,390,768]) {
