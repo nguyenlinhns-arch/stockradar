@@ -494,7 +494,7 @@
     sidebarTitle.append(node('strong', '', 'Cuộc trò chuyện'), node('span', '', 'Lịch sử phân tích theo tài khoản'));
     const fullPage = node('a', 'sr-thread-fullpage', 'Mở AI toàn màn hình →');
     fullPage.href = new URL('ai/', document.baseURI).toString();
-    const sideNewChat = node('button', 'sr-thread-new-chat', '+ Chat mới');
+    const sideNewChat = node('button', 'sr-thread-new-chat', '+ Cuộc trò chuyện mới');
     sideNewChat.type = 'button';
     sideNewChat.hidden = true;
     sidebarHead.append(sidebarTitle, fullPage, sideNewChat);
@@ -513,7 +513,7 @@
 
     const topRight = node('div', 'sr-center-top-actions');
     const privacy = node('span', 'sr-center-privacy', 'Không nhập mật khẩu · OTP · mã giao dịch');
-    const newChat = node('button', 'sr-center-new-chat', 'Chat mới');
+    const newChat = node('button', 'sr-center-new-chat', 'Cuộc trò chuyện mới');
     newChat.type = 'button';
     newChat.hidden = true;
     topRight.append(privacy, newChat);
