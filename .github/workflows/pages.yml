@@ -44,6 +44,7 @@ on:
       - 'scripts/verify_commercial_density_v1.py'
       - 'scripts/verify*.py'
       - 'scripts/visual_qa.cjs'
+      - 'scripts/auth_session_qa.cjs'
       - 'scripts/radar_session_qa.cjs'
       - 'scripts/product_decision_qa.cjs'
       - 'scripts/refresh_eod_email_history.py'
