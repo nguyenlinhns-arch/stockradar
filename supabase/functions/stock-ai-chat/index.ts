@@ -33,6 +33,13 @@ function json(body: unknown, status: number, origin: string | null) {
 function clean(value: unknown, max = 700) {
   return String(value ?? "").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,max);
 }
+function cleanStored(value: unknown, max = 24000) {
+  return String(value ?? "")
+    .replace(/\r\n/g,"\n")
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g," ")
+    .trim()
+    .slice(0,max);
+}
 function validTicker(value: unknown) {
   const t = String(value ?? "").trim().toUpperCase();
   return TICKER_RE.test(t) && /[A-Z]/.test(t) ? t : "";
@@ -49,7 +56,7 @@ function scanIntent(text: string) {
   return /(\btop\b|quét|quet|mã nào|ma nao|cổ phiếu nào|co phieu nao|ngành nào|nganh nao|pocket pivot|breakout)/i.test(text);
 }
 function methodologyIntent(text: string) {
-  return /(4m|payback|canslim|sepa|vcp|vpa|pocket pivot|ichimoku|bollinger|stage\s*[1-4]|fair value|margin of safety|định giá là gì|dinh gia la gi|phương pháp|phuong phap|quản trị rủi ro|quan tri rui ro|giải thích|giai thich)/i.test(text) && !explicitTicker(text);
+  return /(4m|payback|canslim|sepa|vcp|vpa|pocket pivot|ichimoku|bollinger|stage\s*[1-4]|fair value|margin of safety|định giá là gì|dinh gia la gi|phương pháp|phuong phap|quản trị rủi ro|quan tri rui ro)/i.test(text) && !explicitTicker(text);
 }
 function horizon(value: unknown, fallback = "SHORT_TERM") {
   const h = String(value ?? "").trim().toUpperCase();
@@ -112,7 +119,7 @@ function forwardHistory(rows: any[], thread: any, knowledge: any) {
 }
 
 async function saveExchange(db: any, thread: any, input: {message:string,scope:string,ticker:string,horizon:string}, result: any, knowledgeVersion: string) {
-  const answer = clean(result?.answer || "StockRadar AI chưa có nội dung để trả lời.", 24000);
+  const answer = cleanStored(result?.answer || "StockRadar AI chưa có nội dung để trả lời.", 24000);
   const now = new Date().toISOString();
   const title = thread.title || (input.ticker ? `${input.ticker} · ${input.message.slice(0,48)}` : input.message.slice(0,64));
   const userInsert = await db.from("stockradar_ai_messages").insert({
@@ -219,12 +226,16 @@ Deno.serve(async (req: Request) => {
     const existing = await loadMessages(db,thread.id,MAX_STORED_HISTORY);
     const explicit = explicitTicker(message);
     const requested = validTicker(body.ticker);
-    const canFollowTicker = !portfolioIntent(message) && !scanIntent(message);
+    const isMethodQuestion = methodologyIntent(message);
+    const canFollowTicker = !isMethodQuestion && !portfolioIntent(message) && !scanIntent(message);
     const resolvedTicker = explicit || requested || (canFollowTicker ? validTicker(thread.last_ticker) : "");
-    const inputHorizon = horizon(body.horizon,thread.last_horizon || "SHORT_TERM");
+    const explicitTickerNow = explicit || requested;
+    const previousTicker = validTicker(thread.last_ticker);
+    const tickerChanged = Boolean(explicitTickerNow && previousTicker && explicitTickerNow !== previousTicker);
+    const inputHorizon = horizon(body.horizon,tickerChanged ? "SHORT_TERM" : (thread.last_horizon || "SHORT_TERM"));
     const scope = resolvedTicker ? "ticker" : portfolioIntent(message) ? "portfolio" : scanIntent(message) ? "scan" : "conversation";
 
-    if (methodologyIntent(message) && !resolvedTicker) {
+    if (scope === "conversation") {
       const result = await knowledgeAnswer(db,user.id,tier,message,existing,knowledge,thread,inputHorizon);
       if (result.httpStatus === 200 && result.payload?.answer) {
         await saveExchange(db,thread,{message,scope:"conversation",ticker:"",horizon:inputHorizon},result.payload,knowledge.version);
@@ -233,7 +244,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const forward = {
-      scope: scope === "conversation" ? "auto" : scope,
+      scope,
       ticker: resolvedTicker,
       horizon: inputHorizon,
       message,
