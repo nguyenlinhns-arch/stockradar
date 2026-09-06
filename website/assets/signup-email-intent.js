@@ -86,6 +86,12 @@
     const render = () => {
       const plan = selectedPlan(form);
       const premium = plan === 'premium';
+      document.documentElement.dataset.signupPlan = premium ? 'premium' : 'free';
+      if (selector) selector.hidden = !premium || Boolean(lockedPlan);
+      const emailOptions = form.querySelector('.signup-email-options');
+      if (emailOptions) emailOptions.hidden = !premium;
+      const value = document.querySelector('[data-signup-value]');
+      if (value) value.textContent = premium ? 'Tạo tài khoản và xác minh email trước khi tiếp tục nâng Premium.' : '10 câu StockRadar AI mỗi ngày';
       const name = document.querySelector('[data-signup-plan-name]');
       const note = document.querySelector('[data-signup-plan-note]');
       const emailNote = document.querySelector('.signup-email-note');
@@ -97,7 +103,7 @@
       if (note) {
         note.textContent = premium
           ? 'Premium: email tự động cập nhật điểm mua/bán của mã theo dõi, bản tin 09:00 và AI không giới hạn. Giá 199.000đ/30 ngày.'
-          : 'Free có phí 0đ, StockRadar AI 10 câu/ngày và email hệ thống cần thiết cho tài khoản. Báo cáo hằng ngày và Action Alert thuộc Premium.';
+          : '0đ · Không cần thẻ · Có thể nâng cấp sau';
       }
       if (emailNote) {
         emailNote.textContent = premium
@@ -114,7 +120,7 @@
         }
       });
       if (submit) submit.textContent = premium
-        ? 'Tạo tài khoản Premium & thanh toán'
+        ? 'Tạo tài khoản để tiếp tục Premium'
         : 'Tạo tài khoản Free';
     };
 

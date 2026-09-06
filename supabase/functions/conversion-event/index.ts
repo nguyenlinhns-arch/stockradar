@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { UUID, FUNNEL_EVENTS, cleanTouch, fingerprints, knownBot } from "../_shared/funnel.ts";
 
 const ALLOWED_ORIGINS = new Set([
   "https://stockradar.vn",
@@ -71,7 +72,7 @@ Deno.serve(async (req: Request) => {
 
   // Local development and Chromium visual QA may exercise the funnel, but those
   // requests must never pollute production conversion metrics.
-  if (NON_PRODUCTION_ORIGINS.has(origin)) {
+  if (NON_PRODUCTION_ORIGINS.has(origin) || knownBot(req)) {
     return json(origin, 202, { accepted: true, recorded: false });
   }
 
@@ -83,11 +84,42 @@ Deno.serve(async (req: Request) => {
 
   let payload: Record<string, unknown>;
   try {
-    payload = await req.json();
+    const raw = await req.text();
+    if (new TextEncoder().encode(raw).length > 4096) return json(origin, 400, { accepted: false });
+    payload = JSON.parse(raw);
   } catch {
     return json(origin, 400, { accepted: false });
   }
 
+  if (payload.schema_version === 'STOCKRADAR_FUNNEL_V2') {
+    const name = String(payload.event_name || '');
+    if (!FUNNEL_EVENTS.has(name) || name === 'signup_completed' || !UUID.test(String(payload.event_id || ''))
+      || !UUID.test(String(payload.session_id || '')) || !/^\/[a-zA-Z0-9_/-]{0,150}$/.test(String(payload.source_path || '')))
+      return json(origin, 400, {accepted: false});
+    const serverKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '', url = Deno.env.get('SUPABASE_URL') || '';
+    if (!serverKey || !url) return json(origin, 503, {accepted: false});
+    const ids = await fingerprints(req, payload.session_id, serverKey);
+    const ticker = String(payload.ticker || '');
+    const safe = {
+      event_name: name, event_id: payload.event_id, source_path: payload.source_path,
+      tier: ['GUEST','FREE','PREMIUM'].includes(String(payload.tier)) ? payload.tier : null,
+      ticker: /^[A-Z0-9]{3}$/.test(ticker) && /[A-Z]/.test(ticker) && !['BTC','ETH','USD'].includes(ticker) ? ticker : null,
+      horizon: ['SHORT_TERM','MEDIUM_TERM','LONG_TERM','ACCUMULATION'].includes(String(payload.horizon)) ? payload.horizon : 'SHORT_TERM',
+      plan_interest: payload.plan_interest === 'PREMIUM' ? 'PREMIUM' : 'FREE',
+      model_status: ['MODEL_READY','MODEL_NOT_CALLED','MODEL_CREDIT_BLOCKED','MODEL_TIMEOUT','MODEL_ERROR'].includes(String(payload.model_status)) ? payload.model_status : null,
+      first_touch: cleanTouch(payload.first_touch), last_touch: cleanTouch(payload.last_touch),
+    };
+    try {
+      const result = await fetch(`${url}/rest/v1/rpc/capture_conversion_event_v2`, {method: 'POST',signal: AbortSignal.timeout(8000),
+        headers: {apikey: serverKey, authorization: `Bearer ${serverKey}`, 'content-type': 'application/json'},
+        body: JSON.stringify({p_payload: safe, p_session_hash: ids.session, p_ip_hash: ids.ip})});
+      if (!result.ok) {
+        const limited = (await result.text()).includes('rate limit exceeded');
+        return json(origin, limited ? 429 : 503, {accepted: false});
+      }
+      return json(origin, 202, {accepted: true, recorded: (await result.json()) === true});
+    } catch (_) { return json(origin, 503, {accepted: false}); }
+  }
   const eventName = cleanText(payload.event_name, 64).toLowerCase();
   const actionName = cleanText(payload.action_name, 80).toLowerCase();
   const sourcePath = cleanText(payload.source_path, 256);

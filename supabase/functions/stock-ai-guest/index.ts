@@ -5,6 +5,7 @@ import { appendResearchSnapshot, buildResearchSnapshot, analysisContract } from 
 
 import { parseResearchQuery, loadResearchQuery, guestQuotaIdentity } from "../_shared/stockradar-query.ts";
 import { buildDecisionCards, decisionResponse, releasedReport, observationFresh } from "../_shared/stockradar-decision.ts";
+import { withModelStatus } from "../_shared/model-status.ts";
 
 const ORIGINS = new Set(["https://stockradar.vn","https://www.stockradar.vn","https://nguyenlinhns-arch.github.io","http://localhost:8000","http://127.0.0.1:8000"]);
 const HORIZONS = ["SHORT_TERM","MEDIUM_TERM","LONG_TERM","ACCUMULATION"];
@@ -16,7 +17,7 @@ function cors(origin) {
   if(origin&&ORIGINS.has(origin))Object.assign(h,{"Access-Control-Allow-Origin":origin,"Access-Control-Allow-Headers":"apikey, content-type","Access-Control-Allow-Methods":"POST, OPTIONS"});
   return h;
 }
-function json(body,status,origin,extra={}) { return new Response(JSON.stringify(decisionResponse(body)),{status,headers:{...cors(origin),...extra,"Content-Type":"application/json; charset=utf-8"}}); }
+function json(body,status,origin,extra={}) { return new Response(JSON.stringify(decisionResponse(withModelStatus(body))),{status,headers:{...cors(origin),...extra,"Content-Type":"application/json; charset=utf-8"}}); }
 function validTicker(v){return /^[A-Z0-9]{3}$/.test(v)&&/[A-Z]/.test(v)}
 function validHorizon(v){return HORIZONS.includes(v)}
 function clean(v,max=700){return String(v??"").replace(/[\u0000-\u001f\u007f]/g," ").replace(/\s+/g," ").trim().slice(0,max)}
@@ -84,7 +85,7 @@ Deno.serve(async req=>{
   let response;
   try{
     response=await fetch('https://api.openai.com/v1/responses',{method:'POST',signal:AbortSignal.timeout(25000),headers:{Authorization:`Bearer ${key}`,'Content-Type':'application/json'},body:JSON.stringify({model:Deno.env.get('OPENAI_MODEL')?.trim()||'gpt-5-mini',instructions:STOCKRADAR_SYSTEM_CORE,input:JSON.stringify(context),max_output_tokens:2800,store:false,reasoning:{effort:"minimal"}})});
-  }catch{return json({status:'READY_FALLBACK',reason:'OPENAI_NETWORK_ERROR',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
+  }catch(error){return json({status:'READY_FALLBACK',reason:error?.name==='TimeoutError'?'OPENAI_TIMEOUT':'OPENAI_NETWORK_ERROR',...base,answer_engine:'STOCKRADAR_CORE',answer:fallback},200,origin,rate)}
   let payload=null; try{payload=await response.json()}catch{}
   if(!response.ok){
     const code=errCode(payload);

@@ -28,9 +28,10 @@
       if(c.schema_version!=='STOCKRADAR_DECISION_CARD_V1')continue;
       const d=c.data||{},fresh=stillFresh(d),official=fresh&&c.public_action_allowed===true;
       const card=element('article',null,'sr-decision-card');card.dataset.decisionTicker=c.ticker;
-      card.append(element('strong',`KẾT LUẬN: ${c.ticker} — ${fresh?c.conclusion:'CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH'}`,'sr-decision-conclusion'));
+      card.append(element('strong',`KẾT LUẬN: ${c.ticker} — ${official?c.conclusion:'CHƯA ĐỦ DỮ LIỆU ĐỂ RA HÀNH ĐỘNG'}`,'sr-decision-conclusion'));
+      card.append(element('p',official ? 'HÀNH ĐỘNG: ' + c.conclusion : 'HÀNH ĐỘNG: KHÔNG HÀNH ĐỘNG. StockRadar vẫn có thể giải thích doanh nghiệp/phương pháp bằng dữ liệu hiện có.','sr-decision-conditions'));
       const sourceStatus=fresh?d.status:'UNAVAILABLE';
-      card.append(element('p',`${sourceStatus} · ${d.source||'StockRadar'} · ${fresh?'Nguồn còn hạn':'Nguồn chưa đủ mới'} · ${d.price_time_kind==='EOD'?'Đóng cửa':'Ngày dữ liệu'} ${date(d.as_of_date)} · Rà soát ${time(d.updated_at)} (GMT+7)`,'sr-decision-source'));
+      card.append(element('p',`${official?'Dữ liệu hành động đã xác nhận':fresh?'Phân tích tham chiếu':'Dữ liệu chưa đủ mới'} · ${d.source||'StockRadar'} · ${d.price_time_kind==='EOD'?'Đóng cửa':'Ngày dữ liệu'} ${date(d.as_of_date)} · Rà soát ${time(d.updated_at)} (GMT+7)`,'sr-decision-source'));
       const targets=c.targets||{},zone=c.buy_zone||{};
       rows(card,[['Giá quan sát',price(c.price)],['Khung đầu tư',({SHORT_TERM:'Ngắn hạn',MEDIUM_TERM:'3–6 tháng',LONG_TERM:'12 tháng',ACCUMULATION:'Tích sản'})[c.horizon]||'Chưa xác định']]);
       if(official)rows(card,[['Vùng mua (Buy Zone)',numeric(zone.low)&&numeric(zone.high)?`${price(zone.low)} – ${price(zone.high)}`:'Chưa xác nhận'],

@@ -5,6 +5,7 @@
 
   const config = window.STOCKRADAR_AUTH_CONFIG || {};
   const STORAGE_KEY = 'stockradar-auth';
+  const incomingCallback = /(?:^|[?&#])(?:access_token|code|error|error_code)=/.test(location.search + location.hash);
   const STYLE_ID = 'stockradar-auth-state-style-v3';
   const state = {
     client: null,
@@ -285,6 +286,11 @@
       if (event.target.closest('[data-auth-state-logout]')) logout();
     });
     await refresh();
+    if (incomingCallback && !state.user && !location.pathname.includes('dang-nhap')) {
+      // Do not invent a session when email opens in another WebView or a PKCE verifier is absent.
+      location.replace(siteUrl('dang-nhap/?callback=login_required'));
+      return;
+    }
     const auth = await client();
     auth?.auth?.onAuthStateChange?.(() => {
       setTimeout(refresh, 0);

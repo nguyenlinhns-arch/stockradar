@@ -5,3 +5,5 @@ window.STOCKRADAR_AUTH_CONFIG = Object.freeze({
   configured: true,
   emailDeliveryReady: false
 });
+// Public measurement configuration. No access token belongs in this file.
+window.STOCKRADAR_META_CONFIG = Object.freeze({enabled: false, pixelId: ''});

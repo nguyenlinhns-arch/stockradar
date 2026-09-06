@@ -9,7 +9,12 @@ begin
   end if;
   if (v_health #>> '{research,total_rows}')::int = 0
      and v_health #>> '{capabilities,ai_answer_coverage}' = 'READY_405_OF_405'
-     and v_health->>'overall_status' <> 'REFERENCE_ONLY_RESEARCH_BLOCKED' then
+     and not (
+       v_health->>'overall_status' = 'REFERENCE_ONLY_RESEARCH_BLOCKED'
+       or (v_health->>'overall_status' = 'AI_ONLY_REFERENCE_READY'
+           and v_health #>> '{capabilities,research_grade}' = 'REFERENCE_ONLY'
+           and (v_health #>> '{ai_reference,research_ready_rows}')::int = 0)
+     ) then
     raise exception 'reference coverage must not claim research is ready';
   end if;
   if has_function_privilege('anon','public.stockradar_runtime_health_snapshot()','execute')

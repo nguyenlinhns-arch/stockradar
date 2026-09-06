@@ -52,7 +52,7 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "NO_QUALIFIED_BUYS",
             "performance_summary",
             "normalizeHeaderActions",
-            "dang-ky/?plan=free",
+            "signup/?plan=free",
         ):
             self.assertIn(marker, js)
         for forbidden in ("Math.random", "demoTicker", "fakePrice"):

@@ -7,6 +7,7 @@
     "visual-qa": "node scripts/visual_qa.cjs"
   },
   "devDependencies": {
-    "playwright": "1.62.1"
+    "playwright": "1.62.1",
+    "terser": "5.51.2"
   }
 }

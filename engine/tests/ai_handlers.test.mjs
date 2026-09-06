@@ -5,6 +5,7 @@ import * as core from '../../supabase/functions/_shared/stockradar-core.ts';
 import * as view from '../../supabase/functions/_shared/stockradar-research-view.ts';
 import * as query from '../../supabase/functions/_shared/stockradar-query.ts';
 import * as decision from '../../supabase/functions/_shared/stockradar-decision.ts';
+import * as modelStatus from '../../supabase/functions/_shared/model-status.ts';
 
 function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,incomplete=false,watch=[]}={}) {
   let handler, modelInput, quotaCalls=0;
@@ -29,7 +30,7 @@ function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,inco
     }};
   const Deno={serve:fn=>{handler=fn;},env:{get:name=>({SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'test-only',OPENAI_API_KEY:'test-only'}[name])}};
   const fetchMock=async(url,args)=>{modelInput=JSON.parse(JSON.parse(args.body).input);return new Response(JSON.stringify({status:incomplete?'incomplete':'completed',output_text:'KẾT LUẬN: THEO DÕI. DỮ LIỆU: 04/09/2026.'}));};
-  const bindings={...core,...view,...query,...decision,Deno,createClient:()=>db,fetch:fetchMock};
+  const bindings={...core,...view,...query,...decision,...modelStatus,Deno,createClient:()=>db,fetch:fetchMock};
   const source=fs.readFileSync(new URL(`../../supabase/functions/${guest?'stock-ai-guest':'stock-ai'}/index.ts`,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
   new Function(...Object.keys(bindings),source.replace("} catch { return json({status:'SERVICE_UNAVAILABLE',answer:","} catch (error) { throw error; return json({status:'SERVICE_UNAVAILABLE',answer:"))(...Object.values(bindings));
   return {calls,get modelInput(){return modelInput},get quotaCalls(){return quotaCalls},async ask(message,extra={}){

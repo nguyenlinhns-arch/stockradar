@@ -55,7 +55,7 @@ def main() -> None:
         "KHÁCH · 3 CÂU / NGÀY",
         "FREE · 10 CÂU / NGÀY",
         "PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN",
-        "dang-ky/?plan=free",
+        "signup/?plan=free",
         "thanh-toan/?plan=premium",
         "Nâng Premium",
         "currentAccountTier",
@@ -94,13 +94,10 @@ def main() -> None:
         'data-signup-email-sent',
         'autocomplete="one-time-code"',
         'Nhập mã OTP 6 số',
-        'Kiểm tra email để xác minh tài khoản',
-        'Đã xác minh? Đăng nhập',
         'xac-minh-email/',
-        'gửi email xác minh',
     ):
         if forbidden in signup:
-            errors.append(f"signup must not expose verification UI: {forbidden}")
+            errors.append(f"signup must not expose obsolete OTP UI: {forbidden}")
 
     require(signup_client, (
         "/functions/v1/signup-link",

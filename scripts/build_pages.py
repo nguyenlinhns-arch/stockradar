@@ -105,9 +105,14 @@ def write_auth_config(output: Path) -> None:
         "configured": bool(url and key), "emailDeliveryReady": email_ready,
     }
     target = output / "assets" / "auth-config.js"
+    pixel_id = os.environ.get("META_PIXEL_ID", "").strip()
+    if pixel_id and not re.fullmatch(r"[0-9]{5,25}", pixel_id):
+        raise RuntimeError("META_PIXEL_ID must be a numeric public identifier")
+    meta = {"enabled": bool(pixel_id), "pixelId": pixel_id}
     target.write_text(
         "window.STOCKRADAR_AUTH_CONFIG = Object.freeze("
-        + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ");\n",
+        + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ");\n"
+        + "window.STOCKRADAR_META_CONFIG = Object.freeze(" + json.dumps(meta, separators=(",", ":")) + ");\n",
         encoding="utf-8",
     )
 

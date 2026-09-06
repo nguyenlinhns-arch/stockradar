@@ -258,7 +258,7 @@ class StaticAssetTests(unittest.TestCase):
         homepage = (WEBSITE / "index.html").read_text(encoding="utf-8")
         for marker in (
             "STOCKRADAR AI",
-            "AI tìm điểm mua/bán cổ phiếu HOSE",
+            "AI phân tích cổ phiếu HOSE.",
             "Khách: 3 câu/ngày",
             "10 câu AI/ngày",
             "Email tự động báo điểm mua/bán",

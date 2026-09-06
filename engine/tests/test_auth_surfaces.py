@@ -37,7 +37,10 @@ class AuthSurfaceTests(unittest.TestCase):
         self.assertIn('settings.mailer_autoconfirm !== false', function)
         self.assertNotIn('auth.admin.createUser', function)
         self.assertNotIn('email_confirm: true', function)
-        self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', function)
+        self.assertIn('createClient(supabaseUrl, key,', function)
+        self.assertNotIn('createClient(supabaseUrl, serverKey', function)
+        self.assertIn('finalize_registration_conversion_v1', function)
+        self.assertNotIn('SUPABASE_SERVICE_ROLE_KEY', signup_client)
         self.assertNotIn('auth.admin.generateLink', function)
         self.assertNotIn('RESEND_API_KEY', function)
 

@@ -50,3 +50,6 @@
 .signup-plan-option input:focus-visible+.signup-plan-option-body{outline:3px solid rgba(23,105,170,.35);outline-offset:2px}
 .signup-plan-note{margin:-5px 0 18px;padding:10px 12px;border-radius:5px;background:#f2f6f9;color:#536579;font-size:11px}
 @media(max-width:760px){.plans-hero{padding:40px 0 26px}.plan-grid{grid-template-columns:1fr}.plan-card{padding:24px}.plan-card h2{font-size:24px}.plan-price strong{font-size:32px}.signup-plan-grid{grid-template-columns:1fr}.plan-comparison{margin-top:24px}}
+
+/* Free registration stays compact before deferred scripts run. */
+html[data-signup-plan="free"] .signup-plan-selector,html[data-signup-plan="free"] .signup-email-options,html[data-signup-plan="free"] .auth-intro,html[data-signup-plan="free"] [data-signup-locked-plan],html[data-signup-plan="free"] .conversion-premium-summary,html[data-signup-plan="free"] .premium-email-onboarding-v1,html[data-signup-plan="free"] .auth-security-note{display:none!important}

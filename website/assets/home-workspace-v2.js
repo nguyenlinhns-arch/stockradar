@@ -58,7 +58,7 @@
   }
 
   function normalizeHeaderActions() {
-    const href = new URL('dang-ky/?plan=free', document.baseURI).toString();
+    const href = new URL('signup/?plan=free', document.baseURI).toString();
     document.querySelectorAll('.header-register-cta').forEach(link => {
       link.href = href;
       link.textContent = 'Đăng ký Free';
@@ -79,6 +79,9 @@
 
   function renderSchedule(payload) {
     const s=payload?.snapshot || {}, email=payload?.email || {}, schedule=payload?.schedule || {};
+    setText('[data-home-readiness-claim]', email.ready === true && payload?.data_status === 'READY'
+      ? 'Theo dõi điểm mua/bán và gửi email khi có hành động đủ điều kiện.'
+      : 'Theo dõi điểm mua/bán khi dữ liệu đủ điều kiện.');
     const date=String(s.as_of_date || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
     setText('[data-reco-price-date]',date ? `${date[3]}/${date[2]}/${date[1]}` : 'Chưa ghi nhận');
     setText('[data-reco-reviewed-at]',fmtTime(s.evaluated_at));
@@ -168,7 +171,9 @@
     const snapshot=payload?.snapshot||{},at=Date.parse(snapshot.evaluated_at),now=Date.now();
     const day=Date.parse(snapshot.as_of_date),today=Date.parse(new Date(now+7*3600000).toISOString().slice(0,10));
     const fresh=snapshot.fresh===true&&Number.isFinite(at)&&at<=now+300000&&now-at<=96*3600000&&day<=today&&today-day<=96*3600000;
-    setText('[data-market-status]',fresh?'RESEARCH · giá cuối phiên':'UNAVAILABLE');
+    setText('[data-market-status]',fresh?'Phân tích tham chiếu · giá cuối phiên':'Dữ liệu trong phiên chưa khả dụng');
+    const statusNode = qs('[data-market-status]');
+    if (statusNode) statusNode.dataset.readiness = fresh ? 'REFERENCE_ONLY' : 'BLOCKED';
     setText('[data-market-updated]',fresh?`Đóng cửa ${String(snapshot.as_of_date).split('-').reverse().join('/')}`:'Dữ liệu intraday hiện chưa khả dụng');
     setText('[data-market-reviewed]',fresh?fmtTime(snapshot.evaluated_at):'Chưa xác minh');
     setText('[data-market-coverage]',fresh?`${number(payload.coverage?.reviewed)} mã · nguồn còn hạn`:'Chưa đủ dữ liệu mới');

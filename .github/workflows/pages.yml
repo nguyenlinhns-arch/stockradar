@@ -34,6 +34,8 @@ on:
       - 'scripts/fix_commercial_auth_headings.py'
       - 'scripts/apply_commercial_runtime_v2.py'
       - 'scripts/apply_commercial_support_v1.py'
+      - 'scripts/minify_funnel_assets.cjs'
+      - 'scripts/conversion_funnel_qa.cjs'
       - 'scripts/optimize_home_asset_budget_v1.py'
       - 'scripts/optimize_conversion_asset_budget_v1.py'
       - 'scripts/optimize_dashboard_asset_budget_v1.py'
@@ -93,6 +95,7 @@ jobs:
         env:
           STOCKRADAR_ENABLE_AUTH: "1"
           STOCKRADAR_AUTH_EMAIL_READY: "0"
+          META_PIXEL_ID: ${{ vars.META_PIXEL_ID }}
           STOCKRADAR_SUPABASE_URL: "https://xamviatbxufjlpiwhebb.supabase.co"
           STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK"
         run: python scripts/build_pages.py --output .pages-site
@@ -138,8 +141,14 @@ jobs:
           fi
       - name: Verify checkout starts closed
         run: python scripts/enforce_checkout_public_bank_info.py .pages-site
+      - name: Set up Node for asset build and browser QA
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
       - name: Apply final commercial surface and SEO
+        # Terser runs only at build time; the browser receives plain async/deferred JS.
         run: |
+          npm ci --ignore-scripts --no-audit --no-fund
           python scripts/normalize_commercial_pricing.py .pages-site
           python scripts/normalize_commercial_plans_preflight_v1.py .pages-site
           python scripts/normalize_commercial_home_preflight_v1.py .pages-site
@@ -148,20 +157,17 @@ jobs:
           python scripts/fix_commercial_auth_headings.py .pages-site
           python scripts/apply_commercial_runtime_v2.py .pages-site
           python scripts/apply_commercial_support_v1.py .pages-site
+          node scripts/minify_funnel_assets.cjs .pages-site
           python scripts/optimize_home_asset_budget_v1.py .pages-site
           python scripts/optimize_conversion_asset_budget_v1.py .pages-site
           python scripts/apply_commercial_cleanup_v3.py .pages-site
           python scripts/optimize_dashboard_asset_budget_v1.py .pages-site
           python scripts/apply_public_seo_v1.py .pages-site
           python scripts/verify_commercial_density_v1.py .pages-site
-      - name: Install Chromium visual QA
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
       - name: Install browser QA dependencies
         run: |
           npm ci --ignore-scripts --no-audit --no-fund
-          npx playwright install --with-deps chromium
+          npx playwright install --with-deps chromium webkit
           node --test engine/tests/*.test.mjs
       - name: Run multi-viewport visual QA
         run: |
@@ -177,6 +183,7 @@ jobs:
           STOCKRADAR_QA_URL=http://127.0.0.1:8765 npm run visual-qa
           node scripts/auth_session_qa.cjs
           node scripts/signup_verification_qa.cjs
+          node scripts/conversion_funnel_qa.cjs
           node scripts/product_decision_qa.cjs
           node scripts/radar_session_qa.cjs
       - name: Configure GitHub Pages

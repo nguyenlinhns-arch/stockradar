@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
+import * as funnel from '../../supabase/functions/_shared/funnel.ts';
 
 function signup({autoConfirm=false,error=null,session=null}={}) {
   let handler;const calls=[];
@@ -9,7 +10,8 @@ function signup({autoConfirm=false,error=null,session=null}={}) {
   const fetch=async()=>new Response(JSON.stringify({mailer_autoconfirm:autoConfirm,disable_signup:false}));
   const createClient=(url,key)=>{calls.push({url,key});return {auth:{signUp:async args=>{calls.push(args);return {data:{user:{id:'user'},session},error};}}};};
   const source=fs.readFileSync(new URL('../../supabase/functions/signup-link/index.ts',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
-  new Function('Deno','fetch','createClient',stripTypeScriptTypes(source))(Deno,fetch,createClient);
+  const bindings={...funnel,Deno,fetch,createClient};
+  new Function(...Object.keys(bindings),stripTypeScriptTypes(source))(...Object.values(bindings));
   return {calls,run:(plan='free')=>handler(new Request('https://fixture.invalid',{method:'POST',headers:{'content-type':'application/json',origin:'https://stockradar.vn'},body:JSON.stringify({email:'qa@example.invalid',password:'Local-test-Only-123!',plan,terms_accepted:true,privacy_accepted:true})}))};
 }
 

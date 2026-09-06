@@ -241,6 +241,7 @@
     const form = document.querySelector('[data-auth-signup-form]');
     const otpForm = document.querySelector('[data-auth-signup-otp-form]');
     if (!form) return;
+    if (document.querySelector('script[src*="signup-link-v1.js"]')) return;
     if (!providerReady) {
       lockForm(form, 'Đăng ký đang chờ kết nối dịch vụ xác thực. Website chưa nhận mật khẩu.');
       if (otpForm) lockForm(otpForm, 'Xác minh OTP đang chờ kết nối dịch vụ xác thực.');
@@ -368,6 +369,8 @@
     const presetEmail = normalizeEmail(params.get('email'));
     if (presetEmail && form.elements.email) form.elements.email.value = presetEmail;
     if (params.get('signed_out') === '1') setMessage(form.querySelector('[data-auth-message]'), 'Đã đăng xuất an toàn.', 'success');
+    if (params.get('verified') === '1') setMessage(form.querySelector('[data-auth-message]'), 'Nếu bạn đã xác minh email, đăng nhập để tiếp tục 10 câu AI/ngày.', 'success');
+    if (params.get('callback') === 'login_required') setMessage(form.querySelector('[data-auth-message]'), 'Liên kết xác minh chưa tạo được phiên trên trình duyệt này. Đăng nhập để tiếp tục; nếu email chưa xác minh, hãy gửi lại liên kết bên dưới.', '');
 
     form.addEventListener('submit', async event => {
       event.preventDefault();
@@ -382,6 +385,7 @@
         if (error) throw error;
         clearPendingSignupEmail();
         clearPendingSignupFlow();
+        window.StockRadarAnalytics?.loginSuccess();
         setMessage(message, 'Đăng nhập thành công.', 'success');
         location.href = safeNext(params.get('next'));
       } catch (error) {

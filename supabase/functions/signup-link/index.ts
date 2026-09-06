@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
+import { UUID, cleanTouch, fingerprints, knownBot } from "../_shared/funnel.ts";
 
 const ALLOWED_ORIGINS = new Set(["https://stockradar.vn", "https://www.stockradar.vn"]);
 
@@ -43,7 +44,10 @@ Deno.serve(async (req: Request) => {
   if (!supabaseUrl || !key) return json(origin, { ok: false, reason: "AUTH_BACKEND_NOT_READY" }, 503);
 
   try {
-    const body = await req.json();
+    const raw = await req.text();
+    if (new TextEncoder().encode(raw).length > 4096) return json(origin, { ok: false, reason: 'INVALID_SIGNUP' }, 400);
+    const body = JSON.parse(raw);
+    if (String(body?.company || '').trim() || knownBot(req)) return json(origin, { ok: false, reason: 'INVALID_SIGNUP' }, 400);
     const email = String(body?.email || "").trim().toLowerCase();
     const password = String(body?.password || "");
     const plan = String(body?.plan || "free").trim().toLowerCase() === "premium" ? "premium" : "free";
@@ -54,8 +58,11 @@ Deno.serve(async (req: Request) => {
       return json(origin, { ok: false, reason: "INVALID_SIGNUP" }, 400);
     }
 
+    const measurement = body?.measurement || {};
+    const flowId = UUID.test(String(measurement.flow_id || '')) ? String(measurement.flow_id) : crypto.randomUUID();
     const metadata = {
-      signup_source: "stockradar_web_verified_v2",
+      signup_source: "stockradar_web_verified_v3",
+      registration_flow_id: flowId,
       selected_plan_interest: plan,
       terms_accepted: true,
       terms_version: "2026-09-03",
@@ -67,7 +74,7 @@ Deno.serve(async (req: Request) => {
       product_email_event_alerts: plan === "premium" && body?.product_email_event_alerts === true,
     };
 
-    const settingsResponse = await fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: key } });
+    const settingsResponse = await fetch(`${supabaseUrl}/auth/v1/settings`, { headers: { apikey: key }, signal: AbortSignal.timeout(10000) });
     const settings = settingsResponse.ok ? await settingsResponse.json() : {};
     if (settings.mailer_autoconfirm !== false || settings.disable_signup === true) {
       return json(origin, { ok: false, reason: "EMAIL_VERIFICATION_NOT_READY" }, 503);
@@ -90,7 +97,23 @@ Deno.serve(async (req: Request) => {
       return json(origin, { ok: false, reason: "SIGNUP_UNAVAILABLE" }, error?.status === 429 ? 429 : 409);
     }
 
-    return json(origin, { ok: true, verification_required: true, plan }, 202);
+    // A successful Auth response may be an obfuscated existing user. Only an INSERT receipt
+    // bound to this user and form flow can produce a registration conversion.
+    let receipt: Record<string, unknown> = { registration_created: false };
+    const serverKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
+    if (serverKey) try {
+      const ids = await fingerprints(req, measurement.session_id, serverKey);
+      const result = await fetch(`${supabaseUrl}/rest/v1/rpc/finalize_registration_conversion_v1`, {
+        method: 'POST', signal: AbortSignal.timeout(8000),
+        headers: {apikey: serverKey, authorization: `Bearer ${serverKey}`, 'content-type': 'application/json'},
+        body: JSON.stringify({p_user_id: data.user.id, p_flow_id: flowId, p_session_hash: ids.session, p_ip_hash: ids.ip,
+          p_first_touch: cleanTouch(measurement.first_touch), p_last_touch: cleanTouch(measurement.last_touch)}),
+      });
+      const value = result.ok ? await result.json() : null;
+      if (value?.registration_created === true && UUID.test(value.event_id || ''))
+        receipt = {registration_created: true, event_id: value.event_id};
+    } catch (_) { console.warn('REGISTRATION_MEASUREMENT_UNAVAILABLE'); }
+    return json(origin, { ok: true, verification_required: true, plan, ...receipt }, 202);
   } catch (_) {
     return json(origin, { ok: false, reason: "REQUEST_FAILED" }, 500);
   }

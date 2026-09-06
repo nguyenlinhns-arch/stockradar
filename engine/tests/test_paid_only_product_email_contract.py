@@ -37,7 +37,7 @@ class PaidOnlyProductEmailContractTests(unittest.TestCase):
         self.assertIn("input.disabled = !premium", client)
         self.assertIn("if (!premium)", client)
         self.assertIn("input.checked = false", client)
-        self.assertIn("Free có phí 0đ", client)
+        self.assertIn("0đ · Không cần thẻ · Có thể nâng cấp sau", client)
         self.assertIn("email hệ thống cần thiết cho tài khoản", client)
 
     def test_plan_page_does_not_sell_daily_email_as_free(self):

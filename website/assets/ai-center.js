@@ -130,6 +130,19 @@
     log.scrollTop = log.scrollHeight;
   }
 
+  function guestFreeCta(log, kind = 'first') {
+    if (state.tier !== 'GUEST' || !window.StockRadarAnalytics?.guestCta(kind, state.tier)) return;
+    log.parentElement.querySelectorAll('[data-guest-free-cta]').forEach(el => el.remove());
+    const card = node('aside', 'sr-guest-free-cta'); card.dataset.guestFreeCta = kind;
+    card.append(node('strong', '', kind === 'exhausted' ? 'Bạn đã dùng hết 3 lượt Guest hôm nay.' : kind === 'last' ? 'Bạn còn 1 lượt Guest hôm nay.' : 'Muốn hỏi tiếp?'));
+    card.append(node('p', '', 'Tạo tài khoản Free để dùng StockRadar AI 10 câu/ngày.'));
+    card.append(node('small', '', '0đ · Không cần thẻ · Chỉ cần email'));
+    const link = node('a', 'button button-primary', 'Đăng ký Free');
+    link.href = new URL('signup/?plan=free', document.baseURI).toString();
+    link.addEventListener('click', () => window.StockRadarAnalytics?.guestCtaClick());
+    card.append(link); log.after(card);
+  }
+
   function sourceMeta(data) {
     const bits = [];
     const source = data?.source || {};
@@ -151,6 +164,7 @@
     if (!status) return;
     const tier = data?.tier ? normalizeTier(data.tier) : normalizeTier(fallbackTier);
     state.tier = tier;
+    if (tier !== 'GUEST') document.querySelectorAll('[data-guest-free-cta]').forEach(el => el.remove());
     if (tier === 'GUEST') {
       const remaining = data?.quota?.remaining;
       status.textContent = remaining == null ? 'KHÁCH · 3 CÂU / NGÀY' : `KHÁCH · CÒN ${remaining}/3 CÂU HÔM NAY`;
@@ -167,7 +181,7 @@
 
   function freshnessNotice(data) {
     if (data?.mode !== 'METHOD_ONLY') return '';
-    return 'Dữ liệu thị trường của mã này hiện chưa đủ mới hoặc chưa vượt toàn bộ kiểm tra chất lượng. StockRadar AI đã tự chuyển sang chế độ phương pháp và không dùng giá, điểm mua/bán hay tín hiệu cũ để đưa ra hành động.';
+    return 'CHƯA ĐỦ DỮ LIỆU ĐỂ RA HÀNH ĐỘNG. StockRadar vẫn có thể giải thích doanh nghiệp/phương pháp bằng dữ liệu hiện có.';
   }
 
   async function ask(message, log, input, send, status) {
@@ -187,7 +201,7 @@
       updatePlan(status, state.quota ? {quota: state.quota, tier: account.tier} : null, account.tier);
 
       if (!authenticated && !ticker && portfolioIntent(message) && !/(top|quét|quet|cổ phiếu nào|co phieu nao)/i.test(message)) {
-        addAction(log, 'Khách chưa đăng nhập có thể hỏi trực tiếp một mã HOSE. Để hỏi về danh mục/watchlist hoặc nhận 10 câu/ngày, hãy tạo tài khoản Free.', 'dang-ky/?plan=free', 'Tạo tài khoản Free');
+        addAction(log, 'Bạn có thể hỏi trực tiếp một mã HOSE. Tạo tài khoản để dùng danh sách theo dõi: Free · 0đ · 10 câu AI/ngày.', 'signup/?plan=free', 'Đăng ký Free');
         return;
       }
 
@@ -202,26 +216,31 @@
         ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY), guest_id: guestId()
       };
 
-      window.StockRadarAnalytics?.aiSubmitted();
+      window.StockRadarAnalytics?.aiSubmitted({tier: account.tier, ticker, horizon});
+      window.StockRadarAnalytics?.returnedToAI(account.tier);
       const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(35000) });
       let data = {};
       try { data = await response.json(); } catch (_) {}
 
       if (response.status === 401 && authenticated) {
+        window.StockRadarAnalytics?.aiFailed({tier: account.tier});
         addAction(log, 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục với hạn mức tài khoản của bạn.', 'dang-nhap/', 'Đăng nhập lại');
         return;
       }
 
-      if(response.ok)window.StockRadarAnalytics?.aiResult(data);
+      const success = response.ok && window.StockRadarAnalytics?.aiResult(data) === true;
+      if (!response.ok) window.StockRadarAnalytics?.aiFailed({tier: account.tier, ...data});
       const answer = data.answer || (response.ok ? 'StockRadar AI chưa có nội dung để trả lời.' : 'StockRadar AI tạm thời chưa thể phản hồi.');
+      const modelState = window.StockRadarAnalytics?.modelStatus(data);
+      if (response.ok && modelState !== 'MODEL_READY') addMessage(log, 'assistant', data.model_notice || 'Mô hình AI tạm thời chưa khả dụng. Nội dung bên dưới là thông tin tham chiếu, chưa phải câu trả lời từ mô hình AI.');
       if (!window.StockRadarDecisionView?.render(log, data, sourceMeta(data))) addMessage(log, 'assistant', answer, sourceMeta(data));
       const warning = freshnessNotice(data);
-      if (warning) addMessage(log, 'assistant', warning, 'Fail-closed · không dùng dữ liệu cũ để khuyến nghị');
+      if (warning && !data.decision_cards?.length) addMessage(log, 'assistant', warning);
       updatePlan(status, data, account.tier);
 
       if (response.status === 429 && data.reason !== 'TECHNICAL_RATE_LIMIT') {
         const responseTier = normalizeTier(data?.tier || account.tier);
-        if (responseTier === 'GUEST') addAction(log, 'Đăng ký miễn phí để tiếp tục sử dụng AI StockRadar.', 'dang-ky/?plan=free', 'Đăng ký Free');
+        if (responseTier === 'GUEST') guestFreeCta(log, 'exhausted');
         if (responseTier === 'FREE') addAction(log, 'Bạn đã sử dụng hết lượt AI miễn phí. Nâng cấp StockRadar Pro để sử dụng không giới hạn.', 'thanh-toan/?plan=premium', 'Nâng Premium');
         return;
       }
@@ -231,14 +250,21 @@
         state.history.push({ role: 'assistant', content: String(answer).slice(0, 600) });
         state.history = state.history.slice(-MAX_HISTORY);
       }
+      if (success && !authenticated && state.tier === 'GUEST') {
+        guestFreeCta(log, 'first');
+        if (Number(data.quota?.remaining) === 1 && !log.parentElement.querySelector('[data-guest-free-cta]')) guestFreeCta(log, 'last');
+        if (Number(data.quota?.remaining) === 0) guestFreeCta(log, 'exhausted');
+      }
     } catch (error) {
+      window.StockRadarAnalytics?.aiFailed({tier: state.tier, model_status: error?.name === 'TimeoutError' ? 'MODEL_TIMEOUT' : 'MODEL_ERROR'});
       addMessage(log, 'assistant', 'Không thể kết nối StockRadar AI lúc này. Vui lòng thử lại.');
     } finally {
       state.sending = false;
       input.disabled = false;
       send.disabled = false;
       send.textContent = oldLabel;
-      input.focus();
+      // Keep the result/CTA visible instead of reopening a mobile keyboard automatically.
+      if (!matchMedia('(pointer: coarse)').matches) input.focus({preventScroll: true});
     }
   }
 
@@ -267,14 +293,14 @@
     const input = document.createElement('textarea');
     input.rows = 2;
     input.maxLength = 700;
-    input.placeholder = 'Hỏi StockRadar AI về một mã HOSE…';
+    input.placeholder = 'Nhập mã cổ phiếu HOSE bạn đang quan tâm';
     input.setAttribute('aria-label', 'Hỏi StockRadar AI');
     const send = node('button', 'sr-center-send', 'Hỏi StockRadar AI');
     send.type = 'submit';
     form.append(input, send);
 
     const foot = node('div', 'sr-center-foot');
-    foot.innerHTML = '<span><strong>Khách:</strong> 3 câu/ngày</span><span><strong>Free:</strong> 10 câu/ngày</span><span><strong>Premium:</strong> email mua/bán + AI không giới hạn</span>';
+    foot.innerHTML = '<span>Thử miễn phí · Không cần đăng nhập</span><span>Free · 0đ · 10 câu AI/ngày</span>';
     host.replaceChildren(top, log, chips, form, foot);
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
@@ -292,7 +318,7 @@
     });
 
     input.addEventListener('keydown', event => {
-      if (event.key === 'Enter' && !event.shiftKey) {
+      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing && !matchMedia('(pointer: coarse)').matches) {
         event.preventDefault();
         form.requestSubmit();
       }

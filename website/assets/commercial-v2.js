@@ -7,7 +7,7 @@
 
   function normalizeHeader() {
     document.querySelectorAll('.header-register-cta').forEach(link => {
-      link.href = siteUrl('dang-ky/?plan=free');
+      link.href = siteUrl('signup/?plan=free');
       link.textContent = 'Bắt đầu miễn phí';
     });
   }
@@ -18,6 +18,7 @@
     const render = () => {
       const plan = String(form.elements.selected_plan?.value || 'free').toLowerCase();
       const premium = plan === 'premium';
+      if (!premium) return; // signup-email-intent owns the uncluttered Free flow.
       const note = document.querySelector('[data-signup-plan-note]');
       if (note) note.textContent = premium
         ? 'Premium · Email điểm mua/bán · 199.000đ/30 ngày.'
@@ -42,7 +43,7 @@
 
   function normalizeLogin() {
     document.querySelectorAll('.commercial-auth-page .auth-switch a[href*="signup/"]').forEach(link => {
-      link.href = siteUrl('dang-ky/?plan=free');
+      link.href = siteUrl('signup/?plan=free');
       link.textContent = 'Bắt đầu miễn phí';
     });
   }

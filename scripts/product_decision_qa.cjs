@@ -19,7 +19,7 @@ const api='https://xamviatbxufjlpiwhebb.supabase.co';
    await page.waitForFunction(()=>window.StockRadarDecisionView&&window.StockRadarAnalytics);
    await page.waitForTimeout(700);
    assert.equal(await page.locator('.home-workspace .home-market-bar').isVisible(),true,'runtime transforms must preserve the data status below the hero');
-   assert.match(await page.locator('.home-market-bar').innerText(),/UNAVAILABLE/);
+   assert.match(await page.locator('.home-market-bar').innerText(),/Dữ liệu trong phiên chưa khả dụng/);
    const nav=await page.locator('[data-nav-menu]').first().innerText();
    for(const label of ['AI StockRadar','Khuyến nghị','Hiệu quả','Theo dõi','Premium'])assert.ok(nav.includes(label));
    const at=new Date().toISOString(),day=new Date(Date.now()+7*3600000).toISOString().slice(0,10);
@@ -28,7 +28,7 @@ const api='https://xamviatbxufjlpiwhebb.supabase.co';
     buy_zone:{low:49500,high:50500},stop_loss:47000,targets:{short_term:57000,three_to_six_months:61000,twelve_months:68000},position_pct:25,
     moving_averages:{ma10:49000,ma50:48000,ma150:46000,ma200:45000},reasons:['Khối lượng đạt điều kiện của báo cáo.','<img src=x onerror=alert(1)>'],conditions:['Luận điểm cần rà soát khi mất vùng hỗ trợ.']};
    await page.evaluate(card=>{
-    const payload={scope:'ticker',tier:'FREE',decision_cards:[card],answer:'Chi tiết phương pháp và giả định của fixture.'};
+    const payload={status:'READY',answer_engine:'MODEL_STOCKRADAR',scope:'ticker',tier:'FREE',decision_cards:[card],answer:'Chi tiết phương pháp và giả định của fixture.'};
     window.StockRadarDecisionView.render(document.querySelector('.sr-center-log'),payload);
     window.StockRadarAnalytics.aiSubmitted();window.StockRadarAnalytics.aiResult(payload);
    },c);
@@ -47,7 +47,7 @@ const api='https://xamviatbxufjlpiwhebb.supabase.co';
    const stale={...c,data:{...c.data,updated_at:'2020-01-01T00:00:00Z'}};
    await page.evaluate(card=>window.StockRadarDecisionView.render(document.querySelector('.sr-center-log'),{scope:'ticker',decision_cards:[card],answer:'old fixture'}),stale);
    const last=page.locator('[data-decision-ticker="ZZZ"]').last();
-   assert.match(await last.innerText(),/CHƯA ĐỦ DỮ LIỆU ĐỂ RA QUYẾT ĐỊNH/);
+   assert.match(await last.innerText(),/CHƯA ĐỦ DỮ LIỆU ĐỂ RA HÀNH ĐỘNG/);
    assert.doesNotMatch(await last.innerText(),/57\.000đ|47\.000đ/);
    await page.waitForTimeout(200);
    assert.ok(events.some(e=>e.action_name==='meaningful_report'));

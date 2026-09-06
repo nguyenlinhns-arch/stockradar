@@ -54,9 +54,9 @@ ROUTES = {
         "required_js": {
             "app.js", "auth-config.js", "auth-email-gate.js", "auth-policy.js", "auth.js",
             "auth-extra.js", "paid-nav-v1.js", "auth-production-gate.js", "decision-copy-guard-v1.js",
-            "header-notifications.js", "commercial-v2.js",
+            "header-notifications.js", "commercial-v2.js", "conversion-v3.js",
         },
-        "max_css": 7, "max_js": 11, "max_bytes": 245_000,
+        "max_css": 7, "max_js": 12, "max_bytes": 245_000,
     },
     "thanh-toan": {
         "remove_css": {

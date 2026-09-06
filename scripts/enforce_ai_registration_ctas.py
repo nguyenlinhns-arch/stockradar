@@ -2,8 +2,8 @@
 """Force final StockRadar AI CTAs to match the Guest -> Free -> Premium funnel.
 
 This runs after all Pages UX transforms. Older conversion transforms may still
-rewrite AI links to the legacy /signup/ form. Guest registration must route to
-the current /dang-ky/ Free page, while a signed-in Free account upgrades directly
+rewrite AI links to the plan selector. Guest registration must route to
+the compact /signup/?plan=free form, while a signed-in Free account upgrades directly
 through /thanh-toan/ instead of being sent through registration again.
 
 The static builder intentionally keeps generated pages noindex by default. This
@@ -23,7 +23,7 @@ REPLACEMENTS = (
         "dang-ky/?plan=premium",
     ),
     ("signup/?plan=premium", "dang-ky/?plan=premium"),
-    ("signup/?plan=free", "dang-ky/?plan=free"),
+    ("dang-ky/?plan=free", "signup/?plan=free"),
 )
 
 PUBLIC_HOME_ROBOTS = 'name="robots" content="index,follow,max-image-preview:large"'
@@ -47,12 +47,12 @@ def rewrite_asset(path: Path) -> None:
     if path.name == "ai-center.js":
         # Homepage AI is account-aware: Guests can create Free; signed-in Free
         # upgrades directly to payment. Premium must never be another signup.
-        for marker in ("dang-ky/?plan=free", "thanh-toan/?plan=premium", "Nâng Premium"):
+        for marker in ("signup/?plan=free", "thanh-toan/?plan=premium", "Nâng Premium"):
             if marker not in source:
                 raise RuntimeError(f"Final AI center missing current account-state CTA: {marker}")
         if "dang-ky/?plan=premium" in source:
             raise RuntimeError("Final AI center routes signed-in Premium upgrade through registration")
-    elif "dang-ky/?plan=free" not in source:
+    elif "signup/?plan=free" not in source:
         # Floating assistant may be mounted on public pages and only needs the
         # unauthenticated Free registration destination.
         raise RuntimeError("Final AI assistant missing current Free registration route")

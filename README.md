@@ -8,10 +8,12 @@ Website tiếng Việt cho nghiên cứu cổ phiếu HOSE. Giữ giao diện hi
 
 ## Chạy và kiểm tra
 
+Phễu Facebook → AI → Free và cấu hình Meta được mô tả trong [META_ADS_MEASUREMENT.md](docs/META_ADS_MEASUREMENT.md). Pixel mặc định tắt; chưa ADS READY khi chưa kiểm chứng Events Manager thật và model production còn bị chặn credit.
+
 ```sh
 python -m pip install pandas
 npm ci --ignore-scripts
-npx playwright install chromium
+npx playwright install chromium webkit
 python -m unittest discover -s engine/tests -v
 node --test engine/tests/ai_runtime.test.mjs engine/tests/ai_handlers.test.mjs
 python scripts/build_production.py

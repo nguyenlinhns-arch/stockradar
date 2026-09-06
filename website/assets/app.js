@@ -317,51 +317,17 @@
   }
 
   function getUtm() {
-    const params = new URLSearchParams(location.search);
-    const keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'proposition'];
-    const current = {};
-    keys.forEach(key => {
-      const value = params.get(key);
-      if (value) current[key] = value.slice(0, 120);
-    });
-    if (Object.keys(current).length) localStorage.setItem('sr_utm', JSON.stringify(current));
-    try { return JSON.parse(localStorage.getItem('sr_utm') || '{}'); } catch (_) { return {}; }
+    return window.StockRadarAnalytics?.attribution()?.first || {};
   }
 
   function track(name, properties = {}) {
     if (!allowedEvents.has(name)) return;
-    const payload = {
-      event_name: name,
-      occurred_at: new Date().toISOString(),
-      session_id: sessionId(),
-      page: location.pathname,
-      proposition: document.body.dataset.proposition || getUtm().proposition || 'organic',
-      utm: getUtm(),
-      properties
-    };
-    window.dataLayer = window.dataLayer || [];
-    window.dataLayer.push({ event: name, ...payload });
-    const endpoint = apiUrl('api/events');
-    if (!endpoint) return;
-    const body = JSON.stringify(payload);
-    if (navigator.sendBeacon) {
-      navigator.sendBeacon(endpoint, new Blob([body], { type: 'application/json' }));
-    } else {
-      fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
-    }
+    // One canonical, allowlisted transport; never forward arbitrary form/report properties.
+    window.StockRadarAnalytics?.track(name, properties);
   }
 
   function retentionEvents() {
-    const now = Date.now();
-    const first = Number(localStorage.getItem('sr_first_seen') || now);
-    if (!localStorage.getItem('sr_first_seen')) localStorage.setItem('sr_first_seen', String(now));
-    const days = (now - first) / 86400000;
-    if (days >= 1 && !localStorage.getItem('sr_return_d1')) {
-      localStorage.setItem('sr_return_d1', '1'); track('return_d1');
-    }
-    if (days >= 7 && !localStorage.getItem('sr_return_d7')) {
-      localStorage.setItem('sr_return_d7', '1'); track('return_d7');
-    }
+    // D1/D7 is emitted only after another useful AI result by the canonical tracker.
   }
 
   function stateClass(state) {
@@ -924,7 +890,7 @@
       }));
       let started = false;
       form.addEventListener('input', () => {
-        if (!started) { started = true; track('signup_started'); track('signup_start'); }
+        if (!started) { started = true; track('signup_started'); }
       }, { once: true });
       form.addEventListener('submit', async event => {
         event.preventDefault();
@@ -959,7 +925,6 @@
           message.className = 'form-message success';
           message.textContent = 'Đã ghi nhận. Khi có bản thử nghiệm phù hợp, StockRadar sẽ liên hệ theo thông tin bạn đã chọn.';
           track('signup_completed', { proposition: data.proposition });
-          track('signup_complete', { proposition: data.proposition });
           if (data.alert_opt_in) track('alert_opt_in', { proposition: data.proposition });
           form.reset();
         } catch (error) {
@@ -1000,7 +965,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     getUtm(); retentionEvents();
-    track('landing_view');
+    // conversion-v3 owns landing impressions and restricts them to landing routes.
     mountPortalShell();
     wireNavigation();
     if (/(^|\/)pro\/?$/.test(location.pathname)) { track('pro_page_view'); track('pro_view'); }

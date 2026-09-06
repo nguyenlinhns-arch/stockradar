@@ -208,7 +208,7 @@ def verify(output: Path) -> None:
             raise RuntimeError(f"Commercial v2 CSS missing from {route}")
     if "4M · Payback · CANSLIM" in pages["co-phieu"] or "premium-analysis-stack" in pages["co-phieu"]:
         raise RuntimeError("Stock page still exposes verbose methodology preview")
-    if "auth-intro" in pages["signup"] or "auth-intro" in pages["dang-nhap"]:
+    if any(re.search(r'<[^>]+class=["\'][^"\']*\bauth-intro\b', pages[r]) for r in ("signup", "dang-nhap")):
         raise RuntimeError("Auth pages still contain marketing intro block")
     if "checkout-help" in pages["thanh-toan"]:
         raise RuntimeError("Checkout still contains duplicated help walkthrough")

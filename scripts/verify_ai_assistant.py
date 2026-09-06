@@ -82,7 +82,7 @@ def main() -> int:
                 "KHÁCH · 3 CÂU / NGÀY",
                 "FREE · 10 CÂU / NGÀY",
                 "PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN",
-                "dang-ky/?plan=free",
+                "signup/?plan=free",
                 "thanh-toan/?plan=premium",
                 "Tạo tài khoản Free",
                 "Nâng Premium",
@@ -96,7 +96,7 @@ def main() -> int:
             "TRIAL · AI",
             "dang-ky/?plan=premium",
             "Xem gói Paid",
-            "signup/?plan=free",
+            "dang-ky/?plan=free",
             "signup/?plan=premium&next=thanh-toan/%3Fplan%3Dpremium",
         ):
             if stale in center_js:

@@ -51,9 +51,9 @@ class ConversionV3Tests(unittest.TestCase):
         self.assertIn("data-premium-flow-summary", transformed)
         self.assertIn("Tùy chọn email Premium", transformed)
         self.assertIn("Free chỉ nhận email hệ thống", transformed)
-        js = self.read("website/assets/conversion-v3.js")
-        self.assertIn("params.get('plan') === 'premium'", js)
-        self.assertIn("premium.checked = true", js)
+        js = self.read("website/assets/signup-email-intent.js")
+        self.assertIn("params.get('plan')", js)
+        self.assertIn("input.checked", js)
         self.assertNotIn("email_event_alerts.checked = true", js)
         self.assertNotIn("daily_brief.checked = true", js)
 

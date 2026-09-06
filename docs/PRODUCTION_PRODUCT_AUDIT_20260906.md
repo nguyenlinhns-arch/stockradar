@@ -4,6 +4,35 @@
 
 Baseline `969d88ba8360144958f4945f0958f9f100544210`; Pages [33998348779](https://github.com/nguyenlinhns-arch/stockradar/actions/runs/33998348779) SUCCESS. Bằng chứng release mới ở cuối tài liệu.
 
+## Đợt Facebook → AI → Free, tiếp tục từ production hiện tại
+
+**DONE code / TESTING đo lường production / BLOCKED mở Ads.** Baseline lúc bắt đầu `e494f84`; đã fast-forward commit `2f1ac78` trên main để giữ migration `decouple_ai_only_synthesis_from_research_grade`. Không khôi phục nhãn health cũ: hiện `AI_ONLY_REFERENCE_READY`, 405 reference/0 Research-Grade; đây là coverage dữ liệu, không phải model E2E PASS.
+
+| Hạng mục | Trạng thái | Bằng chứng / giới hạn |
+|---|---|---|
+| Guest → Free | DONE | CTA dưới kết quả MODEL_READY đầu tiên; khóa impression qua reload, nhắc còn1/hết lượt; không hiện cho Free/Premium; URL `signup/?plan=free` |
+| Free-first signup | DONE | Ẩn chọn Premium/email Premium; email + hai ô mật khẩu + legal consent; honeypot ẩn; không thanh toán hay tự cấp quyền |
+| Verification/session | DONE code, TESTING app thật | Public Auth signUp vẫn bắt verification; hướng dẫn sau submit; callback SDK về Home, thiếu session/verifier về login; fixture kiểm quota10, reload, back/forward và hỏi tiếp |
+| Meta | DONE integration / BLOCKED production | Cấu hình tập trung, SDK async/optional; PageView, AIQuestion, StartRegistration, CompleteRegistration có eventID. **META_PIXEL_ID_NOT_CONFIGURED; Events Manager chưa kiểm chứng** |
+| Registration authority | DONE | Auth INSERT receipt + flow matching, unique event; browser không thể chèn completion vào DB. SQL rollback kiểm new/existing flow, retry, verified marker, ACL, metadata; backend fixture phân biệt Auth acceptance và receipt |
+| CAPI | CAPI_NOT_CONFIGURED | Receipt/event_id ổn định là interface cho sender tương lai; chưa có server CAPI, không token công khai |
+| Attribution/KPI | DONE code / TESTING dữ liệu thật | First/last touch30 ngày, UTM5 + fbclid; canonical aliases dùng chung dedupe. Hai private SQL views30 ngày + query event/account/verified. Không có số conversion/retention thật để kết luận |
+| Model observability | DONE / BLOCKED provider | `stock-ai` v24, `stock-ai-guest` v23. HTTP thật trả200 `READY_FALLBACK`, `OPENAI_429_CREDIT_BALANCE_EXHAUSTED`, `MODEL_CREDIT_BLOCKED`, quota Guest còn2/3. Fallback/METHOD_ONLY không tăng ai_result_success |
+| Data/hero copy | DONE | Input AI nằm first screen traffic Facebook; trạng thái tham chiếu/intraday chưa khả dụng bằng tiếng Việt, giữ fail-closed; claim email chỉ đổi khi readiness thật cho phép |
+| Mobile/UA/engines | DONE emulation / TESTING thiết bị thật |360/390/430; Facebook Android UA, Instagram iPhone UA, Chrome Android UA, WebKit iPhone viewport và Edge desktop thật qua browser fixture. Không tuyên bố app Facebook/Instagram hoặc bàn phím điện thoại thật đã PASS |
+
+`signup-link` v4 và `conversion-event` v4 ACTIVE; migration canonical funnel đã apply. HTTP thật của conversion-event: lần đầu202/recorded=true, lặp UUID202/false, bot202/false, forged signup_completed400. Bản ghi QA có UUID riêng đã xóa; không tạo tài khoản/email production trong đợt funnel. SQL fixtures rollback, dispatch chỉ tắt trong transaction thử và không ảnh hưởng cấu hình bên ngoài.
+
+Regression:463 unittest PASS;465 pytest +28 subtests PASS (Windows dùng basetemp riêng vì temp hệ thống bị ACL);75 Node tests PASS; production build/SEO/asset guards PASS;85/85 visual checks; auth-session, signup-verification, product-decision8, radar-session và conversion browser14 scenarios PASS. SQL5 scripts PASS, gồm server-only Premium activation từ verified grant. Test reference_health được cập nhật để chấp nhận nhãn reference-only mới nhưng vẫn kiểm grade0, future timestamps/dates, stale data và ACL. Browser fixture chờ request hoàn tất trước các lần reload lập trình để tránh hủy request đang bay trong WebKit.
+
+Budget byte giữ nguyên: Home151456/196000 bytes, signup260837/275000, login237778/245000, checkout214994/230000 trước cleanup cuối. Login thêm analytics runtime (12 JS); Terser chỉ dùng lúc build để giảm dung lượng, không thêm runtime dependency. Privacy kiểm metadata tối thiểu, không prompt/email/holdings/token; Pixel có opt-out và bỏ URL/referrer nhạy cảm. Bot filter là UA/honeypot/rate-limit, không phải chứng minh mọi traffic đều là người.
+
+Advisors:0 ERROR; các WARN hiện có về RPC có chủ đích và HIBP còn. Receipt mới private/RLS, không cấp anon/authenticated; INFO không có policy phù hợp với bảng chỉ server truy cập. [Giải thích RLS lint](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), [HIBP](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+Blocker để mở Ads: Pixel ID + CompleteRegistration thật đúng một lần trong Events Manager; OpenAI credit; SMTP Auth và email ngoài team; kiểm thử app/thiết bị thật. Action/data rights/compliance/email sản phẩm/checkout vẫn theo gate PAUSED. Không coi cảnh báo này là đã giải quyết. Cấu hình, event definitions, KPI SQL, privacy và checklist ở [META_ADS_MEASUREMENT.md](META_ADS_MEASUREMENT.md).
+
+Deployment frontend của đợt này được ghi sau khi Pages hoàn tất; các release bên dưới là lịch sử.
+
 ## P0/P1/P2
 
 | Ưu tiên | Hạng mục | Trạng thái | Kết quả / giới hạn |

@@ -19,7 +19,7 @@ class EmailSubscriptionFunnelTests(unittest.TestCase):
         self.assertNotIn('name="email_event_alerts" type="checkbox" checked', signup)
         self.assertIn('name="selected_plan" value="free" checked', signup)
         self.assertIn('name="selected_plan" value="premium"', signup)
-        self.assertIn("Free có 10 câu StockRadar AI/ngày", signup)
+        self.assertIn("10 câu StockRadar AI mỗi ngày", signup)
         self.assertIn("chỉ nhận email hệ thống", signup)
         self.assertIn("Báo cáo StockRadar lúc 09:00", signup)
         self.assertIn("Action Alert trong phiên", signup)

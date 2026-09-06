@@ -55,6 +55,8 @@ def visible_main(source: str) -> str:
     if not match:
         raise RuntimeError("Missing <main>")
     text = match.group(1)
+    # The post-registration guidance appears only after Auth acceptance.
+    text = re.sub(r'<p\b[^>]*\bhidden(?:\s|>)[\s\S]*?</p>', '', text, flags=re.I)
     # Verified price/history rows are user-requested records, not explanatory copy.
     # Adding tomorrow's recommendation must not exhaust the page's prose budget.
     if 'data-verified-recommendations' in match.group(0):
