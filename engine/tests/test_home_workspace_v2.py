@@ -84,11 +84,15 @@ class HomeWorkspaceV2Tests(unittest.TestCase):
             "storageKey: STORAGE_KEY",
             "currentAccountTier",
             "normalizeTier",
-            "PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN",
+            "PREMIUM · AI KHÔNG GIỚI HẠN · EMAIL CẢNH BÁO",
             "Premium · hỏi không giới hạn",
             "thanh-toan/?plan=premium",
             "Nâng Premium",
             "onAuthStateChange",
+            "/functions/v1/stock-ai-chat",
+            "operation: 'history'",
+            "operation: 'new_thread'",
+            "Đã lưu ngữ cảnh theo tài khoản",
         ):
             self.assertIn(marker, ai)
         self.assertRegex(budget, r'AI_CENTER_CACHE_VERSION = "\d{8}-[a-z0-9]+"')
