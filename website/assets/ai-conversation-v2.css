@@ -1,0 +1,212 @@
+.sr-thread-fullpage{
+  justify-self:start;
+  color:#075fcf;
+  font-size:11px;
+  font-weight:800;
+  text-decoration:none;
+}
+.sr-thread-fullpage:hover{text-decoration:underline}
+.ai-chat-page .sr-thread-fullpage{display:none}
+.ai-chat-page .ai-chat-main{padding:18px 0 34px}
+.ai-chat-page .ai-chat-wrap{width:min(1380px,calc(100% - 28px));margin:0 auto}
+.ai-chat-page .ai-chat-heading{display:flex;justify-content:space-between;gap:18px;align-items:end;margin:0 0 14px}
+.ai-chat-page .ai-chat-heading h1{margin:0;font-size:24px;color:var(--navy,#0d2b49)}
+.ai-chat-page .ai-chat-heading p{margin:4px 0 0;color:var(--muted,#667585);font-size:13px}
+.ai-chat-page .ai-chat-heading a{font-size:12px;font-weight:800;color:var(--blue,#1769aa)}
+.ai-chat-page .ai-center-shell{max-width:none;margin:0;border:1px solid #d8e2ed;background:#fff;border-radius:16px;box-shadow:0 18px 48px rgba(11,31,51,.09);overflow:hidden}
+.ai-chat-page [data-stockradar-ai-center].sr-conversation-shell{
+  height:calc(100vh - 166px);
+  max-height:none;
+  min-height:620px;
+}
+
+[data-stockradar-ai-center].sr-conversation-shell{
+  display:grid;
+  grid-template-columns:250px minmax(0,1fr);
+  min-height:640px;
+  height:min(76vh,760px);
+  max-height:760px;
+  position:relative;
+  overflow:hidden;
+  background:#fff;
+}
+.sr-thread-sidebar{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  border-right:1px solid var(--sr-line,#dbe4ee);
+  background:#f7f9fc;
+}
+.sr-thread-sidebar-head{
+  display:grid;
+  gap:12px;
+  padding:16px 14px 12px;
+  border-bottom:1px solid #e5ebf2;
+}
+.sr-thread-sidebar-title{display:grid;gap:2px;min-width:0}
+.sr-thread-sidebar-title strong{font-size:13px;color:var(--sr-ink,#0b1f33)}
+.sr-thread-sidebar-title span{font-size:10.5px;color:#6b7c90}
+.sr-thread-new-chat{
+  width:100%;
+  border:0;
+  border-radius:10px;
+  background:#0f6fff;
+  color:#fff;
+  padding:10px 12px;
+  font:inherit;
+  font-size:12px;
+  font-weight:850;
+  cursor:pointer;
+}
+.sr-thread-new-chat:hover{filter:brightness(.97)}
+.sr-thread-new-chat:disabled{opacity:.55;cursor:wait}
+.sr-thread-list{
+  min-height:0;
+  overflow:auto;
+  padding:8px;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.sr-thread-item{
+  width:100%;
+  display:grid;
+  gap:3px;
+  text-align:left;
+  border:1px solid transparent;
+  background:transparent;
+  border-radius:9px;
+  padding:10px 9px;
+  color:#26384b;
+  cursor:pointer;
+  font:inherit;
+}
+.sr-thread-item:hover{background:#eef3f8}
+.sr-thread-item.is-active{
+  background:#e9f2ff;
+  border-color:#c8dcf5;
+  color:#0b4f98;
+}
+.sr-thread-item strong{
+  min-width:0;
+  font-size:12px;
+  line-height:1.35;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.sr-thread-item small{
+  font-size:10px;
+  color:#718197;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.sr-thread-empty{
+  display:grid;
+  gap:7px;
+  margin:6px;
+  padding:12px;
+  border:1px dashed #ccd7e3;
+  border-radius:10px;
+  color:#637388;
+  font-size:11px;
+  line-height:1.5;
+  background:#fff;
+}
+.sr-thread-empty strong{color:#31465a;font-size:12px}
+.sr-thread-empty p{margin:0}
+.sr-thread-signup{
+  justify-self:start;
+  color:#075fcf;
+  font-weight:800;
+}
+.sr-conversation-main{
+  min-width:0;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  background:#fff;
+}
+.sr-conversation-main .sr-center-top{flex:0 0 auto}
+.sr-conversation-main .sr-center-log{
+  flex:1 1 auto;
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+}
+.sr-conversation-main .sr-center-chips,
+.sr-conversation-main .sr-center-form,
+.sr-conversation-main .sr-center-foot{flex:0 0 auto}
+.sr-thread-toggle{
+  display:none;
+  border:1px solid #cfd9e4;
+  background:#fff;
+  color:#17324d;
+  border-radius:9px;
+  padding:7px 10px;
+  font:inherit;
+  font-size:11px;
+  font-weight:800;
+  cursor:pointer;
+}
+.ai-center-shell:has(.sr-conversation-shell){
+  max-width:1280px;
+}
+.workspace-main:has(.sr-conversation-shell){
+  min-width:0;
+}
+@media(max-width:980px){
+  [data-stockradar-ai-center].sr-conversation-shell{
+    grid-template-columns:220px minmax(0,1fr);
+    height:min(74vh,720px);
+  }
+}
+@media(max-width:760px){
+  [data-stockradar-ai-center].sr-conversation-shell{
+    display:block;
+    height:660px;
+    max-height:78vh;
+    overflow:hidden;
+  }
+  .sr-thread-toggle{display:inline-flex;align-items:center}
+  .sr-thread-sidebar{
+    position:absolute;
+    inset:0 auto 0 0;
+    width:min(84vw,320px);
+    z-index:15;
+    transform:translateX(-105%);
+    transition:transform .2s ease;
+    box-shadow:14px 0 32px rgba(11,31,51,.14);
+  }
+  .sr-conversation-shell.threads-open .sr-thread-sidebar{transform:translateX(0)}
+  .sr-conversation-shell.threads-open:after{
+    content:"";
+    position:absolute;
+    inset:0;
+    z-index:14;
+    background:rgba(10,27,44,.22);
+    pointer-events:none;
+  }
+  .sr-conversation-main{height:100%}
+  .sr-conversation-main .sr-center-top{
+    padding:10px 12px;
+  }
+  .sr-conversation-main .sr-center-top-left{
+    width:100%;
+    justify-content:flex-start;
+  }
+  .sr-conversation-main .sr-center-continuity{display:none}
+  .sr-conversation-main .sr-center-top-actions{display:none}
+  .sr-conversation-main .sr-center-log{
+    padding:16px 14px 6px;
+  }
+}
+@media(max-width:480px){
+  [data-stockradar-ai-center].sr-conversation-shell{
+    height:690px;
+    max-height:82vh;
+  }
+  .sr-thread-sidebar{width:88vw}
+  .sr-center-plan{font-size:10px;padding:6px 8px}
+}
