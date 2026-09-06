@@ -51,16 +51,20 @@ def main() -> None:
 
     require(ai, (
         "stock-ai-guest",
-        "stock-ai",
+        "stock-ai-chat",
         "KHÁCH · 3 CÂU / NGÀY",
         "FREE · 10 CÂU / NGÀY",
-        "PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN",
+        "PREMIUM · AI KHÔNG GIỚI HẠN · EMAIL CẢNH BÁO",
         "signup/?plan=free",
         "thanh-toan/?plan=premium",
         "Nâng Premium",
         "currentAccountTier",
         "storageKey: STORAGE_KEY",
-    ), "AI client access model", errors)
+        "operation: 'history'",
+        "operation: 'new_thread'",
+        "Cuộc trò chuyện mới",
+        "Đã lưu ngữ cảnh theo tài khoản",
+    ), "AI client access and persistent conversation model", errors)
     for forbidden in (
         "PAID · AI KHÔNG GIỚI HẠN",
         "TRIAL · AI",
@@ -140,7 +144,7 @@ def main() -> None:
 
     if errors:
         raise RuntimeError("AI-first product verification failed:\n- " + "\n- ".join(errors))
-    print("AI-first product verification: PASS")
+    print("AI-first product verification: PASS — persistent signed-in chat enabled")
 
 
 if __name__ == "__main__":
