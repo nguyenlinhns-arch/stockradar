@@ -69,7 +69,7 @@
     if (/(tích sản|tich san|2\s*[-–]\s*5\s*năm|dài hạn nhiều năm)/.test(value)) return 'ACCUMULATION';
     if (/(12\s*tháng|12\s*thang|6\s*[-–]\s*18\s*tháng|dài hạn|dai han)/.test(value)) return 'LONG_TERM';
     if (/(3\s*[-–]\s*6\s*tháng|1\s*[-–]\s*6\s*tháng|trung hạn|trung han|6\s*tháng|6\s*thang)/.test(value)) return 'MEDIUM_TERM';
-    return 'SHORT_TERM';
+    return '';
   }
 
   function loadSupabaseLibrary() {
@@ -186,7 +186,7 @@
           thread_id: state.threadId || null,
           scope: scope === 'conversation' ? 'auto' : scope,
           ticker: ticker || '',
-          horizon,
+          horizon: horizon || '',
           message: String(message).slice(0, 700)
         })
       });
