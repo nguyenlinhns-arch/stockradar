@@ -24,6 +24,9 @@ SKIP_TOP_ROUTES = {
     "email",
     "nhan-ban-tin",
     "huy-dang-ky-email",
+    # /ai owns a native full-screen conversation workspace. Injecting the global
+    # floating assistant here would create a second AI surface on top of the chat.
+    "ai",
 }
 
 HOME_CENTER = '''<section class="sr-ai-center" id="stockradar-ai" data-stockradar-ai-center aria-labelledby="stockradar-ai-title">
