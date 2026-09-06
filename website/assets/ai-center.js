@@ -3,9 +3,10 @@
 
   const config = window.STOCKRADAR_AUTH_CONFIG || {};
   const STORAGE_KEY = 'stockradar-auth';
-  const MAX_HISTORY = 6;
-  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI']);
-  const state = { client: null, sending: false, history: [], tier: 'GUEST' };
+  const THREAD_KEY = 'stockradar_ai_thread_id_v1';
+  const MAX_GUEST_HISTORY = 6;
+  const STOPWORDS = new Set(['MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','DANG','THE','NAO','CAN','XEM','MAI','HOM','TIE','THEO','TOP','CAC','CUA','VOI','TAI','VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR']);
+  const state = { client: null, sending: false, history: [], tier: 'GUEST', quota: null, threadId: loadThreadId() };
 
   function node(tag, className, text = '') {
     const el = document.createElement(tag);
@@ -14,13 +15,28 @@
     return el;
   }
 
+  function loadThreadId() {
+    try {
+      const value = localStorage.getItem(THREAD_KEY) || '';
+      return /^[0-9a-f-]{36}$/i.test(value) ? value : '';
+    } catch (_) { return ''; }
+  }
+
+  function saveThreadId(value) {
+    state.threadId = /^[0-9a-f-]{36}$/i.test(String(value || '')) ? String(value) : '';
+    try {
+      if (state.threadId) localStorage.setItem(THREAD_KEY, state.threadId);
+      else localStorage.removeItem(THREAD_KEY);
+    } catch (_) {}
+  }
+
   function validTicker(value) {
     const ticker = String(value || '').trim().toUpperCase();
     return /^[A-Z0-9]{3}$/.test(ticker) && /[A-Z]/.test(ticker);
   }
 
   function explicitTicker(text) {
-    const tokens = String(text || '').toUpperCase().match(/\b[A-Z0-9]{3}\b/g) || [];
+    const tokens = String(text || '').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
     return tokens.find(token => validTicker(token) && !STOPWORDS.has(token)) || '';
   }
 
@@ -33,7 +49,7 @@
   }
 
   function portfolioIntent(text) {
-    return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|mã đang giữ|ma dang giu|hôm nay.*(làm gì|lam gi|chú ý|chu y)|mã nào|ma nao)/i.test(String(text || ''));
+    return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|mã đang giữ|ma dang giu|hôm nay.*(làm gì|lam gi|chú ý|chu y))/i.test(String(text || ''));
   }
 
   function guestId() {
@@ -77,12 +93,7 @@
       return state.client;
     }
     state.client = window.supabase.createClient(config.supabaseUrl, config.supabasePublishableKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storageKey: STORAGE_KEY,
-      }
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: STORAGE_KEY }
     });
     window.StockRadarAuthClient = state.client;
     return state.client;
@@ -100,15 +111,12 @@
     const session = await authSession();
     const user = session?.user;
     if (!user) return { session: null, tier: 'GUEST' };
-
     let tier = 'FREE';
-    try {
-      const { data: profile, error } = await state.client.rpc('get_my_stockradar_access');
-      if (error) throw error;
-      state.quota = profile?.quota || null;
-      const active = String(profile?.account_status || '').toUpperCase() === 'ACTIVE';
-      if (active) tier = normalizeTier(profile?.account_tier) === 'PREMIUM' ? 'PREMIUM' : 'FREE';
-    } catch (_) { throw new Error('Chưa tải được quyền tài khoản. Vui lòng thử lại.'); }
+    const { data: profile, error } = await state.client.rpc('get_my_stockradar_access');
+    if (error) throw error;
+    state.quota = profile?.quota || null;
+    const active = String(profile?.account_status || '').toUpperCase() === 'ACTIVE';
+    if (active) tier = normalizeTier(profile?.account_tier) === 'PREMIUM' ? 'PREMIUM' : 'FREE';
     return { session, tier };
   }
 
@@ -118,6 +126,13 @@
     if (meta) wrap.append(node('small', 'sr-center-meta', meta));
     log.append(wrap);
     log.scrollTop = log.scrollHeight;
+  }
+
+  function showIntro(log, authenticated = false) {
+    log.replaceChildren();
+    addMessage(log, 'assistant', authenticated
+      ? 'Bạn có thể trò chuyện liên tục với StockRadar AI như trong một phiên phân tích. Hỏi một mã HOSE, rồi hỏi tiếp “mua được chưa?”, “3–6 tháng thì sao?” hoặc “rủi ro chính?” mà không cần gõ lại mã. Lịch sử được lưu theo tài khoản của bạn.'
+      : 'Hỏi tôi về một mã HOSE. Guest có 3 câu/ngày; tạo tài khoản Free để có 10 câu/ngày và giữ ngữ cảnh phân tích trên tài khoản.');
   }
 
   function addAction(log, text, href, label) {
@@ -134,8 +149,8 @@
     if (state.tier !== 'GUEST' || !window.StockRadarAnalytics?.guestCta(kind, state.tier)) return;
     log.parentElement.querySelectorAll('[data-guest-free-cta]').forEach(el => el.remove());
     const card = node('aside', 'sr-guest-free-cta'); card.dataset.guestFreeCta = kind;
-    card.append(node('strong', '', kind === 'exhausted' ? 'Bạn đã dùng hết 3 lượt Guest hôm nay.' : kind === 'last' ? 'Bạn còn 1 lượt Guest hôm nay.' : 'Muốn hỏi tiếp?'));
-    card.append(node('p', '', 'Tạo tài khoản Free để dùng StockRadar AI 10 câu/ngày.'));
+    card.append(node('strong', '', kind === 'exhausted' ? 'Bạn đã dùng hết 3 lượt Guest hôm nay.' : kind === 'last' ? 'Bạn còn 1 lượt Guest hôm nay.' : 'Muốn hỏi tiếp và giữ ngữ cảnh?'));
+    card.append(node('p', '', 'Tạo tài khoản Free để dùng StockRadar AI 10 câu/ngày và tiếp tục cuộc phân tích trên tài khoản.'));
     card.append(node('small', '', '0đ · Không cần thẻ · Chỉ cần email'));
     const link = node('a', 'button button-primary', 'Đăng ký Free');
     link.href = new URL('signup/?plan=free', document.baseURI).toString();
@@ -147,12 +162,15 @@
     const bits = [];
     const source = data?.source || {};
     const quota = data?.quota || {};
-    if (data?.mode === 'ACTION_READY') bits.push('Action đã xác nhận');
+    if (data?.mode === 'ACTION_READY') bits.push('Tín hiệu đã xác nhận');
     else if (data?.mode === 'RESEARCH_ONLY') bits.push('Dữ liệu nghiên cứu hiện hành');
-    else if (data?.mode === 'METHOD_ONLY') bits.push('Chế độ phương pháp · không dùng tín hiệu hiện tại');
+    else if (data?.mode === 'KNOWLEDGE_ONLY') bits.push('Kiến thức StockRadar');
+    else if (data?.mode === 'METHOD_ONLY') bits.push('Giải thích phương pháp');
     if (source.generated_at) {
       try { bits.push(`Dữ liệu ${new Date(source.generated_at).toLocaleString('vi-VN')}`); } catch (_) {}
     }
+    if (data?.knowledge_version) bits.push(String(data.knowledge_version));
+    if (data?.conversation_persisted) bits.push('Đã lưu hội thoại');
     const tier = normalizeTier(data?.tier);
     if (tier === 'GUEST') bits.push(quota.remaining != null ? `Khách · còn ${quota.remaining}/3 câu hôm nay` : 'Khách · tối đa 3 câu/ngày');
     else if (tier === 'FREE') bits.push(quota.remaining != null ? `Free · còn ${quota.remaining}/10 câu hôm nay` : 'Free · tối đa 10 câu/ngày');
@@ -174,14 +192,62 @@
       status.textContent = remaining == null ? 'FREE · 10 CÂU / NGÀY' : `FREE · CÒN ${remaining}/10 CÂU HÔM NAY`;
       status.dataset.tier = 'free';
     } else {
-      status.textContent = 'PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN';
-      status.dataset.tier = 'premium';
+      status.textContent = 'PREMIUM · AI KHÔNG GIỚI HẠN · EMAIL CẢNH BÁO';
+      status.dataset.tier = 'paid';
     }
   }
 
   function freshnessNotice(data) {
     if (data?.mode !== 'METHOD_ONLY') return '';
-    return 'CHƯA ĐỦ DỮ LIỆU ĐỂ RA HÀNH ĐỘNG. StockRadar vẫn có thể giải thích doanh nghiệp/phương pháp bằng dữ liệu hiện có.';
+    return 'Chưa đủ dữ liệu hiện tại để xác nhận hành động mua/bán. StockRadar vẫn có thể giải thích phần phương pháp và dữ liệu đang có.';
+  }
+
+  async function callAuthenticated(session, payload) {
+    const url = `${String(config.supabaseUrl).replace(/\/$/, '')}/functions/v1/stock-ai-chat`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey, 'Authorization': `Bearer ${session.access_token}` },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(40000)
+    });
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    return { response, data };
+  }
+
+  async function hydrateHistory(session, log) {
+    if (!session?.access_token) return false;
+    const { response, data } = await callAuthenticated(session, { operation: 'history', thread_id: state.threadId || null });
+    if (!response.ok) return false;
+    if (data.thread_id) saveThreadId(data.thread_id);
+    const messages = Array.isArray(data.messages) ? data.messages : [];
+    if (!messages.length) {
+      showIntro(log, true);
+      return true;
+    }
+    log.replaceChildren();
+    messages.forEach(item => addMessage(log, item.role === 'user' ? 'user' : 'assistant', String(item.content || '')));
+    state.history = messages.slice(-MAX_GUEST_HISTORY).map(item => ({ role: item.role, content: String(item.content || '').slice(0, 600) }));
+    return true;
+  }
+
+  async function startNewThread(session, log, button) {
+    if (!session?.access_token || state.sending) return;
+    button.disabled = true;
+    const original = button.textContent;
+    button.textContent = 'Đang tạo…';
+    try {
+      const { response, data } = await callAuthenticated(session, { operation: 'new_thread' });
+      if (!response.ok || !data.thread_id) throw new Error('NEW_THREAD_FAILED');
+      saveThreadId(data.thread_id);
+      state.history = [];
+      showIntro(log, true);
+    } catch (_) {
+      addMessage(log, 'assistant', 'Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại.');
+    } finally {
+      button.disabled = false;
+      button.textContent = original;
+    }
   }
 
   async function ask(message, log, input, send, status) {
@@ -200,39 +266,47 @@
       const authenticated = Boolean(session?.access_token);
       updatePlan(status, state.quota ? {quota: state.quota, tier: account.tier} : null, account.tier);
 
-      if (!authenticated && !ticker && portfolioIntent(message) && !/(top|quét|quet|cổ phiếu nào|co phieu nao)/i.test(message)) {
-        addAction(log, 'Bạn có thể hỏi trực tiếp một mã HOSE. Tạo tài khoản để dùng danh sách theo dõi: Free · 0đ · 10 câu AI/ngày.', 'signup/?plan=free', 'Đăng ký Free');
+      if (!authenticated && !ticker && portfolioIntent(message)) {
+        addAction(log, 'Danh mục và lịch sử hội thoại theo tài khoản cần đăng nhập. Bạn vẫn có thể hỏi trực tiếp một mã HOSE ở chế độ Guest.', 'signup/?plan=free', 'Đăng ký Free');
         return;
       }
 
-      const endpoint = authenticated ? 'stock-ai' : 'stock-ai-guest';
-      const url = `${String(config.supabaseUrl).replace(/\/$/, '')}/functions/v1/${endpoint}`;
-      const headers = { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey };
-      if (authenticated) headers.Authorization = `Bearer ${session.access_token}`;
-      const body = authenticated ? {
-        scope: ticker ? 'auto' : (portfolioIntent(message) && !/(top|quét|quet|mã nào|ma nao|cổ phiếu nào|co phieu nao)/i.test(message) ? 'portfolio' : 'auto'),
-        ticker: ticker || '', horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY)
-      } : {
-        ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_HISTORY), guest_id: guestId()
-      };
-
-      window.StockRadarAnalytics?.aiSubmitted({tier: account.tier, ticker, horizon});
-      window.StockRadarAnalytics?.returnedToAI(account.tier);
-      const response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(35000) });
-      let data = {};
-      try { data = await response.json(); } catch (_) {}
+      let response, data;
+      if (authenticated) {
+        ({ response, data } = await callAuthenticated(session, {
+          operation: 'ask',
+          thread_id: state.threadId || null,
+          scope: ticker ? 'auto' : (portfolioIntent(message) ? 'portfolio' : 'auto'),
+          ticker: ticker || '',
+          horizon,
+          message: String(message).slice(0, 700)
+        }));
+      } else {
+        const url = `${String(config.supabaseUrl).replace(/\/$/, '')}/functions/v1/stock-ai-guest`;
+        response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': config.supabasePublishableKey },
+          body: JSON.stringify({ ticker, horizon, message: String(message).slice(0, 700), history: state.history.slice(-MAX_GUEST_HISTORY), guest_id: guestId() }),
+          signal: AbortSignal.timeout(35000)
+        });
+        data = {};
+        try { data = await response.json(); } catch (_) {}
+      }
 
       if (response.status === 401 && authenticated) {
         window.StockRadarAnalytics?.aiFailed({tier: account.tier});
-        addAction(log, 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục với hạn mức tài khoản của bạn.', 'dang-nhap/', 'Đăng nhập lại');
+        addAction(log, 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục cuộc trò chuyện.', 'dang-nhap/', 'Đăng nhập lại');
         return;
       }
 
+      if (data?.thread_id) saveThreadId(data.thread_id);
+      window.StockRadarAnalytics?.aiSubmitted({tier: account.tier, ticker, horizon});
+      window.StockRadarAnalytics?.returnedToAI(account.tier);
       const success = response.ok && window.StockRadarAnalytics?.aiResult(data) === true;
       if (!response.ok) window.StockRadarAnalytics?.aiFailed({tier: account.tier, ...data});
       const answer = data.answer || (response.ok ? 'StockRadar AI chưa có nội dung để trả lời.' : 'StockRadar AI tạm thời chưa thể phản hồi.');
       const modelState = window.StockRadarAnalytics?.modelStatus(data);
-      if (response.ok && modelState !== 'MODEL_READY') addMessage(log, 'assistant', data.model_notice || 'Mô hình AI tạm thời chưa khả dụng. Nội dung bên dưới là thông tin tham chiếu, chưa phải câu trả lời từ mô hình AI.');
+      if (response.ok && modelState && modelState !== 'MODEL_READY' && data.model_notice) addMessage(log, 'assistant', data.model_notice);
       if (!window.StockRadarDecisionView?.render(log, data, sourceMeta(data))) addMessage(log, 'assistant', answer, sourceMeta(data));
       const warning = freshnessNotice(data);
       if (warning && !data.decision_cards?.length) addMessage(log, 'assistant', warning);
@@ -248,7 +322,7 @@
       if (response.ok) {
         state.history.push({ role: 'user', content: String(message).slice(0, 600) });
         state.history.push({ role: 'assistant', content: String(answer).slice(0, 600) });
-        state.history = state.history.slice(-MAX_HISTORY);
+        state.history = state.history.slice(-MAX_GUEST_HISTORY);
       }
       if (success && !authenticated && state.tier === 'GUEST') {
         guestFreeCta(log, 'first');
@@ -263,7 +337,6 @@
       input.disabled = false;
       send.disabled = false;
       send.textContent = oldLabel;
-      // Keep the result/CTA visible instead of reopening a mobile keyboard automatically.
       if (!matchMedia('(pointer: coarse)').matches) input.focus({preventScroll: true});
     }
   }
@@ -274,16 +347,24 @@
     host.dataset.mounted = 'true';
 
     const top = node('div', 'sr-center-top');
+    const topLeft = node('div', 'sr-center-top-left');
     const status = node('span', 'sr-center-plan', 'ĐANG KIỂM TRA TÀI KHOẢN…');
+    const continuity = node('span', 'sr-center-continuity', 'Hội thoại liên tục');
+    topLeft.append(status, continuity);
+    const topRight = node('div', 'sr-center-top-actions');
     const privacy = node('span', 'sr-center-privacy', 'Không nhập mật khẩu · OTP · mã giao dịch');
-    top.append(status, privacy);
+    const newChat = node('button', 'sr-center-new-chat', 'Cuộc trò chuyện mới');
+    newChat.type = 'button';
+    newChat.hidden = true;
+    topRight.append(privacy, newChat);
+    top.append(topLeft, topRight);
 
     const log = node('div', 'sr-center-log');
     log.setAttribute('aria-live', 'polite');
-    addMessage(log, 'assistant', 'Hỏi tôi về một mã HOSE hoặc danh mục của bạn. Tôi sẽ dùng dữ liệu StockRadar hiện có và nói rõ khi dữ liệu chưa đủ mới hoặc chưa đủ chuẩn để ra hành động.');
+    showIntro(log, false);
 
     const chips = node('div', 'sr-center-chips');
-    ['FPT mua được chưa?', 'MWG 3–6 tháng thế nào?', 'Rủi ro chính của VNM?', 'Danh mục hôm nay cần làm gì?'].forEach(label => {
+    ['Phân tích FPT', 'Mua được chưa?', '3–6 tháng thì sao?', 'SEPA là gì?'].forEach(label => {
       const button = node('button', '', label);
       button.type = 'button';
       chips.append(button);
@@ -293,14 +374,14 @@
     const input = document.createElement('textarea');
     input.rows = 2;
     input.maxLength = 700;
-    input.placeholder = 'Nhập mã cổ phiếu HOSE bạn đang quan tâm';
+    input.placeholder = 'VD: Phân tích FPT; sau đó hỏi tiếp “mua được chưa?”';
     input.setAttribute('aria-label', 'Hỏi StockRadar AI');
-    const send = node('button', 'sr-center-send', 'Hỏi StockRadar AI');
+    const send = node('button', 'sr-center-send', 'Gửi');
     send.type = 'submit';
     form.append(input, send);
 
     const foot = node('div', 'sr-center-foot');
-    foot.innerHTML = '<span>Thử miễn phí · Không cần đăng nhập</span><span>Free · 0đ · 10 câu AI/ngày</span>';
+    foot.innerHTML = '<span>Guest · 3 câu/ngày</span><span>Free · 10 câu/ngày + lưu ngữ cảnh</span><span>Premium · AI không giới hạn + email cảnh báo</span>';
     host.replaceChildren(top, log, chips, form, foot);
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
@@ -327,12 +408,22 @@
     try {
       const account = await currentAccountTier();
       updatePlan(status, {quota:state.quota}, account.tier);
+      const authenticated = Boolean(account.session?.access_token);
+      newChat.hidden = !authenticated;
+      continuity.textContent = authenticated ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
+      if (authenticated) await hydrateHistory(account.session, log);
+      newChat.addEventListener('click', () => startNewThread(account.session, log, newChat));
+
       const client = await authClient();
       client?.auth?.onAuthStateChange?.(() => {
         setTimeout(async () => {
           try {
             const next = await currentAccountTier();
             updatePlan(status, {quota:state.quota}, next.tier);
+            const nextAuth = Boolean(next.session?.access_token);
+            newChat.hidden = !nextAuth;
+            continuity.textContent = nextAuth ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
+            if (nextAuth) await hydrateHistory(next.session, log);
           } catch (_) {
             status.textContent = 'Đang chờ xác nhận phiên tài khoản. Vui lòng thử lại.';
           }
