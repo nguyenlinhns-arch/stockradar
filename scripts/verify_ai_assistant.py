@@ -78,18 +78,22 @@ def main() -> int:
             center_js,
             (
                 "stock-ai-guest",
-                "stock-ai",
+                "stock-ai-chat",
                 "KHÁCH · 3 CÂU / NGÀY",
                 "FREE · 10 CÂU / NGÀY",
-                "PREMIUM · EMAIL ĐIỂM MUA/BÁN · AI KHÔNG GIỚI HẠN",
+                "PREMIUM · AI KHÔNG GIỚI HẠN · EMAIL CẢNH BÁO",
                 "signup/?plan=free",
                 "thanh-toan/?plan=premium",
                 "Tạo tài khoản Free",
                 "Nâng Premium",
                 "currentAccountTier",
                 "storageKey: STORAGE_KEY",
+                "operation: 'history'",
+                "operation: 'new_thread'",
+                "Cuộc trò chuyện mới",
+                "Đã lưu ngữ cảnh theo tài khoản",
             ),
-            "Native AI browser product contract",
+            "Native AI persistent conversation contract",
         )
         for stale in (
             "PAID · AI KHÔNG GIỚI HẠN",
@@ -159,7 +163,7 @@ def main() -> int:
         if "sr-ai-nav-link" not in source:
             raise SystemExit(f"AI navigation missing from: {relative}")
 
-    print("StockRadar AI production surface verified: native AI-first + Guest 3/day + Free 10/day + Premium unlimited/alert entitlement; signed-in Free upgrades directly to payment")
+    print("StockRadar AI production surface verified: persistent signed-in chat + Guest 3/day + Free 10/day + Premium unlimited/alert entitlement")
     return 0
 
 
