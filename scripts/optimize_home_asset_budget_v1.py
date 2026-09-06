@@ -24,6 +24,7 @@ REMOVE_JS = {
 }
 REQUIRED_CSS = {
     "ai-decision-view.css",
+    "ai-conversation-v2.css",
     "home-base.css",
     "home-ai-center-v1.css",
     "home-workspace-v2.css",
@@ -47,7 +48,7 @@ REQUIRED_JS = {
 }
 # Keep the performance gate strict. We reduce shipped bytes instead of raising this budget.
 MAX_LOCAL_ASSET_BYTES = 196_000  # Includes the requested six-column recommendation history and mobile layout.
-AI_CENTER_CACHE_VERSION = "20260905-decision1"
+AI_CENTER_CACHE_VERSION = "20260906-chat2"
 
 
 def basename(ref: str) -> str:
