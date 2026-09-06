@@ -55,10 +55,11 @@ const fs=require('node:fs');
       await page.goto('http://127.0.0.1:8765/radar5/');
       await page.locator('.sr-ai-launcher').click();
       await page.locator('.sr-ai-form textarea').fill('FPT mua được chưa?');
+      const requestsBeforeAsk=aiRequests; // Homepage history hydration may legitimately use the same authenticated endpoint.
       const answered=page.waitForResponse(r=>r.url().endsWith('/functions/v1/stock-ai-chat') && r.request().method()==='POST');
       await page.locator('.sr-ai-send').click();
       assert.equal((await (await answered).json()).status,'READY');
-      assert.equal(aiRequests,1,'route assistant must use the existing authenticated session');
+      assert.equal(aiRequests,requestsBeforeAsk+1,'one assistant submission must create exactly one authenticated AI request');
       await page.goto('http://127.0.0.1:8765/');
       await page.waitForFunction(t=>document.querySelector('[data-tier="'+t+'"]'),expected);
       if(tier==='FREE') {
