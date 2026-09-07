@@ -2,7 +2,7 @@
   "repo": "nguyenlinhns-arch/stockradar",
   "trusted_user": "nguyenlinhns-arch",
   "prefixes": ["[PC-CONTROL]", "[ZALO-CONTROL]"],
-  "poll_seconds": 45,
+  "poll_seconds": 75,
   "hub_url": "http://127.0.0.1:4310/health",
   "api_port": 4321,
   "auto_start_hub": true,
