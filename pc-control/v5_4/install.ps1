@@ -7,7 +7,7 @@ $RepoRaw = 'https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/pc-co
 $Expected = @{
     'agent.py' = '038d2c7868b19107f798c1cf11447c99683c51e3'
     'config.json' = 'ba9599adb63b98f908a540503827fcd19e375b82'
-    'repair_hub.ps1' = '418f3d2ed8f94aa04858e6647c43fb329b4338c3'
+    'repair_hub.ps1' = 'bd28ba1bf6a947ef885a740195e9eadb750bd1d3'
     'automation_hub.cmd' = 'af41efaebcf7b0cc75514ffae108c40afb955671'
 }
 
