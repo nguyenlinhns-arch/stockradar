@@ -1,0 +1,63 @@
+name: PC Control V5.4 Windows CI
+
+on:
+  push:
+    branches:
+      - pc-control
+    paths:
+      - 'pc-control/v5_4/**'
+      - '.github/workflows/pc-control-v54-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  windows-validation:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Compile Python agent
+        shell: pwsh
+        run: python -m py_compile pc-control/v5_4/agent.py
+
+      - name: Parse PowerShell scripts
+        shell: pwsh
+        run: |
+          $files = @(
+            'pc-control/v5_4/install.ps1',
+            'pc-control/v5_4/uninstall.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($file, [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error ("{0}: {1}" -f $file, $_.Message) }
+              throw "PowerShell parse failed: $file"
+            }
+            Write-Host "PowerShell parse OK: $file"
+          }
+
+      - name: Validate config and agent allow-list
+        shell: pwsh
+        run: |
+          python -c "import json; json.load(open(r'pc-control/v5_4/config.json', encoding='utf-8')); print('config JSON OK')"
+          python -c "import importlib.util; p=r'pc-control/v5_4/agent.py'; s=importlib.util.spec_from_file_location('pcbridge',p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); assert m.parse_action('[PC-CONTROL] PING')=='PING'; assert m.parse_action('[ZALO-CONTROL] RESTART_DESKTOP_COMMANDER')=='RESTART_DESKTOP_COMMANDER'; assert m.parse_action('[OTHER] PING') is None; r=m.run_action('PING'); assert r.get('ok') and r.get('pong'); r=m.run_action('SHELL'); assert not r.get('ok'); print('allow-list tests OK')"
+
+      - name: Verify release manifest hashes
+        shell: pwsh
+        run: |
+          $release = Get-Content 'pc-control/v5_4/RELEASE.json' -Raw | ConvertFrom-Json
+          $agent = (git hash-object 'pc-control/v5_4/agent.py').Trim()
+          $config = (git hash-object 'pc-control/v5_4/config.json').Trim()
+          $installer = (git hash-object 'pc-control/v5_4/install.ps1').Trim()
+          if ($agent -ne $release.agent_git_blob_sha1) { throw "Agent hash mismatch: $agent" }
+          if ($config -ne $release.config_git_blob_sha1) { throw "Config hash mismatch: $config" }
+          if ($installer -ne $release.installer_git_blob_sha1) { throw "Installer hash mismatch: $installer" }
+          Write-Host 'Release manifest hashes OK.'
