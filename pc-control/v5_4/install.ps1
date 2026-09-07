@@ -6,9 +6,10 @@ $Version = '5.4.1'
 $RepoRaw = 'https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/pc-control/pc-control/v5_4'
 $Expected = @{
     'agent.py' = '038d2c7868b19107f798c1cf11447c99683c51e3'
-    'config.json' = 'ba9599adb63b98f908a540503827fcd19e375b82'
+    'config.json' = '4e191a55d142672b4ea2a80944d3520cf4d130eb'
     'repair_hub.ps1' = 'bd28ba1bf6a947ef885a740195e9eadb750bd1d3'
     'automation_hub.cmd' = 'af41efaebcf7b0cc75514ffae108c40afb955671'
+    'start_desktop_commander.ps1' = 'de93a97b3fec0f12fe7f7a6e69e55be440f15500'
 }
 
 $Root = Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
@@ -86,6 +87,7 @@ if ($python) {
 }
 Log 'Python syntax check OK.'
 ParsePowerShell $tempFiles['repair_hub.ps1']
+ParsePowerShell $tempFiles['start_desktop_commander.ps1']
 
 $existingConfig = Join-Path $Root 'config.json'
 if (Test-Path -LiteralPath $existingConfig) {
@@ -97,6 +99,7 @@ if (Test-Path -LiteralPath $existingConfig) {
 Move-Item -Force -LiteralPath $tempFiles['agent.py'] -Destination (Join-Path $Root 'agent.py')
 Move-Item -Force -LiteralPath $tempFiles['config.json'] -Destination $existingConfig
 Move-Item -Force -LiteralPath $tempFiles['repair_hub.ps1'] -Destination (Join-Path $Root 'repair_hub.ps1')
+Move-Item -Force -LiteralPath $tempFiles['start_desktop_commander.ps1'] -Destination (Join-Path $Root 'start_desktop_commander.ps1')
 Copy-Item -Force -LiteralPath $tempFiles['automation_hub.cmd'] -Destination (Join-Path $Root 'automation_hub.cmd')
 Move-Item -Force -LiteralPath $tempFiles['automation_hub.cmd'] -Destination $HubWrapper
 Log "Hub recovery wrapper installed: $HubWrapper"
