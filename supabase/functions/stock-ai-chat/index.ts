@@ -1,5 +1,7 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
+import { loadProjectKnowledge, projectKnowledgeInstructions, projectKnowledgeMeta } from "../_shared/stockradar-knowledge.ts";
+// PROJECT_KNOWLEDGE_BRIDGE_V2
 
 const ORIGINS = new Set([
   "https://stockradar.vn",
@@ -74,13 +76,7 @@ function openAIText(payload: any) {
 }
 
 async function activeKnowledge(db: any) {
-  const {data} = await db.from("stockradar_ai_knowledge_versions")
-    .select("version,title,content,activated_at")
-    .eq("status","ACTIVE")
-    .order("activated_at",{ascending:false})
-    .limit(1)
-    .maybeSingle();
-  return data || {version:"STATIC_CORE",title:"StockRadar runtime core",content:""};
+  return await loadProjectKnowledge(db);
 }
 
 async function ensureThread(db: any, userId: string, requestedId: unknown, knowledgeVersion: string, forceNew = false) {
@@ -160,7 +156,7 @@ async function knowledgeAnswer(db: any, userId: string, tier: string, message: s
   if (!quotaResult.ok) return {httpStatus:quotaResult.status, payload:{...quotaResult.body,thread_id:thread.id,knowledge_version:knowledge.version}};
   const key = Deno.env.get("OPENAI_API_KEY")?.trim();
   if (!key) return {httpStatus:200,payload:{status:"READY_FALLBACK",reason:"OPENAI_KEY_MISSING",tier,mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_CREDIT_BLOCKED",answer_engine:"KNOWLEDGE_CORE",answer:"StockRadar đã lưu được ngữ cảnh hội thoại, nhưng mô hình AI hiện chưa khả dụng. Bạn có thể hỏi trực tiếp một mã HOSE để dùng lớp phân tích dữ liệu hiện hành."}};
-  const instructions = `Bạn là StockRadar AI. Nguồn tri thức bên dưới là source of truth của dự án cho các câu hỏi phương pháp và cách phân tích. Chỉ phân tích cổ phiếu HOSE, không phân tích Crypto/Coin, HNX hoặc UPCoM. Không bịa giá, tín hiệu, mục tiêu hay dữ liệu thị trường khi context không có. Trả lời bằng tiếng Việt rõ ràng, tự nhiên, như một cuộc hội thoại liên tục.\n\nKNOWLEDGE VERSION: ${knowledge.version}\n${knowledge.content}`;
+  const instructions = projectKnowledgeInstructions("Bạn là StockRadar AI. Trả lời bằng tiếng Việt rõ ràng, liên tục theo hội thoại. Chỉ giải thích phương pháp cho HOSE; không phân tích Crypto/Coin, HNX hoặc UPCoM. Trong nhánh KNOWLEDGE_ONLY, không có dữ liệu thị trường mới: không công bố giá, Buy Zone, Stop, Target, xác suất hay tín hiệu hành động; số trong lịch sử không phải dữ liệu hiện tại.", knowledge);
   const context = {USER_QUESTION:message,RECENT_CONVERSATION:history.slice(-12),THREAD_CONTEXT:{last_ticker:thread.last_ticker,last_horizon:thread.last_horizon},REQUESTED_HORIZON:inputHorizon};
   let response: Response;
   try {
@@ -174,7 +170,7 @@ async function knowledgeAnswer(db: any, userId: string, tier: string, message: s
   let payload: any = null; try { payload = await response.json(); } catch {}
   const text = response.ok && payload?.status === "completed" ? openAIText(payload) : "";
   if (!text) return {httpStatus:200,payload:{status:"READY_FALLBACK",reason:`OPENAI_${response.status}`,tier,mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_ERROR",answer_engine:"KNOWLEDGE_CORE",answer:"StockRadar chưa tạo được câu trả lời từ mô hình AI lúc này. Lịch sử hội thoại vẫn được giữ lại."}};
-  return {httpStatus:200,payload:{status:"READY",tier,scope:"conversation",mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_READY",answer_engine:"MODEL_PLUS_KNOWLEDGE_CORE",answer:text}};
+  return {httpStatus:200,payload:{status:"READY",tier,scope:"conversation",mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_READY",answer_engine:"MODEL_PLUS_KNOWLEDGE_CORE",...projectKnowledgeMeta(knowledge,true),answer:text}};
 }
 
 Deno.serve(async (req: Request) => {
@@ -255,9 +251,9 @@ Deno.serve(async (req: Request) => {
     });
     let result: any = {}; try { result = await upstream.json(); } catch {}
     if (upstream.ok && result?.answer) {
-      await saveExchange(db,thread,{message,scope:result.scope || scope,ticker:validTicker(result.ticker) || resolvedTicker,horizon:inputHorizon},result,knowledge.version);
+      await saveExchange(db,thread,{message,scope:result.scope || scope,ticker:validTicker(result.ticker) || resolvedTicker,horizon:inputHorizon},result,result?.knowledge_version || knowledge.version);
     }
-    return json({...result,thread_id:thread.id,conversation_persisted:upstream.ok && Boolean(result?.answer),knowledge_version:knowledge.version},upstream.status,origin);
+    return json({...result,thread_id:thread.id,conversation_persisted:upstream.ok && Boolean(result?.answer),knowledge_version:result?.knowledge_version || knowledge.version},upstream.status,origin);
   } catch (error) {
     console.error("stock-ai-chat",error?.message || error);
     return json({status:"SERVICE_UNAVAILABLE",answer:"StockRadar AI tạm thời chưa thể phản hồi. Vui lòng thử lại."},503,origin);

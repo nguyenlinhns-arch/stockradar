@@ -66,3 +66,7 @@ Within StockRadar's controllable implementation scope, the operational static pr
 The production stock API remains intentionally disabled and its cache is empty. Any structurally valid three-letter ticker can enter the public lookup flow, but verified current-HOSE membership and real market conclusions remain gated. Live Top HOSE, production recommendations/performance, actual product email delivery, actual payment collection and Ads remain **BLOCKED by external data-rights/provider/compliance inputs rather than unfinished core application code**.
 
 Critical path: `licensed public/derived-data rights + supplier credentials → current HOSE raw market/fundamental/event/corporate-action bundle → fresh production manifest → StockRadar auto research + Decision-Grade report batch → manifest-bound cache → reconciliation → compliance evidence → activate exact manifest/snapshot → controlled signed-in Free/Trial/Paid browser E2E → email/payment providers + signed webhooks → formal compliance → PRODUCTION_APPROVED`.
+
+## Project knowledge bridge — 2026-09-07
+
+All three AI endpoints now load the same reviewed project-knowledge version server-side. Data/Action gates, quotas, payment approval and account ownership are unchanged. This is a reviewed snapshot bridge, not direct or automatic access to ChatGPT project chats. Runtime deploy and live-model verification are tracked separately in `docs/AI_PROJECT_KNOWLEDGE_BRIDGE_20260907.md`.
