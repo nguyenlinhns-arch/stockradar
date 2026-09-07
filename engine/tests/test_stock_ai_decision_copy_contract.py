@@ -99,7 +99,11 @@ class StockAiDecisionCopyContractTests(unittest.TestCase):
         source = "".join(raw_source.split())
         self.assertIn('if(mode==="METHOD_ONLY")', source)
         self.assertNotIn('if(mode!=="ACTION_READY")', source)
-        self.assertIn('instructions:STOCKRADAR_SYSTEM_CORE', source)
+        # The unchanged safety core must be passed through the reviewed project bridge.
+        self.assertIn('instructions:projectKnowledgeInstructions(STOCKRADAR_SYSTEM_CORE,projectKnowledge)', source)
+        self.assertIn('constprojectKnowledge=awaitloadProjectKnowledge(db)', source)
+        self.assertIn('projectKnowledgeMeta(projectKnowledge,Boolean(modelText))', source)
+        self.assertNotIn('body.knowledge', source)
         self.assertIn('answer_engine:modelText?"MODEL_PLUS_STOCKRADAR_CORE":"STOCKRADAR_CORE"', source)
 
     def test_signed_in_research_uses_model_when_data_exists(self):

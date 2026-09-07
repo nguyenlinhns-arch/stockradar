@@ -4,6 +4,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 MIGRATION = ROOT / "supabase" / "migrations" / "20260906144605_add_stockradar_ai_knowledge_and_persistent_chat.sql"
 CHAT_EDGE = ROOT / "supabase" / "functions" / "stock-ai-chat" / "index.ts"
+KNOWLEDGE = ROOT / "supabase" / "functions" / "_shared" / "stockradar-knowledge.ts"
 CLIENT = ROOT / "website" / "assets" / "ai-center.js"
 PRIVACY = ROOT / "website" / "quyen-rieng-tu" / "index.html"
 
@@ -31,7 +32,7 @@ class StockAiPersistentChatTests(unittest.TestCase):
             '"ask","history","new_thread"',
             "stockradar_ai_threads",
             "stockradar_ai_messages",
-            "stockradar_ai_knowledge_versions",
+            "return await loadProjectKnowledge(db);",
             "last_ticker",
             "forwardHistory",
             "knowledgeAnswer",
@@ -40,6 +41,15 @@ class StockAiPersistentChatTests(unittest.TestCase):
             "store:false",
         ):
             self.assertIn(marker, source)
+        # Knowledge retrieval moved to the shared loader; ownership and active-version
+        # filtering remain required rather than relying on an obsolete inline query.
+        knowledge = KNOWLEDGE.read_text(encoding="utf-8")
+        self.assertIn(".from('stockradar_ai_knowledge_versions')", knowledge)
+        self.assertIn(".eq('status', 'ACTIVE')", knowledge)
+        self.assertIn(".in('source', PROJECT_KNOWLEDGE_SOURCES)", knowledge)
+        self.assertIn('auth.auth.getUser(token)', source)
+        self.assertIn('.eq("user_id",userId)', source)
+        self.assertIn('result?.knowledge_version || knowledge.version', source)
         self.assertNotIn("SUPABASE_SERVICE_ROLE_KEY =", source)
         self.assertNotIn("OPENAI_API_KEY =", source)
 
