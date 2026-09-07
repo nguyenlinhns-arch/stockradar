@@ -2,9 +2,10 @@
   "name": "ThayLinh PC Bridge V5.4.1",
   "version": "5.4.1",
   "channel": "production-candidate",
+  "payload_commit": "4ae0a3bc6f5ff0acba95e4630c41c09161e8bc9f",
   "agent_git_blob_sha1": "038d2c7868b19107f798c1cf11447c99683c51e3",
   "config_git_blob_sha1": "4e191a55d142672b4ea2a80944d3520cf4d130eb",
-  "installer_git_blob_sha1": "e010c06bb72a067ee0a8626867befa0c59cc9045",
+  "installer_git_blob_sha1": "161de016ba16196767c708f602c9ffda23a6926b",
   "repair_hub_git_blob_sha1": "bd28ba1bf6a947ef885a740195e9eadb750bd1d3",
   "automation_hub_wrapper_git_blob_sha1": "af41efaebcf7b0cc75514ffae108c40afb955671",
   "desktop_commander_launcher_git_blob_sha1": "de93a97b3fec0f12fe7f7a6e69e55be440f15500",
@@ -17,5 +18,6 @@
   "supervisor_restart_policy": true,
   "hub_autodiscovery": true,
   "desktop_commander_local_first": true,
+  "immutable_payload_downloads": true,
   "requires_live_windows_validation": true
 }
