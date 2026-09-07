@@ -1,3 +1,5 @@
+// CHATGPT_WORKSPACE_NO_API_V1
+import { chatGPTWorkspaceMode, chatGPTWorkspaceHandoff } from "../_shared/chatgpt-workspace.ts";
 import { loadProjectBridge, loadProjectContext, projectContextInput, projectBridgeMeta, PROJECT_HANDOFF_RULE } from "../_shared/stockradar-project-context.ts";
 // PRIVATE_PROJECT_BRIDGE_V1
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -59,6 +61,7 @@ Deno.serve(async req=>{
   let body;try{body=await req.json()}catch{return json({status:'INVALID_REQUEST',reason:'INVALID_JSON'},400,origin)}
   const requestedTicker=String(body.ticker||'').trim().toUpperCase(),scopeRaw=String(body.scope||'auto').trim().toLowerCase(),horizon=String(body.horizon||'SHORT_TERM').trim().toUpperCase(),message=clean(body.message),hist=history(body.history);
   if(!validHorizon(horizon)||!message||!['auto','ticker','portfolio','scan','compare'].includes(scopeRaw))return json({status:'INVALID_REQUEST'},400,origin);
+  if(chatGPTWorkspaceMode(Deno.env)){if(!message||!validHorizon(horizon))return json({status:"INVALID_REQUEST"},400,origin);return json(chatGPTWorkspaceHandoff(message,horizon),200,origin);}
   const query=parseResearchQuery(message,requestedTicker);
   const ticker=query.scope==='ticker'?query.tickers[0]:'';
   const scope=scopeRaw==='portfolio'?'portfolio':query.scope;

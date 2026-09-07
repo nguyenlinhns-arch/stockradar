@@ -1,3 +1,5 @@
+// CHATGPT_WORKSPACE_NO_API_V1
+import * as workspaceModeHelpers from '../../supabase/functions/_shared/chatgpt-workspace.ts';
 // PRIVATE_PROJECT_BRIDGE_V1
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -32,7 +34,7 @@ test('successful provider fixture satisfies the real research contract',()=>{
   assert.equal(core.hasResearchFramework(validModelAnswer),true);
 });
 
-function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,incomplete=false,malformed=false,watch=[],knowledge=reviewedKnowledge,knowledgeError=false}={}) {
+function harness({workspaceMode=false,guest=false,tier='FREE',quota=true,burst=true,stale=false,incomplete=false,malformed=false,watch=[],knowledge=reviewedKnowledge,knowledgeError=false}={}) {
   let handler, modelInput, modelRequest, quotaCalls=0;
   const calls=[];
   const context=ticker=>({status:'INTERNAL_RESEARCH_READY',context_grade:'RESEARCH_READY',ticker,
@@ -58,9 +60,9 @@ function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,inco
       };
       chain.then=resolve=>Promise.resolve({data:table==='watchlist_items'?watch:[]}).then(resolve);return chain;
     }};
-  const Deno={serve:fn=>{handler=fn;},env:{get:name=>({SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'test-only',OPENAI_API_KEY:'test-only'}[name])}};
+  const Deno={serve:fn=>{handler=fn;},env:{get:name=>({SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'test-only',STOCKRADAR_INFERENCE_MODE:workspaceMode?'CHATGPT_WORKSPACE':'API',OPENAI_API_KEY:'test-only'}[name])}};
   const fetchMock=async(url,args)=>{modelRequest=JSON.parse(args.body);modelInput=JSON.parse(modelRequest.input);return new Response(JSON.stringify({status:incomplete?'incomplete':'completed',output_text:malformed?'KẾT LUẬN: THEO DÕI.':validModelAnswer}));};
-  const bindings={...core,...view,...query,...decision,...modelStatus,...projectKnowledge,...privateProjectContext,Deno,createClient:()=>db,fetch:fetchMock};
+  const bindings={...core,...view,...query,...decision,...modelStatus,...projectKnowledge,...privateProjectContext,...workspaceModeHelpers,Deno,createClient:()=>db,fetch:fetchMock};
   const source=fs.readFileSync(new URL(`../../supabase/functions/${guest?'stock-ai-guest':'stock-ai'}/index.ts`,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
   new Function(...Object.keys(bindings),source.replace("} catch { return json({status:'SERVICE_UNAVAILABLE',answer:","} catch (error) { throw error; return json({status:'SERVICE_UNAVAILABLE',answer:"))(...Object.values(bindings));
   return {calls,get modelInput(){return modelInput},get modelRequest(){return modelRequest},get quotaCalls(){return quotaCalls},async ask(message,extra={}){
@@ -169,3 +171,6 @@ test('client-supplied knowledge cannot replace server-reviewed methodology',asyn
   assert.equal(r.body.knowledge_version,reviewedKnowledge.version);
  }
 });
+
+
+test('workspace mode stops signed-in and guest API inference before quota or market queries',async()=>{for(const guest of [false,true]){const h=harness({guest,workspaceMode:true});const r=await h.ask('Phân tích FPT');assert.equal(r.status,200);assert.equal(r.body.mode,'CHATGPT_WORKSPACE');assert.equal(r.body.model_status,'MODEL_NOT_CALLED');assert.equal(r.body.provider_attempted,false);assert.equal(r.body.quota_consumed,false);assert.equal(h.modelInput,undefined);assert.equal(h.quotaCalls,0);assert.ok(!h.calls.some(x=>x.name==='fetch_stockradar_ai_context'));assert.equal(r.body.handoff.url,'https://chatgpt.com/');}});

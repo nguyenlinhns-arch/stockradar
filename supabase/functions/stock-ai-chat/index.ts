@@ -1,3 +1,5 @@
+// CHATGPT_WORKSPACE_NO_API_V1
+import { chatGPTWorkspaceMode, chatGPTWorkspaceHandoff } from "../_shared/chatgpt-workspace.ts";
 // PROJECT_CONTEXT_READ_V1
 import { projectRecordIntent, projectRecordAnswer, knowledgeProviderFailure } from "../_shared/chat-continuation.ts";
 // PROJECT_AUTORESUME_ROUTING_V1
@@ -196,6 +198,7 @@ async function consumeKnowledgeQuota(db: any, userId: string, tier: string) {
 }
 
 async function knowledgeAnswer(db: any, userId: string, tier: string, message: string, history: any[], knowledge: any, thread: any, inputHorizon: string, bridge: any) {
+  if (chatGPTWorkspaceMode(Deno.env)) return {httpStatus:200,payload:chatGPTWorkspaceHandoff(message,inputHorizon)};
   const quotaResult = await consumeKnowledgeQuota(db,userId,tier);
   if (!quotaResult.ok) return {httpStatus:quotaResult.status, payload:{...quotaResult.body,thread_id:thread.id,knowledge_version:knowledge.version,quota_consumed:false,provider_attempted:false,model_status:"MODEL_NOT_CALLED"}};
   const base = {tier,scope:"conversation",mode:"KNOWLEDGE_ONLY",thread_id:thread.id,...projectKnowledgeMeta(knowledge,false),quota:quotaResult.quota,quota_consumed:true};
@@ -283,6 +286,7 @@ Deno.serve(async (req: Request) => {
       await saveExchange(db,thread,{message,scope:"conversation",ticker:"",horizon:thread.last_horizon || "SHORT_TERM"},record,knowledge.version);
       return json({...record,conversation_persisted:true},200,origin);
     }
+    if (chatGPTWorkspaceMode(Deno.env)) return json({...chatGPTWorkspaceHandoff(message,body.horizon),thread_id:thread.id},200,origin);
     const existing = await loadMessages(db,thread.id,MAX_STORED_HISTORY);
     const explicit = explicitTicker(message);
     const requested = validTicker(body.ticker);

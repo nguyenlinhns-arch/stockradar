@@ -1,3 +1,5 @@
+// CHATGPT_WORKSPACE_NO_API_V1
+import * as workspaceModeHelpers from '../../supabase/functions/_shared/chatgpt-workspace.ts';
 // PROJECT_CONTEXT_READ_V1
 import * as continuation from '../../supabase/functions/_shared/chat-continuation.ts';
 // PROJECT_AUTORESUME_ROUTING_V1
@@ -10,7 +12,7 @@ import * as knowledge from '../../supabase/functions/_shared/stockradar-knowledg
 import {parseResearchQuery} from '../../supabase/functions/_shared/stockradar-query.ts';
 const U='11111111-1111-4111-8111-111111111111',V='22222222-2222-4222-8222-222222222222',T='33333333-3333-4333-8333-333333333333',O='44444444-4444-4444-8444-444444444444';
 const SUMMARY='PRIVATE_REVIEWED_HANDOFF_ONLY_FOR_OWNER. Continue research using fresh data; no current prices are provided.';
-function harness({user=U,providerError=false,linked=true,keyMissing=false,burstAllowed=true}={}) {
+function harness({workspaceMode=false,user=U,providerError=false,linked=true,keyMissing=false,burstAllowed=true}={}) {
  let handler,modelInput,forwarded;const calls=[];
  const tables={
   stockradar_ai_user_memory:linked?[{user_id:U,preferences:{project_bridge:{enabled:true,source:'CHATGPT_PROJECT_STOCKRADAR',version:'PRIVATE_TEST_V1',thread_id:T,reviewed_at:'2025-01-01T00:00:00Z',summary:SUMMARY}}}]:[],
@@ -24,10 +26,10 @@ function harness({user=U,providerError=false,linked=true,keyMissing=false,burstA
   const result=()=>{let rows=(tables[table]||[]).filter(r=>filters.every(f=>f(r)));if(action==='insert'){const r={...value,id:value.id||'55555555-5555-4555-8555-555555555555',status:value.status||'ACTIVE'};(tables[table]||=[]).push(r);rows=[r];}if(action==='update')rows.forEach(r=>Object.assign(r,value));if(descending)rows=rows.slice().sort((a,b)=>b.id-a.id);return {data:rows.slice(0,limit),error:null};};
   chain.maybeSingle=chain.single=async()=>{const r=result();return {...r,data:r.data[0]||null};};chain.then=(resolve,reject)=>Promise.resolve(result()).then(resolve,reject);return chain;
  }};
- const Deno={serve:fn=>{handler=fn;},env:{get:key=>({SUPABASE_URL:'https://test.invalid',SUPABASE_ANON_KEY:'test',SUPABASE_SERVICE_ROLE_KEY:'test',OPENAI_API_KEY:keyMissing?'':'test'}[key])}};
+ const Deno={serve:fn=>{handler=fn;},env:{get:key=>({SUPABASE_URL:'https://test.invalid',SUPABASE_ANON_KEY:'test',SUPABASE_SERVICE_ROLE_KEY:'test',STOCKRADAR_INFERENCE_MODE:workspaceMode?'CHATGPT_WORKSPACE':'API',OPENAI_API_KEY:keyMissing?'':'test'}[key])}};
  const fetch=async(url,opts)=>{const data=JSON.parse(opts.body);if(url.includes('api.openai.com')){modelInput=JSON.parse(data.input);return new Response(JSON.stringify(providerError?{error:{code:'insufficient_quota'}}:{status:'completed',output_text:'Đây là câu trả lời phương pháp mô phỏng.'}),{status:providerError?429:200});}forwarded=data;return new Response(JSON.stringify({status:'READY_FALLBACK',answer:'Dữ liệu tham chiếu mô phỏng.',scope:'ticker',ticker:data.ticker,model_status:'MODEL_ERROR',knowledge_version:'PUBLIC_TEST'}));};
  const raw=fs.readFileSync(new URL('../../supabase/functions/stock-ai-chat/index.ts',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
- const bindings={...bridge,...knowledge,...continuation,Deno,createClient:()=>db,fetch};new Function(...Object.keys(bindings),stripTypeScriptTypes(raw))(...Object.values(bindings));
+ const bindings={...bridge,...knowledge,...continuation,...workspaceModeHelpers,Deno,createClient:()=>db,fetch};new Function(...Object.keys(bindings),stripTypeScriptTypes(raw))(...Object.values(bindings));
  return {calls,tables,get modelInput(){return modelInput;},get forwarded(){return forwarded;},async ask(body,token='test') {const headers={'Content-Type':'application/json',Origin:'https://stockradar.vn'};if(token)headers.Authorization='Bearer '+token;const response=await handler(new Request('https://test.invalid',{method:'POST',headers,body:JSON.stringify(body)}));return {status:response.status,body:await response.json()};}};
 }
 test('resume requires authentication before reading project context',async()=>{const h=harness();assert.equal((await h.ask({operation:'resume_project'},'')).status,401);assert.equal(h.calls.length,0);});
@@ -94,3 +96,7 @@ test('a successful knowledge model reply records true persistence only after sav
  const h=harness();const r=await h.ask({message:'SEPA là gì?',thread_id:T});
  assert.equal(r.body.model_status,'MODEL_READY');assert.equal(r.body.knowledge_applied,true);assert.equal(r.body.conversation_persisted,true);assert.equal(r.body.provider_http_status,200);assert.equal(h.tables.stockradar_ai_messages.length,3);
 });
+
+
+test('workspace chat never calls inference or daily quota for a new research/method question',async()=>{for(const message of ['Phân tích FPT','SEPA là gì?']){const h=harness({workspaceMode:true});const r=await h.ask({message,thread_id:T});assert.equal(r.body.mode,'CHATGPT_WORKSPACE');assert.equal(r.body.provider_attempted,false);assert.equal(h.modelInput,undefined);assert.equal(h.forwarded,undefined);assert.ok(!h.calls.some(x=>x.name==='consume_stockradar_api_quota'));assert.equal(h.tables.stockradar_ai_messages.length,1);}});
+test('workspace mode preserves owned history and context record reads',async()=>{const h=harness({workspaceMode:true});assert.equal((await h.ask({operation:'history',thread_id:T})).body.messages.length,1);const r=await h.ask({message:'Đã liên thông với dự án chưa?',thread_id:T});assert.equal(r.body.answer_engine,'PROJECT_HANDOFF_RECORD');assert.equal(r.body.provider_attempted,false);});

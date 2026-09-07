@@ -1,3 +1,5 @@
+// CHATGPT_WORKSPACE_NO_API_V1
+import { chatGPTWorkspaceMode, chatGPTWorkspaceHandoff } from "../_shared/chatgpt-workspace.ts";
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 import { STOCKRADAR_SYSTEM_CORE, deterministicStockRadarAnswer, normalizeResearchContext, stockRadarMode, hasResearchFramework } from "../_shared/stockradar-core.ts";
@@ -43,6 +45,7 @@ Deno.serve(async req=>{
   if(req.method!=='POST')return json({status:'METHOD_NOT_ALLOWED'},405,origin,{Allow:'POST, OPTIONS'});
   let body; try{body=await req.json()}catch{return json({status:'INVALID_REQUEST',reason:'INVALID_JSON'},400,origin)}
   const requestedTicker=String(body.ticker||'').trim().toUpperCase(),horizon=String(body.horizon||'SHORT_TERM').trim().toUpperCase(),message=clean(body.message),guestId=String(body.guest_id||'').trim(),history=cleanHistory(body.history);
+  if(chatGPTWorkspaceMode(Deno.env)){if(!message||!validHorizon(horizon))return json({status:"INVALID_REQUEST"},400,origin);return json(chatGPTWorkspaceHandoff(message,horizon),200,origin);}
   const query=parseResearchQuery(message,requestedTicker);
   const ticker=query.scope==='ticker'?query.tickers[0]:'';
   if(query.scope==='portfolio')return json({status:'INVALID_REQUEST',answer:'Nhập mã HOSE, yêu cầu quét hoặc so sánh cổ phiếu.'},400,origin);
