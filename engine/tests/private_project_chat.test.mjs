@@ -1,3 +1,4 @@
+// PROJECT_AUTORESUME_ROUTING_V1
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -38,3 +39,22 @@ test('provider failure never claims the private context was successfully applied
 test('ticker request forwards the owned thread id but not the handoff in a client field',async()=>{const h=harness();const r=await h.ask({message:'tra cứu FPT',thread_id:T});assert.equal(r.status,200);assert.equal(h.forwarded.ticker,'FPT');assert.equal(h.forwarded.thread_id,T);assert.ok(!JSON.stringify(h.forwarded).includes(SUMMARY));});
 test('Vietnamese lookup phrase does not invent TRA while real TRA remains usable',()=>{for(const text of ['tra cứu FPT','Tra cuu FPT','TRA CỨU: FPT'])assert.deepEqual(parseResearchQuery(text).tickers,['FPT']);assert.deepEqual(parseResearchQuery('tra cứu TRA').tickers,['TRA']);assert.deepEqual(parseResearchQuery('TRA').tickers,['TRA']);});
 test('frontend lookup and server lookup keep the same non-phantom behavior',()=>{const text=fs.readFileSync(new URL('../../website/assets/ai-center.js',import.meta.url),'utf8');const a=text.indexOf('  function explicitTicker('),z=text.indexOf('\n  function horizonFromText(',a);const fn=new Function('validTicker','STOPWORDS',text.slice(a,z)+';return explicitTicker;')(t=>/^[A-Z0-9]{3}$/.test(t),new Set());assert.equal(fn('tra cứu FPT'),'FPT');assert.equal(fn('tra cứu TRA'),'TRA');assert.match(text,/Tiếp tục từ dự án/);assert.match(text,/operation:'resume_project'/);assert.match(text,/current.user.id !== session.user\?\.id/);});
+
+
+test('long Vietnamese lookup stays on the intended ticker through the real chat handler',async()=>{
+ const h=harness();await h.ask({message:'Tra cứu FPT; chỉ dùng dữ liệu có nguồn và ghi rõ ngày dữ liệu.',thread_id:T});
+ assert.equal(h.forwarded.ticker,'FPT');
+ assert.deepEqual(parseResearchQuery(h.forwarded.message,h.forwarded.ticker).tickers,['FPT']);
+});
+test('Pocket Pivot follow-up keeps the current ticker rather than becoming an all-market scan',async()=>{
+ const h=harness();await h.ask({message:'Có Pocket Pivot chưa?',thread_id:T});
+ assert.equal(h.forwarded.ticker,'FPT');assert.equal(h.forwarded.scope,'ticker');
+});
+test('server infers an explicitly changed horizon in a follow-up without a client hint',async()=>{
+ const h=harness();await h.ask({message:'3–6 tháng thì sao?',thread_id:T});
+ assert.equal(h.forwarded.ticker,'FPT');assert.equal(h.forwarded.horizon,'MEDIUM_TERM');
+});
+test('project-context questions stay on the knowledge route without inventing a ticker',async()=>{
+ const h=harness();await h.ask({message:'Đoạn chat này liên thông với dự án của tôi chưa?',thread_id:T});
+ assert.equal(h.forwarded,undefined);assert.equal(h.modelInput.PROJECT_HANDOFF.summary,SUMMARY);
+});

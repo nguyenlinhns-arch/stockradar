@@ -1,13 +1,40 @@
+// PROJECT_AUTORESUME_ROUTING_V1
 // PRIVATE_PROJECT_BRIDGE_V1
 import { normalizeResearchContext } from './stockradar-core.ts';
 
-const STOP = new Set(['VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR','CHI','DON','GON','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','CHO','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','MAI','HOM','CAC','CUA','VOI','TAI']);
+function extractStockTickers(text) {
+  // Canonical lexical extractor, embedded identically in browser/chat/research.
+  // This recognizes mentions only: listing, venue and data gates remain server-side.
+  const raw = String(text || '').normalize('NFC').slice(0,8000);
+  const masked = raw
+    .replace(/https?:\/\/\S+|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, s => ' '.repeat(s.length))
+    .replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu, s => ' '.repeat(s.length));
+  const technical = new Set(['VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR','RSI','MAC','PEG','MOS','GDP','CPI','USD','VND','ETF','NAV','IPO','API','OTP','JWT','URL','CEO','CFO','CTO','LLM','MAI']);
+  const words = new Set(['CHI','CHO','GHI','TRA','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','HOM','CAC','CUA','VOI','TAI','TOI','NEN','CON','HON','GAN','LAM','VAN','QUA','MOT','HAI','NAM','DAY','DAU','TEN','BAO','LAI','LUC','NOI','NHA','DON','GON','RAT','TAM','TAN','CHU','DAN','DEN','CAP','NET','DAT','TUC','TIE','COI','GI','FOR','AND','THE','NEW','NOW','ALL','GET','SET']);
+  const tokens = masked.matchAll(/(?<![\p{L}\p{N}_])([$#]?)([A-Za-z0-9]{3})(?![\p{L}\p{N}_])/gu);
+  const tickers = [];
+  for (const match of tokens) {
+    const ticker = match[2].toUpperCase();
+    if (!/[A-Z]/.test(ticker) || technical.has(ticker)) continue;
+    const prefix = masked.slice(0,match.index);
+    const stockCue = /(?:\bmã|\bma|cổ phiếu|co phieu|\bticker|\bsymbol)\s*[:=]?\s*$/iu.test(prefix);
+    const namedCue = match[2] === ticker && (/(?:phân tích|phan tich|so sánh|so sanh|kiểm tra|kiem tra|đánh giá|danh gia)\s*[:=]?\s*$/iu.test(prefix) || (tickers.length > 0 && /(?:\bvà|\bva|\bvới|\bvoi|\bvs|[,/])\s*$/iu.test(prefix)));
+    const standalone = masked.trim() === match[0] && match[2] === ticker;
+    const command = /^(MUA|BAN|GIU|CHO|GHI|TOP|SAO|KHI|NEU|HAY|TOI|XEM|CAC|CUA|VOI|NAY|ROI|RUI|CHI|THE|FOR|AND|ALL|GET|SET)$/.test(ticker);
+    if (command && !match[1]) continue;
+    if (words.has(ticker) && !match[1] && !stockCue && !namedCue && !standalone) continue;
+    if (!tickers.includes(ticker)) tickers.push(ticker);
+    if (tickers.length === 4) break;
+  }
+  return tickers;
+}
+
 export function parseResearchQuery(message: string, requestedTicker = '') {
   const q = message.normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
-  // Accented Vietnamese words such as “đạt” must not become ticker DAT.
-  const tokens = (message.replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu,' ').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu)||[]).filter(t=>/[A-Z]/.test(t)&&!STOP.has(t));
-  const tickers = [...new Set([requestedTicker.toUpperCase(),...tokens].filter(Boolean))].slice(0,4);
-  const scan = /\b(top|quet|nganh|ma nao|co phieu nao)\b/.test(q);
+  const explicit = extractStockTickers(message);
+  const requested = String(requestedTicker || '').trim().toUpperCase();
+  const tickers = explicit.length ? explicit : /^[A-Z0-9]{3}$/.test(requested) && /[A-Z]/.test(requested) ? [requested] : [];
+  const scan = /\b(top|quet|loc|ma nao|co phieu nao|nganh nao)\b/.test(q) || (!tickers.length && /\bnganh\b/.test(q));
   const filter = /pocket/.test(q)?'pocket_pivot':/(gan|chuan bi|near).*breakout|gan.*pivot/.test(q)?'near_pivot':/breakout/.test(q)?'breakout':'top';
   const sector = /ngan hang/.test(q)?'Ngân hàng':/thep/.test(q)?'Thép':/bat dong san/.test(q)?'Bất động sản':'';
   return {scope:scan?'scan':tickers.length>1?'compare':tickers.length?'ticker':'portfolio',tickers,filter,sector};

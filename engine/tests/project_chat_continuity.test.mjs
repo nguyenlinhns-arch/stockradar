@@ -1,3 +1,4 @@
+// PROJECT_AUTORESUME_ROUTING_V1
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -24,7 +25,7 @@ function harness(initial=A){
  const sandbox={document,URL,AbortSignal,console,setTimeout,clearTimeout,matchMedia:()=>({matches:false}),localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},window:{STOCKRADAR_AUTH_CONFIG:{configured:true,supabaseUrl:'https://fixture.invalid',supabasePublishableKey:'fixture-only'},supabase:{createClient:()=>client},StockRadarAuthClient:client},fetch:async(url,args)=>{const body=JSON.parse(args.body);calls.push({url,body});const result=await reply(body);return {ok:!(result.httpStatus>=400),status:result.httpStatus||200,json:async()=>result};}};
  sandbox.globalThis=sandbox;
  let source=fs.readFileSync(new URL('../../website/assets/ai-center.js',import.meta.url),'utf8');
- source=source.replace("  if (document.readyState === 'loading')",'  globalThis.__test = {state,bindAccount,loadThreadId,saveThreadId,hydrateHistory,renderThreads,startNewThread,ask,resumeProject};\n  if (document.readyState === \'loading\')');
+ source=source.replace("  if (document.readyState === 'loading')",'  globalThis.__test = {state,bindAccount,loadThreadId,saveThreadId,hydrateHistory,renderThreads,startNewThread,ask,resumeProject,restoreInitialConversation};\n  if (document.readyState === \'loading\')');
  vm.runInNewContext(source,sandbox);
  const api=sandbox.__test;api.state.ui={log,threadList:list,projectResume:resume,continuity};api.bindAccount(initial);
  return {api,storage,calls,log,list,resume,continuity,setSession(value){session=value;api.bindAccount(value);},setReply(fn){reply=fn;},setRpc(fn){rpcReply=fn;},async ask(message='Phân tích FPT'){return api.ask(message,log,new Element(),new Element(),new Element());}};
@@ -75,4 +76,33 @@ test('project resume is metadata/history only and cannot cross accounts',async()
 });
 test('token refresh for the same account does not erase draft or reload conversation',()=>{
  const h=harness();h.api.state.history=[{content:'guest-only-fixture'}];h.api.saveThreadId(T);const epoch=h.api.state.accountEpoch;assert.equal(h.api.bindAccount({...A,access_token:'refreshed-fixture'}),false);assert.equal(h.api.state.accountEpoch,epoch);assert.equal(h.api.state.threadId,T);
+});
+
+
+test('opted-in project auto-opens once per version and later preserves a manual thread selection',async()=>{
+ const h=harness();h.setReply(async body=>body.operation==='project_bridge'?{project_bridge:{available:true,auto_resume:true,thread_id:T,version:'AUTO_V1'}}:response(body.thread_id || T));
+ assert.equal(await h.api.restoreInitialConversation(A,h.log),true);
+ assert.deepEqual(h.calls.map(c=>c.body.operation),['project_bridge','resume_project','history']);
+ assert.equal(h.storage.get(`${KEY}:project-auto:${U}`),'AUTO_V1');
+ h.api.saveThreadId(O);h.calls.length=0;
+ assert.equal(await h.api.restoreInitialConversation(A,h.log),true);
+ assert.deepEqual(h.calls.map(c=>c.body.operation),['project_bridge','history']);
+ assert.equal(h.api.state.threadId,O);
+});
+test('ordinary users do not auto-resume and metadata errors still restore owned history',async()=>{
+ for(const meta of [{available:false},{available:true,auto_resume:false,version:'AUTO_V1'}]){
+  const h=harness();h.setReply(async body=>body.operation==='project_bridge'?{project_bridge:meta}:response());
+  assert.equal(await h.api.restoreInitialConversation(A,h.log),true);
+  assert.deepEqual(h.calls.map(c=>c.body.operation),['project_bridge','history']);
+ }
+ const h=harness();h.setReply(async body=>{if(body.operation==='project_bridge')throw new Error('offline');return response();});
+ assert.equal(await h.api.restoreInitialConversation(A,h.log),true);
+ assert.equal(h.calls.at(-1).body.operation,'history');
+});
+test('a late auto-resume metadata response cannot select or expose another account conversation',async()=>{
+ const h=harness(),d=deferred();h.setReply(()=>d.promise);
+ const work=h.api.restoreInitialConversation(A,h.log);await new Promise(r=>setImmediate(r));h.setSession(B);
+ d.resolve({project_bridge:{available:true,auto_resume:true,thread_id:T,version:'AUTO_V1'}});
+ assert.equal(await work,false);assert.equal(h.calls.length,1);assert.equal(h.api.state.threadId,'');
+ assert.equal(h.storage.has(`${KEY}:project-auto:${V}`),false);
 });

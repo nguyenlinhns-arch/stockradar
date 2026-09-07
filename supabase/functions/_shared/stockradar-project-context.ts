@@ -1,3 +1,4 @@
+// PROJECT_AUTORESUME_ROUTING_V1
 // Private reviewed handoffs; never a public knowledge source or an authorization claim.
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SECRET = /\b(?:sk-(?:proj-)?|sb_secret_|ghp_)[A-Za-z0-9_-]{16,}|-----BEGIN [A-Z ]*PRIVATE KEY-----/i;
@@ -11,7 +12,7 @@ export function validateProjectBridge(row, userId, now = Date.now()) {
   if (typeof b.summary !== 'string' || b.summary.trim().length < 20 || b.summary.length > 6000 || SECRET.test(b.summary)) return null;
   const reviewed = Date.parse(b.reviewed_at || '');
   if (!Number.isFinite(reviewed) || reviewed > now) return null;
-  return {thread_id:b.thread_id, version:b.version, source:b.source, reviewed_at:b.reviewed_at, summary:b.summary.trim()};
+  return {auto_resume:b.auto_resume === true,thread_id:b.thread_id, version:b.version, source:b.source, reviewed_at:b.reviewed_at, summary:b.summary.trim()};
 }
 
 export async function loadProjectBridge(db, userId) {
@@ -40,5 +41,5 @@ export function projectContextInput(bridge, threadId) {
 export function projectBridgeMeta(bridge, threadId = '', modelApplied = false) {
   if (!bridge) return {available:false,sync_mode:'EXPLICIT_REVIEWED_HANDOFF',context_loaded:false,context_applied:false};
   const loaded = bridge.thread_id === threadId;
-  return {available:true,thread_id:bridge.thread_id,version:bridge.version,reviewed_at:bridge.reviewed_at,sync_mode:'EXPLICIT_REVIEWED_HANDOFF',context_loaded:loaded,context_applied:loaded && modelApplied === true};
+  return {available:true,auto_resume:bridge.auto_resume === true,thread_id:bridge.thread_id,version:bridge.version,reviewed_at:bridge.reviewed_at,sync_mode:'EXPLICIT_REVIEWED_HANDOFF',context_loaded:loaded,context_applied:loaded && modelApplied === true};
 }

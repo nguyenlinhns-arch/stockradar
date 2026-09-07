@@ -1,3 +1,4 @@
+// PROJECT_AUTORESUME_ROUTING_V1
 // PROJECT_CHAT_CONTINUITY_V2
 // PRIVATE_PROJECT_BRIDGE_V1
 (() => {
@@ -98,8 +99,30 @@
   }
 
   function explicitTicker(text) {
-    const tokens = String(text || '').replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu,' ').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
-    return tokens.find(token => validTicker(token) && !STOPWORDS.has(token)) || '';
+    // Canonical lexical extractor, embedded identically in browser/chat/research.
+    // This recognizes mentions only: listing, venue and data gates remain server-side.
+    const raw = String(text || '').normalize('NFC').slice(0,8000);
+    const masked = raw
+      .replace(/https?:\/\/\S+|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, s => ' '.repeat(s.length))
+      .replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu, s => ' '.repeat(s.length));
+    const technical = new Set(['VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR','RSI','MAC','PEG','MOS','GDP','CPI','USD','VND','ETF','NAV','IPO','API','OTP','JWT','URL','CEO','CFO','CTO','LLM','MAI']);
+    const words = new Set(['CHI','CHO','GHI','TRA','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','HOM','CAC','CUA','VOI','TAI','TOI','NEN','CON','HON','GAN','LAM','VAN','QUA','MOT','HAI','NAM','DAY','DAU','TEN','BAO','LAI','LUC','NOI','NHA','DON','GON','RAT','TAM','TAN','CHU','DAN','DEN','CAP','NET','DAT','TUC','TIE','COI','GI','FOR','AND','THE','NEW','NOW','ALL','GET','SET']);
+    const tokens = masked.matchAll(/(?<![\p{L}\p{N}_])([$#]?)([A-Za-z0-9]{3})(?![\p{L}\p{N}_])/gu);
+    const tickers = [];
+    for (const match of tokens) {
+      const ticker = match[2].toUpperCase();
+      if (!/[A-Z]/.test(ticker) || technical.has(ticker)) continue;
+      const prefix = masked.slice(0,match.index);
+      const stockCue = /(?:\bmã|\bma|cổ phiếu|co phieu|\bticker|\bsymbol)\s*[:=]?\s*$/iu.test(prefix);
+      const namedCue = match[2] === ticker && (/(?:phân tích|phan tich|so sánh|so sanh|kiểm tra|kiem tra|đánh giá|danh gia)\s*[:=]?\s*$/iu.test(prefix) || (tickers.length > 0 && /(?:\bvà|\bva|\bvới|\bvoi|\bvs|[,/])\s*$/iu.test(prefix)));
+      const standalone = masked.trim() === match[0] && match[2] === ticker;
+      const command = /^(MUA|BAN|GIU|CHO|GHI|TOP|SAO|KHI|NEU|HAY|TOI|XEM|CAC|CUA|VOI|NAY|ROI|RUI|CHI|THE|FOR|AND|ALL|GET|SET)$/.test(ticker);
+      if (command && !match[1]) continue;
+      if (words.has(ticker) && !match[1] && !stockCue && !namedCue && !standalone) continue;
+      if (!tickers.includes(ticker)) tickers.push(ticker);
+      if (tickers.length === 4) break;
+    }
+    return tickers[0] || "";
   }
 
   function horizonFromText(text) {
@@ -331,6 +354,28 @@
     if (!(await sameAccount(session,epoch))) return false;
     if (!response.ok || !data.thread_id) throw new Error('PROJECT_NOT_LINKED');
     return await hydrateHistory(session,log,data.thread_id);
+  }
+
+  async function restoreInitialConversation(session, log) {
+    const epoch = state.accountEpoch;
+    if (!session?.access_token || !(await sameAccount(session,epoch))) return false;
+    const key = `${THREAD_KEY}:project-auto:${state.accountId}`;
+    try {
+      const {response,data} = await callAuthenticated(session,{operation:'project_bridge'});
+      if (!(await sameAccount(session,epoch))) return false;
+      const bridge = data?.project_bridge;
+      if (response.ok && bridge?.available === true && bridge.auto_resume === true && /^[A-Z0-9_.-]{1,100}$/i.test(String(bridge.version || ''))) {
+        let seen = ''; try { seen = localStorage.getItem(key) || ''; } catch (_) {}
+        if (seen !== bridge.version && await resumeProject(session,log)) {
+          if (!(await sameAccount(session,epoch))) return false;
+          try { localStorage.setItem(key,bridge.version); } catch (_) {}
+          return true;
+        }
+      }
+    } catch (_) {
+      if (!(await sameAccount(session,epoch))) return false;
+    }
+    return await hydrateHistory(session,log,state.threadId,true);
   }
 
   function threadLabel(row) {
@@ -699,7 +744,7 @@
       newChat.hidden = !authenticated;
       sideNewChat.hidden = !authenticated;
       continuity.textContent = authenticated ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
-      if (authenticated) await hydrateHistory(account.session, log, state.threadId, true);
+      if (authenticated) await restoreInitialConversation(account.session, log);
       await renderThreads(account.session, threadList, log);
 
       const client = await authClient();
@@ -713,7 +758,7 @@
             newChat.hidden = !nextAuth;
             sideNewChat.hidden = !nextAuth;
             continuity.textContent = nextAuth ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
-            if (nextAuth) await hydrateHistory(next.session, log, state.threadId, true);
+            if (nextAuth) await restoreInitialConversation(next.session, log);
             else showIntro(log, false);
             await renderThreads(next.session, threadList, log);
           } catch (_) {

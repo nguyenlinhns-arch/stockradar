@@ -1,3 +1,4 @@
+// PROJECT_AUTORESUME_ROUTING_V1
 import { loadProjectBridge, loadProjectContext, projectContextInput, projectBridgeMeta, PROJECT_HANDOFF_RULE } from "../_shared/stockradar-project-context.ts";
 // PRIVATE_PROJECT_BRIDGE_V1
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
@@ -48,20 +49,56 @@ function validTicker(value: unknown) {
   const t = String(value ?? "").trim().toUpperCase();
   return TICKER_RE.test(t) && /[A-Z]/.test(t) ? t : "";
 }
-function explicitTicker(text: string) {
-  const stop = new Set(["MUA","BAN","GIU","CHO","GIA","NAY","SAO","KHI","NEU","HAY","DAI","HAN","VON","LOI","ROI","DANG","THE","NAO","CAN","XEM","MAI","HOM","TIE","THEO","TOP","CAC","CUA","VOI","TAI","VPA","VCP","EPS","ROE","ROA","PBT","FCF","DCF","ATR"]);
-  const tokens = text.replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu,' ').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
-  return tokens.find(t => validTicker(t) && !stop.has(t)) || "";
+function explicitTicker(text) {
+  // Canonical lexical extractor, embedded identically in browser/chat/research.
+  // This recognizes mentions only: listing, venue and data gates remain server-side.
+  const raw = String(text || '').normalize('NFC').slice(0,8000);
+  const masked = raw
+    .replace(/https?:\/\/\S+|\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi, s => ' '.repeat(s.length))
+    .replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu, s => ' '.repeat(s.length));
+  const technical = new Set(['VPA','VCP','EPS','ROE','ROA','PBT','FCF','DCF','ATR','RSI','MAC','PEG','MOS','GDP','CPI','USD','VND','ETF','NAV','IPO','API','OTP','JWT','URL','CEO','CFO','CTO','LLM','MAI']);
+  const words = new Set(['CHI','CHO','GHI','TRA','SAU','TIN','RUI','MOC','MOI','TOP','MUA','BAN','GIU','GIA','NAY','SAO','KHI','NEU','HAY','DAI','HAN','VON','LOI','ROI','THE','NAO','CAN','XEM','HOM','CAC','CUA','VOI','TAI','TOI','NEN','CON','HON','GAN','LAM','VAN','QUA','MOT','HAI','NAM','DAY','DAU','TEN','BAO','LAI','LUC','NOI','NHA','DON','GON','RAT','TAM','TAN','CHU','DAN','DEN','CAP','NET','DAT','TUC','TIE','COI','GI','FOR','AND','THE','NEW','NOW','ALL','GET','SET']);
+  const tokens = masked.matchAll(/(?<![\p{L}\p{N}_])([$#]?)([A-Za-z0-9]{3})(?![\p{L}\p{N}_])/gu);
+  const tickers = [];
+  for (const match of tokens) {
+    const ticker = match[2].toUpperCase();
+    if (!/[A-Z]/.test(ticker) || technical.has(ticker)) continue;
+    const prefix = masked.slice(0,match.index);
+    const stockCue = /(?:\bmã|\bma|cổ phiếu|co phieu|\bticker|\bsymbol)\s*[:=]?\s*$/iu.test(prefix);
+    const namedCue = match[2] === ticker && (/(?:phân tích|phan tich|so sánh|so sanh|kiểm tra|kiem tra|đánh giá|danh gia)\s*[:=]?\s*$/iu.test(prefix) || (tickers.length > 0 && /(?:\bvà|\bva|\bvới|\bvoi|\bvs|[,/])\s*$/iu.test(prefix)));
+    const standalone = masked.trim() === match[0] && match[2] === ticker;
+    const command = /^(MUA|BAN|GIU|CHO|GHI|TOP|SAO|KHI|NEU|HAY|TOI|XEM|CAC|CUA|VOI|NAY|ROI|RUI|CHI|THE|FOR|AND|ALL|GET|SET)$/.test(ticker);
+    if (command && !match[1]) continue;
+    if (words.has(ticker) && !match[1] && !stockCue && !namedCue && !standalone) continue;
+    if (!tickers.includes(ticker)) tickers.push(ticker);
+    if (tickers.length === 4) break;
+  }
+  return tickers[0] || "";
 }
+
+function explicitHorizon(text) {
+  const q = String(text || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[đĐ]/g,'d').toLowerCase();
+  if (/tich san|tich luy/.test(q)) return 'ACCUMULATION';
+  if (/12\s*thang|dai han/.test(q)) return 'LONG_TERM';
+  if (/3\s*[-–]\s*6\s*thang|trung han|6\s*thang/.test(q)) return 'MEDIUM_TERM';
+  if (/ngan han|vai phien|vai tuan/.test(q)) return 'SHORT_TERM';
+  return '';
+}
+
 function portfolioIntent(text: string) {
   return /(danh mục|danh muc|watchlist|mã tôi|ma toi|cổ phiếu của tôi|co phieu cua toi|đang sở hữu|dang so huu|mã đang giữ|ma dang giu|các mã đang giữ|cac ma dang giu)/i.test(text);
 }
 function scanIntent(text: string) {
-  return /(\btop\b|quét|quet|mã nào|ma nao|cổ phiếu nào|co phieu nao|ngành nào|nganh nao|pocket pivot|breakout)/i.test(text);
+  return /(\btop\b|quét|quet|lọc|loc|mã nào|ma nao|cổ phiếu nào|co phieu nao|ngành nào|nganh nao)/i.test(text);
 }
+
 function methodologyIntent(text: string) {
-  return /(4m|payback|canslim|sepa|vcp|vpa|pocket pivot|ichimoku|bollinger|stage\s*[1-4]|fair value|margin of safety|định giá là gì|dinh gia la gi|phương pháp|phuong phap|quản trị rủi ro|quan tri rui ro)/i.test(text) && !explicitTicker(text);
+  if (explicitTicker(text)) return false;
+  if (/(liên thông|lien thong|ngữ cảnh|ngu canh|dự án|du an|chatgpt|cuộc trò chuyện|cuoc tro chuyen)/i.test(text)) return true;
+  const method = /(4m|payback|canslim|sepa|vcp|vpa|pocket pivot|ichimoku|bollinger|stage\s*[1-4]|fair value|margin of safety|định giá|dinh gia|phương pháp|phuong phap|quản trị rủi ro|quan tri rui ro)/i.test(text);
+  return method && (/(là gì|la gi|giải thích|giai thich|khái niệm|khai niem|hướng dẫn|huong dan|phương pháp|phuong phap)/i.test(text) || /^(4m|payback|canslim|sepa|vcp|vpa|pocket pivot|ichimoku|bollinger)\s*[?.!]*$/i.test(text.trim()));
 }
+
 function horizon(value: unknown, fallback = "SHORT_TERM") {
   const h = String(value ?? "").trim().toUpperCase();
   return HORIZONS.has(h) ? h : fallback;
@@ -241,7 +278,7 @@ Deno.serve(async (req: Request) => {
     const explicitTickerNow = explicit || requested;
     const previousTicker = validTicker(thread.last_ticker);
     const tickerChanged = Boolean(explicitTickerNow && previousTicker && explicitTickerNow !== previousTicker);
-    const inputHorizon = horizon(body.horizon,tickerChanged ? "SHORT_TERM" : (thread.last_horizon || "SHORT_TERM"));
+    const inputHorizon = horizon(explicitHorizon(message) || body.horizon,tickerChanged ? "SHORT_TERM" : (thread.last_horizon || "SHORT_TERM"));
     const scope = resolvedTicker ? "ticker" : portfolioIntent(message) ? "portfolio" : scanIntent(message) ? "scan" : "conversation";
 
     if (scope === "conversation") {
