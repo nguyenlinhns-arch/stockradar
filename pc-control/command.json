@@ -1,6 +1,6 @@
 {
-  "id": "20260907-gpts-dc-type-003",
-  "action": "TYPE",
-  "text": "cmd.exe /k npx @wonderwhy-er/desktop-commander@latest remote",
-  "created_at": "2026-09-07T23:40:22+07:00"
+  "id": "20260907-gpts-dc-enter-004",
+  "action": "KEY",
+  "keys": "ENTER",
+  "created_at": "2026-09-07T23:40:44+07:00"
 }
