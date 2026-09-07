@@ -13,8 +13,24 @@ const reviewedKnowledge = Object.freeze({
   source:'PROJECT_STOCKRADAR_PUBLIC',activated_at:'2025-01-01T00:00:00Z',
   content:'FIXTURE_REVIEWED_PUBLIC_METHOD_SEQUENCE: use 4M, CANSLIM, SEPA and VPA; never bypass current-data gates.'
 });
+// Provider fixtures must satisfy the same four-layer/four-horizon contract as production.
+// This is synthetic test copy, not a current market recommendation.
+const validModelAnswer = `KẾT LUẬN: THEO DÕI; chưa đủ bằng chứng xác nhận mua mới.
+4M: Chưa có báo cáo tài chính để kết luận lợi thế cạnh tranh và định giá.
+CANSLIM: Chưa có chuỗi tăng trưởng doanh thu và lợi nhuận để đánh giá.
+SEPA/VCP: Dữ liệu mô phỏng có đường trung bình 20 phiên nhưng thiếu nền giá và xu hướng dài hạn.
+VPA: Có khối lượng phiên trong dữ liệu mô phỏng, chưa có chuỗi so sánh để xác nhận cầu.
+Ngắn hạn: Tiếp tục theo dõi; chưa có điểm mua được xác nhận.
+3–6 tháng: Cần bổ sung tăng trưởng và động lực kinh doanh; chưa đủ dữ liệu đặt mục tiêu.
+12 tháng: Cần định giá và các giả định được kiểm chứng; chưa đủ dữ liệu định lượng.
+Tích sản: Chưa đủ bằng chứng về chất lượng doanh nghiệp và biên an toàn.
+Thông tin chỉ dùng cho kiểm thử với dữ liệu giả lập; chưa có tín hiệu mua/bán được xác nhận.`;
 
-function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,incomplete=false,watch=[],knowledge=reviewedKnowledge,knowledgeError=false}={}) {
+test('successful provider fixture satisfies the real research contract',()=>{
+  assert.equal(core.hasResearchFramework(validModelAnswer),true);
+});
+
+function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,incomplete=false,malformed=false,watch=[],knowledge=reviewedKnowledge,knowledgeError=false}={}) {
   let handler, modelInput, modelRequest, quotaCalls=0;
   const calls=[];
   const context=ticker=>({status:'INTERNAL_RESEARCH_READY',context_grade:'RESEARCH_READY',ticker,
@@ -41,7 +57,7 @@ function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,inco
       chain.then=resolve=>Promise.resolve({data:table==='watchlist_items'?watch:[]}).then(resolve);return chain;
     }};
   const Deno={serve:fn=>{handler=fn;},env:{get:name=>({SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'test-only',OPENAI_API_KEY:'test-only'}[name])}};
-  const fetchMock=async(url,args)=>{modelRequest=JSON.parse(args.body);modelInput=JSON.parse(modelRequest.input);return new Response(JSON.stringify({status:incomplete?'incomplete':'completed',output_text:'KẾT LUẬN: THEO DÕI. DỮ LIỆU: 04/09/2026.'}));};
+  const fetchMock=async(url,args)=>{modelRequest=JSON.parse(args.body);modelInput=JSON.parse(modelRequest.input);return new Response(JSON.stringify({status:incomplete?'incomplete':'completed',output_text:malformed?'KẾT LUẬN: THEO DÕI.':validModelAnswer}));};
   const bindings={...core,...view,...query,...decision,...modelStatus,...projectKnowledge,Deno,createClient:()=>db,fetch:fetchMock};
   const source=fs.readFileSync(new URL(`../../supabase/functions/${guest?'stock-ai-guest':'stock-ai'}/index.ts`,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
   new Function(...Object.keys(bindings),source.replace("} catch { return json({status:'SERVICE_UNAVAILABLE',answer:","} catch (error) { throw error; return json({status:'SERVICE_UNAVAILABLE',answer:"))(...Object.values(bindings));
@@ -90,6 +106,13 @@ test('incomplete provider response uses accurately labelled deterministic fallba
   assert.equal(r.body.answer_engine,'STOCKRADAR_CORE');assert.equal(r.body.status,'READY_FALLBACK');
   assert.equal(r.body.knowledge_status,'ACTIVE');assert.equal(r.body.knowledge_applied,false);
 });
+test('completed but malformed provider response cannot claim reviewed knowledge was applied',async()=>{
+  for(const guest of [false,true]){
+    const h=harness({guest,malformed:true});const r=await h.ask('Phân tích HPG');
+    assert.equal(r.body.status,'READY_FALLBACK');assert.equal(r.body.answer_engine,'STOCKRADAR_CORE');
+    assert.equal(r.body.knowledge_status,'ACTIVE');assert.equal(r.body.knowledge_applied,false);
+  }
+});
 
 test('guest and signed-in answers append full research only on a detailed request',async()=>{
   for(const guest of [false,true]) for(const incomplete of [false,true]){
@@ -122,6 +145,7 @@ test('both research handlers apply the real reviewed loader and report the versi
   assert.equal(h.modelRequest.store,false);
   assert.equal(r.body.knowledge_version,reviewedKnowledge.version);assert.equal(r.body.knowledge_status,'ACTIVE');
   assert.equal(r.body.knowledge_sync_mode,'REVIEWED_PROJECT_SNAPSHOT');assert.equal(r.body.knowledge_applied,true);
+  assert.equal(r.body.answer_engine,'MODEL_PLUS_STOCKRADAR_CORE');
   assert.ok(!JSON.stringify(r.body).includes(reviewedKnowledge.content));
   assert.ok(h.calls.some(x=>x.table==='stockradar_ai_knowledge_versions'&&x.name==='eq'&&x.args[0]==='status'&&x.args[1]==='ACTIVE'));
   assert.ok(h.calls.some(x=>x.table==='stockradar_ai_knowledge_versions'&&x.name==='in'&&x.args[0]==='source'));
