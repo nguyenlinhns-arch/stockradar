@@ -1,0 +1,48 @@
+name: Verify bounded native conversation probe
+on:
+  push:
+    branches: ['experiment/native-project-probe-20260907']
+    paths:
+      - 'supabase/functions/_shared/native-probe/**'
+      - 'scripts/apply_native_project_probe.py'
+      - 'scripts/native_probe_test.mjs'
+      - '.github/workflows/native-project-probe.yml'
+permissions:
+  contents: write
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - name: Mount isolated native UI probe
+        run: python scripts/apply_native_project_probe.py
+      - name: Prove existing guest source is byte-preserved outside the probe route
+        run: |
+          python - <<'PY'
+          import importlib.util, subprocess
+          spec=importlib.util.spec_from_file_location('patch','scripts/apply_native_project_probe.py');mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
+          old=subprocess.check_output(['git','show','HEAD:supabase/functions/stock-ai-guest/index.ts']).decode()
+          new=mod.P.read_text()
+          assert new.replace(mod.PATCH,'')==old
+          PY
+      - name: Verify opt-in behavior and all existing handler/client regressions
+        run: |
+          node --test scripts/native_probe_test.mjs
+          node --test engine/tests/*.test.mjs
+          git diff --check
+      - name: Commit verified generated source to experiment branch only
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          git config user.name 'StockRadar native probe verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/stock-ai-guest/index.ts supabase/functions/_shared/native-probe/widget.ts
+          if ! git diff --cached --quiet; then
+            git commit -m 'Mount reviewed static native-message probe [skip ci]'
+            git push origin "HEAD:$BRANCH_NAME"
+          fi
