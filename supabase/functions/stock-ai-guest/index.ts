@@ -38,6 +38,11 @@ function errCode(p){const e=p&&typeof p==="object"?p.error:null;return String(e?
 async function sha(v){const d=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(v));return Array.from(new Uint8Array(d),b=>b.toString(16).padStart(2,'0')).join('')}
 
 Deno.serve(async req=>{
+  // NATIVE_PROJECT_PROBE_V1: public static test UI; no queue, auth data or model calls.
+  if (/\/native-probe\/(mcp|health)$/.test(new URL(req.url).pathname)) {
+    const { handleNativeProbe } = await import("../_shared/native-probe/index.ts");
+    return await handleNativeProbe(req);
+  }
   try {
   const origin=req.headers.get('origin');
   if(origin&&!ORIGINS.has(origin))return json({status:'FORBIDDEN_ORIGIN'},403,null);
