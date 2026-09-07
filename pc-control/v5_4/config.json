@@ -7,7 +7,7 @@
   "api_port": 4321,
   "auto_start_hub": true,
   "auto_start_desktop_commander": true,
-  "desktop_commander_command": "npx @wonderwhy-er/desktop-commander@latest remote",
+  "desktop_commander_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%LOCALAPPDATA%\\ThayLinhPCBridge\\start_desktop_commander.ps1\"",
   "app_candidates": {
     "zalo": [
       "%LOCALAPPDATA%\\Programs\\Zalo\\Zalo.exe",
