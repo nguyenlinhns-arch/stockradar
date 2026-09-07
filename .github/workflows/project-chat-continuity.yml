@@ -5,6 +5,7 @@ on:
     paths:
       - 'scripts/apply_project_chat_continuity.py'
       - 'engine/tests/project_chat_continuity.test.mjs'
+      - 'engine/tests/test_ai_conversation_workspace_v2.py'
       - '.github/workflows/project-chat-continuity.yml'
 permissions:
   contents: write

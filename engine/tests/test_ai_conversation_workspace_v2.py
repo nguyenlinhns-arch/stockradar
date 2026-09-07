@@ -22,12 +22,18 @@ class AiConversationWorkspaceV2Tests(unittest.TestCase):
             "get_my_stockradar_ai_threads",
             "sr-thread-sidebar",
             "sr-thread-item",
-            "hydrateHistory(session, log, row.thread_id)",
             "operation: 'new_thread'",
             "Mở AI toàn màn hình",
             "Cuộc trò chuyện mới",
         ):
             self.assertIn(marker, source)
+        # Whitespace is not a behavioral contract. Selection must be committed only
+        # after ownership-checked restoration; the VM tests exercise the async races.
+        compact = "".join(source.split())
+        self.assertIn("hydrateHistory(session,log,row.thread_id)", compact)
+        self.assertIn("sameAccount(session,epoch)", compact)
+        self.assertNotIn("saveThreadId(row.thread_id)", compact)
+        self.assertIn("state.historySequence", source)
 
     def test_thread_list_rpc_is_user_scoped_and_not_anonymous(self):
         sql = self.read("supabase/migrations/20260906164000_add_my_stockradar_ai_thread_list.sql")
