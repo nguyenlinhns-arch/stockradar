@@ -1,5 +1,6 @@
 {
-  "id": "20260907-gpts-recover-dc-001",
-  "action": "RESTART_DESKTOP_COMMANDER",
-  "created_at": "2026-09-07T23:35:00+07:00"
+  "id": "20260907-gpts-dc-open-run-002",
+  "action": "KEY",
+  "keys": "WIN+R",
+  "created_at": "2026-09-07T23:40:00+07:00"
 }
