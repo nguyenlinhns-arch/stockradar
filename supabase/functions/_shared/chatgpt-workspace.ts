@@ -1,5 +1,5 @@
 // Default is no billable inference. API mode requires an explicit server-side opt-in.
-// The deployed workspace entrypoints force CHATGPT_WORKSPACE as requested by the owner.
+// Production uses this default; deployment wrappers do not mutate runtime environment values.
 export function chatGPTWorkspaceMode(env) {
   return env?.get?.('STOCKRADAR_INFERENCE_MODE') !== 'API';
 }
