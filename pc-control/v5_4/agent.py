@@ -18,12 +18,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Any
 
 APP_NAME = "ThayLinh PC Bridge"
-VERSION = "5.4.0"
+VERSION = "5.4.1"
 DEFAULT_REPO = "nguyenlinhns-arch/stockradar"
 DEFAULT_PREFIXES = ("[PC-CONTROL]", "[ZALO-CONTROL]")
 DEFAULT_TRUSTED_USER = "nguyenlinhns-arch"
 API_PORT = 4321
-POLL_SECONDS = 45
+POLL_SECONDS = 75
 HUB_URL = "http://127.0.0.1:4310/health"
 
 ROOT = pathlib.Path(os.environ.get("LOCALAPPDATA", pathlib.Path.home())) / "ThayLinhPCBridge"
@@ -122,17 +122,17 @@ def save_state() -> None:
 def acquire_single_instance() -> bool:
     if os.name != "nt":
         return True
-    kernel32 = ctypes.windll.kernel32
-    handle = kernel32.CreateFileW(
-        str(LOCK_FILE),
-        0x40000000,
-        0,
-        None,
-        4,
-        0x80,
-        None,
-    )
-    if handle == ctypes.c_void_p(-1).value or handle == -1:
+    import msvcrt
+
+    handle = LOCK_FILE.open("a+b")
+    try:
+        if handle.tell() == 0:
+            handle.write(b"0")
+            handle.flush()
+        handle.seek(0)
+        msvcrt.locking(handle.fileno(), msvcrt.LK_NBLCK, 1)
+    except OSError:
+        handle.close()
         return False
     acquire_single_instance.handle = handle  # type: ignore[attr-defined]
     return True
@@ -311,6 +311,8 @@ def find_executable(app: str) -> pathlib.Path | None:
 def focus_process(exe_name: str) -> bool:
     if os.name != "nt":
         return False
+    from ctypes import wintypes
+
     user32 = ctypes.windll.user32
     kernel32 = ctypes.windll.kernel32
     PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
@@ -318,11 +320,34 @@ def focus_process(exe_name: str) -> bool:
     target = exe_name.lower()
     found = {"ok": False}
 
-    @ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+    kernel32.QueryFullProcessImageNameW.argtypes = [
+        wintypes.HANDLE,
+        wintypes.DWORD,
+        wintypes.LPWSTR,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    user32.GetWindowThreadProcessId.argtypes = [
+        wintypes.HWND,
+        ctypes.POINTER(wintypes.DWORD),
+    ]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.SetForegroundWindow.restype = wintypes.BOOL
+
+    @ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
     def enum_proc(hwnd, _lparam):
         if not user32.IsWindowVisible(hwnd):
             return True
-        pid = ctypes.c_ulong()
+        pid = wintypes.DWORD()
         user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
         hproc = kernel32.OpenProcess(
             PROCESS_QUERY_LIMITED_INFORMATION, False, pid.value
@@ -330,7 +355,7 @@ def focus_process(exe_name: str) -> bool:
         if not hproc:
             return True
         try:
-            size = ctypes.c_ulong(32768)
+            size = wintypes.DWORD(32768)
             buf = ctypes.create_unicode_buffer(size.value)
             if kernel32.QueryFullProcessImageNameW(
                 hproc, 0, buf, ctypes.byref(size)
@@ -483,7 +508,11 @@ def comment_and_close(issue_number: int, result: dict[str, Any]) -> None:
     token = resolve_github_token()
     if not token:
         return
-    text = "```json\n" + json.dumps(result, ensure_ascii=False, indent=2)[:6000] + "\n```"
+    text = (
+        "```json\n"
+        + json.dumps(result, ensure_ascii=False, indent=2)[:6000]
+        + "\n```"
+    )
     github_request("POST", f"/issues/{issue_number}/comments", {"body": text})
     github_request("PATCH", f"/issues/{issue_number}", {"state": "closed"})
 
