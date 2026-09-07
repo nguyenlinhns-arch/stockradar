@@ -1,0 +1,22 @@
+name: Verify StockRadar ChatGPT app
+on:
+  push:
+    branches: ['feat/stockradar-chatgpt-app-20260907']
+    paths: ['supabase/functions/stockradar-ai-app/**','engine/tests/stockradar_chatgpt_app.test.mjs','.github/workflows/stockradar-chatgpt-app.yml']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: 24}
+      - run: node --test engine/tests/stockradar_chatgpt_app.test.mjs
+      - run: git diff --check
+      - name: Static production contract
+        run: |
+          grep -q "registerTool('search'" supabase/functions/stockradar-ai-app/index.ts
+          grep -q "registerTool('fetch'" supabase/functions/stockradar-ai-app/index.ts
+          grep -q "text/html;profile=mcp-app" supabase/functions/stockradar-ai-app/index.ts
+          ! grep -R "OPENAI_API_KEY\|api.openai.com" supabase/functions/stockradar-ai-app
