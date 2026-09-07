@@ -138,7 +138,7 @@ foreach ($root in $roots) {
                 }
             }
         }
-    } catch { Log "Script discovery failed in $root: $($_.Exception.Message)" }
+    } catch { Log "Script discovery failed in ${root}: $($_.Exception.Message)" }
 }
 
 Log 'Hub recovery exhausted safe candidates; 4310 is still unavailable.'
