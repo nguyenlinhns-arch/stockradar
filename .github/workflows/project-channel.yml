@@ -1,0 +1,45 @@
+name: Verify explicit two-way Project channel
+on:
+  push:
+    branches: ['feat/direct-project-channel-20260907']
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check pandas==3.0.5 requests==2.34.2 pytest==9.1.1
+      - name: All existing regression tests plus real-source channel tests
+        run: |
+          node --test engine/tests/*.test.mjs
+          python -m unittest discover -s engine/tests
+          python -m pytest engine/tests -q
+          node --check website/assets/project-channel.js
+          git diff --check
+      - name: Browser dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npx playwright install --with-deps chromium
+      - name: Build and activate exactly the delivered mode
+        env:
+          STOCKRADAR_ENABLE_AUTH: '1'
+          STOCKRADAR_AUTH_EMAIL_READY: '0'
+          STOCKRADAR_SUPABASE_URL: 'https://xamviatbxufjlpiwhebb.supabase.co'
+          STOCKRADAR_SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_Ne0TfBw0Iu732yrhqRcdIA_hPGxYDAK'
+        run: |
+          python scripts/build_pages.py --output .channel-site
+          python scripts/activate_chatgpt_workspace.py .channel-site
+      - name: Verify queued submission and returning Project answer in browser
+        run: |
+          python -m http.server 8767 --bind 127.0.0.1 --directory .channel-site >/tmp/project-channel-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do curl -fsS http://127.0.0.1:8767/ >/dev/null && break; sleep 0.2; done
+          STOCKRADAR_QA_URL=http://127.0.0.1:8767 node scripts/project_channel_qa.cjs
