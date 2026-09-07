@@ -1,0 +1,14 @@
+{
+  "name": "ThayLinh PC Bridge V5.4.1",
+  "version": "5.4.1",
+  "channel": "production-candidate",
+  "agent_git_blob_sha1": "038d2c7868b19107f798c1cf11447c99683c51e3",
+  "config_git_blob_sha1": "d13e1a750b1fb073813c3e17de275a525385339b",
+  "installer_git_blob_sha1": "92b9d93cf7c663af1fd8ffc9195fcb45e4daf1ab",
+  "local_health": "http://127.0.0.1:4321/health",
+  "local_status": "http://127.0.0.1:4321/status",
+  "hub_health": "http://127.0.0.1:4310/health",
+  "cloud_rescue_prefix": "[PC-CONTROL]",
+  "legacy_prefix": "[ZALO-CONTROL]",
+  "requires_live_windows_validation": true
+}
