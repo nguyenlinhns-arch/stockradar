@@ -1,6 +1,6 @@
 {
-  "id": "20260907-gpts-readback-enter-010",
+  "id": "20260907-gpts-supa-openrun-011",
   "action": "KEY",
-  "keys": "ENTER",
-  "created_at": "2026-09-07T23:52:40+07:00"
+  "keys": "WIN+R",
+  "created_at": "2026-09-08T00:00:00+07:00"
 }
