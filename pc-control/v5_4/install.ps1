@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $Version = '5.4.1'
 $RepoRaw = 'https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/pc-control/pc-control/v5_4'
-$ExpectedAgentGitBlob = 'e2d7209615d68fb9fbd4ab5d76f55952bd046ba7'
+$ExpectedAgentGitBlob = '038d2c7868b19107f798c1cf11447c99683c51e3'
 $ExpectedConfigGitBlob = 'd13e1a750b1fb073813c3e17de275a525385339b'
 $Root = Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
 $LogDir = Join-Path $Root 'logs'
