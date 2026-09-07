@@ -1,6 +1,6 @@
 {
-  "id": "20260907-gpts-supa-type-012b",
-  "action": "TYPE",
-  "text": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$p=@{nonce='gpts-probe-20260907-001';computer=$env:COMPUTERNAME;user=$env:USERNAME;ts=(Get-Date).ToString('o');p4310=[bool](Get-NetTCPConnection -LocalPort 4310 -State Listen -ErrorAction SilentlyContinue);p8777=[bool](Get-NetTCPConnection -LocalPort 8777 -State Listen -ErrorAction SilentlyContinue);node=((Get-Process node -ErrorAction SilentlyContinue|Select-Object -ExpandProperty Id)-join ',')}|ConvertTo-Json -Compress;Invoke-RestMethod -Uri 'https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/pc-control-readback-tmp-20260907' -Method Post -ContentType 'application/json' -Body $p\"",
-  "created_at": "2026-09-08T00:01:20+07:00"
+  "id": "20260907-gpts-supa-enter-013",
+  "action": "KEY",
+  "keys": "ENTER",
+  "created_at": "2026-09-08T00:01:40+07:00"
 }
