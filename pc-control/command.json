@@ -1,5 +1,5 @@
 {
-  "id": "20260907-restart-dc-editvideo-001",
-  "action": "RESTART_DC",
-  "created_at": "2026-09-07T16:16:00+07:00"
+  "id": "20260907-1617-restart-desktop-commander-002",
+  "action": "RESTART_DESKTOP_COMMANDER",
+  "created_at": "2026-09-07T16:17:00+07:00"
 }
