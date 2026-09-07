@@ -1,0 +1,33 @@
+{
+  "version": "5.4.2",
+  "repo": "nguyenlinhns-arch/stockradar",
+  "trusted_user": "nguyenlinhns-arch",
+  "github_prefixes": ["[PC-CONTROL]", "[ZALO-CONTROL]"],
+  "github_min_issue_number": 110,
+  "github_poll_seconds": 180,
+  "drive_poll_seconds": 2,
+  "heartbeat_seconds": 30,
+  "drive_root_folder": "07_CHATGPT_PC",
+  "drive_bus_folder": "PC_CONTROL_BUS",
+  "hub_url": "http://127.0.0.1:4310/",
+  "computer_use_health_urls": [
+    "http://127.0.0.1:8777/health",
+    "http://127.0.0.1:8766/health"
+  ],
+  "api_port": 4321,
+  "auto_start_hub": true,
+  "auto_start_computer_use": true,
+  "auto_start_desktop_commander": true,
+  "desktop_commander_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%LOCALAPPDATA%\\ThayLinhPCBridge\\start_desktop_commander.ps1\"",
+  "computer_use_command": "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File \"%LOCALAPPDATA%\\ThayLinhPCBridge\\start_computer_use.ps1\"",
+  "app_candidates": {
+    "zalo": [
+      "%LOCALAPPDATA%\\Programs\\Zalo\\Zalo.exe",
+      "%LOCALAPPDATA%\\Zalo\\Zalo.exe"
+    ],
+    "capcut": [
+      "%LOCALAPPDATA%\\CapCut\\Apps\\CapCut.exe",
+      "%LOCALAPPDATA%\\Programs\\CapCut\\CapCut.exe"
+    ]
+  }
+}
