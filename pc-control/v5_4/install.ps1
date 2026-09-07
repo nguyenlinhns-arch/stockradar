@@ -92,25 +92,40 @@ $stdout = Join-Path $LogDir 'runner-out.log'
 $stderr = Join-Path $LogDir 'runner-err.log'
 if (-not (Test-Path -LiteralPath $Agent)) { exit 2 }
 
-$pythonw = Get-Command pythonw.exe -ErrorAction SilentlyContinue
-$python = Get-Command python.exe -ErrorAction SilentlyContinue
-$py = Get-Command py.exe -ErrorAction SilentlyContinue
+while ($true) {
+    try {
+        $health = Invoke-RestMethod -Uri 'http://127.0.0.1:4321/health' -TimeoutSec 2
+        if ($health.ok) {
+            Start-Sleep -Seconds 10
+            continue
+        }
+    } catch {}
 
-if ($pythonw) {
-    Start-Process -FilePath $pythonw.Source -ArgumentList @($Agent) -WorkingDirectory $Root -WindowStyle Hidden
-    exit 0
+    $pythonw = Get-Command pythonw.exe -ErrorAction SilentlyContinue
+    $python = Get-Command python.exe -ErrorAction SilentlyContinue
+    $py = Get-Command py.exe -ErrorAction SilentlyContinue
+
+    try {
+        if ($pythonw) {
+            $p = Start-Process -FilePath $pythonw.Source -ArgumentList @($Agent) -WorkingDirectory $Root -WindowStyle Hidden -PassThru
+            $p.WaitForExit()
+        } elseif ($python) {
+            $p = Start-Process -FilePath $python.Source -ArgumentList @($Agent) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+            $p.WaitForExit()
+        } elseif ($py) {
+            $p = Start-Process -FilePath $py.Source -ArgumentList @('-3', $Agent) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+            $p.WaitForExit()
+        } else {
+            exit 3
+        }
+    } catch {
+        Add-Content -LiteralPath $stderr -Value "$(Get-Date -Format o) supervisor error: $($_.Exception.Message)" -Encoding UTF8
+    }
+    Start-Sleep -Seconds 5
 }
-if ($python) {
-    Start-Process -FilePath $python.Source -ArgumentList @($Agent) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-    exit 0
-}
-if ($py) {
-    Start-Process -FilePath $py.Source -ArgumentList @('-3', $Agent) -WorkingDirectory $Root -WindowStyle Hidden -RedirectStandardOutput $stdout -RedirectStandardError $stderr
-    exit 0
-}
-exit 3
 '@
-Set-Content -LiteralPath (Join-Path $Root 'run_bridge.ps1') -Value $runner -Encoding UTF8
+$runnerPath = Join-Path $Root 'run_bridge.ps1'
+Set-Content -LiteralPath $runnerPath -Value $runner -Encoding UTF8
 
 $repair = @'
 @echo off
@@ -128,16 +143,33 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File "%LO
 '@
 Set-Content -LiteralPath $StartupCmd -Value $startup -Encoding ASCII
 
-$taskCommand = "powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Root\run_bridge.ps1`""
+$taskCreated = $false
+$taskArgs = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$runnerPath`""
 try {
-    & schtasks.exe /Create /F /SC ONLOGON /TN $TaskName /TR $taskCommand /RL LIMITED | Out-Null
-    if ($LASTEXITCODE -eq 0) {
-        Write-InstallLog "Scheduled task created: $TaskName"
-    } else {
-        Write-InstallLog "Scheduled task creation returned $LASTEXITCODE; Startup fallback remains active."
-    }
+    $action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $taskArgs
+    $trigger = New-ScheduledTaskTrigger -AtLogOn
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit ([TimeSpan]::Zero)
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited -Force | Out-Null
+    $taskCreated = $true
+    Write-InstallLog "Scheduled task created with restart policy: $TaskName"
 } catch {
-    Write-InstallLog "Scheduled task creation failed: $($_.Exception.Message). Startup fallback remains active."
+    Write-InstallLog "Register-ScheduledTask failed: $($_.Exception.Message). Trying schtasks fallback."
+    try {
+        $taskCommand = "powershell.exe $taskArgs"
+        & schtasks.exe /Create /F /SC ONLOGON /TN $TaskName /TR $taskCommand /RL LIMITED | Out-Null
+        if ($LASTEXITCODE -eq 0) {
+            $taskCreated = $true
+            Write-InstallLog "Scheduled task created by schtasks fallback: $TaskName"
+        }
+    } catch {
+        Write-InstallLog "schtasks fallback failed: $($_.Exception.Message)"
+    }
+}
+
+if ($taskCreated) {
+    Remove-Item -Force -LiteralPath $StartupCmd -ErrorAction SilentlyContinue
+} else {
+    Write-InstallLog 'Scheduled task unavailable; Startup-folder fallback remains active.'
 }
 
 $marker = @{
@@ -145,17 +177,17 @@ $marker = @{
     installed_at = (Get-Date -Format o)
     install_root = $Root
     task_name = $TaskName
-    startup_cmd = $StartupCmd
+    scheduled_task_created = $taskCreated
+    startup_fallback = (-not $taskCreated)
     agent_git_blob = $ExpectedAgentGitBlob
     config_git_blob = $ExpectedConfigGitBlob
 } | ConvertTo-Json -Depth 4
 Set-Content -LiteralPath (Join-Path $Root 'install_state.json') -Value $marker -Encoding UTF8
 
 if (-not $NoStart) {
-    Write-InstallLog 'Starting bridge now.'
-    $runnerPath = Join-Path $Root 'run_bridge.ps1'
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $runnerPath
-    Start-Sleep -Seconds 4
+    Write-InstallLog 'Starting supervisor now.'
+    Start-Process -FilePath 'powershell.exe' -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-WindowStyle','Hidden','-File',$runnerPath) -WindowStyle Hidden
+    Start-Sleep -Seconds 5
     try {
         $health = Invoke-RestMethod -Uri 'http://127.0.0.1:4321/health' -TimeoutSec 5
         Write-InstallLog ("Health OK: " + ($health | ConvertTo-Json -Compress))
@@ -164,7 +196,7 @@ if (-not $NoStart) {
     }
 }
 
-Write-InstallLog 'Install completed. The bridge will also start at Windows logon.'
+Write-InstallLog 'Install completed. The supervisor will restart the bridge if the agent exits.'
 Write-Host "`nInstalled: $Root"
 Write-Host "Local health: http://127.0.0.1:4321/health"
 Write-Host "Local status: http://127.0.0.1:4321/status"
