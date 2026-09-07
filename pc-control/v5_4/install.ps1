@@ -3,11 +3,11 @@ param([switch]$NoStart)
 
 $ErrorActionPreference = 'Stop'
 $Version = '5.4.1'
-$PayloadCommit = '4ae0a3bc6f5ff0acba95e4630c41c09161e8bc9f'
+$PayloadCommit = '1f1c46d4969f374aac6298e347b14808aacf2bc6'
 $RepoRaw = "https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/$PayloadCommit/pc-control/v5_4"
 $Expected = @{
     'agent.py' = '038d2c7868b19107f798c1cf11447c99683c51e3'
-    'config.json' = '4e191a55d142672b4ea2a80944d3520cf4d130eb'
+    'config.json' = '25d087d4e16e566ef3d5d7e7191eb3685b49b9a1'
     'repair_hub.ps1' = 'bd28ba1bf6a947ef885a740195e9eadb750bd1d3'
     'automation_hub.cmd' = 'af41efaebcf7b0cc75514ffae108c40afb955671'
     'start_desktop_commander.ps1' = 'de93a97b3fec0f12fe7f7a6e69e55be440f15500'
@@ -105,6 +105,14 @@ Copy-Item -Force -LiteralPath $tempFiles['automation_hub.cmd'] -Destination (Joi
 Move-Item -Force -LiteralPath $tempFiles['automation_hub.cmd'] -Destination $HubWrapper
 Log "Hub recovery wrapper installed: $HubWrapper"
 
+# The cloud rescue bus is deliberately read-only. The agent may read public trusted
+# issues, but it must never discover a GitHub write token and publish local PC paths.
+$ghShim = @'
+@echo off
+exit /b 1
+'@
+Set-Content -LiteralPath (Join-Path $Root 'gh.cmd') -Value $ghShim -Encoding ASCII
+
 $runner = @'
 $ErrorActionPreference = 'Continue'
 $Root = Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
@@ -114,6 +122,13 @@ New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
 $stdout = Join-Path $LogDir 'runner-out.log'
 $stderr = Join-Path $LogDir 'runner-err.log'
 if (-not (Test-Path -LiteralPath $Agent)) { exit 2 }
+
+# Force the rescue agent into public-read/private-result mode. The local gh.cmd shim
+# masks any globally installed gh CLI only for this child process environment.
+$env:THAYLINH_GITHUB_TOKEN = ''
+$env:GH_TOKEN = ''
+$env:GITHUB_TOKEN = ''
+$env:PATH = "$Root;$env:PATH"
 
 while ($true) {
     try {
@@ -189,6 +204,7 @@ $marker = @{
     install_root = $Root
     scheduled_task_created = $taskCreated
     hub_wrapper = $HubWrapper
+    github_rescue_mode = 'public-read-local-result'
     payload_git_blobs = $Expected
 } | ConvertTo-Json -Depth 6
 Set-Content -LiteralPath (Join-Path $Root 'install_state.json') -Value $marker -Encoding UTF8
