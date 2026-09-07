@@ -1,0 +1,49 @@
+name: Verify account-scoped project chat continuity
+on:
+  push:
+    branches: ['fix/project-chat-continuity-20260907']
+    paths:
+      - 'scripts/apply_project_chat_continuity.py'
+      - 'engine/tests/project_chat_continuity.test.mjs'
+      - '.github/workflows/project-chat-continuity.yml'
+permissions:
+  contents: write
+concurrency:
+  group: project-chat-continuity-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check pandas==3.0.5 requests==2.34.2 pytest==9.1.1
+      - name: Apply exact-source continuity repair
+        run: python scripts/apply_project_chat_continuity.py
+      - name: Verify private history isolation and all current regression contracts
+        run: |
+          node --check website/assets/ai-center.js
+          node --test engine/tests/*.test.mjs
+          node --test scripts/private_project_bridge_test.mjs scripts/project_knowledge_bridge_test.mjs
+          python -m unittest discover -s engine/tests
+          python -m pytest engine/tests -q
+          git diff --check
+      - name: Commit verified client change to feature branch only
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          git config user.name 'StockRadar continuity verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add website/assets/ai-center.js
+          if ! git diff --cached --quiet; then
+            git commit -m 'Keep project chat state scoped to the active account and session'
+            git push origin "HEAD:$BRANCH_NAME"
+          fi
+          echo "Verified source: $(git rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
