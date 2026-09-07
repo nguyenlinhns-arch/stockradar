@@ -253,7 +253,7 @@ def start_desktop_commander(force_restart: bool = False) -> dict[str, Any]:
     if force_restart and os.name == "nt":
         ps = (
             "Get-CimInstance Win32_Process | Where-Object { "
-            "$_.CommandLine -match 'desktop-commander' -and $_.CommandLine -match 'remote' } | "
+            "$_.ProcessId -ne $PID -and $_.CommandLine -match 'desktop-commander' -and $_.CommandLine -match 'remote' } | "
             "ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
         )
         try:
