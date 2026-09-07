@@ -3,7 +3,7 @@
   "trusted_user": "nguyenlinhns-arch",
   "prefixes": ["[PC-CONTROL]", "[ZALO-CONTROL]"],
   "poll_seconds": 75,
-  "hub_url": "http://127.0.0.1:4310/health",
+  "hub_url": "http://127.0.0.1:4310/",
   "api_port": 4321,
   "auto_start_hub": true,
   "auto_start_desktop_commander": true,
