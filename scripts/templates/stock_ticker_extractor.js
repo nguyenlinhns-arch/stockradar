@@ -14,10 +14,11 @@ function extractStockTickers(text) {
     if (!/[A-Z]/.test(ticker) || technical.has(ticker)) continue;
     const prefix = masked.slice(0,match.index);
     const stockCue = /(?:\bmã|\bma|cổ phiếu|co phieu|\bticker|\bsymbol)\s*[:=]?\s*$/iu.test(prefix);
+    const namedCue = match[2] === ticker && (/(?:phân tích|phan tich|so sánh|so sanh|kiểm tra|kiem tra|đánh giá|danh gia)\s*[:=]?\s*$/iu.test(prefix) || (tickers.length > 0 && /(?:\bvà|\bva|\bvới|\bvoi|\bvs|[,/])\s*$/iu.test(prefix)));
     const standalone = masked.trim() === match[0] && match[2] === ticker;
     const command = /^(MUA|BAN|GIU|CHO|GHI|TOP|SAO|KHI|NEU|HAY|TOI|XEM|CAC|CUA|VOI|NAY|ROI|RUI|CHI|THE|FOR|AND|ALL|GET|SET)$/.test(ticker);
     if (command && !match[1]) continue;
-    if (words.has(ticker) && !match[1] && !stockCue && !standalone) continue;
+    if (words.has(ticker) && !match[1] && !stockCue && !namedCue && !standalone) continue;
     if (!tickers.includes(ticker)) tickers.push(ticker);
     if (tickers.length === 4) break;
   }
