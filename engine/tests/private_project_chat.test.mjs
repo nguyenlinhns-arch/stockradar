@@ -1,3 +1,5 @@
+// PROJECT_CONTEXT_READ_V1
+import * as continuation from '../../supabase/functions/_shared/chat-continuation.ts';
 // PROJECT_AUTORESUME_ROUTING_V1
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
@@ -8,7 +10,7 @@ import * as knowledge from '../../supabase/functions/_shared/stockradar-knowledg
 import {parseResearchQuery} from '../../supabase/functions/_shared/stockradar-query.ts';
 const U='11111111-1111-4111-8111-111111111111',V='22222222-2222-4222-8222-222222222222',T='33333333-3333-4333-8333-333333333333',O='44444444-4444-4444-8444-444444444444';
 const SUMMARY='PRIVATE_REVIEWED_HANDOFF_ONLY_FOR_OWNER. Continue research using fresh data; no current prices are provided.';
-function harness({user=U,providerError=false,linked=true}={}) {
+function harness({user=U,providerError=false,linked=true,keyMissing=false,burstAllowed=true}={}) {
  let handler,modelInput,forwarded;const calls=[];
  const tables={
   stockradar_ai_user_memory:linked?[{user_id:U,preferences:{project_bridge:{enabled:true,source:'CHATGPT_PROJECT_STOCKRADAR',version:'PRIVATE_TEST_V1',thread_id:T,reviewed_at:'2025-01-01T00:00:00Z',summary:SUMMARY}}}]:[],
@@ -16,17 +18,17 @@ function harness({user=U,providerError=false,linked=true}={}) {
   stockradar_ai_messages:[{id:1,thread_id:T,role:'user',content:'Reviewed handoff note',scope:'project_handoff'}],
   stockradar_ai_knowledge_versions:[{version:'PUBLIC_TEST',status:'ACTIVE',source:'PROJECT_STOCKRADAR_PUBLIC',activated_at:'2025-01-01T00:00:00Z',content:'Reviewed public methods and current-data safety instructions.'}]
  };
- const db={auth:{getUser:async()=>({data:{user:{id:user}}})},rpc:async(name,args)=>{calls.push({name,args});if(name==='get_my_stockradar_access')return {data:{account_tier:'PAID',account_status:'ACTIVE'}};return {data:{allowed:true,unlimited:true,limit:null,remaining:null}};},from(table){
+ const db={auth:{getUser:async()=>({data:{user:{id:user}}})},rpc:async(name,args)=>{calls.push({name,args});if(name==='get_my_stockradar_access')return {data:{account_tier:'PAID',account_status:'ACTIVE'}};return {data:{allowed:args?.p_bucket === "stock_ai_burst" ? burstAllowed : true,unlimited:true,limit:null,remaining:null}};},from(table){
   const filters=[];let action='read',value,limit=100,descending=false;const chain={};
   chain.select=()=>chain;chain.eq=(k,v)=>{filters.push(r=>r[k]===v);calls.push({table,key:k,value:v});return chain;};chain.in=(k,v)=>{filters.push(r=>v.includes(r[k]));return chain;};chain.order=(k,opts)=>{descending=k==='id'&&opts?.ascending===false;return chain;};chain.limit=n=>{limit=n;return chain;};chain.insert=v=>{action='insert';value=v;return chain;};chain.update=v=>{action='update';value=v;return chain;};
   const result=()=>{let rows=(tables[table]||[]).filter(r=>filters.every(f=>f(r)));if(action==='insert'){const r={...value,id:value.id||'55555555-5555-4555-8555-555555555555',status:value.status||'ACTIVE'};(tables[table]||=[]).push(r);rows=[r];}if(action==='update')rows.forEach(r=>Object.assign(r,value));if(descending)rows=rows.slice().sort((a,b)=>b.id-a.id);return {data:rows.slice(0,limit),error:null};};
   chain.maybeSingle=chain.single=async()=>{const r=result();return {...r,data:r.data[0]||null};};chain.then=(resolve,reject)=>Promise.resolve(result()).then(resolve,reject);return chain;
  }};
- const Deno={serve:fn=>{handler=fn;},env:{get:key=>({SUPABASE_URL:'https://test.invalid',SUPABASE_ANON_KEY:'test',SUPABASE_SERVICE_ROLE_KEY:'test',OPENAI_API_KEY:'test'}[key])}};
+ const Deno={serve:fn=>{handler=fn;},env:{get:key=>({SUPABASE_URL:'https://test.invalid',SUPABASE_ANON_KEY:'test',SUPABASE_SERVICE_ROLE_KEY:'test',OPENAI_API_KEY:keyMissing?'':'test'}[key])}};
  const fetch=async(url,opts)=>{const data=JSON.parse(opts.body);if(url.includes('api.openai.com')){modelInput=JSON.parse(data.input);return new Response(JSON.stringify(providerError?{error:{code:'insufficient_quota'}}:{status:'completed',output_text:'Đây là câu trả lời phương pháp mô phỏng.'}),{status:providerError?429:200});}forwarded=data;return new Response(JSON.stringify({status:'READY_FALLBACK',answer:'Dữ liệu tham chiếu mô phỏng.',scope:'ticker',ticker:data.ticker,model_status:'MODEL_ERROR',knowledge_version:'PUBLIC_TEST'}));};
  const raw=fs.readFileSync(new URL('../../supabase/functions/stock-ai-chat/index.ts',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
- const bindings={...bridge,...knowledge,Deno,createClient:()=>db,fetch};new Function(...Object.keys(bindings),stripTypeScriptTypes(raw))(...Object.values(bindings));
- return {calls,get modelInput(){return modelInput;},get forwarded(){return forwarded;},async ask(body,token='test') {const headers={'Content-Type':'application/json',Origin:'https://stockradar.vn'};if(token)headers.Authorization='Bearer '+token;const response=await handler(new Request('https://test.invalid',{method:'POST',headers,body:JSON.stringify(body)}));return {status:response.status,body:await response.json()};}};
+ const bindings={...bridge,...knowledge,...continuation,Deno,createClient:()=>db,fetch};new Function(...Object.keys(bindings),stripTypeScriptTypes(raw))(...Object.values(bindings));
+ return {calls,tables,get modelInput(){return modelInput;},get forwarded(){return forwarded;},async ask(body,token='test') {const headers={'Content-Type':'application/json',Origin:'https://stockradar.vn'};if(token)headers.Authorization='Bearer '+token;const response=await handler(new Request('https://test.invalid',{method:'POST',headers,body:JSON.stringify(body)}));return {status:response.status,body:await response.json()};}};
 }
 test('resume requires authentication before reading project context',async()=>{const h=harness();assert.equal((await h.ask({operation:'resume_project'},'')).status,401);assert.equal(h.calls.length,0);});
 test('owner can resume linked history without a provider call or AI quota',async()=>{const h=harness();const r=await h.ask({operation:'resume_project',thread_id:O});assert.equal(r.status,200);assert.equal(r.body.thread_id,T);assert.equal(r.body.messages.length,1);assert.equal(r.body.project_bridge.context_loaded,true);assert.equal(r.body.project_bridge.context_applied,false);assert.equal(h.modelInput,undefined);assert.ok(!h.calls.some(c=>c.name?.startsWith('consume_')));});
@@ -55,6 +57,40 @@ test('server infers an explicitly changed horizon in a follow-up without a clien
  assert.equal(h.forwarded.ticker,'FPT');assert.equal(h.forwarded.horizon,'MEDIUM_TERM');
 });
 test('project-context questions stay on the knowledge route without inventing a ticker',async()=>{
- const h=harness();await h.ask({message:'Đoạn chat này liên thông với dự án của tôi chưa?',thread_id:T});
- assert.equal(h.forwarded,undefined);assert.equal(h.modelInput.PROJECT_HANDOFF.summary,SUMMARY);
+ const h=harness();const r=await h.ask({message:'Đoạn chat này liên thông với dự án của tôi chưa?',thread_id:T});
+ assert.equal(h.forwarded,undefined);assert.equal(h.modelInput,undefined);assert.equal(r.body.model_status,'MODEL_NOT_CALLED');assert.equal(r.body.project_bridge.context_loaded,true);assert.equal(r.body.project_bridge.context_applied,false);
+});
+
+
+test('project record status remains available without a configured model and consumes no daily question',async()=>{
+ const h=harness({keyMissing:true});const r=await h.ask({message:'Đã liên thông với dự án chưa?',thread_id:T});
+ assert.equal(r.status,200);assert.equal(r.body.answer_engine,'PROJECT_HANDOFF_RECORD');assert.equal(r.body.quota_consumed,false);assert.equal(r.body.provider_attempted,false);assert.equal(r.body.conversation_persisted,true);
+ assert.match(r.body.answer,/PRIVATE_TEST_V1/);assert.ok(!r.body.answer.includes(SUMMARY));assert.equal(h.modelInput,undefined);
+ assert.equal(h.calls.filter(x=>x.name==='consume_stockradar_api_quota'&&x.args.p_bucket==='stock_ai').length,0);
+ assert.equal(h.calls.filter(x=>x.name==='consume_stockradar_api_quota'&&x.args.p_bucket==='stock_ai_burst').length,1);
+});
+test('project summary reads only the owned record and ignores forged client content',async()=>{
+ const h=harness({keyMissing:true});const r=await h.ask({message:'Xem ngữ cảnh dự án đã chuyển',thread_id:T,project_context:'FORGED_SUMMARY'});
+ assert.match(r.body.answer,/PRIVATE_REVIEWED_HANDOFF_ONLY_FOR_OWNER/);assert.ok(!r.body.answer.includes('FORGED_SUMMARY'));assert.equal(r.body.model_status,'MODEL_NOT_CALLED');assert.equal(h.modelInput,undefined);
+});
+test('an unrelated account cannot obtain the project record in its own thread',async()=>{
+ const h=harness({user:V});const r=await h.ask({message:'Xem ngữ cảnh dự án đã chuyển',thread_id:O,user_id:U});
+ assert.equal(r.status,200);assert.ok(!r.body.answer.includes(SUMMARY));assert.equal(r.body.project_bridge.available,false);assert.equal(h.modelInput,undefined);
+});
+test('record reads retain technical throttling without consuming daily questions',async()=>{
+ const h=harness({burstAllowed:false});const r=await h.ask({message:'Đã liên thông với dự án chưa?',thread_id:T});
+ assert.equal(r.status,429);assert.equal(r.body.reason,'TECHNICAL_RATE_LIMIT');assert.equal(r.body.quota_consumed,false);assert.equal(h.modelInput,undefined);assert.equal(h.tables.stockradar_ai_messages.length,1);
+});
+test('knowledge credit failure is specific, persisted and never claims knowledge application',async()=>{
+ const h=harness({providerError:true});const r=await h.ask({message:'SEPA là gì?',thread_id:T});
+ assert.equal(r.body.model_status,'MODEL_CREDIT_BLOCKED');assert.equal(r.body.reason,'OPENAI_429_QUOTA_EXHAUSTED');assert.equal(r.body.provider_http_status,429);assert.equal(r.body.provider_attempted,true);assert.equal(r.body.knowledge_applied,false);assert.equal(r.body.conversation_persisted,true);
+ assert.match(r.body.answer,/không phải hết lượt hỏi/);const saved=h.tables.stockradar_ai_messages.find(x=>x.role==='assistant');assert.equal(saved.metadata.reason,'OPENAI_429_QUOTA_EXHAUSTED');
+});
+test('missing key cannot be misreported as exhausted credit or successful provider attempt',async()=>{
+ const h=harness({keyMissing:true});const r=await h.ask({message:'SEPA là gì?',thread_id:T});
+ assert.equal(r.body.model_status,'MODEL_ERROR');assert.equal(r.body.reason,'OPENAI_KEY_MISSING');assert.equal(r.body.provider_attempted,false);assert.equal(r.body.knowledge_applied,false);assert.equal(r.body.project_bridge.context_applied,false);assert.equal(h.modelInput,undefined);
+});
+test('a successful knowledge model reply records true persistence only after saving',async()=>{
+ const h=harness();const r=await h.ask({message:'SEPA là gì?',thread_id:T});
+ assert.equal(r.body.model_status,'MODEL_READY');assert.equal(r.body.knowledge_applied,true);assert.equal(r.body.conversation_persisted,true);assert.equal(r.body.provider_http_status,200);assert.equal(h.tables.stockradar_ai_messages.length,3);
 });

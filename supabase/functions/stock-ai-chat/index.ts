@@ -1,3 +1,5 @@
+// PROJECT_CONTEXT_READ_V1
+import { projectRecordIntent, projectRecordAnswer, knowledgeProviderFailure } from "../_shared/chat-continuation.ts";
 // PROJECT_AUTORESUME_ROUTING_V1
 import { loadProjectBridge, loadProjectContext, projectContextInput, projectBridgeMeta, PROJECT_HANDOFF_RULE } from "../_shared/stockradar-project-context.ts";
 // PRIVATE_PROJECT_BRIDGE_V1
@@ -139,7 +141,7 @@ async function ensureThread(db: any, userId: string, requestedId: unknown, knowl
 
 async function loadMessages(db: any, threadId: string, limit = MAX_STORED_HISTORY) {
   const {data,error} = await db.from("stockradar_ai_messages")
-    .select("id,role,content,scope,ticker,horizon,answer_engine,model_status,knowledge_version,created_at")
+    .select("id,role,content,scope,ticker,horizon,answer_engine,model_status,knowledge_version,metadata,created_at")
     .eq("thread_id",threadId).order("id",{ascending:false}).limit(limit);
   if (error) throw new Error("THREAD_HISTORY_FAILED");
   return (data || []).reverse();
@@ -170,7 +172,7 @@ async function saveExchange(db: any, thread: any, input: {message:string,scope:s
     ticker:validTicker(result?.ticker) || input.ticker || null, horizon:input.horizon || null,
     answer_engine:clean(result?.answer_engine,120) || null, model_status:clean(result?.model_status,120) || null,
     knowledge_version:knowledgeVersion,
-    metadata:{mode:result?.mode || null,status:result?.status || null,source:result?.source || null,project_bridge:result?.project_bridge || null},
+    metadata:{mode:result?.mode || null,status:result?.status || null,source:result?.source || null,project_bridge:result?.project_bridge || null,reason:result?.reason || null,provider_attempted:result?.provider_attempted ?? null,provider_http_status:result?.provider_http_status ?? null,quota_consumed:result?.quota_consumed ?? null},
   });
   if (assistantInsert.error) throw new Error("THREAD_SAVE_ASSISTANT_FAILED");
   const update = await db.from("stockradar_ai_threads").update({
@@ -195,9 +197,11 @@ async function consumeKnowledgeQuota(db: any, userId: string, tier: string) {
 
 async function knowledgeAnswer(db: any, userId: string, tier: string, message: string, history: any[], knowledge: any, thread: any, inputHorizon: string, bridge: any) {
   const quotaResult = await consumeKnowledgeQuota(db,userId,tier);
-  if (!quotaResult.ok) return {httpStatus:quotaResult.status, payload:{...quotaResult.body,thread_id:thread.id,knowledge_version:knowledge.version}};
+  if (!quotaResult.ok) return {httpStatus:quotaResult.status, payload:{...quotaResult.body,thread_id:thread.id,knowledge_version:knowledge.version,quota_consumed:false,provider_attempted:false,model_status:"MODEL_NOT_CALLED"}};
+  const base = {tier,scope:"conversation",mode:"KNOWLEDGE_ONLY",thread_id:thread.id,...projectKnowledgeMeta(knowledge,false),quota:quotaResult.quota,quota_consumed:true};
+  const fallback = (failure: any) => ({httpStatus:200,payload:{...base,status:"READY_FALLBACK",answer_engine:"KNOWLEDGE_CORE",...failure}});
   const key = Deno.env.get("OPENAI_API_KEY")?.trim();
-  if (!key) return {httpStatus:200,payload:{status:"READY_FALLBACK",reason:"OPENAI_KEY_MISSING",tier,mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_CREDIT_BLOCKED",answer_engine:"KNOWLEDGE_CORE",answer:"StockRadar đã lưu được ngữ cảnh hội thoại, nhưng mô hình AI hiện chưa khả dụng. Bạn có thể hỏi trực tiếp một mã HOSE để dùng lớp phân tích dữ liệu hiện hành."}};
+  if (!key) return fallback(knowledgeProviderFailure({kind:"MISSING_KEY"}));
   const instructions = projectKnowledgeInstructions("Bạn là StockRadar AI. Trả lời bằng tiếng Việt rõ ràng, liên tục theo hội thoại. Chỉ giải thích phương pháp cho HOSE; không phân tích Crypto/Coin, HNX hoặc UPCoM. Trong nhánh KNOWLEDGE_ONLY, không có dữ liệu thị trường mới: không công bố giá, Buy Zone, Stop, Target, xác suất hay tín hiệu hành động; số trong lịch sử không phải dữ liệu hiện tại.", knowledge) + (projectContextInput(bridge,thread.id) ? PROJECT_HANDOFF_RULE : "");
   const context = {PROJECT_HANDOFF:projectContextInput(bridge,thread.id),USER_QUESTION:message,RECENT_CONVERSATION:history.slice(-12),THREAD_CONTEXT:{last_ticker:thread.last_ticker,last_horizon:thread.last_horizon},REQUESTED_HORIZON:inputHorizon};
   let response: Response;
@@ -207,12 +211,12 @@ async function knowledgeAnswer(db: any, userId: string, tier: string, message: s
       body:JSON.stringify({model:Deno.env.get("OPENAI_MODEL")?.trim() || "gpt-5-mini",instructions,input:JSON.stringify(context),max_output_tokens:1400,store:false,reasoning:{effort:"minimal"}}),
     });
   } catch (error) {
-    return {httpStatus:200,payload:{status:"READY_FALLBACK",reason:error?.name === "TimeoutError" ? "OPENAI_TIMEOUT" : "OPENAI_NETWORK_ERROR",tier,mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:error?.name === "TimeoutError" ? "MODEL_TIMEOUT" : "MODEL_ERROR",answer_engine:"KNOWLEDGE_CORE",answer:"Mô hình AI đang tạm thời chưa phản hồi. Lịch sử hội thoại của bạn vẫn được giữ lại."}};
+    return fallback(knowledgeProviderFailure({kind:error?.name === "TimeoutError" ? "TIMEOUT" : "NETWORK"}));
   }
   let payload: any = null; try { payload = await response.json(); } catch {}
   const text = response.ok && payload?.status === "completed" ? openAIText(payload) : "";
-  if (!text) return {httpStatus:200,payload:{status:"READY_FALLBACK",reason:`OPENAI_${response.status}`,tier,mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_ERROR",answer_engine:"KNOWLEDGE_CORE",answer:"StockRadar chưa tạo được câu trả lời từ mô hình AI lúc này. Lịch sử hội thoại vẫn được giữ lại."}};
-  return {httpStatus:200,payload:{status:"READY",tier,scope:"conversation",mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_READY",answer_engine:"MODEL_PLUS_KNOWLEDGE_CORE",...projectKnowledgeMeta(knowledge,true),answer:text}};
+  if (!text) return fallback(knowledgeProviderFailure({status:response.status,payload}));
+  return {httpStatus:200,payload:{...base,status:"READY",model_status:"MODEL_READY",answer_engine:"MODEL_PLUS_KNOWLEDGE_CORE",...projectKnowledgeMeta(knowledge,true),provider_attempted:true,provider_http_status:response.status,answer:text}};
 }
 
 Deno.serve(async (req: Request) => {
@@ -269,6 +273,16 @@ Deno.serve(async (req: Request) => {
 
     const message = clean(body.message,700);
     if (!message) return json({status:"INVALID_REQUEST",reason:"EMPTY_MESSAGE"},400,origin);
+    // Read only the server-reviewed record. Never use this branch for market analysis.
+    const recordIntent = explicitTicker(message) ? null : projectRecordIntent(message);
+    if (recordIntent) {
+      const {data:burst,error:burstError} = await db.rpc("consume_stockradar_api_quota",{p_user_id:user.id,p_bucket:"stock_ai_burst"});
+      if (burstError || !burst || burst.reason === "POLICY_MISSING") return json({status:"SERVICE_UNAVAILABLE",reason:"AI_BURST_POLICY_UNAVAILABLE",quota_consumed:false,provider_attempted:false},503,origin);
+      if (burst.allowed !== true) return json({status:"RATE_LIMITED",reason:"TECHNICAL_RATE_LIMIT",tier,quota_consumed:false,provider_attempted:false,answer:"Bạn đang gửi nhiều yêu cầu liên tiếp. Vui lòng thử lại sau một phút."},429,origin);
+      const record = {...projectRecordAnswer(projectBridge,thread.id,recordIntent),...projectKnowledgeMeta(knowledge,false),tier,thread_id:thread.id,project_bridge:projectBridgeMeta(projectBridge,thread.id,false)};
+      await saveExchange(db,thread,{message,scope:"conversation",ticker:"",horizon:thread.last_horizon || "SHORT_TERM"},record,knowledge.version);
+      return json({...record,conversation_persisted:true},200,origin);
+    }
     const existing = await loadMessages(db,thread.id,MAX_STORED_HISTORY);
     const explicit = explicitTicker(message);
     const requested = validTicker(body.ticker);
@@ -286,6 +300,7 @@ Deno.serve(async (req: Request) => {
       result.payload = {...result.payload,project_bridge:projectBridgeMeta(projectBridge,thread.id,result.payload?.model_status === "MODEL_READY")};
       if (result.httpStatus === 200 && result.payload?.answer) {
         await saveExchange(db,thread,{message,scope:"conversation",ticker:"",horizon:inputHorizon},result.payload,knowledge.version);
+        result.payload.conversation_persisted = true;
       }
       return json(result.payload,result.httpStatus,origin);
     }
