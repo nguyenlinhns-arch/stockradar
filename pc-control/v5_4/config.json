@@ -1,0 +1,21 @@
+{
+  "repo": "nguyenlinhns-arch/stockradar",
+  "trusted_user": "nguyenlinhns-arch",
+  "prefixes": ["[PC-CONTROL]", "[ZALO-CONTROL]"],
+  "poll_seconds": 45,
+  "hub_url": "http://127.0.0.1:4310/health",
+  "api_port": 4321,
+  "auto_start_hub": true,
+  "auto_start_desktop_commander": true,
+  "desktop_commander_command": "npx @wonderwhy-er/desktop-commander@latest remote",
+  "app_candidates": {
+    "zalo": [
+      "%LOCALAPPDATA%\\Programs\\Zalo\\Zalo.exe",
+      "%LOCALAPPDATA%\\Zalo\\Zalo.exe"
+    ],
+    "capcut": [
+      "%LOCALAPPDATA%\\CapCut\\Apps\\CapCut.exe",
+      "%LOCALAPPDATA%\\Programs\\CapCut\\CapCut.exe"
+    ]
+  }
+}
