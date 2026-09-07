@@ -1,6 +1,6 @@
 {
-  "id": "20260907-gpts-readback-type-009",
-  "action": "TYPE",
-  "text": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$ts=Get-Date -Format yyyyMMdd-HHmmss;$c=@(Join-Path $env:USERPROFILE 'Google Drive\\My Drive\\07_CHATGPT_PC',Join-Path $env:USERPROFILE 'My Drive\\07_CHATGPT_PC');Get-PSDrive -PSProvider FileSystem|ForEach-Object{$r=$_.Root;$c+=Join-Path $r 'My Drive\\07_CHATGPT_PC';$c+=Join-Path $r '07_CHATGPT_PC'};$d=$c|Where-Object{Test-Path -LiteralPath $_}|Select-Object -First 1;if($d){$o=@('READBACK_OK '+(Get-Date -Format o),'COMPUTER='+$env:COMPUTERNAME,'USER='+$env:USERNAME,'P4310='+[bool](Get-NetTCPConnection -LocalPort 4310 -State Listen -ErrorAction SilentlyContinue),'P8777='+[bool](Get-NetTCPConnection -LocalPort 8777 -State Listen -ErrorAction SilentlyContinue),'NODEPIDS='+((Get-Process node -ErrorAction SilentlyContinue|Select-Object -ExpandProperty Id)-join ','));Set-Content -LiteralPath (Join-Path $d ('PC_CONTROL_READBACK_'+$ts+'.txt')) -Value $o -Encoding UTF8}\"",
-  "created_at": "2026-09-07T23:52:20+07:00"
+  "id": "20260907-gpts-readback-enter-010",
+  "action": "KEY",
+  "keys": "ENTER",
+  "created_at": "2026-09-07T23:52:40+07:00"
 }
