@@ -106,3 +106,21 @@ test('a late auto-resume metadata response cannot select or expose another accou
  assert.equal(await work,false);assert.equal(h.calls.length,1);assert.equal(h.api.state.threadId,'');
  assert.equal(h.storage.has(`${KEY}:project-auto:${V}`),false);
 });
+
+// PROJECT_RESTORE_STARTUP_LOCK_V1
+test('initial metadata restoration blocks submitting into the wrong thread',async()=>{
+ const h=harness(),d=deferred();h.setReply(body=>body.operation==='project_bridge'?d.promise:Promise.resolve(response()));
+ const work=h.api.restoreInitialConversation(A,h.log);await new Promise(r=>setImmediate(r));
+ assert.equal(h.api.state.hydrating,true);await h.ask();assert.equal(h.calls.length,1);
+ d.resolve({project_bridge:{available:true,auto_resume:true,thread_id:T,version:'AUTO_LOCK'}});
+ assert.equal(await work,true);assert.equal(h.api.state.hydrating,false);assert.equal(h.api.state.threadId,T);
+});
+test('old account restoration does not release the new account startup lock',async()=>{
+ const h=harness(),first=deferred(),second=deferred();let count=0;
+ h.setReply(()=>++count===1?first.promise:second.promise);
+ const old=h.api.restoreInitialConversation(A,h.log);await new Promise(r=>setImmediate(r));
+ h.setSession(B);const next=h.api.restoreInitialConversation(B,h.log);await new Promise(r=>setImmediate(r));
+ first.resolve({project_bridge:{available:false}});assert.equal(await old,false);assert.equal(h.api.state.hydrating,true);
+ second.resolve(response(O,'ACCOUNT_B_ONLY',{project_bridge:{available:false}}));assert.equal(await next,true);
+ assert.equal(h.api.state.hydrating,false);assert.ok(!textOf(h.log).includes('OWNER_A_PRIVATE'));
+});

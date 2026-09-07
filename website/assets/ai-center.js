@@ -1,3 +1,4 @@
+// PROJECT_RESTORE_STARTUP_LOCK_V1
 // PROJECT_AUTORESUME_ROUTING_V1
 // PROJECT_CHAT_CONTINUITY_V2
 // PRIVATE_PROJECT_BRIDGE_V1
@@ -357,25 +358,34 @@
   }
 
   async function restoreInitialConversation(session, log) {
+    if (!session?.access_token) return false;
     const epoch = state.accountEpoch;
-    if (!session?.access_token || !(await sameAccount(session,epoch))) return false;
+    const sequence = (state.restoreSequence || 0) + 1;
+    state.restoreSequence = sequence;
+    state.hydrating = true;
+    const current = async () => state.restoreSequence === sequence && await sameAccount(session,epoch);
     const key = `${THREAD_KEY}:project-auto:${state.accountId}`;
     try {
-      const {response,data} = await callAuthenticated(session,{operation:'project_bridge'});
-      if (!(await sameAccount(session,epoch))) return false;
-      const bridge = data?.project_bridge;
-      if (response.ok && bridge?.available === true && bridge.auto_resume === true && /^[A-Z0-9_.-]{1,100}$/i.test(String(bridge.version || ''))) {
-        let seen = ''; try { seen = localStorage.getItem(key) || ''; } catch (_) {}
-        if (seen !== bridge.version && await resumeProject(session,log)) {
-          if (!(await sameAccount(session,epoch))) return false;
-          try { localStorage.setItem(key,bridge.version); } catch (_) {}
-          return true;
+      if (!(await current())) return false;
+      try {
+        const {response,data} = await callAuthenticated(session,{operation:'project_bridge'});
+        if (!(await current())) return false;
+        const bridge = data?.project_bridge;
+        if (response.ok && bridge?.available === true && bridge.auto_resume === true && /^[A-Z0-9_.-]{1,100}$/i.test(String(bridge.version || ''))) {
+          let seen = ''; try { seen = localStorage.getItem(key) || ''; } catch (_) {}
+          if (seen !== bridge.version && await resumeProject(session,log)) {
+            if (!(await current())) return false;
+            try { localStorage.setItem(key,bridge.version); } catch (_) {}
+            return true;
+          }
         }
+      } catch (_) {
+        if (!(await current())) return false;
       }
-    } catch (_) {
-      if (!(await sameAccount(session,epoch))) return false;
+      return await hydrateHistory(session,log,state.threadId,true);
+    } finally {
+      if (epoch === state.accountEpoch && sequence === state.restoreSequence) state.hydrating = false;
     }
-    return await hydrateHistory(session,log,state.threadId,true);
   }
 
   function threadLabel(row) {
