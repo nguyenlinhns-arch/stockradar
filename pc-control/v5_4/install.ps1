@@ -3,7 +3,8 @@ param([switch]$NoStart)
 
 $ErrorActionPreference = 'Stop'
 $Version = '5.4.1'
-$RepoRaw = 'https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/pc-control/pc-control/v5_4'
+$PayloadCommit = '4ae0a3bc6f5ff0acba95e4630c41c09161e8bc9f'
+$RepoRaw = "https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/$PayloadCommit/pc-control/v5_4"
 $Expected = @{
     'agent.py' = '038d2c7868b19107f798c1cf11447c99683c51e3'
     'config.json' = '4e191a55d142672b4ea2a80944d3520cf4d130eb'
@@ -64,7 +65,7 @@ function ParsePowerShell([string]$Path) {
 }
 
 New-Item -ItemType Directory -Force -Path $Root, $LogDir, $StartupDir, $OpenAIComputerUse | Out-Null
-Log "Installing ThayLinh PC Bridge v$Version into $Root"
+Log "Installing ThayLinh PC Bridge v$Version payload=$PayloadCommit into $Root"
 
 $tempFiles = @{}
 foreach ($name in $Expected.Keys) {
@@ -183,6 +184,7 @@ else { Log 'Scheduled task unavailable; Startup-folder fallback remains active.'
 
 $marker = @{
     installed_version = $Version
+    payload_commit = $PayloadCommit
     installed_at = (Get-Date -Format o)
     install_root = $Root
     scheduled_task_created = $taskCreated
