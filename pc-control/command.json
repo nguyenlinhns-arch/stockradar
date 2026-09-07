@@ -1,6 +1,6 @@
 {
-  "id": "20260907-1958-editvideo-type-dc-011",
-  "action": "TYPE",
-  "text": "cmd.exe /k npx @wonderwhy-er/desktop-commander@latest remote",
-  "created_at": "2026-09-07T19:58:20+07:00"
+  "id": "20260907-1958-editvideo-enter-dc-012",
+  "action": "KEY",
+  "keys": "ENTER",
+  "created_at": "2026-09-07T19:58:40+07:00"
 }
