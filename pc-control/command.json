@@ -1,6 +1,6 @@
 {
-  "id": "20260907-editvideo-readbridge-type-017",
-  "action": "TYPE",
-  "text": "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"$p='D:\\Thay_Linh_Automation_Hub_MOI_HOAN_TOAN_v1.3.3\\mxh-video-tools\\bridge_cmd.js';$t=Get-Content -Raw -LiteralPath $p;$lines=($t -split '\\r?\\n' | Where-Object {$_ -match 'BRIDGE_BASE_URL|api/command|/command'} | Select-Object -First 80) -join [Environment]::NewLine;$b=[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($lines));Start-Process msedge.exe -ArgumentList @('data:text/plain;base64,'+$b)\"",
-  "created_at": "2026-09-07T20:06:20+07:00"
+  "id": "20260907-editvideo-readbridge-enter-018",
+  "action": "KEY",
+  "keys": "ENTER",
+  "created_at": "2026-09-07T20:06:40+07:00"
 }
