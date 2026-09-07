@@ -12,7 +12,7 @@ on:
 jobs:
   windows-validation:
     runs-on: windows-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,7 +31,8 @@ jobs:
         run: |
           $files = @(
             'pc-control/v5_4/install.ps1',
-            'pc-control/v5_4/uninstall.ps1'
+            'pc-control/v5_4/uninstall.ps1',
+            'pc-control/v5_4/repair_hub.ps1'
           )
           foreach ($file in $files) {
             $tokens = $null
@@ -47,17 +48,54 @@ jobs:
       - name: Validate config and agent allow-list
         shell: pwsh
         run: |
-          python -c "import json; json.load(open(r'pc-control/v5_4/config.json', encoding='utf-8')); print('config JSON OK')"
+          python -c "import json; c=json.load(open(r'pc-control/v5_4/config.json', encoding='utf-8')); assert c['hub_url']=='http://127.0.0.1:4310/'; print('config JSON and Hub root OK')"
           python -c "import importlib.util; p=r'pc-control/v5_4/agent.py'; s=importlib.util.spec_from_file_location('pcbridge',p); m=importlib.util.module_from_spec(s); s.loader.exec_module(m); assert m.parse_action('[PC-CONTROL] PING')=='PING'; assert m.parse_action('[ZALO-CONTROL] RESTART_DESKTOP_COMMANDER')=='RESTART_DESKTOP_COMMANDER'; assert m.parse_action('[OTHER] PING') is None; r=m.run_action('PING'); assert r.get('ok') and r.get('pong'); r=m.run_action('SHELL'); assert not r.get('ok'); print('allow-list tests OK')"
 
       - name: Verify release manifest hashes
         shell: pwsh
         run: |
           $release = Get-Content 'pc-control/v5_4/RELEASE.json' -Raw | ConvertFrom-Json
-          $agent = (git hash-object 'pc-control/v5_4/agent.py').Trim()
-          $config = (git hash-object 'pc-control/v5_4/config.json').Trim()
-          $installer = (git hash-object 'pc-control/v5_4/install.ps1').Trim()
-          if ($agent -ne $release.agent_git_blob_sha1) { throw "Agent hash mismatch: $agent" }
-          if ($config -ne $release.config_git_blob_sha1) { throw "Config hash mismatch: $config" }
-          if ($installer -ne $release.installer_git_blob_sha1) { throw "Installer hash mismatch: $installer" }
-          Write-Host 'Release manifest hashes OK.'
+          $checks = @{
+            agent_git_blob_sha1 = 'pc-control/v5_4/agent.py'
+            config_git_blob_sha1 = 'pc-control/v5_4/config.json'
+            installer_git_blob_sha1 = 'pc-control/v5_4/install.ps1'
+            repair_hub_git_blob_sha1 = 'pc-control/v5_4/repair_hub.ps1'
+            automation_hub_wrapper_git_blob_sha1 = 'pc-control/v5_4/automation_hub.cmd'
+          }
+          foreach ($key in $checks.Keys) {
+            $actual = (git hash-object $checks[$key]).Trim()
+            $expected = $release.$key
+            if ($actual -ne $expected) { throw "$key mismatch: expected=$expected actual=$actual" }
+            Write-Host "$key OK: $actual"
+          }
+
+      - name: Exercise installer without starting services
+        shell: pwsh
+        run: |
+          & ./pc-control/v5_4/install.ps1 -NoStart
+          if ($LASTEXITCODE -ne 0) { throw "Installer returned $LASTEXITCODE" }
+          $root = Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
+          $required = @(
+            (Join-Path $root 'agent.py'),
+            (Join-Path $root 'config.json'),
+            (Join-Path $root 'repair_hub.ps1'),
+            (Join-Path $root 'automation_hub.cmd'),
+            (Join-Path $root 'run_bridge.ps1'),
+            (Join-Path $root 'REPAIR_NOW.cmd'),
+            (Join-Path $env:USERPROFILE '.openai\computer-use\automation_hub.cmd')
+          )
+          foreach ($file in $required) {
+            if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { throw "Missing installed file: $file" }
+            Write-Host "Installed OK: $file"
+          }
+          $installedConfig = Get-Content (Join-Path $root 'config.json') -Raw | ConvertFrom-Json
+          if ($installedConfig.hub_url -ne 'http://127.0.0.1:4310/') { throw 'Installed Hub URL mismatch' }
+
+      - name: Exercise uninstall rollback
+        if: always()
+        shell: pwsh
+        run: |
+          & ./pc-control/v5_4/uninstall.ps1
+          $root = Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
+          if (Test-Path -LiteralPath $root) { throw "Uninstall left root behind: $root" }
+          Write-Host 'Rollback cleanup OK.'
