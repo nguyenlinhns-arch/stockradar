@@ -1,6 +1,5 @@
 {
-  "id": "20260907-editvideo-readbridge-enter-018",
-  "action": "KEY",
-  "keys": "ENTER",
-  "created_at": "2026-09-07T20:06:40+07:00"
+  "id": "20260907-gpts-recover-dc-001",
+  "action": "RESTART_DESKTOP_COMMANDER",
+  "created_at": "2026-09-07T23:35:00+07:00"
 }
