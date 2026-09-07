@@ -1,0 +1,43 @@
+name: Verify no-API ChatGPT workspace
+on:
+  push:
+    branches: ['feat/chatgpt-workspace-no-api-20260907']
+permissions:
+  contents: write
+concurrency:
+  group: chatgpt-workspace-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: '3.13'
+      - run: python -m pip install --disable-pip-version-check pandas==3.0.5 requests==2.34.2 pytest==9.1.1
+      - run: python scripts/apply_chatgpt_workspace.py
+      - name: All regression tests and explicit no-inference handler checks
+        run: |
+          node --test engine/tests/*.test.mjs
+          node --test scripts/project_context_read_test.mjs scripts/private_project_bridge_test.mjs scripts/project_knowledge_bridge_test.mjs
+          python -m unittest discover -s engine/tests
+          python -m pytest engine/tests -q
+          node --check website/assets/chatgpt-workspace.js
+          git diff --check
+      - name: Commit verified source to feature branch
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          git config user.name 'StockRadar workspace verification'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add supabase/functions/stock-ai/index.ts supabase/functions/stock-ai-guest/index.ts supabase/functions/stock-ai-chat/index.ts supabase/functions/_shared/model-status.ts engine/tests/ai_handlers.test.mjs engine/tests/private_project_chat.test.mjs .github/workflows/pages.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'Switch website inference to ChatGPT workspace and preserve private history'
+            git push origin "HEAD:$BRANCH_NAME"
+          fi
