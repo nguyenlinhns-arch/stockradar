@@ -1,3 +1,4 @@
+// PROJECT_CHAT_CONTINUITY_V2
 // PRIVATE_PROJECT_BRIDGE_V1
 (() => {
   'use strict';
@@ -16,7 +17,12 @@
     history: [],
     tier: 'GUEST',
     quota: null,
-    threadId: loadThreadId(),
+    threadId: '',
+    accountId: '',
+    accountEpoch: 0,
+    historySequence: 0,
+    listSequence: 0,
+    hydrating: false,
     ui: {}
   };
 
@@ -27,19 +33,63 @@
     return el;
   }
 
-  function loadThreadId() {
+  function loadThreadId(userId) {
+    if (!/^[0-9a-f-]{36}$/i.test(String(userId || ''))) return '';
     try {
-      const value = localStorage.getItem(THREAD_KEY) || '';
+      const value = localStorage.getItem(`${THREAD_KEY}:${userId}`) || '';
       return /^[0-9a-f-]{36}$/i.test(value) ? value : '';
     } catch (_) { return ''; }
   }
 
   function saveThreadId(value) {
+    if (!state.accountId) { state.threadId = ''; return; }
     state.threadId = /^[0-9a-f-]{36}$/i.test(String(value || '')) ? String(value) : '';
     try {
-      if (state.threadId) localStorage.setItem(THREAD_KEY, state.threadId);
-      else localStorage.removeItem(THREAD_KEY);
+      const key = `${THREAD_KEY}:${state.accountId}`;
+      if (state.threadId) localStorage.setItem(key, state.threadId);
+      else localStorage.removeItem(key);
     } catch (_) {}
+  }
+
+  function bindAccount(session) {
+    const userId = String(session?.user?.id || '');
+    if (userId === state.accountId) return false;
+    state.accountId = userId;
+    state.accountEpoch += 1;
+    state.historySequence += 1;
+    state.listSequence += 1;
+    state.hydrating = false;
+    state.history = [];
+    state.quota = null;
+    state.threadId = loadThreadId(userId);
+    // The old key had no owner. Recover from owned server history, not this pointer.
+    try { localStorage.removeItem(THREAD_KEY); } catch (_) {}
+    if (state.ui.projectResume) state.ui.projectResume.hidden = true;
+    if (state.ui.continuity) state.ui.continuity.textContent = userId ? 'Đang mở hội thoại của tài khoản…' : 'Guest · ngữ cảnh tạm thời';
+    state.ui.threadList?.replaceChildren();
+    if (state.ui.log) showIntro(state.ui.log,Boolean(userId));
+    return true;
+  }
+
+  async function sameAccount(session, epoch) {
+    try {
+      const current = await authSession();
+      const userId = String(session?.user?.id || '');
+      return state.accountEpoch === epoch && state.accountId === userId && String(current?.user?.id || '') === userId;
+    } catch (_) { return false; }
+  }
+
+  function renderProjectMeta(data) {
+    const bridge = data?.project_bridge;
+    if (state.ui.projectResume) {
+      state.ui.projectResume.hidden = !state.accountId || bridge?.available !== true;
+      state.ui.projectResume.title = bridge?.available ? 'Mở hội thoại có ngữ cảnh đã chuyển từ dự án. Không tự đọc mọi tin nhắn mới trong ChatGPT.' : '';
+    }
+    if (state.ui.continuity) {
+      const linked = bridge?.available === true && bridge.thread_id === state.threadId;
+      state.ui.continuity.textContent = linked ? 'Hội thoại dự án đã mở' : state.accountId ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
+      state.ui.continuity.title = linked ? `Bản ngữ cảnh: ${String(bridge.version || '')}. Lưu hội thoại không đồng nghĩa mô hình AI đã phản hồi thành công.` : '';
+    }
   }
 
   function validTicker(value) {
@@ -126,10 +176,13 @@
 
   async function currentAccountTier() {
     const session = await authSession();
+    bindAccount(session);
+    const epoch = state.accountEpoch;
     const user = session?.user;
     if (!user) return { session: null, tier: 'GUEST' };
     let tier = 'FREE';
     const { data: profile, error } = await state.client.rpc('get_my_stockradar_access');
+    if (!(await sameAccount(session,epoch))) throw new Error('ACCOUNT_CHANGED');
     if (error) throw error;
     state.quota = profile?.quota || null;
     const active = String(profile?.account_status || '').toUpperCase() === 'ACTIVE';
@@ -239,33 +292,45 @@
     return { response, data };
   }
 
-  async function hydrateHistory(session, log, requestedThreadId = state.threadId) {
+  async function hydrateHistory(session, log, requestedThreadId = state.threadId, recoverMissing = false) {
     if (!session?.access_token) return false;
-    const { response, data } = await callAuthenticated(session, {
-      operation: 'history',
-      thread_id: requestedThreadId || null
-    });
-    if (!response.ok) return false;
-    const current = await authSession();
-    if (!current?.user?.id || current.user.id !== session.user?.id) return false;
-    if (state.ui.projectResume) {
-      state.ui.projectResume.hidden = data.project_bridge?.available !== true;
-      state.ui.projectResume.title = data.project_bridge?.available ? 'Mở cuộc trò chuyện có bản ngữ cảnh đã chuyển từ dự án ChatGPT. Không tự đọc mọi tin nhắn mới.' : '';
-    }
-    if (data.thread_id) saveThreadId(data.thread_id);
-    const messages = Array.isArray(data.messages) ? data.messages : [];
-    if (!messages.length) {
+    const epoch = state.accountEpoch, sequence = ++state.historySequence;
+    state.hydrating = true;
+    try {
+      if (!(await sameAccount(session,epoch))) return false;
+      let {response,data} = await callAuthenticated(session,{operation: 'history',thread_id:requestedThreadId || null});
+      if (sequence !== state.historySequence || !(await sameAccount(session,epoch))) return false;
+      // Only implicit startup restoration may recover a removed/legacy thread.
+      // An explicit sidebar selection is never silently replaced with another chat.
+      if (recoverMissing && requestedThreadId && [400,404].includes(response.status) && ['THREAD_NOT_FOUND','INVALID_THREAD_ID'].includes(data.reason)) {
+        saveThreadId('');
+        ({response,data} = await callAuthenticated(session,{operation: 'history',thread_id:null}));
+      }
+      if (!response.ok || sequence !== state.historySequence || !(await sameAccount(session,epoch))) return false;
+      const current = await authSession();
+      if (!current?.user?.id || current.user.id !== session.user?.id || epoch !== state.accountEpoch || sequence !== state.historySequence) return false;
+      if (!/^[0-9a-f-]{36}$/i.test(String(data.thread_id || ''))) return false;
+      saveThreadId(data.thread_id);
+      renderProjectMeta(data);
+      const messages = Array.isArray(data.messages) ? data.messages : [];
+      // Signed-in history lives on the server. Never put it in the Guest buffer.
       state.history = [];
-      showIntro(log, true);
+      if (!messages.length) { showIntro(log,true); return true; }
+      log.replaceChildren();
+      messages.forEach(item => addMessage(log,item.role === 'user' ? 'user' : 'assistant',String(item.content || ''),item.scope === 'project_handoff' ? 'Bản tóm tắt chuyển từ dự án · không phải tin nhắn nguyên văn' : ''));
       return true;
+    } finally {
+      if (sequence === state.historySequence) state.hydrating = false;
     }
-    log.replaceChildren();
-    messages.forEach(item => addMessage(log, item.role === 'user' ? 'user' : 'assistant', String(item.content || '')));
-    state.history = messages.slice(-MAX_GUEST_HISTORY).map(item => ({
-      role: item.role,
-      content: String(item.content || '').slice(0, 600)
-    }));
-    return true;
+  }
+
+  async function resumeProject(session, log) {
+    const epoch = state.accountEpoch;
+    if (!(await sameAccount(session,epoch))) return false;
+    const {response,data} = await callAuthenticated(session,{operation:'resume_project'});
+    if (!(await sameAccount(session,epoch))) return false;
+    if (!response.ok || !data.thread_id) throw new Error('PROJECT_NOT_LINKED');
+    return await hydrateHistory(session,log,data.thread_id);
   }
 
   function threadLabel(row) {
@@ -295,6 +360,7 @@
 
   async function renderThreads(session, list, log) {
     if (!list) return;
+    const epoch = state.accountEpoch, sequence = ++state.listSequence;
     list.replaceChildren();
     if (!session?.access_token) {
       const empty = node('div', 'sr-thread-empty');
@@ -309,6 +375,7 @@
 
     const client = await authClient();
     const { data, error } = await client.rpc('get_my_stockradar_ai_threads', { p_limit: 30 });
+    if (sequence !== state.listSequence || !(await sameAccount(session,epoch))) return;
     if (error) {
       list.append(node('div', 'sr-thread-empty', 'Chưa tải được lịch sử trò chuyện.'));
       return;
@@ -326,12 +393,16 @@
       const meta = node('small', '', threadMeta(row));
       button.append(title, meta);
       button.addEventListener('click', async () => {
-        if (state.sending || String(row.thread_id) === state.threadId) return;
-        list.querySelectorAll('.sr-thread-item').forEach(el => el.classList.remove('is-active'));
-        button.classList.add('is-active');
-        saveThreadId(row.thread_id);
-        await hydrateHistory(session, log, row.thread_id);
-        closeThreadDrawer();
+        if (state.sending || state.hydrating || String(row.thread_id) === state.threadId) return;
+        state.sending = true;
+        try {
+          if (!(await sameAccount(session,epoch))) return;
+          if (await hydrateHistory(session,log,row.thread_id)) {
+            list.querySelectorAll('.sr-thread-item').forEach(el => el.classList.remove('is-active'));
+            button.classList.add('is-active');
+            closeThreadDrawer();
+          }
+        } finally { state.sending = false; }
       });
       list.append(button);
     });
@@ -349,28 +420,34 @@
   }
 
   async function startNewThread(session, log, button) {
-    if (!session?.access_token || state.sending) return;
+    if (!session?.access_token || state.sending || state.hydrating) return;
+    const epoch = state.accountEpoch;
+    state.sending = true;
     button.disabled = true;
     const original = button.textContent;
     button.textContent = 'Đang tạo…';
     try {
       const { response, data } = await callAuthenticated(session, { operation: 'new_thread' });
+      if (!(await sameAccount(session,epoch))) return;
       if (!response.ok || !data.thread_id) throw new Error('NEW_THREAD_FAILED');
       saveThreadId(data.thread_id);
+      renderProjectMeta(data);
       state.history = [];
       showIntro(log, true);
       await renderThreads(session, state.ui.threadList, log);
       closeThreadDrawer();
     } catch (_) {
-      addMessage(log, 'assistant', 'Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại.');
+      if (epoch === state.accountEpoch) addMessage(log, 'assistant', 'Chưa tạo được cuộc trò chuyện mới. Vui lòng thử lại.');
     } finally {
+      state.sending = false;
       button.disabled = false;
       button.textContent = original;
     }
   }
 
   async function ask(message, log, input, send, status) {
-    if (state.sending) return;
+    if (state.sending || state.hydrating) return;
+    const epoch = state.accountEpoch;
     state.sending = true;
     input.disabled = true;
     send.disabled = true;
@@ -379,6 +456,7 @@
 
     try {
       const account = await currentAccountTier();
+      if (epoch !== state.accountEpoch) return;
       const session = account.session;
       const ticker = explicitTicker(message);
       const horizon = horizonFromText(message);
@@ -427,6 +505,7 @@
         try { data = await response.json(); } catch (_) {}
       }
 
+      if (!(await sameAccount(session,epoch))) return;
       if (response.status === 401 && authenticated) {
         window.StockRadarAnalytics?.aiFailed({ tier: account.tier });
         addAction(log, 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại để tiếp tục cuộc trò chuyện.', 'dang-nhap/', 'Đăng nhập lại');
@@ -454,12 +533,12 @@
         return;
       }
 
-      if (response.ok) {
+      if (response.ok && !authenticated) {
         state.history.push({ role: 'user', content: String(message).slice(0, 600) });
         state.history.push({ role: 'assistant', content: String(answer).slice(0, 600) });
         state.history = state.history.slice(-MAX_GUEST_HISTORY);
-        if (authenticated) await renderThreads(session, state.ui.threadList, log);
       }
+      if (response.ok && authenticated) await renderThreads(session, state.ui.threadList, log);
 
       if (success && !authenticated && state.tier === 'GUEST') {
         guestFreeCta(log, 'first');
@@ -467,6 +546,7 @@
         if (Number(data.quota?.remaining) === 0) guestFreeCta(log, 'exhausted');
       }
     } catch (error) {
+      if (epoch !== state.accountEpoch) return;
       window.StockRadarAnalytics?.aiFailed({
         tier: state.tier,
         model_status: error?.name === 'TimeoutError' ? 'MODEL_TIMEOUT' : 'MODEL_ERROR'
@@ -558,7 +638,7 @@
     main.append(top, log, chips, form, foot);
     host.replaceChildren(sidebar, main);
 
-    state.ui = { host, threadList, threadToggle, log, sideNewChat, newChat, projectResume };
+    state.ui = { host, threadList, threadToggle, log, sideNewChat, newChat, projectResume, continuity };
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
       input.value = button.textContent || '';
@@ -573,11 +653,10 @@
       try {
         const current = await currentAccountTier();
         if (!current.session?.access_token) return;
-        const {response,data} = await callAuthenticated(current.session,{operation:'resume_project'});
-        if (!response.ok || !data.thread_id) throw new Error('PROJECT_NOT_LINKED');
-        await hydrateHistory(current.session,log,data.thread_id);
-        await renderThreads(current.session,threadList,log);
-        closeThreadDrawer();
+        if (await resumeProject(current.session,log)) {
+          await renderThreads(current.session,threadList,log);
+          closeThreadDrawer();
+        }
       } catch (_) {
         addMessage(log,'assistant','Chưa mở được cuộc trò chuyện liên thông của tài khoản này.');
       } finally {
@@ -589,7 +668,7 @@
     form.addEventListener('submit', event => {
       event.preventDefault();
       const message = input.value.trim();
-      if (!message) return;
+      if (!message || state.sending || state.hydrating) return;
       addMessage(log, 'user', message);
       input.value = '';
       ask(message, log, input, send, status);
@@ -620,11 +699,12 @@
       newChat.hidden = !authenticated;
       sideNewChat.hidden = !authenticated;
       continuity.textContent = authenticated ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
-      if (authenticated) await hydrateHistory(account.session, log);
+      if (authenticated) await hydrateHistory(account.session, log, state.threadId, true);
       await renderThreads(account.session, threadList, log);
 
       const client = await authClient();
-      client?.auth?.onAuthStateChange?.(() => {
+      client?.auth?.onAuthStateChange?.((_event,session) => {
+        if (!bindAccount(session)) return;
         setTimeout(async () => {
           try {
             const next = await currentAccountTier();
@@ -633,7 +713,7 @@
             newChat.hidden = !nextAuth;
             sideNewChat.hidden = !nextAuth;
             continuity.textContent = nextAuth ? 'Đã lưu ngữ cảnh theo tài khoản' : 'Guest · ngữ cảnh tạm thời';
-            if (nextAuth) await hydrateHistory(next.session, log);
+            if (nextAuth) await hydrateHistory(next.session, log, state.threadId, true);
             else showIntro(log, false);
             await renderThreads(next.session, threadList, log);
           } catch (_) {
