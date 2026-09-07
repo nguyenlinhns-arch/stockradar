@@ -1,3 +1,5 @@
+import { loadProjectBridge, loadProjectContext, projectContextInput, projectBridgeMeta, PROJECT_HANDOFF_RULE } from "../_shared/stockradar-project-context.ts";
+// PRIVATE_PROJECT_BRIDGE_V1
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 import { loadProjectKnowledge, projectKnowledgeInstructions, projectKnowledgeMeta } from "../_shared/stockradar-knowledge.ts";
@@ -48,7 +50,7 @@ function validTicker(value: unknown) {
 }
 function explicitTicker(text: string) {
   const stop = new Set(["MUA","BAN","GIU","CHO","GIA","NAY","SAO","KHI","NEU","HAY","DAI","HAN","VON","LOI","ROI","DANG","THE","NAO","CAN","XEM","MAI","HOM","TIE","THEO","TOP","CAC","CUA","VOI","TAI","VPA","VCP","EPS","ROE","ROA","PBT","FCF","DCF","ATR"]);
-  const tokens = text.toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
+  const tokens = text.replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu,' ').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
   return tokens.find(t => validTicker(t) && !stop.has(t)) || "";
 }
 function portfolioIntent(text: string) {
@@ -81,9 +83,12 @@ async function activeKnowledge(db: any) {
 
 async function ensureThread(db: any, userId: string, requestedId: unknown, knowledgeVersion: string, forceNew = false) {
   const requested = String(requestedId ?? "").trim();
-  if (!forceNew && UUID_RE.test(requested)) {
-    const {data} = await db.from("stockradar_ai_threads").select("*").eq("id",requested).eq("user_id",userId).maybeSingle();
-    if (data) return data;
+  if (!forceNew && requested) {
+    if (!UUID_RE.test(requested)) throw new Error("INVALID_THREAD_ID");
+    const {data,error} = await db.from("stockradar_ai_threads").select("*").eq("id",requested).eq("user_id",userId).eq("status","ACTIVE").maybeSingle();
+    if (error) throw new Error("THREAD_READ_FAILED");
+    if (!data) throw new Error("THREAD_NOT_FOUND");
+    return data;
   }
   if (!forceNew) {
     const {data} = await db.from("stockradar_ai_threads").select("*").eq("user_id",userId).eq("status","ACTIVE")
@@ -128,7 +133,7 @@ async function saveExchange(db: any, thread: any, input: {message:string,scope:s
     ticker:validTicker(result?.ticker) || input.ticker || null, horizon:input.horizon || null,
     answer_engine:clean(result?.answer_engine,120) || null, model_status:clean(result?.model_status,120) || null,
     knowledge_version:knowledgeVersion,
-    metadata:{mode:result?.mode || null,status:result?.status || null,source:result?.source || null},
+    metadata:{mode:result?.mode || null,status:result?.status || null,source:result?.source || null,project_bridge:result?.project_bridge || null},
   });
   if (assistantInsert.error) throw new Error("THREAD_SAVE_ASSISTANT_FAILED");
   const update = await db.from("stockradar_ai_threads").update({
@@ -151,13 +156,13 @@ async function consumeKnowledgeQuota(db: any, userId: string, tier: string) {
   return {ok:true,quota};
 }
 
-async function knowledgeAnswer(db: any, userId: string, tier: string, message: string, history: any[], knowledge: any, thread: any, inputHorizon: string) {
+async function knowledgeAnswer(db: any, userId: string, tier: string, message: string, history: any[], knowledge: any, thread: any, inputHorizon: string, bridge: any) {
   const quotaResult = await consumeKnowledgeQuota(db,userId,tier);
   if (!quotaResult.ok) return {httpStatus:quotaResult.status, payload:{...quotaResult.body,thread_id:thread.id,knowledge_version:knowledge.version}};
   const key = Deno.env.get("OPENAI_API_KEY")?.trim();
   if (!key) return {httpStatus:200,payload:{status:"READY_FALLBACK",reason:"OPENAI_KEY_MISSING",tier,mode:"KNOWLEDGE_ONLY",thread_id:thread.id,knowledge_version:knowledge.version,quota:quotaResult.quota,model_status:"MODEL_CREDIT_BLOCKED",answer_engine:"KNOWLEDGE_CORE",answer:"StockRadar đã lưu được ngữ cảnh hội thoại, nhưng mô hình AI hiện chưa khả dụng. Bạn có thể hỏi trực tiếp một mã HOSE để dùng lớp phân tích dữ liệu hiện hành."}};
-  const instructions = projectKnowledgeInstructions("Bạn là StockRadar AI. Trả lời bằng tiếng Việt rõ ràng, liên tục theo hội thoại. Chỉ giải thích phương pháp cho HOSE; không phân tích Crypto/Coin, HNX hoặc UPCoM. Trong nhánh KNOWLEDGE_ONLY, không có dữ liệu thị trường mới: không công bố giá, Buy Zone, Stop, Target, xác suất hay tín hiệu hành động; số trong lịch sử không phải dữ liệu hiện tại.", knowledge);
-  const context = {USER_QUESTION:message,RECENT_CONVERSATION:history.slice(-12),THREAD_CONTEXT:{last_ticker:thread.last_ticker,last_horizon:thread.last_horizon},REQUESTED_HORIZON:inputHorizon};
+  const instructions = projectKnowledgeInstructions("Bạn là StockRadar AI. Trả lời bằng tiếng Việt rõ ràng, liên tục theo hội thoại. Chỉ giải thích phương pháp cho HOSE; không phân tích Crypto/Coin, HNX hoặc UPCoM. Trong nhánh KNOWLEDGE_ONLY, không có dữ liệu thị trường mới: không công bố giá, Buy Zone, Stop, Target, xác suất hay tín hiệu hành động; số trong lịch sử không phải dữ liệu hiện tại.", knowledge) + (projectContextInput(bridge,thread.id) ? PROJECT_HANDOFF_RULE : "");
+  const context = {PROJECT_HANDOFF:projectContextInput(bridge,thread.id),USER_QUESTION:message,RECENT_CONVERSATION:history.slice(-12),THREAD_CONTEXT:{last_ticker:thread.last_ticker,last_horizon:thread.last_horizon},REQUESTED_HORIZON:inputHorizon};
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/responses",{
@@ -197,7 +202,7 @@ Deno.serve(async (req: Request) => {
 
     let body: any; try { body = await req.json(); } catch { return json({status:"INVALID_REQUEST",reason:"INVALID_JSON"},400,origin); }
     const operation = String(body.operation || "ask").trim().toLowerCase();
-    if (!["ask","history","new_thread"].includes(operation)) return json({status:"INVALID_REQUEST",reason:"INVALID_OPERATION"},400,origin);
+    if (!["ask","history","new_thread"].includes(operation) && !["project_bridge","resume_project"].includes(operation)) return json({status:"INVALID_REQUEST",reason:"INVALID_OPERATION"},400,origin);
 
     const [{data:profile,error:profileError},knowledge] = await Promise.all([
       auth.rpc("get_my_stockradar_access"),
@@ -206,15 +211,23 @@ Deno.serve(async (req: Request) => {
     const tier = String(profile?.account_tier || "").toUpperCase();
     if (profileError || String(profile?.account_status || "").toUpperCase() !== "ACTIVE" || !["FREE","TRIAL","PAID"].includes(tier)) return json({status:"FORBIDDEN",reason:"ACCOUNT_INACTIVE"},403,origin);
 
+    const projectBridge = await loadProjectBridge(db,user.id);
+    if (operation === "project_bridge") return json({status:"READY",project_bridge:projectBridgeMeta(projectBridge),knowledge_version:knowledge.version},200,origin);
+    if (operation === "resume_project") {
+      if (!projectBridge) return json({status:"NOT_FOUND",reason:"PROJECT_BRIDGE_NOT_LINKED"},404,origin);
+      const linked = await ensureThread(db,user.id,projectBridge.thread_id,knowledge.version,false);
+      const messages = await loadMessages(db,linked.id,40);
+      return json({status:"READY",thread_id:linked.id,title:linked.title,project_bridge:projectBridgeMeta(projectBridge,linked.id),knowledge_version:knowledge.version,messages},200,origin);
+    }
     if (operation === "new_thread") {
       const thread = await ensureThread(db,user.id,null,knowledge.version,true);
-      return json({status:"READY",thread_id:thread.id,knowledge_version:knowledge.version,messages:[]},200,origin);
+      return json({status:"READY",thread_id:thread.id,knowledge_version:knowledge.version,project_bridge:projectBridgeMeta(projectBridge,thread.id),messages:[]},200,origin);
     }
 
     const thread = await ensureThread(db,user.id,body.thread_id,knowledge.version,false);
     if (operation === "history") {
       const messages = await loadMessages(db,thread.id,40);
-      return json({status:"READY",thread_id:thread.id,title:thread.title || null,knowledge_version:knowledge.version,messages},200,origin);
+      return json({status:"READY",thread_id:thread.id,title:thread.title || null,knowledge_version:knowledge.version,project_bridge:projectBridgeMeta(projectBridge,thread.id),messages},200,origin);
     }
 
     const message = clean(body.message,700);
@@ -232,7 +245,8 @@ Deno.serve(async (req: Request) => {
     const scope = resolvedTicker ? "ticker" : portfolioIntent(message) ? "portfolio" : scanIntent(message) ? "scan" : "conversation";
 
     if (scope === "conversation") {
-      const result = await knowledgeAnswer(db,user.id,tier,message,existing,knowledge,thread,inputHorizon);
+      const result = await knowledgeAnswer(db,user.id,tier,message,existing,knowledge,thread,inputHorizon,projectBridge);
+      result.payload = {...result.payload,project_bridge:projectBridgeMeta(projectBridge,thread.id,result.payload?.model_status === "MODEL_READY")};
       if (result.httpStatus === 200 && result.payload?.answer) {
         await saveExchange(db,thread,{message,scope:"conversation",ticker:"",horizon:inputHorizon},result.payload,knowledge.version);
       }
@@ -240,6 +254,7 @@ Deno.serve(async (req: Request) => {
     }
 
     const forward = {
+      thread_id:thread.id,
       scope,
       ticker: resolvedTicker,
       horizon: inputHorizon,
@@ -255,7 +270,9 @@ Deno.serve(async (req: Request) => {
     }
     return json({...result,thread_id:thread.id,conversation_persisted:upstream.ok && Boolean(result?.answer),knowledge_version:result?.knowledge_version || knowledge.version},upstream.status,origin);
   } catch (error) {
-    console.error("stock-ai-chat",error?.message || error);
+    if (error?.message === "THREAD_NOT_FOUND") return json({status:"NOT_FOUND",reason:"THREAD_NOT_FOUND"},404,origin);
+    if (error?.message === "INVALID_THREAD_ID") return json({status:"INVALID_REQUEST",reason:"INVALID_THREAD_ID"},400,origin);
+    console.error("stock-ai-chat","REQUEST_FAILED");
     return json({status:"SERVICE_UNAVAILABLE",answer:"StockRadar AI tạm thời chưa thể phản hồi. Vui lòng thử lại."},503,origin);
   }
 });

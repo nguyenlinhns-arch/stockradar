@@ -1,3 +1,4 @@
+// PRIVATE_PROJECT_BRIDGE_V1
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -7,6 +8,7 @@ import * as query from '../../supabase/functions/_shared/stockradar-query.ts';
 import * as decision from '../../supabase/functions/_shared/stockradar-decision.ts';
 import * as modelStatus from '../../supabase/functions/_shared/model-status.ts';
 import * as projectKnowledge from '../../supabase/functions/_shared/stockradar-knowledge.ts';
+import * as privateProjectContext from '../../supabase/functions/_shared/stockradar-project-context.ts';
 
 const reviewedKnowledge = Object.freeze({
   version:'FIXTURE_PROJECT_V2',title:'Reviewed public test methods',status:'ACTIVE',
@@ -58,7 +60,7 @@ function harness({guest=false,tier='FREE',quota=true,burst=true,stale=false,inco
     }};
   const Deno={serve:fn=>{handler=fn;},env:{get:name=>({SUPABASE_URL:'https://fixture.invalid',SUPABASE_ANON_KEY:'anon',SUPABASE_SERVICE_ROLE_KEY:'test-only',OPENAI_API_KEY:'test-only'}[name])}};
   const fetchMock=async(url,args)=>{modelRequest=JSON.parse(args.body);modelInput=JSON.parse(modelRequest.input);return new Response(JSON.stringify({status:incomplete?'incomplete':'completed',output_text:malformed?'KẾT LUẬN: THEO DÕI.':validModelAnswer}));};
-  const bindings={...core,...view,...query,...decision,...modelStatus,...projectKnowledge,Deno,createClient:()=>db,fetch:fetchMock};
+  const bindings={...core,...view,...query,...decision,...modelStatus,...projectKnowledge,...privateProjectContext,Deno,createClient:()=>db,fetch:fetchMock};
   const source=fs.readFileSync(new URL(`../../supabase/functions/${guest?'stock-ai-guest':'stock-ai'}/index.ts`,import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'');
   new Function(...Object.keys(bindings),source.replace("} catch { return json({status:'SERVICE_UNAVAILABLE',answer:","} catch (error) { throw error; return json({status:'SERVICE_UNAVAILABLE',answer:"))(...Object.values(bindings));
   return {calls,get modelInput(){return modelInput},get modelRequest(){return modelRequest},get quotaCalls(){return quotaCalls},async ask(message,extra={}){

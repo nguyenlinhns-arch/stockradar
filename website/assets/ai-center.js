@@ -1,3 +1,4 @@
+// PRIVATE_PROJECT_BRIDGE_V1
 (() => {
   'use strict';
 
@@ -47,7 +48,7 @@
   }
 
   function explicitTicker(text) {
-    const tokens = String(text || '').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
+    const tokens = String(text || '').replace(/\btra\s+(?:cứu|cuu)(?=\s|$|[.,:;!?])/giu,' ').toUpperCase().match(/(?<![\p{L}\p{N}])[A-Z0-9]{3}(?![\p{L}\p{N}])/gu) || [];
     return tokens.find(token => validTicker(token) && !STOPWORDS.has(token)) || '';
   }
 
@@ -145,6 +146,7 @@
   }
 
   function showIntro(log, authenticated = false) {
+    if (!authenticated && state.ui.projectResume) state.ui.projectResume.hidden = true;
     log.replaceChildren();
     addMessage(log, 'assistant', authenticated
       ? 'Đây là cuộc trò chuyện phân tích của bạn. Hãy hỏi một mã HOSE, rồi hỏi tiếp tự nhiên như “mua được chưa?”, “3–6 tháng thì sao?”, “rủi ro chính?” hoặc chuyển sang mã khác. StockRadar sẽ giữ ngữ cảnh của cuộc trò chuyện này.'
@@ -244,9 +246,16 @@
       thread_id: requestedThreadId || null
     });
     if (!response.ok) return false;
+    const current = await authSession();
+    if (!current?.user?.id || current.user.id !== session.user?.id) return false;
+    if (state.ui.projectResume) {
+      state.ui.projectResume.hidden = data.project_bridge?.available !== true;
+      state.ui.projectResume.title = data.project_bridge?.available ? 'Mở cuộc trò chuyện có bản ngữ cảnh đã chuyển từ dự án ChatGPT. Không tự đọc mọi tin nhắn mới.' : '';
+    }
     if (data.thread_id) saveThreadId(data.thread_id);
     const messages = Array.isArray(data.messages) ? data.messages : [];
     if (!messages.length) {
+      state.history = [];
       showIntro(log, true);
       return true;
     }
@@ -509,7 +518,10 @@
     threadToggle.setAttribute('aria-expanded', 'false');
     const status = node('span', 'sr-center-plan', 'ĐANG KIỂM TRA TÀI KHOẢN…');
     const continuity = node('span', 'sr-center-continuity', 'Hội thoại liên tục');
-    topLeft.append(threadToggle, status, continuity);
+    const projectResume = node('button', 'sr-center-new-chat', 'Tiếp tục từ dự án');
+    projectResume.type = 'button';
+    projectResume.hidden = true;
+    topLeft.append(threadToggle, status, continuity, projectResume);
 
     const topRight = node('div', 'sr-center-top-actions');
     const privacy = node('span', 'sr-center-privacy', 'Không nhập mật khẩu · OTP · mã giao dịch');
@@ -546,7 +558,7 @@
     main.append(top, log, chips, form, foot);
     host.replaceChildren(sidebar, main);
 
-    state.ui = { host, threadList, threadToggle, log, sideNewChat, newChat };
+    state.ui = { host, threadList, threadToggle, log, sideNewChat, newChat, projectResume };
 
     chips.querySelectorAll('button').forEach(button => button.addEventListener('click', () => {
       input.value = button.textContent || '';
@@ -554,6 +566,25 @@
     }));
 
     threadToggle.addEventListener('click', toggleThreadDrawer);
+    projectResume.addEventListener('click', async () => {
+      if (state.sending) return;
+      state.sending = true;
+      projectResume.disabled = true;
+      try {
+        const current = await currentAccountTier();
+        if (!current.session?.access_token) return;
+        const {response,data} = await callAuthenticated(current.session,{operation:'resume_project'});
+        if (!response.ok || !data.thread_id) throw new Error('PROJECT_NOT_LINKED');
+        await hydrateHistory(current.session,log,data.thread_id);
+        await renderThreads(current.session,threadList,log);
+        closeThreadDrawer();
+      } catch (_) {
+        addMessage(log,'assistant','Chưa mở được cuộc trò chuyện liên thông của tài khoản này.');
+      } finally {
+        state.sending = false;
+        projectResume.disabled = false;
+      }
+    });
 
     form.addEventListener('submit', event => {
       event.preventDefault();
