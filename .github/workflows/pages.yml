@@ -48,6 +48,8 @@ on:
       - 'scripts/radar_session_qa.cjs'
       - 'scripts/product_decision_qa.cjs'
       - 'scripts/refresh_eod_email_history.py'
+      - 'scripts/activate_chatgpt_workspace.py'
+      - 'scripts/chatgpt_workspace_qa.cjs'
       - 'supabase/functions/**'
       - 'package.json'
       - 'package-lock.json'
@@ -187,6 +189,15 @@ jobs:
           node scripts/conversion_funnel_qa.cjs
           node scripts/product_decision_qa.cjs
           node scripts/radar_session_qa.cjs
+      # CHATGPT_WORKSPACE_FINAL_STAGE — legacy compatibility checked above; verify delivered mode below.
+      - name: Activate and verify ChatGPT workspace without billable inference
+        run: |
+          python scripts/activate_chatgpt_workspace.py .pages-site
+          python -m http.server 8766 --bind 127.0.0.1 --directory .pages-site >/tmp/workspace-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..30}; do curl -fsS http://127.0.0.1:8766/ >/dev/null && break; sleep 0.2; done
+          STOCKRADAR_QA_URL=http://127.0.0.1:8766 node scripts/chatgpt_workspace_qa.cjs
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6
         with:
