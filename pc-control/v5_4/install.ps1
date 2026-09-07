@@ -4,8 +4,10 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$Version = '5.4.0'
+$Version = '5.4.1'
 $RepoRaw = 'https://raw.githubusercontent.com/nguyenlinhns-arch/stockradar/pc-control/pc-control/v5_4'
+$ExpectedAgentGitBlob = 'e2d7209615d68fb9fbd4ab5d76f55952bd046ba7'
+$ExpectedConfigGitBlob = 'd13e1a750b1fb073813c3e17de275a525385339b'
 $Root = Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
 $LogDir = Join-Path $Root 'logs'
 $TaskName = 'ThayLinh-PCBridge-V54'
@@ -26,6 +28,29 @@ function Download-Text([string]$Url, [string]$OutFile) {
     if ((Get-Item -LiteralPath $OutFile).Length -lt 10) { throw "Downloaded file too small: $OutFile" }
 }
 
+function Get-GitBlobSha1([string]$Path) {
+    $bytes = [System.IO.File]::ReadAllBytes($Path)
+    $headerText = 'blob ' + $bytes.Length + [char]0
+    $header = [System.Text.Encoding]::ASCII.GetBytes($headerText)
+    $all = New-Object byte[] ($header.Length + $bytes.Length)
+    [System.Buffer]::BlockCopy($header, 0, $all, 0, $header.Length)
+    [System.Buffer]::BlockCopy($bytes, 0, $all, $header.Length, $bytes.Length)
+    $sha1 = [System.Security.Cryptography.SHA1]::Create()
+    try {
+        return (($sha1.ComputeHash($all) | ForEach-Object { $_.ToString('x2') }) -join '')
+    } finally {
+        $sha1.Dispose()
+    }
+}
+
+function Assert-GitBlob([string]$Path, [string]$Expected) {
+    $actual = Get-GitBlobSha1 $Path
+    if ($actual -ne $Expected) {
+        throw "Integrity check failed for $Path. Expected $Expected, got $actual"
+    }
+    Write-InstallLog "Integrity OK: $([System.IO.Path]::GetFileName($Path)) $actual"
+}
+
 New-Item -ItemType Directory -Force -Path $Root, $LogDir, $StartupDir | Out-Null
 Write-InstallLog "Installing ThayLinh PC Bridge v$Version into $Root"
 
@@ -33,6 +58,8 @@ $agentTmp = Join-Path $env:TEMP 'ThayLinh-PCBridge-agent.py.tmp'
 $configTmp = Join-Path $env:TEMP 'ThayLinh-PCBridge-config.json.tmp'
 Download-Text "$RepoRaw/agent.py" $agentTmp
 Download-Text "$RepoRaw/config.json" $configTmp
+Assert-GitBlob $agentTmp $ExpectedAgentGitBlob
+Assert-GitBlob $configTmp $ExpectedConfigGitBlob
 
 $python = Get-Command python.exe -ErrorAction SilentlyContinue
 $py = Get-Command py.exe -ErrorAction SilentlyContinue
@@ -45,6 +72,7 @@ if ($python) {
 } else {
     throw 'Python 3 was not found. Existing Computer Use/Automation Hub requires Python; repair that installation first.'
 }
+Write-InstallLog 'Python syntax check OK.'
 
 Move-Item -Force -LiteralPath $agentTmp -Destination (Join-Path $Root 'agent.py')
 if (-not (Test-Path -LiteralPath (Join-Path $Root 'config.json'))) {
@@ -118,12 +146,15 @@ $marker = @{
     install_root = $Root
     task_name = $TaskName
     startup_cmd = $StartupCmd
+    agent_git_blob = $ExpectedAgentGitBlob
+    config_git_blob = $ExpectedConfigGitBlob
 } | ConvertTo-Json -Depth 4
 Set-Content -LiteralPath (Join-Path $Root 'install_state.json') -Value $marker -Encoding UTF8
 
 if (-not $NoStart) {
     Write-InstallLog 'Starting bridge now.'
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File (Join-Path $Root 'run_bridge.ps1')
+    $runnerPath = Join-Path $Root 'run_bridge.ps1'
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File $runnerPath
     Start-Sleep -Seconds 4
     try {
         $health = Invoke-RestMethod -Uri 'http://127.0.0.1:4321/health' -TimeoutSec 5
