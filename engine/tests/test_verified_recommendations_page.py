@@ -19,8 +19,22 @@ class VerifiedRecommendationPageTests(unittest.TestCase):
         self.assertLess(content.index('data-ticker="VHM"'), content.index('data-ticker="DCM"'))
         self.assertEqual(content.count('<tr data-verified-row'), 2)
         self.assertEqual(content.count('data-verified-event'), 3)
-        for value in ['75.400đ', '75.200đ', '-0,27%', '32.200đ', '32.550đ', '+1,09%', '04/09/2026']:
-            self.assertIn(value, content)
+
+        # Current prices and returns are refreshed from the latest verified EOD run
+        # before this test executes. Assert that the rendered no-JS page reflects
+        # the audited payload instead of pinning the test to a historical close.
+        by_ticker = {row['ticker']: row for row in self.data['items']}
+        for ticker in ('VHM', 'DCM'):
+            row = by_ticker[ticker]
+            reference_price = f"{row['reference_price']:,.0f}đ".replace(',', '.')
+            latest_price = f"{row['latest_price']:,.0f}đ".replace(',', '.')
+            price_change = f"{row['price_change_pct']:+.2f}%".replace('.', ',')
+            price_date = '/'.join(row['price_date'].split('-')[::-1])
+            for value in (reference_price, latest_price, price_change, price_date):
+                self.assertIn(value, content)
+
+        as_of_date = '/'.join(self.data['as_of_date'].split('-')[::-1])
+        self.assertIn(f'Giá đóng cửa {as_of_date}', content)
         self.assertIn('data-verified-controls disabled', content)
         # The shared Radar runtime treats data-status as a text output target.
         self.assertNotIn(' data-status=', content)
