@@ -1,0 +1,25 @@
+{
+  "name": "ThayLinh PC Bridge V5.4.2",
+  "version": "5.4.2",
+  "channel": "production-candidate",
+  "primary_bus": "private-google-drive-drivefs",
+  "drive_folder_id": "1SvV_rzHn4sm2V_tHwK3KNanMEwvS96Sq",
+  "drive_command_file_id": "1WPGR5EsTxCXKwG_cHOiY1zmyPrtEk6gC",
+  "payload_commit": "758288012ae398491215651109d4bb1fe8dce208",
+  "installer_commit": "18a3c2d9c450a5d0bf79041d7fefd8b1829e9f69",
+  "installer_git_blob_sha1": "e2a7b7b8fa518794b46977e678691bd8e73cbc85",
+  "payload_git_blobs": {
+    "agent.py": "22ed99b165093aff5a0c6023ddac63b58dc09c1d",
+    "config.json": "4b2f56e33a53b3936f85de0c8939aa15596524e1",
+    "repair_hub.ps1": "2b8f6ab59a7dfed52c6b00fe7a1b0c4a5314d4e5",
+    "start_computer_use.ps1": "bd40137a46cacfa09397ca4369445b051da9aed0",
+    "start_desktop_commander.ps1": "0fbf35259afcda9f295a7bcafc32dbba6cc6af05",
+    "automation_hub.cmd": "af41efaebcf7b0cc75514ffae108c40afb955671",
+    "uninstall.ps1": "c7d9384795b61b5110444ed9e410f5e4e8c62636"
+  },
+  "windows_ci_run": 34172096047,
+  "windows_ci_result": "all validation steps passed",
+  "local_health": "http://127.0.0.1:4321/health",
+  "hub": "http://127.0.0.1:4310/",
+  "computer_use_health": ["http://127.0.0.1:8777/health", "http://127.0.0.1:8766/health"]
+}
