@@ -1,0 +1,1 @@
+V5.4.2 live rescue validation uses GitHub issues numbered >= 110 only. START_CAPCUT is a permitted rescue action. Computer Use/Supabase cu_jobs is used as independent readback.
