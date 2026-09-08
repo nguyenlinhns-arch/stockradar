@@ -101,12 +101,36 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl --fail-with-body --silent --show-error --retry 2 \
-            -H "Authorization: Bearer ${GITHUB_OIDC_TOKEN}" \
-            -H "Content-Type: application/json" \
-            --data-binary @/tmp/stockradar-research-bundle.json \
-            "https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/stock-research-sync" \
-            | tee /tmp/stockradar-sync-result.json
+          result=/tmp/stockradar-sync-result.json
+          last_error=/tmp/stockradar-sync-error.json
+          rm -f "$result" "$last_error"
+          success=false
+          for attempt in 1 2 3; do
+            tmp="${result}.attempt-${attempt}"
+            rm -f "$tmp"
+            if curl --fail-with-body --silent --show-error \
+              -H "Authorization: Bearer ${GITHUB_OIDC_TOKEN}" \
+              -H "Content-Type: application/json" \
+              --data-binary @/tmp/stockradar-research-bundle.json \
+              --output "$tmp" \
+              "https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/stock-research-sync"; then
+              mv "$tmp" "$result"
+              success=true
+              break
+            fi
+            if [ -f "$tmp" ]; then
+              mv "$tmp" "$last_error"
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              sleep $((attempt * 2))
+            fi
+          done
+          if [ "$success" != true ]; then
+            if [ -f "$last_error" ]; then cat "$last_error" >&2; fi
+            echo 'Research cache sync failed after 3 isolated attempts.' >&2
+            exit 1
+          fi
+          cat "$result"
           python - <<'PY'
           import json
           data = json.load(open('/tmp/stockradar-sync-result.json', encoding='utf-8'))
