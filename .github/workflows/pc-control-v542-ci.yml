@@ -1,0 +1,64 @@
+name: PC Control V5.4.2 CI
+
+on:
+  push:
+    branches: [pc-control]
+    paths:
+      - 'pc-control/v5_4_2/**'
+      - '.github/workflows/pc-control-v542-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  windows-validation:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Python compile
+        shell: powershell
+        run: python -m py_compile pc-control/v5_4_2/agent.py
+      - name: Parse PowerShell payload
+        shell: powershell
+        run: |
+          $files=@(
+            'pc-control/v5_4_2/install.ps1',
+            'pc-control/v5_4_2/uninstall.ps1',
+            'pc-control/v5_4_2/repair_hub.ps1',
+            'pc-control/v5_4_2/start_computer_use.ps1',
+            'pc-control/v5_4_2/start_desktop_commander.ps1'
+          )
+          foreach($f in $files){
+            $t=$null;$e=$null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $f),[ref]$t,[ref]$e)|Out-Null
+            if($e.Count){$e|Format-List|Out-String|Write-Host;throw "Parse failed: $f"}
+          }
+      - name: Static architecture assertions
+        shell: powershell
+        run: |
+          $cfg=Get-Content pc-control/v5_4_2/config.json -Raw|ConvertFrom-Json
+          if($cfg.version -ne '5.4.2'){throw 'version mismatch'}
+          if($cfg.drive_bus_folder -ne 'PC_CONTROL_BUS'){throw 'Drive bus missing'}
+          if($cfg.drive_poll_seconds -gt 5){throw 'Drive control polling too slow'}
+          $agent=Get-Content pc-control/v5_4_2/agent.py -Raw
+          foreach($needle in @('TYPE_TEXT','SCREENSHOT','BATCH','START_COMPUTER_USE','github_min_issue_number')){if($agent -notmatch $needle){throw "missing $needle"}}
+          if($agent -match 'subprocess\.Popen\(.*shell=True'){throw 'arbitrary shell path detected'}
+      - name: Actual immutable installer NoStart
+        shell: powershell
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File pc-control/v5_4_2/install.ps1 -NoStart
+      - name: Verify installed payload
+        shell: powershell
+        run: |
+          $root=Join-Path $env:LOCALAPPDATA 'ThayLinhPCBridge'
+          foreach($f in @('agent.py','config.json','repair_hub.ps1','start_computer_use.ps1','start_desktop_commander.ps1','automation_hub.cmd','uninstall.ps1','run_bridge.ps1')){if(-not(Test-Path (Join-Path $root $f))){throw "missing installed $f"}}
+          $cfg=Get-Content (Join-Path $root 'config.json') -Raw|ConvertFrom-Json
+          if($cfg.version -ne '5.4.2'){throw 'installed config mismatch'}
+          $state=Get-Content (Join-Path $root 'install_state.json') -Raw|ConvertFrom-Json
+          if($state.drive_bus_mode -ne 'private-drivefs'){throw 'wrong bus mode'}
+      - name: Rollback validation
+        shell: powershell
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File "$env:LOCALAPPDATA\ThayLinhPCBridge\uninstall.ps1"
+          if(Test-Path "$env:LOCALAPPDATA\ThayLinhPCBridge"){throw 'rollback left install root'}
