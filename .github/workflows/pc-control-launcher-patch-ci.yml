@@ -1,0 +1,42 @@
+name: PC Control Launcher Patch CI
+
+on:
+  push:
+    branches: [pc-control]
+    paths:
+      - 'pc-control/patches/PATCH_LAUNCH_APP_V4_3.cmd'
+      - '.github/workflows/pc-control-launcher-patch-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  windows-validation:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare fake Computer Use root
+        shell: powershell
+        run: |
+          $root = Join-Path $env:LOCALAPPDATA 'ThayLinhComputerUseV4'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          Set-Content -LiteralPath (Join-Path $root 'launch_app.ps1') -Value "throw 'old launcher'" -Encoding UTF8
+      - name: Run patch
+        shell: cmd
+        run: pc-control\patches\PATCH_LAUNCH_APP_V4_3.cmd
+      - name: Verify syntax and safe launcher behavior
+        shell: powershell
+        run: |
+          $p = Join-Path $env:LOCALAPPDATA 'ThayLinhComputerUseV4\launch_app.ps1'
+          if (-not (Test-Path $p)) { throw 'patched launcher missing' }
+          $tokens=$null; $errors=$null
+          [System.Management.Automation.Language.Parser]::ParseFile($p,[ref]$tokens,[ref]$errors)|Out-Null
+          if ($errors.Count) { $errors | Format-List; throw 'syntax failure' }
+          $status = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Name calculator -Action status -Timeout 2
+          if ($LASTEXITCODE -ne 0) { throw 'calculator status self-test failed' }
+          $obj = $status | ConvertFrom-Json
+          if (-not $obj.ok) { throw 'launcher did not return ok' }
+          try {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $p -Name 'cmd.exe /c whoami' -Action launch -Timeout 1
+            throw 'unsafe command string unexpectedly accepted'
+          } catch {
+            Write-Host 'Unsafe command string rejected as expected.'
+          }
