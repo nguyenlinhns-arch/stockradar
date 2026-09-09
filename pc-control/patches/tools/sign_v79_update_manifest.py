@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import getpass
 import hashlib
 import json
 import pathlib
@@ -67,9 +68,16 @@ def canonical_bytes(signed: dict[str, Any]) -> bytes:
 
 def load_p256_private_key(path: pathlib.Path):
     raw = path.read_bytes()
-    key = serialization.load_pem_private_key(raw, password=None)
+    try:
+        key = serialization.load_pem_private_key(raw, password=None)
+    except TypeError:
+        password = getpass.getpass("Publisher key passphrase: ").encode("utf-8")
+        try:
+            key = serialization.load_pem_private_key(raw, password=password)
+        finally:
+            password = b""
     if not isinstance(key, ec.EllipticCurvePrivateKey) or not isinstance(key.curve, ec.SECP256R1):
-        raise ValueError("publisher key must be an unencrypted ECDSA P-256 PEM private key")
+        raise ValueError("publisher key must be an ECDSA P-256 PEM private key")
     return key
 
 
@@ -92,6 +100,11 @@ def main() -> int:
 
     if not KEY_ID_RE.fullmatch(args.key_id):
         raise ValueError("invalid key id")
+    private_key_path = args.private_key.resolve()
+    signed_path = args.signed_json.resolve()
+    output_path = args.output.resolve()
+    if output_path in {private_key_path, signed_path}:
+        raise ValueError("output must not overwrite the private key or signed metadata input")
 
     source = json.loads(args.signed_json.read_text(encoding="utf-8"))
     if not isinstance(source, dict):
