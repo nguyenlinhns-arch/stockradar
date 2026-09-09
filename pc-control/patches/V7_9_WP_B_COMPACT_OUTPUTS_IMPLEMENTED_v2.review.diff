@@ -1,0 +1,147 @@
+# V7.9 Work Package B — IMPLEMENTATION-READY REVIEW PATCH v2
+# Date: 2026-09-09
+# Scope: bounded pc.status capabilities plus compact/full task result surfaces.
+# Safety: pending, error, OUTCOME_UNKNOWN and journal step status are never hidden.
+# v2 keeps semantic_contract headless: it does not import app_runtime or open a runtime journal.
+
+--- a/agent/protocol_catalog.py
++++ b/agent/protocol_catalog.py
+@@
+-add('pc.execute_task','Execute explicit semantic steps supplied by ChatGPT, journal and verify each step; stop on uncertainty. A goal without steps requests a plan, never guesses.','INTERACT','workflow','execute_task',{'goal':string(minLength=1,maxLength=2000),'steps':array(STEP,100),'constraints':CONSTRAINTS},('goal',))
+-add('pc.task_status','Read persisted task/command results. A pending result is not success.','READ','control','task_status',{'task_id':ID},('task_id',))
++add('pc.execute_task','Execute explicit semantic steps supplied by ChatGPT, journal and verify each step; stop on uncertainty. A goal without steps requests a plan, never guesses.','INTERACT','workflow','execute_task',{
++    'goal':string(minLength=1,maxLength=2000),'steps':array(STEP,100),'constraints':CONSTRAINTS,
++    'result_mode':string(enum=['compact','full'])},('goal',))
++add('pc.task_status','Read persisted task/command results. A pending result is not success. Summary is bounded; full returns durable evidence.','READ','control','task_status',{
++    'task_id':ID,'detail':string(enum=['summary','full'])},('task_id',))
+
+--- a/agent/app_runtime.py
++++ b/agent/app_runtime.py
+@@
+ def pc_status():
+     from protocol_catalog import manifest
+     value={**status(),**local_health()};value.get('engines',{}).pop('opencut',None)
+-    value['capabilities']=manifest();value['session']=INPUT_GUARD.state()
++    m=manifest()
++    # pc.status is a hot-path health surface, not schema discovery. Keep the
++    # immutable catalog identity while avoiding the full tools array on every
++    # status/reconnect check. /capabilities and MCP tools/list remain canonical.
++    value['capabilities']={'schema':m['schema'],'version':m['version'],'catalog_sha256':m['catalog_sha256'],
++                           'tool_count':len(m['tools']),'raw_actions':m['raw_actions'],'shell':m['shell']}
++    value['session']=INPUT_GUARD.state()
+     cfg=config();value['permissions']={k:cfg.get(k) for k in ('permission_profile','remote_control_paused','allow_screenshots','allowed_roots')}
+     if TRANSPORT:value['chatgpt']=TRANSPORT.connection()
+     return value
++
++def _public_error_code(value):
++    if value is None:return None
++    if isinstance(value,dict):return value.get('code') or value.get('error') or 'INTERNAL_ERROR'
++    return str(value)
++
++def compact_task_status(value):
++    """Bound durable task status without hiding uncertainty or failure state."""
++    result=value.get('result')
++    compact_result=None
++    if isinstance(result,dict):
++        keys=('ok','verified','action','task_id','planner','duration_ms','completed_at','cancellation','outcome','can_resume','result_mode')
++        compact_result={k:result[k] for k in keys if k in result}
++        error=_public_error_code(result.get('error'))
++        if error is not None:compact_result['error_code']=error
++        # A workflow result may duplicate every step. The journal below is the
++        # durable source for step state, so omit nested result.steps in summary.
++    elif result is not None:
++        compact_result=result
++    steps=[]
++    for row in value.get('steps',[]):
++        if not isinstance(row,dict):continue
++        step_result=row.get('result')
++        error=step_result.get('error') if isinstance(step_result,dict) else None
++        if error is None:error=row.get('error')
++        item={k:row[k] for k in ('index','command','status') if k in row}
++        code=_public_error_code(error)
++        if code is not None:item['error_code']=code
++        if isinstance(step_result,dict):
++            if 'ok' in step_result:item['ok']=bool(step_result.get('ok'))
++            if 'verified' in step_result:item['verified']=bool(step_result.get('verified'))
++        steps.append(item)
++    return {k:v for k,v in value.items() if k not in {'result','steps'}}|{'result':compact_result,'steps':steps}
+@@
+         if control in {'wait','task_status','cancel'}:
+             result=pc_request('PC_CANCEL' if control=='cancel' else 'PC_WAIT',{'id':a.get('id',a.get('task_id')),'timeout_seconds':a.get('timeout_seconds',0)},origin)
+             if isinstance(result.get('result'),dict):result['result']=public_result(result['result'])
++            if control=='task_status' and a.get('detail','summary')=='summary':result=compact_task_status(result)
+             return result
+
+--- a/agent/semantic_host.py
++++ b/agent/semantic_host.py
+@@
+         if action=='execute_task':
+             if not payload.get('steps'):return {'ok':False,'error':'PLAN_REQUIRED','goal':payload['goal'],'planner':'ChatGPT','task_id':self.cid}
+-            results=[]
++            results=[];result_mode=payload.get('result_mode','compact')
+             for index,step in enumerate(payload['steps']):
+                 if self.cancel.is_set() or time.monotonic()>self.deadline:break
+                 self.host.JOURNAL.step_start(self.cid,index,step['tool'],step['arguments'])
+                 try:result=self.execute(step['tool'],step['arguments'])
+                 except ValueError as exc:result=getattr(exc,'result',{'ok':False,'error':str(exc)})
+-                self.host.JOURNAL.step_finish(self.cid,index,result,result.get('post_state'));results.append({'step_id':index,'tool':step['tool'],'result':public_result(result)})
++                self.host.JOURNAL.step_finish(self.cid,index,result,result.get('post_state'))
++                public=public_result(result)
++                if result_mode=='full':
++                    item={'step_id':index,'tool':step['tool'],'result':public}
++                else:
++                    error=public.get('error');code=error.get('code') if isinstance(error,dict) else error
++                    item={'step_id':index,'tool':step['tool'],'ok':bool(public.get('ok')),
++                          'verified':bool(public.get('verified',public.get('ok'))),
++                          'error_code':code,'method_used':public.get('method_used'),
++                          'duration_ms':public.get('duration_ms')}
++                results.append(item)
+                 if not result.get('ok'):break
+-            ok=len(results)==len(payload['steps']) and all(s['result'].get('ok') for s in results)
++            def step_ok(item):return bool(item['result'].get('ok')) if 'result' in item else bool(item.get('ok'))
++            ok=len(results)==len(payload['steps']) and all(step_ok(s) for s in results)
+             cancelled=self.cancel.is_set()
+-            return {'ok':ok,'error':None if ok else ('CANCELLED' if cancelled else (results[-1]['result'].get('error') or 'TIMEOUT' if results else 'CANCELLED')),'task_id':self.cid,'steps':results,'planner':'ChatGPT',
++            if ok:error=None
++            elif cancelled:error='CANCELLED'
++            elif results:
++                last=results[-1];raw=last.get('result',{}) if 'result' in last else {}
++                value=raw.get('error') if raw else last.get('error_code')
++                error=(value.get('code') if isinstance(value,dict) else value) or 'TIMEOUT'
++            else:error='CANCELLED'
++            return {'ok':ok,'error':error,'task_id':self.cid,'steps':results,'result_mode':result_mode,'planner':'ChatGPT',
+                     'cancellation':'cancelled_after_completed_steps' if cancelled and results else 'cancelled_before_step' if cancelled else None,**__import__('reliability').task_progress(self.host.JOURNAL.steps(self.cid))}
+
+--- a/tests/semantic_contract.py
++++ b/tests/semantic_contract.py
+@@
+     def test_steps_canonical_only(self):
+@@
+         validate_tool('pc.execute_task',{'request_id':str(uuid.uuid4()),'goal':'Read','steps':[{'tool':'pc.read_file','arguments':{'path':'a.txt'}}]})
++    def test_compact_full_schema_modes(self):
++        request=str(uuid.uuid4());task=str(uuid.uuid4())
++        validate_tool('pc.execute_task',{'request_id':request,'goal':'Read','result_mode':'compact','steps':[]})
++        validate_tool('pc.execute_task',{'request_id':request,'goal':'Read','result_mode':'full','steps':[]})
++        validate_tool('pc.task_status',{'task_id':task,'detail':'summary'})
++        validate_tool('pc.task_status',{'task_id':task,'detail':'full'})
++        for mode in ('verbose','all',''):
++            with self.assertRaises(ValueError):validate_tool('pc.execute_task',{'request_id':request,'goal':'Read','result_mode':mode})
++        with self.assertRaises(ValueError):validate_tool('pc.task_status',{'task_id':task,'detail':'verbose'})
++    def test_manifest_compaction_fields_are_derivable(self):
++        from protocol_catalog import manifest
++        m=manifest();summary={'schema':m['schema'],'version':m['version'],'catalog_sha256':m['catalog_sha256'],
++                              'tool_count':len(m['tools']),'raw_actions':m['raw_actions'],'shell':m['shell']}
++        self.assertGreater(summary['tool_count'],0);self.assertNotIn('tools',summary)
++        self.assertEqual(len(summary['catalog_sha256']),64);self.assertFalse(summary['raw_actions']);self.assertFalse(summary['shell'])
++
+--- a/tests/local_controls_live.py
++++ b/tests/local_controls_live.py
+@@
++    # V7.9 regression additions after candidate boot:
++    # - GET/semantic pc.status capabilities contains tool_count + catalog_sha256
++    #   and does not contain a nested tools array.
++    # - execute a harmless two-step READ task with result_mode=compact; assert
++    #   each returned step is bounded and durable task_status(detail=summary)
++    #   preserves state/status/error fields without nested large result payloads.
++    # - query task_status(detail=full); assert durable full evidence remains
++    #   available and no execution is replayed.
