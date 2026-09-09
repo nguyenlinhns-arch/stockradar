@@ -1,0 +1,331 @@
+# V7.9 Work Package D1 — PERSISTENT UFO/UIA IMPLEMENTATION-READY REVIEW PATCH
+# Date: 2026-09-09
+# Scope: replace per-command Python/UFO/COM startup with one serialized persistent worker.
+# Safety invariants:
+# - host /gui-input-check remains authoritative before every mutation;
+# - READ may recycle + retry once after worker loss;
+# - mutation flushed without response => OUTCOME_UNKNOWN and is never replayed;
+# - stdout is protocol-only NDJSON; dependency noise is ignored, not treated as a result;
+# - no generic macro/shell/raw action surface is added.
+# Base SHA256 agent/src/engines/ufo/adapter.py: 1cfec7fe7d1c54e5e29c2e4baa67f2b554ed961267f31d376a24da5099d58606
+# Base SHA256 agent/src/engines/ufo/worker.py: 90f2f619108f79cb0cd51728bd7de673c64adc5773bcd69691267c6ddb760dbf
+# Static validation in analysis workspace: py_compile PASS (adapter/worker/test);
+# headless contract PASS 4/4 (read retry, mutation no-replay, pre-flush failure, env minimization).
+# NOTE: REVIEW-ONLY. Current V7.9 Gate 2 still requires real local Approval A before build/test/promotion.
+
+--- a/agent/src/engines/ufo/adapter.py
++++ b/agent/src/engines/ufo/adapter.py
+@@ -1,20 +1,170 @@
+-"""Bounded out-of-process adapter around Microsoft's retained UFO² inspector."""
+-import json,pathlib,subprocess,sys
++"""Bounded persistent out-of-process adapter around Microsoft's retained UFO² inspector.
++
++The worker is shared by semantic tasks to avoid paying Python/UFO/COM startup cost
++for every UIA read.  Requests are serialized deliberately: UIAutomation state is
++not thread-safe enough to justify parallel mutation, and V7 already serializes
++semantic side effects at a higher layer.
++
++Read-only requests may recycle the worker and retry once when the worker dies
++before a response.  Mutating requests are never automatically replayed after a
++request was flushed to the worker because the side effect may already have
++happened.
++"""
++import atexit,json,os,pathlib,queue,subprocess,sys,threading,uuid
++
++_READ_ACTIONS=frozenset({'inspect','find','get_value'})
++_CREATE_NO_WINDOW=0x08000000
++
++def _worker_environment():
++    # The UIA worker needs only a normal Windows/Python runtime plus the V7 data
++    # root for the host-authoritative /gui-input-check.  Do not pass proxy,
++    # credential, Python injection or arbitrary application environment.
++    allowed={
++        'SystemRoot','WINDIR','COMSPEC','PATH','PATHEXT','TEMP','TMP',
++        'LOCALAPPDATA','APPDATA','USERPROFILE','PROGRAMDATA',
++        'THAYLINH_DATA_ROOT',
++    }
++    allowed={k.casefold() for k in allowed}
++    env={k:v for k,v in os.environ.items() if k.casefold() in allowed}
++    env['PYTHONUTF8']='1'
++    env['PYTHONNOUSERSITE']='1'
++    return env
++
++class _PersistentUfoWorker:
++    def __init__(self):
++        self._lock=threading.RLock()
++        self._process=None
++        self._responses=queue.Queue()
++        self._reader=None
++
++    @staticmethod
++    def paths():
++        worker=pathlib.Path(__file__).with_name('worker.py').resolve()
++        python=pathlib.Path(sys.executable).with_name('python.exe').resolve()
++        return python,worker
++
++    def _reader_loop(self,process,responses):
++        try:
++            for line in process.stdout:
++                try:
++                    value=json.loads(line)
++                except (json.JSONDecodeError,TypeError):
++                    # stdout is protocol-only in our worker, but tolerate a
++                    # dependency writing one stray line without accepting it as
++                    # a result.
++                    continue
++                if isinstance(value,dict) and value.get('request_id'):
++                    responses.put(value)
++        finally:
++            responses.put({'_worker_eof':True})
++
++    def _start_locked(self):
++        if self._process and self._process.poll() is None:
++            return self._process
++        self._close_locked()
++        python,worker=self.paths()
++        self._responses=queue.Queue()
++        process=subprocess.Popen(
++            [str(python),str(worker),'--persistent'],
++            stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,
++            text=True,encoding='utf-8',errors='replace',bufsize=1,
++            creationflags=_CREATE_NO_WINDOW,env=_worker_environment(),
++        )
++        self._process=process
++        self._reader=threading.Thread(
++            target=self._reader_loop,args=(process,self._responses),
++            name='ThayLinh-UFO-stdout',daemon=True,
++        )
++        self._reader.start()
++        return process
++
++    def _close_locked(self):
++        process=self._process
++        self._process=None
++        if not process:
++            return
++        try:
++            if process.stdin:
++                process.stdin.close()
++        except Exception:
++            pass
++        try:
++            if process.poll() is None:
++                process.terminate()
++                process.wait(timeout=1.0)
++        except Exception:
++            try:process.kill()
++            except Exception:pass
++
++    def close(self):
++        with self._lock:
++            self._close_locked()
++
++    def _request_once_locked(self,payload,timeout):
++        process=self._start_locked()
++        request_id=str(uuid.uuid4())
++        body={**payload,'request_id':request_id}
++        try:
++            process.stdin.write(json.dumps(body,ensure_ascii=False,separators=(',',':'))+'\n')
++            process.stdin.flush()
++        except (BrokenPipeError,OSError,ValueError):
++            self._close_locked()
++            return {'ok':False,'error':'UFO_WORKER_FAILED','_request_flushed':False}
++        # From this point a mutating request may have crossed the side-effect
++        # boundary.  A missing response is uncertainty, never permission to
++        # replay the mutation.
++        while True:
++            try:
++                value=self._responses.get(timeout=timeout)
++            except queue.Empty:
++                self._close_locked()
++                return {'ok':False,'error':'TIMEOUT','_request_flushed':True}
++            if value.get('_worker_eof'):
++                self._close_locked()
++                return {'ok':False,'error':'UFO_WORKER_FAILED','_request_flushed':True}
++            if value.get('request_id')!=request_id:
++                # Requests are serialized; an unmatched id is a protocol fault.
++                self._close_locked()
++                return {'ok':False,'error':'UFO_WORKER_FAILED','_request_flushed':True}
++            result=dict(value)
++            result.pop('request_id',None)
++            result['_request_flushed']=True
++            return result
++
++    def request(self,payload,timeout=25):
++        action=payload.get('action')
++        read_only=action in _READ_ACTIONS
++        with self._lock:
++            first=self._request_once_locked(payload,timeout)
++            if first.get('ok'):
++                first.pop('_request_flushed',None)
++                return first
++            if read_only and first.get('error') in {'TIMEOUT','UFO_WORKER_FAILED'}:
++                # READ has no side effect, so one clean worker recycle/retry is
++                # safe and removes transient COM/worker startup failures.
++                self._close_locked()
++                second=self._request_once_locked(payload,timeout)
++                second.pop('_request_flushed',None)
++                return second
++            flushed=bool(first.pop('_request_flushed',False))
++            if not read_only and flushed and first.get('error') in {'TIMEOUT','UFO_WORKER_FAILED'}:
++                return {
++                    'ok':False,'error':'OUTCOME_UNKNOWN',
++                    'replay_safe':False,'method_used':'uia_persistent_worker',
++                }
++            return first
++
++_CLIENT=_PersistentUfoWorker()
++atexit.register(_CLIENT.close)
+ 
+ class UfoAdapter:
+     name='ufo_uia'
+     def __init__(self,command_id=None):self.command_id=command_id
+     def execute(self,action,selector,value=None):
+-        worker=pathlib.Path(__file__).with_name('worker.py')
+-        python=pathlib.Path(sys.executable).with_name('python.exe')
+-        try:
+-            result=subprocess.run([str(python),str(worker)],input=json.dumps({'action':action,'selector':selector,'value':value,'command_id':self.command_id}),
+-                capture_output=True,text=True,encoding='utf-8',errors='replace',timeout=25,creationflags=0x08000000)
+-            for line in reversed(result.stdout.splitlines()):
+-                try:return json.loads(line)
+-                except json.JSONDecodeError:pass
+-            return {'ok':False,'error':'UFO_WORKER_FAILED','exit_code':result.returncode}
+-        except subprocess.TimeoutExpired:return {'ok':False,'error':'TIMEOUT'}
++        return _CLIENT.request({
++            'action':action,'selector':selector,'value':value,
++            'command_id':self.command_id,
++        })
+     def inspect(self,selector):return self.execute('inspect',selector)
+     def find_control(self,selector):return self.execute('find',selector)
+     def click_control(self,selector):return self.execute('invoke',selector)
+--- a/agent/src/engines/ufo/worker.py
++++ b/agent/src/engines/ufo/worker.py
+@@ -1,14 +1,25 @@
+ import json,os,pathlib,sys,urllib.request,urllib.error
+ sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[3]))
+ 
+-def run(request):
+-    import pywinauto
+-    import pywinauto.uia_defines
+-    pywinauto.uia_defines.IUIA() # Generate UIAutomationClient before the upstream import.
+-    from src.engines.ufo.vendor.inspector import ControlInspectorFacade
+-    from pywinauto import Desktop
+-    from selector_resolver import regex_match
+-    selector=request.get('selector',{});hwnd=int(selector.get('hwnd',0))
+-    inspector=ControlInspectorFacade('uia')
++_RUNTIME=None
++
++def _runtime():
++    # Initialize COM/UIAutomation/UFO exactly once on this main worker thread.
++    # Do not hand UIA objects to a generic thread pool and do not cache
++    # AutomationElement instances across requests.
++    global _RUNTIME
++    if _RUNTIME is None:
++        import pywinauto
++        import pywinauto.uia_defines
++        pywinauto.uia_defines.IUIA() # Generate UIAutomationClient before upstream import.
++        from src.engines.ufo.vendor.inspector import ControlInspectorFacade
++        from pywinauto import Desktop
++        from selector_resolver import regex_match
++        _RUNTIME=(pywinauto,ControlInspectorFacade('uia'),Desktop,regex_match)
++    return _RUNTIME
++
++def run(request):
++    pywinauto,inspector,Desktop,regex_match=_runtime()
++    selector=request.get('selector',{});hwnd=int(selector.get('hwnd',0))
+     # A resolved HWND is authoritative. Enumerating unrelated desktop windows
+     # can race with transient windows closing and fail before reading our target.
+     windows=[Desktop(backend='uia').window(handle=hwnd).wrapper_object()] if hwnd else inspector.get_desktop_windows()
+@@ -156,7 +167,23 @@
+     else:return {'ok':False,'error':'UFO_ACTION_UNSUPPORTED'}
+     return {'ok':True,'element':before,'engine':'microsoft_ufo2','executed':True,'method_used':method}
+ 
++def _handle(raw):
++    request_id=None
++    try:
++        request=json.loads(raw);request_id=request.get('request_id')
++        response=run(request)
++    except Exception as exc:
++        response={'ok':False,'error':'UFO_'+type(exc).__name__}
++    if request_id:response={**response,'request_id':request_id}
++    return response
++
+ if __name__=='__main__':
+-    try:response=run(json.loads(sys.stdin.read()))
+-    except Exception as exc:response={'ok':False,'error':'UFO_'+type(exc).__name__}
+-    print(json.dumps(response,ensure_ascii=True))
++    if '--persistent' in sys.argv:
++        # stdout is a strict protocol channel. One request and one JSON response
++        # per line; no user data or diagnostics are printed here.
++        _runtime()
++        for line in sys.stdin:
++            if not line.strip():continue
++            print(json.dumps(_handle(line),ensure_ascii=True,separators=(',',':')),flush=True)
++    else:
++        # Backward-compatible one-shot mode for existing diagnostics/tests.
++        print(json.dumps(_handle(sys.stdin.read()),ensure_ascii=True))
+--- /dev/null
++++ b/tests/ufo_persistent_contract.py
+@@ -0,0 +1,57 @@
++"""Contract tests for the persistent UFO/UIA adapter. No real GUI input."""
++import pathlib,sys,unittest
++
++APP=pathlib.Path(__file__).resolve().parents[1]
++sys.path.insert(0,str(APP/'agent/src/engines/ufo'))
++import adapter
++
++class PersistentUfoContract(unittest.TestCase):
++    def _client(self,responses):
++        client=adapter._PersistentUfoWorker()
++        calls=[]
++        closes=[]
++        def request_once(payload,timeout):
++            calls.append((payload.get('action'),timeout))
++            return dict(responses.pop(0))
++        client._request_once_locked=request_once
++        client._close_locked=lambda:closes.append(True)
++        return client,calls,closes
++
++    def test_read_timeout_recycles_and_retries_once(self):
++        client,calls,closes=self._client([
++            {'ok':False,'error':'TIMEOUT','_request_flushed':True},
++            {'ok':True,'elements':[],'_request_flushed':True},
++        ])
++        result=client.request({'action':'inspect','selector':{'hwnd':1}},timeout=.1)
++        self.assertTrue(result['ok'])
++        self.assertEqual(len(calls),2)
++        self.assertEqual(len(closes),1)
++        self.assertNotIn('_request_flushed',result)
++
++    def test_mutation_timeout_never_replays(self):
++        client,calls,closes=self._client([
++            {'ok':False,'error':'TIMEOUT','_request_flushed':True},
++        ])
++        result=client.request({'action':'invoke_semantic','selector':{'hwnd':1}},timeout=.1)
++        self.assertFalse(result['ok'])
++        self.assertEqual(result['error'],'OUTCOME_UNKNOWN')
++        self.assertFalse(result['replay_safe'])
++        self.assertEqual(len(calls),1)
++        self.assertEqual(len(closes),0)
++
++    def test_mutation_failed_before_flush_is_not_unknown(self):
++        client,calls,_=self._client([
++            {'ok':False,'error':'UFO_WORKER_FAILED','_request_flushed':False},
++        ])
++        result=client.request({'action':'select','selector':{'hwnd':1}},timeout=.1)
++        self.assertFalse(result['ok'])
++        self.assertEqual(result['error'],'UFO_WORKER_FAILED')
++        self.assertEqual(len(calls),1)
++
++    def test_worker_environment_is_minimal(self):
++        env=adapter._worker_environment()
++        self.assertEqual(env['PYTHONNOUSERSITE'],'1')
++        self.assertEqual(env['PYTHONUTF8'],'1')
++        for key in env:
++            low=key.casefold()
++            self.assertNotIn('token',low)
++            self.assertNotIn('secret',low)
++            self.assertNotIn('proxy',low)
++
++if __name__=='__main__':
++    raise SystemExit(not unittest.main(verbosity=2,exit=False).result.wasSuccessful())
