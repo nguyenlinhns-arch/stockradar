@@ -1,0 +1,19 @@
+{
+  "schema": "thaylinh.pc.bootstrap-candidate.v1",
+  "created_at": "2026-09-09T07:15:00+07:00",
+  "target": {"version":"7.9.0-rc1","channel":"preview","protocol":2,"production_ready":false},
+  "observed_live_before_bootstrap": {"version":"7.0.0-rc1","gateway":"ONLINE","mcp":"READY","watchdog":"PASS","update_source":"NOT_CONFIGURED"},
+  "ordered_components": [
+    {"order":10,"id":"WP-A-TRANSPORT","file":"V7_9_WP_A_TRANSPORT_IMPLEMENTED.review.diff","github_branch":"pc-control","github_path":"pc-control/patches/V7_9_WP_A_TRANSPORT_IMPLEMENTED.review.diff","github_commit":"dbee4a165b537aefff03e9dd900b55c08d698ea5","state":"IMPLEMENTATION_READY"},
+    {"order":20,"id":"WP-B-COMPACT-OUTPUTS","file":"V7_9_WP_B_COMPACT_OUTPUTS_IMPLEMENTED_v2.review.diff","github_branch":"pc-control","github_path":"pc-control/patches/V7_9_WP_B_COMPACT_OUTPUTS_IMPLEMENTED_v2.review.diff","github_commit":"b5341a6e4699a78df3f58016de1434da794cf9f8","state":"IMPLEMENTATION_READY"},
+    {"order":30,"id":"WP-C1-MAINTENANCE-ANALYZE","file":"V7_9_WP_C1_MAINTENANCE_ANALYZE_IMPLEMENTED_v2.review.diff","github_branch":"pc-control","github_path":"pc-control/patches/V7_9_WP_C1_MAINTENANCE_ANALYZE_IMPLEMENTED_v2.review.diff","github_commit":"3f9879bf72cd7c3aab5ee2d531734bcc82363d9b","state":"IMPLEMENTATION_READY"},
+    {"order":40,"id":"VERSION-SYNC","file":"V7_9_WP_VERSION_SYNC_FIX_IMPLEMENTED_v2.review.diff","github_branch":"pc-control","github_path":"pc-control/patches/V7_9_WP_VERSION_SYNC_FIX_IMPLEMENTED_v2.review.diff","github_commit":"830a0847b8c6fcecee720475ba691f2eb3cf401d","state":"IMPLEMENTATION_READY"}
+  ],
+  "superseded_local_files": ["V7_9_WP_B_COMPACT_OUTPUTS_IMPLEMENTED.review.diff","V7_9_WP_C1_MAINTENANCE_ANALYZE_IMPLEMENTED.review.diff","V7_9_WP_VERSION_SYNC_FIX_IMPLEMENTED.review.diff"],
+  "activation": {
+    "state":"TRUSTED_LOCAL_BOOTSTRAP_REQUIRED",
+    "reason":"The currently running V7 trust boundary intentionally blocks remote writes to executable/script source and stage runtime. The installed updater also has no configured trusted update source.",
+    "must_not":["write protected source through pc.write_file","modify stage/data config remotely","use GUI or shell to bypass protected-path policy"],
+    "post_bootstrap_expected":["pc.status returns bounded capabilities with catalog hash and tool_count","pc.execute_task supports result_mode compact/full","pc.task_status supports detail summary/full","pc.maintenance_status exists","pc.maintenance_analyze_patch exists","transport owner survives worker restart","gateway HTTPS connection is reused without hidden POST retry","reported build and semantic catalog version are 7.9.0-rc1"]
+  }
+}
