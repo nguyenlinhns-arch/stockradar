@@ -1,0 +1,161 @@
+# V7.9 Work Package A — IMPLEMENTATION-READY REVIEW PATCH
+# Date: 2026-09-09
+# Scope: stable lease owner, persistent HTTPS, no hidden POST retry, 50 ms local result journal cadence.
+# This is review-only data. It does not weaken protected source/runtime write boundaries.
+
+--- a/agent/chatgpt_transport.py
++++ b/agent/chatgpt_transport.py
+@@
+-import base64,datetime,hashlib,json,pathlib,secrets,threading,time,urllib.request,urllib.error,uuid
++import base64,datetime,hashlib,http.client,json,pathlib,secrets,ssl,threading,time,urllib.parse,uuid
+@@
+ class GatewayTransport:
+     def __init__(self,host):
+-        self.host=host;self.owner=str(uuid.uuid4());self.pending=None;self.lease_deadline=0;self.command_deadline=0
++        self.host=host;self.lock=threading.RLock();self.http_local=threading.local();self.ssl_context=ssl.create_default_context()
++        self.owner=self._lease_owner();self.pending=None;self.lease_deadline=0;self.command_deadline=0
+         self.lease_wall_deadline=0;self.command_wall_deadline=0
+-        self.last_lease=0;self.last_command_renew=0;self.lock=threading.RLock()
++        self.last_lease=0;self.last_command_renew=0
+         self.view={'gateway':'DISCONNECTED','mcp':'UNKNOWN','device_registration':'NOT_REGISTERED','chatgpt_connection':'PAIRING_REQUIRED','sessions':[]}
+         self.last_session_refresh=0
+         self.legacy_upload=host.engine.upload_artifact;host.engine.upload_artifact=self.upload
+     @property
+     def vault(self):return self.host.ROOT/'chatgpt-device.dpapi'
++    def _lease_owner(self):
++        # The local singleton prevents concurrent executors. Persist one opaque
++        # cloud fence identity so a watchdog restart does not look like a new
++        # device lease owner. This value is never returned by a public tool.
++        if not self.vault.exists():return str(uuid.uuid4())
++        saved=read_secret(self.vault);value=saved.get('lease_owner')
++        if value:
++            try:return str(uuid.UUID(str(value)))
++            except (ValueError,AttributeError,TypeError):raise ValueError('CREDENTIAL_RECOVERY_REQUIRED')
++        value=str(uuid.uuid4());write_secret(self.vault,{**saved,'lease_owner':value});return value
++    def _drop_http(self):
++        conn=getattr(self.http_local,'conn',None)
++        if conn:
++            try:conn.close()
++            except Exception:pass
++        self.http_local.conn=None;self.http_local.key=None
++    def _http(self,url):
++        key=(url.hostname,url.port or 443)
++        conn=getattr(self.http_local,'conn',None)
++        if conn is None or getattr(self.http_local,'key',None)!=key:
++            self._drop_http()
++            conn=http.client.HTTPSConnection(url.hostname,url.port or 443,timeout=12,context=self.ssl_context)
++            self.http_local.conn=conn;self.http_local.key=key
++        return conn
+     def enabled(self):return self.host.config().get('chatgpt_enabled',False) and self.vault.exists()
+@@
+     def request(self,path,body=None,auth=True,credential=None):
+-        class NoRedirect(urllib.request.HTTPRedirectHandler):
+-            def redirect_request(self,*args,**kwargs):return None
+-        headers={'Content-Type':'application/json'}
++        headers={'Content-Type':'application/json','Accept':'application/json','Connection':'keep-alive'}
+         if auth:headers['x-pc-device-key']=credential or read_secret(self.vault)['key']
+-        req=urllib.request.Request(self.base()+path,data=json.dumps(body or {},ensure_ascii=False).encode(),headers=headers)
++        url=urllib.parse.urlparse(self.base())
++        if url.scheme!='https' or not url.hostname or url.username or url.password:raise ValueError('POLICY_DENIED')
++        target=(url.path.rstrip('/')+path) or '/';payload=json.dumps(body or {},ensure_ascii=False).encode()
+         try:
+-            with urllib.request.build_opener(NoRedirect()).open(req,timeout=12) as r:
+-                raw=r.read(1_500_001)
+-                if len(raw)>1_500_000:raise ValueError('GATEWAY_RESPONSE_TOO_LARGE')
+-                result=json.loads(raw)
+-        except urllib.error.HTTPError as exc:
+-            try:result=json.loads(exc.read(4096))
+-            except Exception:result={'ok':False,'error':'GATEWAY_HTTP_ERROR'}
++            conn=self._http(url)
++            # There is deliberately no retry around this POST. If dispatch or
++            # response transport is uncertain, the existing owner/id/attempt
++            # state machine decides what the next loop iteration may do.
++            conn.request('POST',target,body=payload,headers=headers)
++            response=conn.getresponse();raw=response.read(1_500_001)
++            if len(raw)>1_500_000:self._drop_http();raise ValueError('GATEWAY_RESPONSE_TOO_LARGE')
++            try:result=json.loads(raw)
++            except Exception:result={'ok':False,'error':'GATEWAY_HTTP_ERROR'}
++            if response.status<200 or response.status>=300:
++                error=result.get('error','GATEWAY_HTTP_ERROR');code=error.get('code','GATEWAY_HTTP_ERROR') if isinstance(error,dict) else error
++                raise ValueError(code)
++            if str(response.getheader('Connection','')).casefold()=='close':self._drop_http()
++        except ValueError:raise
++        except (OSError,http.client.HTTPException,ssl.SSLError):
++            self._drop_http();raise
+         if not result.get('ok',False):
+             code=result.get('error','GATEWAY_UNAVAILABLE');code=code.get('code','GATEWAY_UNAVAILABLE') if isinstance(code,dict) else code
+             raise ValueError(code)
+         return result
+@@
+     def register(self):
+         with self.lock:
+             cfgpath=self.host.ROOT/'config.json';cfg=json.loads(cfgpath.read_text(encoding='utf-8-sig'))
+-            if not self.vault.exists():write_secret(self.vault,{'key':secrets.token_urlsafe(32),'created_at':self.host.engine.now_iso()})
++            if not self.vault.exists():write_secret(self.vault,{'key':secrets.token_urlsafe(32),'created_at':self.host.engine.now_iso(),'lease_owner':self.owner})
+             saved=read_secret(self.vault)
+             result=self.request('/device/register',{'name':cfg['device'],'key_hash':hashlib.sha256(saved['key'].encode()).hexdigest()},auth=False)
+@@
+-            write_secret(self.vault,{**saved,'device_id':result['device_id']})
++            write_secret(self.vault,{**saved,'device_id':result['device_id'],'lease_owner':self.owner})
+@@
+-            write_secret(self.vault,{k:v for k,v in {**saved,'key':new,'rotated_at':self.host.engine.now_iso()}.items() if k not in {'pending_key','rotation_state'}})
++            write_secret(self.vault,{k:v for k,v in {**saved,'key':new,'rotated_at':self.host.engine.now_iso(),'lease_owner':self.owner}.items() if k not in {'pending_key','rotation_state'}})
+@@
+             except Exception as exc:
+                 failures+=1
++                self._drop_http()
+                 h.HEALTH['cloud_online']=False;h.health_event('gateway',str(exc) if isinstance(exc,ValueError) else 'GATEWAY_UNAVAILABLE');self.view['gateway']='DEGRADED'
+@@
+-            h.EXIT.wait(backoff(failures) if failures else 1)
++            # While a command is pending this is a local durable-journal cadence,
++            # not a 20 Hz gateway poll. Network renew/result boundaries above
++            # remain unchanged, while completed results can be noticed promptly.
++            h.EXIT.wait(backoff(failures) if failures else (.05 if self.pending else 1))
+
+--- a/tests/gateway_reliability.py
++++ b/tests/gateway_reliability.py
+@@
+-import datetime,hashlib,json,pathlib,secrets,sys,tempfile,threading,time,types,unittest,uuid
++import datetime,hashlib,http.client,json,pathlib,secrets,sys,tempfile,threading,time,types,unittest,uuid
+@@
+ class GatewayReliability(unittest.TestCase):
+     def make(self,folder):
+-        root=pathlib.Path(folder)/'data';root.mkdir();engine=types.SimpleNamespace(upload_artifact=lambda *a:None,now_iso=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat())
+-        host=types.SimpleNamespace(ROOT=root,engine=engine,config=lambda:{'chatgpt_enabled':True});t=GatewayTransport(host)
+-        write_secret(t.vault,{'key':secrets.token_urlsafe(32),'device_id':str(uuid.uuid4())});return t
++        root=pathlib.Path(folder)/'data';root.mkdir();engine=types.SimpleNamespace(upload_artifact=lambda *a:None,now_iso=lambda:datetime.datetime.now(datetime.timezone.utc).isoformat())
++        write_secret(root/'chatgpt-device.dpapi',{'key':secrets.token_urlsafe(32),'device_id':str(uuid.uuid4())})
++        host=types.SimpleNamespace(ROOT=root,engine=engine,config=lambda:{'chatgpt_enabled':True});return GatewayTransport(host)
++    def test_lease_owner_survives_transport_restart(self):
++        with tempfile.TemporaryDirectory(prefix='pc-owner-contract-') as folder:
++            first=self.make(folder);before=read_secret(first.vault);owner=first.owner
++            second=GatewayTransport(first.host);after=read_secret(second.vault)
++            self.assertEqual(second.owner,owner);self.assertEqual(after['lease_owner'],owner)
++            self.assertEqual(after['key'],before['key']);self.assertEqual(after['device_id'],before['device_id'])
++            self.assertEqual(str(uuid.UUID(owner)),owner)
++    def test_persistent_https_connection_is_reused(self):
++        with tempfile.TemporaryDirectory(prefix='pc-http-contract-') as folder:
++            t=self.make(folder)
++            class Response:
++                status=200
++                def read(self,n):return b'{"ok":true}'
++                def getheader(self,name,default=''):return default
++            class Connection:
++                def __init__(self):self.calls=0;self.closed=0
++                def request(self,*args,**kwargs):self.calls+=1
++                def getresponse(self):return Response()
++                def close(self):self.closed+=1
++            connection=Connection()
++            with patch('chatgpt_transport.http.client.HTTPSConnection',return_value=connection) as factory:
++                t.request('/device/status');t.request('/device/status')
++            self.assertEqual(connection.calls,2);self.assertEqual(factory.call_count,1)
++    def test_http_post_failure_is_not_retried(self):
++        with tempfile.TemporaryDirectory(prefix='pc-no-retry-contract-') as folder:
++            t=self.make(folder)
++            class Broken:
++                def __init__(self):self.calls=0;self.closed=0
++                def request(self,*args,**kwargs):self.calls+=1;raise http.client.RemoteDisconnected('fixture')
++                def close(self):self.closed+=1
++            broken=Broken();t.http_local.conn=broken;t.http_local.key=('xamviatbxufjlpiwhebb.supabase.co',443)
++            with self.assertRaises(http.client.RemoteDisconnected):t.request('/device/status')
++            self.assertEqual(broken.calls,1);self.assertEqual(broken.closed,1);self.assertIsNone(t.http_local.conn)
