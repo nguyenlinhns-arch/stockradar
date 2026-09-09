@@ -1,0 +1,25 @@
+{
+  "schema": "thaylinh.pc.update-feed.v2",
+  "key_id": "fixture-p256-01",
+  "signed": {
+    "channel": "preview",
+    "version": "7.9.0-rc2",
+    "release_id": "v7.9.0-rc2",
+    "release_epoch": 2,
+    "published_at": "2026-09-09T12:00:00Z",
+    "expires_at": "2026-09-16T12:00:00Z",
+    "min_manager_version": "7.9.0-rc1",
+    "min_safe_version": "7.9.0-rc1",
+    "package": {
+      "asset": "ThayLinh-PC-Control-7.9.0-rc2.zip",
+      "size": 12345678,
+      "sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    },
+    "health": {
+      "timeout_seconds": 90,
+      "required_agent_count": 1,
+      "required_relay_count": 1
+    }
+  },
+  "signature": "KDCMGfKuyj8B8OD2QSivruXcPr6au/EFT02DUpTUZCsw2O97SCMHx9mvOe/cn5onHDDJPwC2ZdCEKxMGVwyEkA=="
+}
