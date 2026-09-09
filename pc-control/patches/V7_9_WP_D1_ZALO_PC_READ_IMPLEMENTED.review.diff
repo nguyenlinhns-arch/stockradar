@@ -327,10 +327,10 @@
          value['error'].update(retryable=False,recommended_action='review_completed_steps_before_new_plan')
 --- a/tests/semantic_contract.py
 +++ b/tests/semantic_contract.py
-@@ -31,6 +31,14 @@
+@@ -29,6 +29,14 @@
+     def test_schema_enum_size_and_nan(self):
+         for name,args in [('pc.type',{'selector':{'hwnd':42},'text':'x'*200001}),('pc.scroll',{'selector':{'hwnd':42},'direction':'diagonal'}),('pc.wait',{'id':str(uuid.uuid4()),'timeout_seconds':float('nan')}),('pc.find_files',{'path':'x','pattern':'*','max_depth':999})]:
              with self.subTest(name=name),self.assertRaises(ValueError):validate_tool(name,args)
-     def test_translation_only_wrapper(self):
-         self.assertEqual(translate('pc.status',{}),('CALL_TOOL',{'tool':'pc.status','arguments':{}}))
 +    def test_zalo_pc_phase1_surface_is_read_only(self):
 +        expected={'pc.zalo_status','pc.zalo_snapshot','pc.zalo_read_visible'}
 +        self.assertTrue(expected.issubset(CATALOG))
@@ -339,11 +339,9 @@
 +            self.assertEqual(CATALOG[name]['kind'],'zalo')
 +        self.assertFalse(any('send' in name or 'reply' in name for name in CATALOG if 'zalo' in name))
 +
-+    def test_translation_only_wrapper(self):
-+        self.assertEqual(translate('pc.status',{}),('CALL_TOOL',{'tool':'pc.status','arguments':{}}))
+     def test_translation_only_wrapper(self):
+         self.assertEqual(translate('pc.status',{}),('CALL_TOOL',{'tool':'pc.status','arguments':{}}))
      def test_mcp_schema_error_does_not_execute(self):
-         called=[];r=rpc({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'pc.open_app','arguments':{'executable':'cmd.exe'}}},lambda *x:called.append(x))
-         self.assertEqual(r['error']['code'],-32602);self.assertEqual(called,[])
 --- /dev/null
 +++ b/tests/zalo_pc_contract.py
 @@ -0,0 +1,91 @@
