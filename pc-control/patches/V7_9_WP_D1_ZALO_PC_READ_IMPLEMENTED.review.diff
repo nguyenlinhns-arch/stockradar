@@ -1,0 +1,443 @@
+# V7.9 Work Package D1-ZALO — READ-SIDE INSTALLED ZALO PC ADAPTER
+# Date: 2026-09-09
+# Scope: add a read-first semantic surface for the installed Windows Zalo PC app.
+# Primary route: exact locally approved runtime identity -> Accessibility/UIA.
+# Zalo Web/Opera is not used by this patch.
+# Hard phase-1 boundary: no composer write, send/reply, attachment, call, login/OTP/CAPTCHA,
+# cookie/token/private-database access, or third-party binary modification.
+# Existing approved_executables remains the sole launch authorization source.
+# Launcher and runtime UI executable identities are verified separately.
+# Status discovery is a hint only and cannot self-authorize an app.
+# REVIEW-ONLY: current V7.9 Gate 2 remains blocked on real local Approval A.
+# Base BYTE SHA256 agent/protocol_catalog.py: 35199ab7638c2387c6c0034b4465fb265946fc1419d92119747247ead2e410ab
+# Base BYTE SHA256 agent/semantic_host.py: 0e5a73789e543e89c7f38a0a834cc555955542213087ffa4921c875589de2125
+# Base BYTE SHA256 agent/public_errors.py: c1d8d186548931103850798e0437684b0ad4f3f02549677f4a6d90340b587346
+# Base BYTE SHA256 tests/semantic_contract.py: a8a69cfab800d54242bc7afea7012f0829007d562386a6a70eb75f099650b706
+# Static validation: py_compile PASS for all added/modified Python files.
+# Headless Zalo adapter contract: PASS 4/4.
+# Catalog check: pc.zalo_status / pc.zalo_snapshot / pc.zalo_read_visible are READ-only.
+
+--- /dev/null
++++ b/agent/managed_apps.py
+@@ -0,0 +1,57 @@
++"""Shared local ManagedApp identity helpers.
++
++Profiles identify approved applications but never grant executable authority.
++The existing approved_executables policy remains the sole launch authority.
++"""
++import hashlib,pathlib,threading
++
++_HASH_CACHE={}
++_HASH_LOCK=threading.RLock()
++
++def file_sha256(path):
++    p=pathlib.Path(path)
++    stat=p.stat()
++    key=(str(p.resolve()).casefold(),stat.st_size,stat.st_mtime_ns,getattr(stat,'st_ctime_ns',0),getattr(stat,'st_ino',0))
++    with _HASH_LOCK:
++        cached=_HASH_CACHE.get(key)
++        if cached:return cached
++    h=hashlib.sha256()
++    with p.open('rb') as stream:
++        for block in iter(lambda:stream.read(1024*1024),b''):h.update(block)
++    value=h.hexdigest()
++    with _HASH_LOCK:
++        # Keep the cache bounded and automatically invalidated by size/mtime.
++        if len(_HASH_CACHE)>64:_HASH_CACHE.clear()
++        _HASH_CACHE[key]=value
++    return value
++
++def resolve(name,cfg):
++    matches=[]
++    for raw_path,raw_policy in cfg.get('approved_executables',{}).items():
++        policy=raw_policy if isinstance(raw_policy,dict) else {}
++        path=pathlib.Path(raw_path)
++        aliases={
++            path.stem.casefold(),path.name.casefold(),
++            str(policy.get('app_id','')).casefold(),
++            str(policy.get('name','')).casefold(),
++            *[str(v).casefold() for v in policy.get('aliases',[])],
++        }
++        if str(name).casefold() in aliases:matches.append((path,policy))
++    if not matches:raise ValueError('executable_not_locally_approved')
++    if len(matches)>1:raise ValueError('AMBIGUOUS_TARGET')
++    path,policy=matches[0]
++    return {'path':path,'policy':policy}
++
++def launch_recipe(name,cfg):
++    row=resolve(name,cfg);path=row['path'];policy=row['policy']
++    return {'executable':str(path),'args':policy.get('arguments',[]),**({'cwd':policy['cwd']} if policy.get('cwd') else {})}
++
++def verify_file(path,expected_sha256,changed_error='APP_BINARY_CHANGED'):
++    p=pathlib.Path(path)
++    if not p.is_absolute() or not p.is_file():raise ValueError('TARGET_NOT_FOUND')
++    if not expected_sha256 or file_sha256(p).casefold()!=str(expected_sha256).casefold():raise ValueError(changed_error)
++    return p
++
++def verify_launch_identity(name,cfg):
++    row=resolve(name,cfg);verify_file(row['path'],row['policy'].get('sha256'))
++    return row
+--- /dev/null
++++ b/agent/zalo_pc_service.py
+@@ -0,0 +1,158 @@
++"""Read-first semantic adapter for the installed Windows Zalo PC application.
++
++Phase 1 intentionally excludes composing/sending messages.  It discovers the
++installed app, verifies locally approved launcher/runtime identities, and exposes
++bounded accessible UI state for ChatGPT planning.
++"""
++import os,pathlib,re
++from managed_apps import file_sha256,resolve,verify_file
++from observation_store import state_hash
++
++APP_ID='zalo-pc'
++_VERSION_RE=re.compile(r'^Zalo-(\d+(?:\.\d+){1,3})$',re.I)
++
++def _version_key(text):
++    try:return tuple(int(x) for x in str(text).split('.'))
++    except ValueError:return ()
++
++def _install_root():
++    base=os.environ.get('LOCALAPPDATA')
++    return pathlib.Path(base)/'Programs'/'Zalo' if base else None
++
++def discover_candidates():
++    root=_install_root()
++    if not root or not root.is_dir():return {'installed':False,'candidates':[]}
++    launcher=root/'Zalo.exe';found=[]
++    for child in root.iterdir():
++        if not child.is_dir():continue
++        match=_VERSION_RE.fullmatch(child.name);runtime=child/'Zalo.exe'
++        if match and runtime.is_file():found.append((match.group(1),runtime))
++    found.sort(key=lambda item:_version_key(item[0]),reverse=True)
++    rows=[{'version':version,'runtime_sha256':file_sha256(runtime),'runtime_size':runtime.stat().st_size}
++          for version,runtime in found[:5]]
++    value={'installed':bool(launcher.is_file() or found),'candidates':rows}
++    if launcher.is_file():
++        value['launcher_sha256']=file_sha256(launcher)
++        value['launcher_size']=launcher.stat().st_size
++    return value
++
++def _profile(cfg):
++    try:return resolve(APP_ID,cfg)
++    except ValueError as exc:
++        if str(exc)=='executable_not_locally_approved':return None
++        raise
++
++def _runtime_path(policy):
++    raw=policy.get('runtime_executable')
++    if not raw:raise ValueError('PROFILE_NOT_READY')
++    path=pathlib.Path(raw)
++    if not path.is_absolute():raise ValueError('PROFILE_NOT_READY')
++    return path
++
++def _verified_profile(cfg):
++    row=_profile(cfg)
++    if not row:raise ValueError('ZALO_PC_NOT_APPROVED')
++    policy=row['policy']
++    verify_file(row['path'],policy.get('sha256'))
++    runtime=_runtime_path(policy)
++    verify_file(runtime,policy.get('runtime_sha256'),'PROFILE_STALE')
++    root=row['path'].parent.resolve()
++    try:runtime.resolve().relative_to(root)
++    except ValueError:raise ValueError('PROFILE_STALE')
++    return row,runtime
++
++def _runtime_windows(semantic,runtime):
++    process_name=runtime.name.casefold()
++    rows=[]
++    for window in semantic.engine.list_windows():
++        if window.get('process','').casefold()!=process_name:continue
++        try:
++            import psutil
++            actual=pathlib.Path(psutil.Process(int(window['pid'])).exe()).resolve()
++        except Exception:
++            continue
++        if actual!=runtime.resolve():continue
++        rows.append(window)
++    return rows
++
++def _selector_from_profile(policy,runtime):
++    selector={'process':policy.get('process') or runtime.name}
++    if policy.get('window_title_regex'):selector['window_title_regex']=policy['window_title_regex']
++    if policy.get('window_class'):selector['window_class']=policy['window_class']
++    return selector
++
++def preflight_zalo(action,payload,host,cfg):
++    if action in {'zalo_snapshot','zalo_read_visible'}:
++        _verified_profile(cfg)
++    elif action=='zalo_status':
++        return
++    else:raise ValueError('TOOL_NOT_FOUND')
++
++def _status(semantic):
++    cfg=semantic.host.config();discovery=discover_candidates();row=_profile(cfg)
++    value={'ok':True,'schema':'zalo-pc.status.v1','installed':discovery['installed'],'approved':bool(row),
++           'candidates':discovery.get('candidates',[])[:3]}
++    if 'launcher_sha256' in discovery:value['launcher_sha256']=discovery['launcher_sha256']
++    if not row:
++        value.update(state='unapproved' if discovery['installed'] else 'not_installed',ready=False)
++        return value
++    policy=row['policy'];value['profile_version']=policy.get('profile_version')
++    try:
++        _,runtime=_verified_profile(cfg)
++    except ValueError as exc:
++        code=str(exc).split(':',1)[0]
++        value.update(state='profile_stale' if code in {'PROFILE_STALE','APP_BINARY_CHANGED'} else 'profile_not_ready',
++                     ready=False,error=code)
++        return value
++    windows=_runtime_windows(semantic,runtime)
++    value.update(
++        state='ready' if len(windows)==1 else 'not_running' if not windows else 'ambiguous_window',
++        ready=len(windows)==1,
++        runtime_version=policy.get('runtime_version'),
++        window_count=len(windows),
++    )
++    if len(windows)==1:
++        w=windows[0]
++        value['window']={k:w.get(k) for k in ('hwnd','pid','process','title','class_name','rect') if k in w}
++    return value
++
++def _snapshot(semantic,max_elements):
++    cfg=semantic.host.config();row,runtime=_verified_profile(cfg);policy=row['policy']
++    windows=_runtime_windows(semantic,runtime)
++    if len(windows)!=1:raise ValueError('TARGET_NOT_FOUND' if not windows else 'AMBIGUOUS_TARGET')
++    selector={'hwnd':windows[0]['hwnd'],**_selector_from_profile(policy,runtime)}
++    selected,state=semantic.snapshot(selector,True)
++    elements=state.get('ui_tree',[])[:max_elements]
++    compact_state={**state,'ui_tree':elements}
++    return {
++        'ok':True,'schema':'zalo-pc.state.v1',
++        'profile_version':policy.get('profile_version'),
++        'runtime_version':policy.get('runtime_version'),
++        'window':state['window'],'generation':state_hash(compact_state),
++        'elements':elements,'truncated':len(state.get('ui_tree',[]))>len(elements),
++        'selector':{'hwnd':selected['hwnd'],'process':selected.get('process')},
++    }
++
++def _read_visible(semantic,max_items):
++    snap=_snapshot(semantic,500);items=[]
++    for element in snap['elements']:
++        name=str(element.get('control_name') or '').strip()
++        value=str(element.get('value') or '').strip()
++        if not name and not value:continue
++        row={k:element.get(k) for k in ('control_type','automation_id','control_class','control_rect') if element.get(k) not in (None,'')}
++        if name:row['name']=name[:2000]
++        if value and value!=name:row['value']=value[:20000]
++        items.append(row)
++        if len(items)>=max_items:break
++    return {
++        'ok':True,'schema':'zalo-pc.visible.v1','window':snap['window'],
++        'generation':snap['generation'],'items':items,
++        'truncated':snap['truncated'] or len(items)>=max_items,
++        'completeness':'VISIBLE_VIEWPORT_ONLY',
++    }
++
++def execute_zalo(action,payload,semantic):
++    if action=='zalo_status':return _status(semantic)
++    if action=='zalo_snapshot':return _snapshot(semantic,payload.get('max_elements',200))
++    if action=='zalo_read_visible':return _read_visible(semantic,payload.get('max_items',100))
++    raise ValueError('TOOL_NOT_FOUND')
+--- a/agent/protocol_catalog.py
++++ b/agent/protocol_catalog.py
+@@ -56,6 +56,9 @@
+     'max_width':integer(320,1920),'quality':integer(20,90)})
+ add('pc.list_apps','List applications approved on this PC. Paths and hashes are resolved locally.','READ','native','LIST_APPS')
++add('pc.zalo_status','Read installed Zalo PC discovery/profile/runtime readiness without reading cookies, tokens or private databases.','READ','zalo','zalo_status')
++add('pc.zalo_snapshot','Read a bounded accessibility snapshot from the exact locally approved Zalo PC runtime window.','READ','zalo','zalo_snapshot',{'max_elements':integer(1,500)})
++add('pc.zalo_read_visible','Read bounded text/accessibility items currently visible in the exact approved Zalo PC window. This is viewport-only, not a claim of complete conversation history.','READ','zalo','zalo_read_visible',{'max_items':integer(1,500)})
+ add('pc.open_app','Open an approved application and verify its window.','INTERACT','host','open_app',{'app':string(minLength=1,maxLength=260),'selector':SELECTOR},('app',))
+ add('pc.focus_app','Resolve a unique window, focus it and verify the foreground HWND.','INTERACT','host','focus_app',{'selector':SELECTOR,**OBSERVED},('selector',))
+ add('pc.close_app','Close the selected window only with a local one-use approval; verify it closed.','DESTRUCTIVE','host','close_app',{'selector':SELECTOR,'approval_id':ID,**OBSERVED},('selector',))
+--- a/agent/semantic_host.py
++++ b/agent/semantic_host.py
+@@ -20,15 +20,10 @@
+     if not profile.get('MODIFY' if risk=='DESTRUCTIVE' else risk,True):raise ValueError('POLICY_DENIED')
+ 
+ def approved_app(name,cfg):
+-    matches=[]
+-    for path,policy in cfg.get('approved_executables',{}).items():
+-        p=pathlib.Path(path)
+-        aliases={p.stem.casefold(),p.name.casefold(),str(policy.get('app_id','')).casefold(),str(policy.get('name','')).casefold(),*map(str.casefold,policy.get('aliases',[]))}
+-        if name.casefold() in aliases:matches.append((p,policy))
+-    if not matches:raise ValueError('executable_not_locally_approved')
+-    if len(matches)>1:raise ValueError('AMBIGUOUS_TARGET')
+-    p,policy=matches[0]
+-    return {'executable':str(p),'args':policy.get('arguments',[]),**({'cwd':policy['cwd']} if policy.get('cwd') else {})}
++    # Keep approved_executables as the only executable authority while sharing
++    # exact identity resolution with app-specific semantic adapters.
++    from managed_apps import launch_recipe
++    return launch_recipe(name,cfg)
+ 
+ def preflight(host,name,args,cfg,check_approval=True):
+     spec=validate_tool(name,args,internal_step=True);permission(spec,cfg)
+@@ -48,6 +43,9 @@
+     elif spec['kind']=='maintenance':
+         from maintenance_service import preflight_maintenance
+         preflight_maintenance(spec['action'],payload,host,check_approval)
++    elif spec['kind']=='zalo':
++        from zalo_pc_service import preflight_zalo
++        preflight_zalo(spec['action'],payload,host,cfg)
+     return spec,payload
+ 
+ class SemanticHost:
+@@ -211,6 +209,9 @@
+         action=spec['action']
+         if self.origin=='cloud' and self.host.TRANSPORT and self.host.TRANSPORT.enabled():self.host.TRANSPORT.guard(self.cid)
+         if spec['risk']!='READ' and spec['kind'] not in {'workflow','control','native'} and self.host.RELIABILITY:self.host.RELIABILITY.mutation()
+         if spec['kind']=='native':return self.native(action,payload)
++        if spec['kind']=='zalo':
++            from zalo_pc_service import execute_zalo
++            return execute_zalo(action,payload,self)
+         if action=='state':return self.state()
+         if action=='windows':
+             rows=[w for w in self.engine.list_windows() if self.engine._manageable_window(w)];offset=payload.get('offset',0);end=offset+payload.get('max_results',100)
+--- a/agent/public_errors.py
++++ b/agent/public_errors.py
+@@ -22,7 +22,8 @@
+     INVALID_ARGUMENT='INVALID_ARGUMENT';TOOL_NOT_FOUND='TOOL_NOT_FOUND';CANCELLED='CANCELLED';COMMAND_PENDING='COMMAND_PENDING'
+     SESSION_NOT_ACTIVE='SESSION_NOT_ACTIVE';SESSION_LOCKED='SESSION_LOCKED';USER_ACTIVE_RETRY_LATER='USER_ACTIVE_RETRY_LATER'
+     INPUT_GUARD_UNAVAILABLE='INPUT_GUARD_UNAVAILABLE';REMOTE_CONTROL_PAUSED='REMOTE_CONTROL_PAUSED';SCREEN_CAPTURE_DENIED='SCREEN_CAPTURE_DENIED'
+-    APP_BINARY_CHANGED='APP_BINARY_CHANGED';PLAN_REQUIRED='PLAN_REQUIRED';DEVICE_LEASE_HELD='DEVICE_LEASE_HELD'
++    APP_BINARY_CHANGED='APP_BINARY_CHANGED';PROFILE_NOT_READY='PROFILE_NOT_READY';PROFILE_STALE='PROFILE_STALE'
++    PLAN_REQUIRED='PLAN_REQUIRED';DEVICE_LEASE_HELD='DEVICE_LEASE_HELD'
+     DUPLICATE_ID_PAYLOAD_MISMATCH='DUPLICATE_ID_PAYLOAD_MISMATCH';INTERNAL_ERROR='INTERNAL_ERROR'
+     DEVICE_OFFLINE='DEVICE_OFFLINE';DEVICE_SELECTION_REQUIRED='DEVICE_SELECTION_REQUIRED';RATE_LIMITED='RATE_LIMITED'
+ 
+@@ -37,8 +38,10 @@
+  'UFO_WORKER_FAILED':'UI_PATTERN_UNSUPPORTED','APPROVAL_ALREADY_RESOLVED':'APPROVAL_USED',
+  'UFO_INVALIDWINDOWHANDLE':'TARGET_NOT_FOUND','UFO_ELEMENTNOTAVAILABLEERROR':'STATE_CHANGED',
+  'SESSION_GUARD_UNAVAILABLE':'INPUT_GUARD_UNAVAILABLE',
++ 'ZALO_PC_NOT_INSTALLED':'TARGET_NOT_FOUND','ZALO_PC_NOT_APPROVED':'POLICY_DENIED',
++ 'ZALO_RUNTIME_CHANGED':'APP_BINARY_CHANGED','ZALO_PROFILE_NOT_READY':'PROFILE_NOT_READY',
+ }
+-POLICY={'SHELL_NOT_ALLOWED','EXECUTABLE_NOT_LOCALLY_APPROVED','ARGUMENTS_NOT_LOCALLY_APPROVED','PROTECTED_APPLICATION_PATH','SYSTEM_PATH_PROTECTED','EXECUTABLE_WRITE_NOT_ALLOWED','PROTECTED_PROCESS','PUBLIC_CAPABILITY_REQUIRED','FILE_ROOT_DENIED','COMMAND_NOT_LOCALLY_APPROVED','APPROVAL_SIGNATURE_INVALID','LOCAL_TRUST_SURFACE_PROTECTED'}
++POLICY={'SHELL_NOT_ALLOWED','EXECUTABLE_NOT_LOCALLY_APPROVED','ARGUMENTS_NOT_LOCALLY_APPROVED','PROTECTED_APPLICATION_PATH','SYSTEM_PATH_PROTECTED','EXECUTABLE_WRITE_NOT_ALLOWED','PROTECTED_PROCESS','PUBLIC_CAPABILITY_REQUIRED','FILE_ROOT_DENIED','COMMAND_NOT_LOCALLY_APPROVED','APPROVAL_SIGNATURE_INVALID','LOCAL_TRUST_SURFACE_PROTECTED','ZALO_PC_NOT_APPROVED'}
+ 
+ def public_result(result):
+     if not isinstance(result,dict):return {'ok':False,'error':{'code':'INTERNAL_ERROR','message':'Invalid executor response','retryable':False}}
+@@ -49,7 +52,7 @@
+     native=str(raw.get('code') if isinstance(raw,dict) else raw).split(':',1)[0].upper();code=ALIASES.get(native,native)
+     if native in POLICY:code='POLICY_DENIED'
+     if code not in Code._value2member_map_:code='INTERNAL_ERROR'
+-    hints={'STALE_OBSERVATION':'observe_again','REOBSERVE_REQUIRED':'observe_again','DEVICE_OFFLINE':'retry_status','OFFLINE':'retry_status','APPROVAL_REQUIRED':'wait_for_local_approval','APPROVAL_PENDING':'wait_for_local_approval','OUTCOME_UNKNOWN':'observe_target_before_retry','TIMEOUT':'query_result_before_retry','QUEUE_FULL':'retry_after_backoff','RATE_LIMITED':'retry_after_backoff','DEVICE_LEASE_HELD':'retry_status','SAFE_MODE':'open_local_recovery','CREDENTIAL_RECOVERY_REQUIRED':'open_local_recovery'}
++    hints={'STALE_OBSERVATION':'observe_again','REOBSERVE_REQUIRED':'observe_again','DEVICE_OFFLINE':'retry_status','OFFLINE':'retry_status','APPROVAL_REQUIRED':'wait_for_local_approval','APPROVAL_PENDING':'wait_for_local_approval','OUTCOME_UNKNOWN':'observe_target_before_retry','TIMEOUT':'query_result_before_retry','QUEUE_FULL':'retry_after_backoff','RATE_LIMITED':'retry_after_backoff','DEVICE_LEASE_HELD':'retry_status','SAFE_MODE':'open_local_recovery','CREDENTIAL_RECOVERY_REQUIRED':'open_local_recovery','PROFILE_NOT_READY':'complete_local_app_profile','PROFILE_STALE':'reobserve_and_reprofile_app','APP_BINARY_CHANGED':'reobserve_and_reprofile_app'}
+     value['error']={'code':code,'message':code.replace('_',' ').capitalize(),'retryable':code in {'USER_ACTIVE_RETRY_LATER','OFFLINE','DEVICE_OFFLINE','QUEUE_FULL','RATE_LIMITED','APPROVAL_PENDING','COMMAND_PENDING'},'recommended_action':hints.get(code,'inspect_status_before_retry')}
+     if value.get('completed_steps') and value['error']['retryable']:
+         value['error'].update(retryable=False,recommended_action='review_completed_steps_before_new_plan')
+--- a/tests/semantic_contract.py
++++ b/tests/semantic_contract.py
+@@ -31,6 +31,14 @@
+             with self.subTest(name=name),self.assertRaises(ValueError):validate_tool(name,args)
+     def test_translation_only_wrapper(self):
+         self.assertEqual(translate('pc.status',{}),('CALL_TOOL',{'tool':'pc.status','arguments':{}}))
++    def test_zalo_pc_phase1_surface_is_read_only(self):
++        expected={'pc.zalo_status','pc.zalo_snapshot','pc.zalo_read_visible'}
++        self.assertTrue(expected.issubset(CATALOG))
++        for name in expected:
++            self.assertEqual(CATALOG[name]['risk'],'READ')
++            self.assertEqual(CATALOG[name]['kind'],'zalo')
++        self.assertFalse(any('send' in name or 'reply' in name for name in CATALOG if 'zalo' in name))
++
++    def test_translation_only_wrapper(self):
++        self.assertEqual(translate('pc.status',{}),('CALL_TOOL',{'tool':'pc.status','arguments':{}}))
+     def test_mcp_schema_error_does_not_execute(self):
+         called=[];r=rpc({'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'pc.open_app','arguments':{'executable':'cmd.exe'}}},lambda *x:called.append(x))
+         self.assertEqual(r['error']['code'],-32602);self.assertEqual(called,[])
+--- /dev/null
++++ b/tests/zalo_pc_contract.py
+@@ -0,0 +1,91 @@
++"""Headless Zalo PC adapter contract tests. No real Zalo process or GUI input."""
++import hashlib,json,os,pathlib,sys,tempfile,types,unittest
++from unittest.mock import patch
++
++APP=pathlib.Path(__file__).resolve().parents[1]
++sys.path.insert(0,str(APP/'agent'))
++_observation=types.ModuleType('observation_store')
++_observation.state_hash=lambda state:hashlib.sha256(json.dumps(state,sort_keys=True,separators=(',',':'),default=str).encode()).hexdigest()
++sys.modules.setdefault('observation_store',_observation)
++
++import zalo_pc_service
++from managed_apps import file_sha256
++
++def digest(path):
++    return file_sha256(path)
++
++class FakeProcess:
++    def __init__(self,path):self.path=path
++    def exe(self):return str(self.path)
++
++class FakeEngine:
++    def __init__(self,window):self.window=window
++    def list_windows(self):return [self.window]
++
++class FakeHost:
++    def __init__(self,cfg):self._cfg=cfg
++    def config(self):return self._cfg
++
++class FakeSemantic:
++    def __init__(self,cfg,runtime):
++        self.host=FakeHost(cfg)
++        self.engine=FakeEngine({'hwnd':11,'pid':123,'process':'Zalo.exe','title':'Zalo','class_name':'Chrome_WidgetWin_1','rect':{'left':0,'top':0,'width':1000,'height':700}})
++        self.runtime=runtime
++    def snapshot(self,selector,with_ui=True):
++        state={'window':self.engine.window,'foreground_hwnd':11,'monitors':[],'desktop_geometry':{},'dpi_mode':'pmv2',
++               'ui_tree':[{'control_name':'Nguyễn Văn A','control_type':'ListItem','automation_id':'conversation-1'},
++                          {'control_name':'Xin chào','control_type':'Text','automation_id':'','value':'Xin chào'}]}
++        return {**selector,'hwnd':11,'pid':123,'process':'Zalo.exe'},state
++
++class ZaloPcContract(unittest.TestCase):
++    def setUp(self):
++        self.temp=tempfile.TemporaryDirectory()
++        self.local=pathlib.Path(self.temp.name)
++        self.root=self.local/'Programs'/'Zalo';self.root.mkdir(parents=True)
++        self.launcher=self.root/'Zalo.exe';self.launcher.write_bytes(b'launcher')
++        self.version=self.root/'Zalo-26.8.20';self.version.mkdir()
++        self.runtime=self.version/'Zalo.exe';self.runtime.write_bytes(b'runtime-binary')
++        self.old=os.environ.get('LOCALAPPDATA');os.environ['LOCALAPPDATA']=str(self.local)
++
++    def tearDown(self):
++        if self.old is None:os.environ.pop('LOCALAPPDATA',None)
++        else:os.environ['LOCALAPPDATA']=self.old
++        self.temp.cleanup()
++
++    def cfg(self,runtime_sha=None):
++        return {'approved_executables':{str(self.launcher):{
++            'sha256':digest(self.launcher),'arguments':[],'app_id':'zalo-pc','name':'Zalo PC',
++            'process':'Zalo.exe','window_title_regex':'^Zalo','profile_version':1,
++            'runtime_executable':str(self.runtime),'runtime_sha256':runtime_sha or digest(self.runtime),
++            'runtime_version':'26.08.20',
++        }}}
++
++    def test_discovery_is_read_only_hint_not_approval(self):
++        semantic=FakeSemantic({'approved_executables':{}},self.runtime)
++        result=zalo_pc_service.execute_zalo('zalo_status',{},semantic)
++        self.assertTrue(result['installed'])
++        self.assertFalse(result['approved'])
++        self.assertEqual(result['state'],'unapproved')
++        self.assertNotIn('path',str(result).casefold())
++
++    def test_status_requires_exact_runtime_identity(self):
++        semantic=FakeSemantic(self.cfg(),self.runtime)
++        with patch('psutil.Process',return_value=FakeProcess(self.runtime)):
++            result=zalo_pc_service.execute_zalo('zalo_status',{},semantic)
++        self.assertTrue(result['ready'])
++        self.assertEqual(result['window_count'],1)
++
++    def test_runtime_hash_change_fails_closed(self):
++        semantic=FakeSemantic(self.cfg('0'*64),self.runtime)
++        result=zalo_pc_service.execute_zalo('zalo_status',{},semantic)
++        self.assertFalse(result['ready'])
++        self.assertEqual(result['state'],'profile_stale')
++
++    def test_visible_read_is_bounded_and_viewport_only(self):
++        semantic=FakeSemantic(self.cfg(),self.runtime)
++        with patch('psutil.Process',return_value=FakeProcess(self.runtime)):
++            result=zalo_pc_service.execute_zalo('zalo_read_visible',{'max_items':1},semantic)
++        self.assertTrue(result['ok'])
++        self.assertEqual(len(result['items']),1)
++        self.assertEqual(result['completeness'],'VISIBLE_VIEWPORT_ONLY')
++        self.assertIn('generation',result)
++
++if __name__=='__main__':
++    raise SystemExit(not unittest.main(verbosity=2,exit=False).result.wasSuccessful())
