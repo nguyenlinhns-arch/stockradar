@@ -1,0 +1,162 @@
+# V7.9 OpenCut Classic — CURRENT-SOURCE REVALIDATION REVIEW PATCH
+# Date: 2026-09-09
+# Purpose: prove the current bridge before changing Date/storage logic again.
+# The preserved 2026-09-08 `.toISOString()` failure predates current editor-domain.ts.
+# Current source already revives createdAt/updatedAt via nativeProject() before storage/restore.
+# Therefore this patch adds evidence, not another broad Date coercion patch.
+#
+# Current source SHA256:
+# tests/opencut_smoke.py: 0d03926effc3823ecbbf24f6d073ceeee2e2358794cd26cacd2b7c89f097c8bf
+# agent/src/connectors/opencut/adapter.py: 371de8c3a53f3c70f55452c97eecf96dd49f6042d51876de925b0e581f0ca794
+# agent/src/connectors/opencut/contract.py: b27f01e75766be093895c27242e6448efc5f0fc415b52afda2d520ded0de06d1
+# connectors/opencut/editor-domain.ts: 4449a2d4415bea923a396f296be359571d0eb0a200e759c4e45d8ef4e2d56448
+# connectors/opencut/service.cjs: b085900856d9fcfc1454283ceaa8bee002a948bd75200f0345669d6cb52e93f3
+#
+# REVIEW-ONLY. Must run on a locally approved V7.9 staging candidate with current bundle.
+
+--- /dev/null
++++ b/tests/opencut_revalidation.py
+@@ -0,0 +1,182 @@
++"""Fresh OpenCut Classic bridge revalidation against the current source/bundle.
++
++This test intentionally exercises storage/restore and transaction semantics that
++the older smoke test did not cover.  It uses generated temporary media only and
++never edits user footage/projects.
++"""
++import json,os,pathlib,shutil,subprocess,sys,time,uuid
++
++APP=pathlib.Path(__file__).resolve().parents[1]
++sys.path.insert(0,str(APP/'agent/src'))
++from connectors.opencut.adapter import OpenCutAdapter
++from client import Client
++
++ROOT=pathlib.Path(os.environ['TEMP'])/'ThayLinhPCControlTests'/('opencut-revalidate-'+uuid.uuid4().hex[:8])
++ROOT.mkdir(parents=True,exist_ok=True)
++FFMPEG=shutil.which('ffmpeg');FFPROBE=shutil.which('ffprobe')
++assert FFMPEG and FFPROBE,'ffmpeg/ffprobe required'
++
++client=Client();adapter=OpenCutAdapter(client.cfg);evidence=[]
++media=ROOT/'source.mp4';output=ROOT/'export.mp4'
++
++def record(step,result):
++    evidence.append({'step':step,'result':result})
++    print(step+': '+str(result.get('ok'))+' '+str(result.get('error','')),flush=True)
++    return result
++
++def require(step,result):
++    record(step,result)
++    if not result.get('ok'):raise RuntimeError(step+': '+str(result.get('error')))
++    return result
++
++def state():
++    result=require('state',adapter.command({'command':'state'}))
++    return result['state']
++
++def command(name,args=None,*,operation_id=None,expected=None,project_id=None,ok=True):
++    current=state() if expected is None or project_id is None else None
++    body={
++        'command':name,'args':args or {},
++        'operation_id':operation_id or str(uuid.uuid4()),
++        'project_id':project_id if project_id is not None else current['project_id'],
++        'expected_revision':expected if expected is not None else current['revision'],
++    }
++    result=adapter.command(body)
++    record(name,result)
++    if ok and not result.get('ok'):raise RuntimeError(name+': '+str(result.get('error')))
++    return result
++
++def comparable(s):
++    # Revision/selection/playhead may legitimately change during restore.  The
++    # project content that rollback promises to protect must not.
++    return {
++        'project_id':s.get('project_id'),'canvas':s.get('canvas'),'fps':s.get('fps'),
++        'tracks':s.get('tracks'),'clips':s.get('clips'),'media':s.get('media'),
++    }
++
++subprocess.run([
++    FFMPEG,'-hide_banner','-loglevel','error',
++    '-f','lavfi','-i','testsrc2=size=320x180:rate=24',
++    '-f','lavfi','-i','sine=frequency=440:sample_rate=48000',
++    '-t','4','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',str(media),
++],check=True,creationflags=0x08000000)
++
++try:
++    adapter.start()
++
++    # R1/R2: create -> save -> close/open.  A Date/storage regression such as
++    # `createdAt.toISOString is not a function` must fail here, not be hidden.
++    created=require('project.new',adapter.execute('new_project',{'name':'PC Agent Revalidation '+ROOT.name}))
++    project_id=created.get('project_id') or created.get('after',{}).get('project_id') or state()['project_id']
++    require('canvas.set',adapter.execute('set_ratio',{'width':320,'height':180}))
++    require('project.save.1',adapter.execute('save_project'))
++    before_close=state()
++    command('project.close')
++    reopened=require('project.open',adapter.execute('open_project',{'project_id':project_id}))
++    reopened_state=state()
++    assert reopened_state['project_id']==project_id
++    assert reopened_state.get('canvas')==before_close.get('canvas')
++    require('project.save.2',adapter.execute('save_project'))
++
++    # R3: generated media -> timeline -> trim -> save.
++    imported=require('media.import',adapter.execute('import_media',{'paths':[str(media)]}))
++    asset=imported['assets'][0]['id']
++    added=require('timeline.add',adapter.execute('add_to_timeline',{'media_id':asset,'start':0}))
++    clips=added.get('after',{}).get('clips') or state()['clips'];clip=clips[0]['id']
++    trimmed=require('timeline.trim',adapter.execute('trim_clip',{'clip_id':clip,'trim_start':.25,'duration':2.5}))
++    assert abs(trimmed['after']['duration']-2.5)<.05
++    require('project.save.3',adapter.execute('save_project'))
++
++    # R4a: checkpoint -> reversible mutation -> checkpoint restore.
++    checkpoint=command('checkpoint.create',{'name':'revalidation-before-change'})
++    checkpoint_id=checkpoint['checkpoint']['id'];checkpoint_state=checkpoint['state']
++    require('canvas.mutate',adapter.execute('set_ratio',{'width':360,'height':640}))
++    changed=state();assert changed['canvas']!=checkpoint_state['canvas']
++    restored=command('checkpoint.restore',{'checkpoint_id':checkpoint_id})
++    assert comparable(restored['state'])==comparable(checkpoint_state)
++    require('project.save.after_restore',adapter.execute('save_project'))
++
++    # R4b: service-level transaction must restore content if a later operation
++    # fails.  This is intentionally invalid after one valid canvas operation.
++    tx_before=state()
++    transaction=command('transaction',{
++        'operations':[
++            {'command':'canvas.set','args':{'width':400,'height':700}},
++            {'command':'clip.transform','args':{'clip_id':'missing-clip','params':{'x':0}}},
++        ]
++    },ok=False)
++    assert not transaction.get('ok')
++    assert transaction.get('rolled_back') is True
++    tx_after=state();assert comparable(tx_after)==comparable(tx_before)
++
++    # R4c: stale revision must fail before mutation.
++    stale=command('canvas.set',{'width':320,'height':180},expected=max(0,tx_after['revision']-1),project_id=project_id,ok=False)
++    assert stale.get('error')=='STATE_CONFLICT'
++    assert comparable(state())==comparable(tx_after)
++
++    # R5: final export from original/generated source -> bridge verify ->
++    # independent ffprobe/decode verification.
++    require('preview',adapter.execute('preview',{'milliseconds':500}))
++    job=require('export.start',adapter.execute('export',{'path':str(output),'quality':'high'}))['job_id']
++    until=time.monotonic()+180
++    while time.monotonic()<until:
++        status=adapter.execute('wait_export',{'job_id':job})
++        record('export.wait',status)
++        if status.get('state')=='done':break
++        if status.get('state')=='error':raise RuntimeError('EXPORT_FAILED')
++        time.sleep(1)
++    else:raise RuntimeError('EXPORT_TIMEOUT')
++    verified=require('export.verify',adapter.execute('verify_export',{'path':str(output)}));assert verified['bytes']>1000
++    info=json.loads(subprocess.check_output([FFPROBE,'-v','error','-show_format','-show_streams','-of','json',str(output)],creationflags=0x08000000))
++    streams=info['streams'];assert any(x.get('codec_type')=='video' for x in streams);assert any(x.get('codec_type')=='audio' for x in streams)
++    duration=float(info['format']['duration']);assert 2.2<=duration<=2.8
++    subprocess.run([FFMPEG,'-hide_banner','-loglevel','error','-i',str(output),'-f','null','-'],check=True,creationflags=0x08000000)
++    evidence.append({'step':'independent_media_qc','ok':True,'duration':duration,'streams':streams})
++
++    # R2 persistence again after checkpoint/transaction activity.
++    final_before=state();command('project.close');require('project.reopen.final',adapter.execute('open_project',{'project_id':project_id}));final_after=state()
++    assert comparable(final_after)==comparable(final_before)
++    require('project.save.final',adapter.execute('save_project'))
++    print('OPENCUT_CURRENT_REVALIDATION_PASS',flush=True)
++finally:
++    out=pathlib.Path(__file__).parent/'results';out.mkdir(exist_ok=True)
++    (out/'opencut-revalidation-current.json').write_text(json.dumps({'root':str(ROOT),'evidence':evidence},ensure_ascii=True,indent=2))
