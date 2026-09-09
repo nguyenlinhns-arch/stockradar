@@ -1,0 +1,238 @@
+# V7.9 Work Package D2 — HUB-DERIVED MANAGED APP LIFECYCLE CORE
+# Date: 2026-09-09
+# Depends on D1-ZALO managed_apps.py introduction.
+# Purpose: reuse the strongest ThayLinh Hub lifecycle invariants without importing Hub business workflows.
+#
+# Invariants:
+# - approved_executables SHA-256 + exact arguments remains executable authority;
+# - app profile/lifecycle metadata identifies and diagnoses only; it never grants permission;
+# - all managed/preserve/required paths are relative to one narrow app root;
+# - managed and preserve sets may not overlap;
+# - drift is reported, never auto-repaired by this library;
+# - third-party apps (Zalo/OpenCut upstream binaries) may be lifecycle-observed without being source-managed;
+# - update/repair promotion remains behind V7 self-maintenance + TrustedUpdate, not this module.
+#
+# This ports Hub patterns: managedFiles / requiredPaths / preserve / process / baselineId / health / recovery_required.
+# REVIEW-ONLY until Gate #115 real local Approval A.
+
+--- a/agent/managed_apps.py
++++ b/agent/managed_apps.py
+@@ -1,7 +1,8 @@
+ """Shared local ManagedApp identity helpers.
+ 
+ Profiles identify approved applications but never grant executable authority.
+ The existing approved_executables policy remains the sole launch authority.
+ """
+-import hashlib,pathlib,threading
++import hashlib,pathlib,re,threading
++
++_SHA=re.compile(r'^[0-9a-f]{64}$',re.I)
+ 
+ _HASH_CACHE={}
+ _HASH_LOCK=threading.RLock()
+@@ -53,5 +54,71 @@
+ def verify_launch_identity(name,cfg):
+     row=resolve(name,cfg);verify_file(row['path'],row['policy'].get('sha256'))
+     return row
++
++def _relative(value):
++    if not isinstance(value,str) or not value or '\x00' in value:raise ValueError('APP_PROFILE_INVALID')
++    p=pathlib.PurePath(value.replace('\\','/'))
++    if p.is_absolute() or '..' in p.parts or ':' in value or value.startswith(('/', '\\')):raise ValueError('APP_PROFILE_INVALID')
++    return pathlib.PurePosixPath(*p.parts).as_posix()
++
++def lifecycle_contract(policy):
++    """Validate lifecycle metadata as bounded data; never treat it as authority."""
++    if not isinstance(policy,dict):raise ValueError('APP_PROFILE_INVALID')
++    result={
++        'profile_version':policy.get('profile_version'),
++        'adapter':policy.get('adapter'),
++        'baseline_id':policy.get('baseline_id'),
++        'capabilities':list(policy.get('capabilities',[])),
++    }
++    if result['profile_version'] is not None and (not isinstance(result['profile_version'],int) or result['profile_version']<1):raise ValueError('APP_PROFILE_INVALID')
++    if not all(isinstance(x,str) and 1<=len(x)<=80 for x in result['capabilities']):raise ValueError('APP_PROFILE_INVALID')
++
++    managed=[];managed_paths=set()
++    for item in policy.get('managed_files',[]):
++        if not isinstance(item,dict):raise ValueError('APP_PROFILE_INVALID')
++        path=_relative(item.get('path'));sha=str(item.get('sha256','')).casefold()
++        if not _SHA.fullmatch(sha):raise ValueError('APP_PROFILE_INVALID')
++        if path.casefold() in managed_paths:raise ValueError('APP_PROFILE_INVALID')
++        managed_paths.add(path.casefold());managed.append({'path':path,'sha256':sha,'role':str(item.get('role','source'))[:40]})
++
++    required=[];required_paths=set()
++    for raw in policy.get('required_paths',[]):
++        path=_relative(raw);key=path.casefold()
++        if key in required_paths:raise ValueError('APP_PROFILE_INVALID')
++        required_paths.add(key);required.append(path)
++
++    preserve=[];preserve_paths=set()
++    for raw in policy.get('preserve',[]):
++        path=_relative(raw);key=path.casefold()
++        if key in preserve_paths:raise ValueError('APP_PROFILE_INVALID')
++        if key in managed_paths:raise ValueError('APP_PROFILE_PRESERVE_OVERLAP')
++        preserve_paths.add(key);preserve.append(path)
++
++    process=policy.get('process',{})
++    if process and not isinstance(process,dict):raise ValueError('APP_PROFILE_INVALID')
++    proc={}
++    if process:
++        if process.get('name') is not None:
++            if not isinstance(process['name'],str) or not process['name'].lower().endswith('.exe'):raise ValueError('APP_PROFILE_INVALID')
++            proc['name']=process['name']
++        max_instances=process.get('max_instances',1)
++        if not isinstance(max_instances,int) or not 1<=max_instances<=16:raise ValueError('APP_PROFILE_INVALID')
++        proc['max_instances']=max_instances
++        ports=process.get('ports',[])
++        if not isinstance(ports,list) or len(ports)>16 or not all(isinstance(p,int) and 1<=p<=65535 for p in ports):raise ValueError('APP_PROFILE_INVALID')
++        proc['ports']=ports
++
++    result.update(managed_files=managed,required_paths=required,preserve=preserve,process=proc)
++    return result
+--- /dev/null
++++ b/agent/managed_app_lifecycle.py
+@@ -0,0 +1,107 @@
++"""Read-only lifecycle diagnostics for locally approved ManagedApps.
++
++This is intentionally not an updater.  Repair/apply/rollback remains owned by
++V7 self-maintenance/TrustedUpdate after local approvals.  The module provides
++the Hub-style evidence those gates need: identity, managed-file drift, required
++paths, preserve boundaries, process counts and recovery state.
++"""
++import pathlib
++from managed_apps import file_sha256,lifecycle_contract,resolve,verify_file
++
++def _root(row):
++    policy=row['policy'];raw=policy.get('app_root')
++    root=pathlib.Path(raw).resolve() if raw else row['path'].parent.resolve()
++    if not root.is_absolute() or not root.is_dir():raise ValueError('APP_PROFILE_INVALID')
++    try:row['path'].resolve().relative_to(root)
++    except ValueError:raise ValueError('APP_PROFILE_INVALID')
++    return root
++
++def _under(root,relative):
++    value=(root/pathlib.PurePosixPath(relative)).resolve()
++    try:value.relative_to(root)
++    except ValueError:raise ValueError('APP_PROFILE_INVALID')
++    return value
++
++def inspect(app_id,cfg):
++    row=resolve(app_id,cfg);policy=row['policy'];contract=lifecycle_contract(policy);root=_root(row)
++    result={
++        'ok':True,'schema':'managed-app.lifecycle.v1','app_id':policy.get('app_id') or app_id,
++        'profile_version':contract.get('profile_version'),'adapter':contract.get('adapter'),
++        'baseline_id':contract.get('baseline_id'),'capabilities':contract.get('capabilities',[]),
++        'identity':'UNKNOWN','managed_files':[],'required_paths':[],'preserve_count':len(contract['preserve']),
++        'recovery_required':bool(policy.get('recovery_required',False)),
++    }
++    try:
++        verify_file(row['path'],policy.get('sha256'))
++        result['identity']='MATCH'
++    except ValueError as exc:
++        result['identity']='DRIFT';result['identity_error']=str(exc).split(':',1)[0]
++
++    drift=False
++    for item in contract['managed_files']:
++        path=_under(root,item['path']);exists=path.is_file();actual=file_sha256(path) if exists else None
++        match=exists and actual.casefold()==item['sha256'].casefold()
++        if not match:drift=True
++        result['managed_files'].append({'path':item['path'],'role':item['role'],'exists':exists,'match':match})
++
++    missing=False
++    for rel in contract['required_paths']:
++        exists=_under(root,rel).exists();missing|=not exists
++        result['required_paths'].append({'path':rel,'exists':exists})
++
++    process=contract.get('process') or {}
++    if process.get('name'):
++        try:
++            import psutil
++            count=0
++            for proc in psutil.process_iter(['name','exe']):
++                try:
++                    if str(proc.info.get('name') or '').casefold()==process['name'].casefold():count+=1
++                except (psutil.NoSuchProcess,psutil.AccessDenied):continue
++            result['process']={'name':process['name'],'count':count,'max_instances':process['max_instances'],'within_limit':count<=process['max_instances']}
++        except Exception:
++            result['process']={'name':process['name'],'state':'UNKNOWN'}
++
++    if result['recovery_required']:state='RECOVERY_REQUIRED'
++    elif result['identity']!='MATCH':state='IDENTITY_DRIFT'
++    elif drift:state='MANAGED_FILE_DRIFT'
++    elif missing:state='REQUIRED_PATH_MISSING'
++    elif isinstance(result.get('process'),dict) and result['process'].get('within_limit') is False:state='PROCESS_COUNT_INVALID'
++    else:state='READY'
++    result['state']=state;result['ready']=state=='READY'
++    return result
++
++def source_precondition(app_id,relative_path,expected_sha256,cfg):
++    """TOCTOU fence used before a separately-approved source upgrade."""
++    row=resolve(app_id,cfg);root=_root(row);contract=lifecycle_contract(row['policy'])
++    managed={x['path'].casefold():x for x in contract['managed_files']}
++    key=str(relative_path).replace('\\','/').casefold()
++    if key not in managed:raise ValueError('APP_FILE_NOT_MANAGED')
++    path=_under(root,managed[key]['path'])
++    if file_sha256(path).casefold()!=str(expected_sha256).casefold():raise ValueError('STATE_CHANGED')
++    return {'ok':True,'app_id':app_id,'path':managed[key]['path'],'sha256':str(expected_sha256).casefold()}
+--- /dev/null
++++ b/tests/managed_app_lifecycle_contract.py
+@@ -0,0 +1,111 @@
++import pathlib,sys,tempfile,unittest
++
++APP=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(APP/'agent'))
++from managed_apps import file_sha256,lifecycle_contract
++from managed_app_lifecycle import inspect,source_precondition
++
++class LifecycleContract(unittest.TestCase):
++    def setUp(self):
++        self.temp=tempfile.TemporaryDirectory();self.root=pathlib.Path(self.temp.name)
++        self.exe=self.root/'App.exe';self.exe.write_bytes(b'exe')
++        self.src=self.root/'src'/'main.py';self.src.parent.mkdir();self.src.write_text('print(1)')
++        (self.root/'data').mkdir();(self.root/'config.json').write_text('{}')
++        self.cfg={'approved_executables':{str(self.exe):{
++            'sha256':file_sha256(self.exe),'arguments':[],'app_id':'fixture','profile_version':1,'adapter':'fixture',
++            'capabilities':['read','health'],'baseline_id':'base-1','app_root':str(self.root),
++            'managed_files':[{'path':'src/main.py','sha256':file_sha256(self.src),'role':'source'}],
++            'required_paths':['src','data'],'preserve':['data','config.json'],
++            'process':{'name':'Fixture.exe','max_instances':1,'ports':[]},
++        }}}
++    def tearDown(self):self.temp.cleanup()
++
++    def policy(self):return next(iter(self.cfg['approved_executables'].values()))
++
++    def test_ready_profile(self):
++        result=inspect('fixture',self.cfg)
++        self.assertTrue(result['ready']);self.assertEqual(result['state'],'READY')
++        self.assertEqual(result['preserve_count'],2)
++
++    def test_managed_file_drift_is_observed_not_repaired(self):
++        self.src.write_text('changed')
++        result=inspect('fixture',self.cfg)
++        self.assertFalse(result['ready']);self.assertEqual(result['state'],'MANAGED_FILE_DRIFT')
++        self.assertEqual(self.src.read_text(),'changed')
++
++    def test_preserve_overlap_rejected(self):
++        policy=dict(self.policy());policy['preserve']=['src/main.py']
++        with self.assertRaisesRegex(ValueError,'APP_PROFILE_PRESERVE_OVERLAP'):lifecycle_contract(policy)
++
++    def test_absolute_and_parent_paths_rejected(self):
++        for bad in ['../x','C:/Windows/x','/etc/passwd','\\\\server\\share']:
++            policy=dict(self.policy());policy['required_paths']=[bad]
++            with self.subTest(bad=bad),self.assertRaises(ValueError):lifecycle_contract(policy)
++
++    def test_expected_sha_fences_upgrade(self):
++        good=file_sha256(self.src)
++        self.assertTrue(source_precondition('fixture','src/main.py',good,self.cfg)['ok'])
++        self.src.write_text('newer')
++        with self.assertRaisesRegex(ValueError,'STATE_CHANGED'):source_precondition('fixture','src/main.py',good,self.cfg)
++
++    def test_manifest_never_changes_launch_authority(self):
++        policy=self.policy();policy['managed_files'].append({'path':'src/fake.exe','sha256':'0'*64,'role':'binary'})
++        contract=lifecycle_contract(policy)
++        self.assertIn('managed_files',contract)
++        self.assertNotIn('executable',contract)
++        self.assertNotIn('arguments',contract)
++
++if __name__=='__main__':
++    raise SystemExit(not unittest.main(verbosity=2,exit=False).result.wasSuccessful())
