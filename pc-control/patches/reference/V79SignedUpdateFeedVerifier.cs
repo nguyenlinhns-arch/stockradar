@@ -3,7 +3,10 @@
 // Target runtime: .NET 10 Windows.
 
 using System.Buffers;
+using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -33,6 +36,7 @@ internal sealed record VerifiedUpdateFeed(
 internal static partial class V79SignedUpdateFeedVerifier
 {
     internal const string Schema = "thaylinh.pc.update-feed.v2";
+    internal const string P256Oid = "1.2.840.10045.3.1.7";
     internal const int MaxEnvelopeBytes = 100_000;
     internal const long MaxPackageBytes = 700_000_000;
     internal const int P1363SignatureBytes = 64;
@@ -41,10 +45,13 @@ internal static partial class V79SignedUpdateFeedVerifier
     [GeneratedRegex(@"^[0-9]+\.[0-9]+\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$", RegexOptions.CultureInvariant)]
     private static partial Regex SemVerRegex();
 
-    [GeneratedRegex(@"^[0-9A-Za-z._-]+$", RegexOptions.CultureInvariant)]
-    private static partial Regex ReleaseIdRegex();
+    [GeneratedRegex(@"^[0-9A-Za-z][0-9A-Za-z._-]{0,94}[0-9A-Za-z]$", RegexOptions.CultureInvariant)]
+    private static partial Regex MultiCharReleaseIdRegex();
 
-    [GeneratedRegex(@"^[0-9A-Za-z._-]+\.zip$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex(@"^[0-9A-Za-z]$", RegexOptions.CultureInvariant)]
+    private static partial Regex SingleCharReleaseIdRegex();
+
+    [GeneratedRegex(@"^[0-9A-Za-z][0-9A-Za-z._-]{0,154}\.zip$", RegexOptions.CultureInvariant)]
     private static partial Regex AssetRegex();
 
     [GeneratedRegex(@"^[0-9a-f]{64}$", RegexOptions.CultureInvariant)]
@@ -54,7 +61,7 @@ internal static partial class V79SignedUpdateFeedVerifier
     private static partial Regex KeyIdRegex();
 
     internal static VerifiedUpdateFeed Verify(
-        ReadOnlySpan<byte> envelopeUtf8,
+        ReadOnlyMemory<byte> envelopeUtf8,
         string expectedKeyId,
         ReadOnlySpan<byte> publisherPublicKeyPemUtf8,
         DateTimeOffset nowUtc,
@@ -108,7 +115,10 @@ internal static partial class V79SignedUpdateFeedVerifier
             throw new InvalidDataException("UPDATE_SIGNATURE_BASE64_INVALID", ex);
         }
         if (signature.Length != P1363SignatureBytes)
+        {
+            CryptographicOperations.ZeroMemory(signature);
             throw new InvalidDataException("UPDATE_SIGNATURE_LENGTH_INVALID");
+        }
 
         using var ecdsa = ECDsa.Create();
         try
@@ -117,19 +127,32 @@ internal static partial class V79SignedUpdateFeedVerifier
         }
         catch (Exception ex) when (ex is ArgumentException or CryptographicException)
         {
+            CryptographicOperations.ZeroMemory(signature);
             throw new InvalidDataException("UPDATE_PUBLISHER_KEY_INVALID", ex);
         }
 
         var parameters = ecdsa.ExportParameters(includePrivateParameters: false);
-        if (parameters.Q.X is null || parameters.Q.Y is null || parameters.Q.X.Length != 32 || parameters.Q.Y.Length != 32)
+        if (!StringComparer.Ordinal.Equals(parameters.Curve.Oid.Value, P256Oid) ||
+            parameters.Q.X is null || parameters.Q.Y is null ||
+            parameters.Q.X.Length != 32 || parameters.Q.Y.Length != 32)
+        {
+            CryptographicOperations.ZeroMemory(signature);
             throw new InvalidDataException("UPDATE_PUBLISHER_KEY_NOT_P256");
+        }
 
-        var signatureOk = ecdsa.VerifyData(
-            canonical,
-            signature,
-            HashAlgorithmName.SHA256,
-            DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
-        CryptographicOperations.ZeroMemory(signature);
+        bool signatureOk;
+        try
+        {
+            signatureOk = ecdsa.VerifyData(
+                canonical,
+                signature,
+                HashAlgorithmName.SHA256,
+                DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(signature);
+        }
         if (!signatureOk)
             throw new InvalidDataException("UPDATE_SIGNATURE_INVALID");
 
@@ -137,7 +160,7 @@ internal static partial class V79SignedUpdateFeedVerifier
         return ValidateSignedFeed(
             signed,
             canonical,
-            SHA256.HashData(envelopeUtf8),
+            SHA256.HashData(envelopeUtf8.Span),
             nowUtc.ToUniversalTime(),
             maxFutureSkew,
             maxEnvelopeLifetime);
@@ -171,7 +194,7 @@ internal static partial class V79SignedUpdateFeedVerifier
             throw new InvalidDataException("UPDATE_VERSION_INVALID");
 
         var releaseId = RequireString(signed, "release_id");
-        if (releaseId.Length > 96 || !ReleaseIdRegex().IsMatch(releaseId))
+        if (releaseId.Length is <= 0 or > 96 || !IsSafeReleaseId(releaseId))
             throw new InvalidDataException("UPDATE_RELEASE_ID_INVALID");
 
         var releaseEpoch = RequireInt32(signed, "release_epoch");
@@ -191,7 +214,7 @@ internal static partial class V79SignedUpdateFeedVerifier
         RequireObject(package, "package");
         RequireExactPropertySet(package, "package", "asset", "size", "sha256");
         var asset = RequireString(package, "asset");
-        if (asset.Length > 160 || !AssetRegex().IsMatch(asset))
+        if (asset.Length is <= 4 or > 160 || !AssetRegex().IsMatch(asset) || IsWindowsReservedFileName(asset))
             throw new InvalidDataException("UPDATE_ASSET_INVALID");
         var packageSize = RequireInt64(package, "size");
         if (packageSize is <= 0 or > MaxPackageBytes)
@@ -213,6 +236,27 @@ internal static partial class V79SignedUpdateFeedVerifier
             channel, version, releaseId, releaseEpoch, publishedAt, expiresAt,
             minManagerVersion, minSafeVersion, asset, packageSize, packageSha,
             timeout, agentCount, relayCount, canonical, envelopeSha);
+    }
+
+    private static bool IsSafeReleaseId(string value)
+    {
+        if (value is "." or "..") return false;
+        return value.Length == 1
+            ? SingleCharReleaseIdRegex().IsMatch(value)
+            : MultiCharReleaseIdRegex().IsMatch(value);
+    }
+
+    private static bool IsWindowsReservedFileName(string asset)
+    {
+        var baseName = Path.GetFileNameWithoutExtension(asset);
+        if (string.IsNullOrWhiteSpace(baseName)) return true;
+        return baseName.Equals("CON", StringComparison.OrdinalIgnoreCase) ||
+               baseName.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
+               baseName.Equals("AUX", StringComparison.OrdinalIgnoreCase) ||
+               baseName.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
+               Enumerable.Range(1, 9).Any(i =>
+                   baseName.Equals($"COM{i}", StringComparison.OrdinalIgnoreCase) ||
+                   baseName.Equals($"LPT{i}", StringComparison.OrdinalIgnoreCase));
     }
 
     internal static byte[] Canonicalize(JsonElement value)
@@ -244,7 +288,6 @@ internal static partial class V79SignedUpdateFeedVerifier
                 writer.WriteEndObject();
                 break;
             case JsonValueKind.Array:
-                // Feed v2 currently has no arrays, but canonical handling is deterministic.
                 writer.WriteStartArray();
                 foreach (var item in value.EnumerateArray())
                     WriteCanonical(writer, item);
