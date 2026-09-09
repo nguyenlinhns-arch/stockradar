@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://thaylinh.local/schemas/pc-control-update-feed-v2.json",
+  "title": "ThayLinh PC Control signed update feed v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "key_id", "signed", "signature"],
+  "properties": {
+    "schema": {"const": "thaylinh.pc.update-feed.v2"},
+    "key_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]{0,63}$"},
+    "signature": {"type": "string", "minLength": 40, "maxLength": 256},
+    "signed": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "channel", "version", "release_id", "release_epoch", "published_at",
+        "expires_at", "min_manager_version", "min_safe_version", "package", "health"
+      ],
+      "properties": {
+        "channel": {"enum": ["preview", "stable"]},
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "release_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 96,
+          "pattern": "^[0-9A-Za-z._-]+$"
+        },
+        "release_epoch": {"type": "integer", "minimum": 1, "maximum": 2147483647},
+        "published_at": {"type": "string", "format": "date-time", "maxLength": 40},
+        "expires_at": {"type": "string", "format": "date-time", "maxLength": 40},
+        "min_manager_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "min_safe_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+        },
+        "package": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["asset", "size", "sha256"],
+          "properties": {
+            "asset": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[0-9A-Za-z._-]+\\.zip$"
+            },
+            "size": {"type": "integer", "minimum": 1, "maximum": 700000000},
+            "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+          }
+        },
+        "health": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["timeout_seconds", "required_agent_count", "required_relay_count"],
+          "properties": {
+            "timeout_seconds": {"type": "integer", "minimum": 30, "maximum": 300},
+            "required_agent_count": {"const": 1},
+            "required_relay_count": {"type": "integer", "minimum": 0, "maximum": 1}
+          }
+        }
+      }
+    }
+  }
+}
