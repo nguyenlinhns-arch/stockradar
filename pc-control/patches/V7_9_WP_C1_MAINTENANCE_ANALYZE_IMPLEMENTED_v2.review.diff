@@ -1,0 +1,278 @@
+# V7.9 Work Package C1 — IMPLEMENTATION-READY SELF-MAINTENANCE ANALYZE PATCH v2
+# Date: 2026-09-09
+# Scope: maintenance status + strict review-diff analysis + immutable proposal evidence.
+# This package NEVER applies a patch, executes candidate code, changes source, or accepts a build/update command.
+# v2 bounds proposal enumeration as well as public output.
+
+--- a/agent/protocol_catalog.py
++++ b/agent/protocol_catalog.py
+@@
+ add('pc.approval_status','Read an approval status; only the local desktop can approve or deny.','READ','native','APPROVAL_STATUS',{'approval_id':ID},('approval_id',))
++add('pc.maintenance_status','Read bounded proposal state for the locally fixed self-maintenance pipeline.','READ','maintenance','maintenance_status')
++add('pc.maintenance_analyze_patch','Analyze an exact review-only .diff against the locally configured source base. Never applies or executes candidate code.','READ','maintenance','maintenance_analyze_patch',{
++    'patch_path':PATH,'expected_sha256':string(minLength=64,maxLength=64,pattern='^[0-9a-f]{64}$')},('patch_path','expected_sha256'))
+ for name,action,risk in [('pc.update_status','update_status','READ'),('pc.check_update','check_update','READ'),('pc.apply_update','apply_update','MODIFY')]:
+@@
+-for step_name,spec in CATALOG.items():
+-    if spec['kind'] in {'workflow','control','update'}:continue
++for step_name,spec in CATALOG.items():
++    if spec['kind'] in {'workflow','control','update','maintenance'}:continue
+@@
+-            if step['tool'] not in CATALOG or CATALOG[step['tool']]['kind'] in {'workflow','control','update'}:raise ValueError('INVALID_ARGUMENT: recursive/control/update task step forbidden')
++            if step['tool'] not in CATALOG or CATALOG[step['tool']]['kind'] in {'workflow','control','update','maintenance'}:raise ValueError('INVALID_ARGUMENT: recursive/control/update/maintenance task step forbidden')
+
+--- a/agent/semantic_host.py
++++ b/agent/semantic_host.py
+@@
+         if spec['kind']=='update':
+             from update_service import execute_update
+             return execute_update(spec['action'],self.host)
++        if spec['kind']=='maintenance':
++            from maintenance_service import execute_maintenance
++            return execute_maintenance(spec['action'],args,self.host)
+@@
+ def approved_app(name,cfg):
+
+--- /dev/null
++++ b/agent/maintenance_service.py
+@@
++"""Fixed V7.9 self-maintenance proposal boundary.
++
++This first bootstrap layer is intentionally analysis-only. Public callers may
++select an exact .diff already present in the fixed source docs inbox and provide
++its SHA-256. Source base, proposal store, risk classification and path rules are
++all local. No shell text, executable, URL, source root, candidate path or test
++command is accepted here.
++"""
++from __future__ import annotations
++import datetime,hashlib,itertools,json,pathlib,uuid
++from secure_store import atomic_bytes
++
++MAX_PATCH_BYTES=250_000
++MAX_CHANGED_FILES=80
++MAX_CHANGED_LINES=20_000
++MAX_PROPOSAL_SCAN=1000
++MAX_PROPOSAL_RETURN=20
++CODE_EXTENSIONS={'.py','.pyw','.ps1','.psm1','.cs','.csproj','.js','.cjs','.mjs','.ts','.tsx','.cmd','.bat','.exe','.dll','.msi'}
++TRUST_EXACT={
++    'agent/app_runtime.py','agent/approval_store.py','agent/maintenance_service.py','agent/protocol_catalog.py',
++    'agent/semantic_host.py','agent/secure_store.py','agent/chatgpt_transport.py','agent/runtime_bootstrap.py',
++    'shared/trustedupdate.cs','updater/program.cs','version.json','dependencies.json',
++    'scripts/build_all.ps1','scripts/prepare_package.py','scripts/prepare_runtime.py','scripts/generate_protocol.py',
++}
++TRUST_PREFIX=('installer/','updater/','shared/','agent/src/security/')
++TRUST_NAMES=('requirements.lock','requirements-full.lock','requirements-hashed.lock')
++
++def _sha(raw):return hashlib.sha256(raw).hexdigest()
++def _now():return datetime.datetime.now(datetime.timezone.utc).isoformat()
++def _junction(path):
++    try:return bool(getattr(path,'is_junction',lambda:False)())
++    except OSError:return True
++
++def _source(host):
++    value=host.config().get('maintenance_source_root')
++    if not value:raise ValueError('MAINTENANCE_NOT_CONFIGURED')
++    root=pathlib.Path(value)
++    if not root.is_absolute():raise ValueError('MAINTENANCE_SOURCE_INVALID')
++    root=root.resolve(strict=True)
++    if root.is_symlink() or _junction(root):raise ValueError('MAINTENANCE_SOURCE_INVALID')
++    for sentinel in ('agent/protocol_catalog.py','scripts/build_all.ps1','VERSION.json'):
++        if not (root/sentinel).is_file():raise ValueError('MAINTENANCE_SOURCE_INVALID')
++    return root
++
++def _within(root,path,allow_missing=False):
++    path=pathlib.Path(path)
++    if not path.is_absolute():path=root/path
++    resolved=path.resolve(strict=not allow_missing)
++    if resolved!=root and root not in resolved.parents:raise ValueError('POLICY_DENIED')
++    current=root
++    try:relative=resolved.relative_to(root)
++    except ValueError:raise ValueError('POLICY_DENIED')
++    for part in relative.parts[:-1] if allow_missing else relative.parts:
++        current=current/part
++        if current.exists() and (current.is_symlink() or _junction(current)):raise ValueError('POLICY_DENIED')
++    return resolved
++
++def _diff_path(value,prefix):
++    value=value.strip()
++    if value=='/dev/null':return None
++    if '\t' in value:value=value.split('\t',1)[0]
++    if not value.startswith(prefix):raise ValueError('INVALID_PATCH_FORMAT')
++    value=value[len(prefix):]
++    if not value or value.startswith(('/','\\')) or '\\' in value or ':' in value or '\x00' in value:raise ValueError('POLICY_DENIED')
++    parts=pathlib.PurePosixPath(value).parts
++    if any(p in {'','.','..'} for p in parts):raise ValueError('POLICY_DENIED')
++    return pathlib.PurePosixPath(*parts).as_posix()
++
++def _parse(raw):
++    if b'\x00' in raw:raise ValueError('BINARY_PATCH_DENIED')
++    try:text=raw.decode('utf-8')
++    except UnicodeDecodeError:raise ValueError('PATCH_UTF8_REQUIRED')
++    if any(token in text for token in ('GIT binary patch','Binary files ','literal 0\n')):raise ValueError('BINARY_PATCH_DENIED')
++    lines=text.splitlines();files=[];changed=0;i=0
++    while i<len(lines):
++        line=lines[i]
++        if line.startswith('--- '):
++            if i+1>=len(lines) or not lines[i+1].startswith('+++ '):raise ValueError('INVALID_PATCH_FORMAT')
++            old=_diff_path(line[4:],'a/');new=_diff_path(lines[i+1][4:],'b/')
++            if old is None and new is None:raise ValueError('INVALID_PATCH_FORMAT')
++            target=new or old
++            if old is not None and new is not None and old!=new:raise ValueError('PATCH_RENAME_DENIED')
++            files.append({'path':target,'operation':'add' if old is None else 'delete' if new is None else 'modify'})
++            i+=2;continue
++        if (line.startswith('+') or line.startswith('-')) and not line.startswith(('+++','---')):changed+=1
++        i+=1
++    if not files:raise ValueError('INVALID_PATCH_FORMAT')
++    unique=[];seen=set()
++    for item in files:
++        if item['path'] in seen:raise ValueError('DUPLICATE_PATCH_FILE')
++        seen.add(item['path']);unique.append(item)
++    if len(unique)>MAX_CHANGED_FILES:raise ValueError('PATCH_TOO_MANY_FILES')
++    if changed>MAX_CHANGED_LINES:raise ValueError('PATCH_TOO_LARGE')
++    return unique,changed
++
++def _risk(path):
++    lower=path.casefold();name=pathlib.PurePosixPath(lower).name
++    if lower in TRUST_EXACT or lower.startswith(TRUST_PREFIX) or name in TRUST_NAMES:return 'TRUST_BOUNDARY'
++    if pathlib.PurePosixPath(lower).suffix in CODE_EXTENSIONS:return 'EXECUTABLE'
++    return 'NORMAL'
++
++def _max_risk(items):
++    order={'NORMAL':0,'EXECUTABLE':1,'TRUST_BOUNDARY':2}
++    return max((_risk(x['path']) for x in items),key=order.__getitem__)
++
++def _base_manifest(root,items):
++    records=[]
++    for item in items:
++        rel=item['path'];target=_within(root,root/pathlib.PurePosixPath(rel),allow_missing=True)
++        if target.exists():
++            if not target.is_file() or target.is_symlink() or _junction(target):raise ValueError('POLICY_DENIED')
++            digest=_sha(target.read_bytes())
++        else:digest='MISSING'
++        if item['operation']=='add' and digest!='MISSING':raise ValueError('PATCH_ADD_TARGET_EXISTS')
++        if item['operation']!='add' and digest=='MISSING':raise ValueError('PATCH_BASE_FILE_MISSING')
++        records.append({'path':rel,'operation':item['operation'],'sha256':digest,'risk':_risk(rel)})
++    encoded=json.dumps(records,sort_keys=True,separators=(',',':')).encode()
++    return records,_sha(encoded)
++
++def _proposal_root(host):
++    root=host.ROOT.parent/'maintenance'/'proposals';root.mkdir(parents=True,exist_ok=True)
++    return root
++
++def _public(value):
++    return {k:value[k] for k in ('proposal_id','created_at','patch_sha256','base_manifest_sha256','risk','changed_files','changed_lines','state') if k in value}
++
++def status(host):
++    try:source=_source(host);enabled=True
++    except ValueError as exc:
++        return {'ok':True,'enabled':False,'state':'NOT_CONFIGURED','reason':str(exc),'proposals':[],'phase':'ANALYZE_ONLY'}
++    folder=_proposal_root(host);paths=list(itertools.islice(folder.glob('*.json'),MAX_PROPOSAL_SCAN+1));truncated=len(paths)>MAX_PROPOSAL_SCAN
++    paths=paths[:MAX_PROPOSAL_SCAN];paths.sort(key=lambda p:p.stat().st_mtime,reverse=True);proposals=[]
++    for path in paths[:MAX_PROPOSAL_RETURN]:
++        try:proposals.append(_public(json.loads(path.read_text(encoding='utf-8'))))
++        except (OSError,ValueError,KeyError,json.JSONDecodeError):continue
++    return {'ok':True,'enabled':enabled,'state':'READY','source_fingerprint':_sha(str(source).casefold().encode())[:16],
++            'proposal_count':len(paths),'proposal_count_truncated':truncated,'proposals':proposals,'phase':'ANALYZE_ONLY'}
++
++def analyze(args,host):
++    source=_source(host);docs=_within(source,source/'docs')
++    patch=_within(docs,pathlib.Path(args['patch_path']),allow_missing=False)
++    if patch.parent!=docs or patch.suffix.casefold()!='.diff' or patch.is_symlink() or _junction(patch):raise ValueError('PATCH_INBOX_REQUIRED')
++    size=patch.stat().st_size
++    if size<=0 or size>MAX_PATCH_BYTES:raise ValueError('PATCH_TOO_LARGE')
++    raw=patch.read_bytes();digest=_sha(raw)
++    if digest!=args['expected_sha256']:raise ValueError('PATCH_HASH_MISMATCH')
++    items,changed_lines=_parse(raw);records,base_hash=_base_manifest(source,items);proposal_id=str(uuid.uuid4())
++    value={'proposal_id':proposal_id,'created_at':_now(),'patch_name':patch.name,'patch_sha256':digest,'patch_bytes':size,
++           'base_manifest_sha256':base_hash,'base_files':records,'risk':_max_risk(items),'changed_files':len(records),
++           'changed_lines':changed_lines,'state':'ANALYZED','source_fingerprint':_sha(str(source).casefold().encode())[:16]}
++    target=_proposal_root(host)/(proposal_id+'.json')
++    if target.exists():raise ValueError('PROPOSAL_COLLISION')
++    atomic_bytes(target,json.dumps(value,ensure_ascii=False,sort_keys=True,separators=(',',':')).encode())
++    persisted=json.loads(target.read_text(encoding='utf-8'))
++    if persisted!=value:raise ValueError('PROPOSAL_PERSISTENCE_FAILED')
++    return {'ok':True,**_public(value),'files':[{'path':x['path'],'operation':x['operation'],'risk':x['risk']} for x in records],
++            'next':'LOCAL_APPROVAL_AND_ISOLATED_BUILD_NOT_ENABLED_IN_C1'}
++
++def execute_maintenance(action,args,host):
++    if action=='maintenance_status':return status(host)
++    if action=='maintenance_analyze_patch':return analyze(args,host)
++    raise ValueError('TOOL_NOT_FOUND')
++
+--- a/agent/provision.py
++++ b/agent/provision.py
+@@
+ def main():
+@@
+-    root=pathlib.Path(a.root).resolve();data=root/'data';data.mkdir(parents=True,exist_ok=True)
++    root=pathlib.Path(a.root).resolve();data=root/'data';data.mkdir(parents=True,exist_ok=True)
++    # Development/staging only: derive the source from the fixed .build/stage
++    # relationship. Production installs do not acquire a maintenance source by
++    # inference and remain NOT_CONFIGURED until a trusted local installer sets it.
++    candidate_source=root.parent.parent.resolve()
++    maintenance_source=(candidate_source if root.name.casefold()=='stage' and root.parent.name.casefold()=='.build'
++        and (candidate_source/'agent/protocol_catalog.py').is_file() and (candidate_source/'scripts/build_all.ps1').is_file()
++        and (candidate_source/'VERSION.json').is_file() else None)
+@@
+         exe=pathlib.Path(os.environ['WINDIR'])/'System32/hostname.exe'
+         cfg['command_recipes']={'hostname':{'executable':str(exe),'sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'arguments':[]}}
++        if maintenance_source is not None:cfg['maintenance_source_root']=str(maintenance_source)
+@@
+         cfg.setdefault('permission_profile',{'READ':True,'INTERACT':True,'MODIFY':True})
+-        cfg.setdefault('allowed_roots',[str(pathlib.Path.home()/'Documents'),str(pathlib.Path.home()/'Downloads')]);atomic_bytes(data/'config.json',json.dumps(cfg).encode())
++        cfg.setdefault('allowed_roots',[str(pathlib.Path.home()/'Documents'),str(pathlib.Path.home()/'Downloads')])
++        if maintenance_source is not None:cfg.setdefault('maintenance_source_root',str(maintenance_source))
++        atomic_bytes(data/'config.json',json.dumps(cfg).encode())
+
+--- /dev/null
++++ b/tests/maintenance_contract.py
+@@
++"""Headless C1 maintenance proposal contracts. No candidate code is executed."""
++import hashlib,json,pathlib,sys,tempfile,types,unittest
++APP=pathlib.Path(__file__).resolve().parents[1];sys.path.insert(0,str(APP/'agent'))
++from maintenance_service import analyze,status
++
++def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
++
++class MaintenanceContract(unittest.TestCase):
++    def fixture(self,folder):
++        base=pathlib.Path(folder);source=base/'source';data=base/'install'/'data'
++        (source/'agent').mkdir(parents=True);(source/'scripts').mkdir();(source/'docs').mkdir();data.mkdir(parents=True)
++        (source/'agent/protocol_catalog.py').write_text('BASE=1\n');(source/'scripts/build_all.ps1').write_text("Write-Output 'build'\n")
++        (source/'VERSION.json').write_text('{"version":"7.9.0-rc1"}')
++        host=types.SimpleNamespace(ROOT=data,config=lambda:{'maintenance_source_root':str(source)})
++        return source,host
++    def write_patch(self,source,name,text):
++        path=source/'docs'/name;path.write_text(text,encoding='utf-8');return path
++    def test_analyze_does_not_mutate_source_and_persists_hashes(self):
++        with tempfile.TemporaryDirectory(prefix='maint-c1-') as folder:
++            source,host=self.fixture(folder);before=(source/'agent/protocol_catalog.py').read_bytes()
++            patch=self.write_patch(source,'one.diff','--- a/agent/protocol_catalog.py\n+++ b/agent/protocol_catalog.py\n@@\n-BASE=1\n+BASE=2\n')
++            result=analyze({'patch_path':str(patch),'expected_sha256':sha(patch)},host)
++            self.assertTrue(result['ok']);self.assertEqual(result['risk'],'TRUST_BOUNDARY');self.assertEqual((source/'agent/protocol_catalog.py').read_bytes(),before)
++            saved=list((host.ROOT.parent/'maintenance/proposals').glob('*.json'));self.assertEqual(len(saved),1)
++            value=json.loads(saved[0].read_text());self.assertEqual(value['patch_sha256'],sha(patch));self.assertEqual(len(value['base_manifest_sha256']),64)
++    def test_hash_mismatch_and_traversal_fail_closed(self):
++        with tempfile.TemporaryDirectory(prefix='maint-c1-') as folder:
++            source,host=self.fixture(folder);patch=self.write_patch(source,'bad.diff','--- a/agent/protocol_catalog.py\n+++ b/agent/protocol_catalog.py\n@@\n-A\n+B\n')
++            with self.assertRaisesRegex(ValueError,'PATCH_HASH_MISMATCH'):analyze({'patch_path':str(patch),'expected_sha256':'0'*64},host)
++            patch=self.write_patch(source,'escape.diff','--- a/agent/protocol_catalog.py\n+++ b/../escape.py\n@@\n-A\n+B\n')
++            with self.assertRaisesRegex(ValueError,'POLICY_DENIED|PATCH_RENAME_DENIED'):analyze({'patch_path':str(patch),'expected_sha256':sha(patch)},host)
++    def test_patch_must_be_direct_child_of_fixed_docs_inbox(self):
++        with tempfile.TemporaryDirectory(prefix='maint-c1-') as folder:
++            source,host=self.fixture(folder);nested=source/'docs/sub';nested.mkdir();patch=nested/'nested.diff';patch.write_text('--- a/agent/protocol_catalog.py\n+++ b/agent/protocol_catalog.py\n@@\n-A\n+B\n')
++            with self.assertRaisesRegex(ValueError,'PATCH_INBOX_REQUIRED'):analyze({'patch_path':str(patch),'expected_sha256':sha(patch)},host)
++    def test_status_is_bounded_and_source_path_is_not_disclosed(self):
++        with tempfile.TemporaryDirectory(prefix='maint-c1-') as folder:
++            source,host=self.fixture(folder);value=status(host)
++            self.assertTrue(value['enabled']);self.assertEqual(value['phase'],'ANALYZE_ONLY');self.assertNotIn(str(source),json.dumps(value));self.assertLessEqual(len(value['proposals']),20)
++
++if __name__=='__main__':unittest.main(verbosity=2)
++
+--- a/scripts/build_all.ps1
++++ b/scripts/build_all.ps1
+@@
+  & $taskPython tests/semantic_contract.py
+  if($LASTEXITCODE -ne 0){throw 'Semantic contract failed'}
++ & $taskPython tests/maintenance_contract.py
++ if($LASTEXITCODE -ne 0){throw 'Maintenance contract failed'}
