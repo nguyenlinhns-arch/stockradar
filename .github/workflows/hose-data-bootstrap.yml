@@ -186,7 +186,7 @@ jobs:
           }, ensure_ascii=False))
           PY
 
-      - name: Enforce 4-checkpoint freshness and liquidity SLA
+      - name: Enforce intraday action SLA while preserving AI-only research
         env:
           SCAN_SCHEDULE: ${{ github.event.schedule }}
         shell: bash
@@ -194,6 +194,7 @@ jobs:
           set -euo pipefail
           qa_file="$(ls artifacts/scanner/stockradar_scanner_qa_v2_*.json | head -n 1)"
           scanner_file="$(ls artifacts/scanner/stockradar_scanner_master_v2_405_*.csv | head -n 1)"
+          sla_file="artifacts/scanner/stockradar_intraday_sla_v1.json"
           checkpoint=EOD_RESEARCH
           case "$SCAN_SCHEDULE" in
             '30 3 * * 1-5') checkpoint=10:30 ;;
@@ -201,6 +202,7 @@ jobs:
             '30 6 * * 1-5') checkpoint=13:30 ;;
             '15 7 * * 1-5') checkpoint=14:15 ;;
           esac
+          set +e
           python scripts/validate_intraday_scan_sla.py \
             --checkpoint "$checkpoint" \
             --security-master artifacts/market/security_master.csv \
@@ -209,7 +211,37 @@ jobs:
             --scanner-qa "$qa_file" \
             --scanner "$scanner_file" \
             --intraday artifacts/market/intraday_5m.csv \
-            --output artifacts/scanner/stockradar_intraday_sla_v1.json
+            --output "$sla_file"
+          sla_rc=$?
+          set -e
+          if [ "$sla_rc" -ne 0 ]; then
+            python - "$sla_file" <<'PY'
+          import json
+          import sys
+
+          path = sys.argv[1]
+          with open(path, encoding='utf-8') as handle:
+              sla = json.load(handle)
+          research_ready = sla.get('internal_research_ready') is True
+          scan_ready = sla.get('internal_scan_ready') is True
+          public_action = sla.get('public_action_allowed') is True
+          if not research_ready or scan_ready or public_action:
+              raise SystemExit(
+                  'SLA failure is not eligible for AI-only fallback: '
+                  f'internal_research_ready={sla.get("internal_research_ready")}, '
+                  f'internal_scan_ready={sla.get("internal_scan_ready")}, '
+                  f'public_action_allowed={sla.get("public_action_allowed")}'
+              )
+          print(json.dumps({
+              'mode': 'AI_ONLY_REFERENCE_FALLBACK',
+              'checkpoint': sla.get('checkpoint'),
+              'checkpoint_delay_minutes': sla.get('checkpoint_delay_minutes'),
+              'internal_research_ready': True,
+              'internal_scan_ready': False,
+              'public_action_allowed': False,
+          }, ensure_ascii=False))
+          PY
+          fi
 
       - name: Upload internal scanner artifact
         if: ${{ always() }}
