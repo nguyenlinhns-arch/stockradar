@@ -1,0 +1,44 @@
+# V7.9 D2.1 — MANAGED APP LIFECYCLE READ TOOL
+# Depends on D1-ZALO + D2 ManagedApp lifecycle core.
+# Adds one generic READ surface; no repair/update/write capability.
+# REVIEW-ONLY until Gate #115 local Approval A.
+
+--- a/agent/protocol_catalog.py
++++ b/agent/protocol_catalog.py
+@@
+ add('pc.list_apps','List applications approved on this PC. Paths and hashes are resolved locally.','READ','native','LIST_APPS')
++add('pc.app_lifecycle_status','Read the locally approved ManagedApp identity/profile/lifecycle health. This does not repair, update, launch or grant permissions.','READ','managed_app','lifecycle_status',{'app':string(minLength=1,maxLength=120)},('app',))
+ add('pc.zalo_status','Read installed Zalo PC discovery/profile/runtime readiness without reading cookies, tokens or private databases.','READ','zalo','zalo_status')
+--- a/agent/semantic_host.py
++++ b/agent/semantic_host.py
+@@
+     elif spec['kind']=='zalo':
+         from zalo_pc_service import preflight_zalo
+         preflight_zalo(spec['action'],payload,host,cfg)
++    elif spec['kind']=='managed_app':
++        # Read-only lifecycle status is bounded by the existing locally approved
++        # app registry; it cannot discover arbitrary filesystem roots.
++        if spec['action']!='lifecycle_status':raise ValueError('TOOL_NOT_FOUND')
++        approved_app(payload['app'],cfg)
+     return spec,payload
+@@
+         if spec['kind']=='zalo':
+             from zalo_pc_service import execute_zalo
+             return execute_zalo(action,payload,self)
++        if spec['kind']=='managed_app':
++            from managed_app_lifecycle import inspect
++            return inspect(payload['app'],self.host.config())
+         if action=='state':return self.state()
+--- a/tests/semantic_contract.py
++++ b/tests/semantic_contract.py
+@@
+     def test_zalo_pc_phase1_surface_is_read_only(self):
+         expected={'pc.zalo_status','pc.zalo_snapshot','pc.zalo_read_visible'}
+         self.assertTrue(expected.issubset(CATALOG))
+@@
+         self.assertFalse(any('send' in name or 'reply' in name for name in CATALOG if 'zalo' in name))
++    def test_managed_app_lifecycle_surface_is_read_only(self):
++        spec=CATALOG['pc.app_lifecycle_status']
++        self.assertEqual(spec['risk'],'READ')
++        self.assertEqual(spec['kind'],'managed_app')
++        self.assertEqual(spec['action'],'lifecycle_status')
