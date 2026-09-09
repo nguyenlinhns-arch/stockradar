@@ -1,0 +1,110 @@
+{
+  "schema": "thaylinh.pc.integration-candidate.v1",
+  "created_at": "2026-09-09T21:45:00+07:00",
+  "target": {
+    "version": "7.9.0-rc2",
+    "channel": "preview",
+    "production_ready": false,
+    "base_required": "7.9.0-rc1"
+  },
+  "scope": [
+    "installed Windows Zalo PC read/control foundation",
+    "OpenCut Classic read-first semantic integration and current-source revalidation",
+    "ThayLinh Hub-derived ManagedApp lifecycle/reliability patterns"
+  ],
+  "hard_boundaries": {
+    "zalo_pc_no_send": true,
+    "zalo_web_primary": false,
+    "no_zalo_cookie_token_private_db_access": true,
+    "opencut_mutations_public": false,
+    "business_data_inside_pc_control": false,
+    "arbitrary_shell_or_script_surface": false,
+    "approved_executables_remains_authority": true,
+    "approval_store_remains_authority": true,
+    "trusted_update_remains_activation_authority": true
+  },
+  "ordered_components": [
+    {
+      "order": 10,
+      "id": "D1-PERSISTENT-UIA",
+      "file": "V7_9_WP_D1_PERSISTENT_UIA_IMPLEMENTED.review.diff",
+      "git_blob_sha": "390a3764a11d2354ee2e22a76470a3a640f68269",
+      "source_commit": "ed529b8a181787e5a745bc05ff7c2e4c1abdb53d",
+      "state": "STATIC_HEADLESS_PASS",
+      "evidence": "py_compile PASS; headless contract 4/4; live warm-latency benchmark pending"
+    },
+    {
+      "order": 20,
+      "id": "D1-ZALO-PC-READ",
+      "file": "V7_9_WP_D1_ZALO_PC_READ_IMPLEMENTED.review.diff",
+      "git_blob_sha": "1be82364213669a12eafdac48ea768db614b59f8",
+      "source_commit": "14bacf126ef3d22f2aa2260a94c09e8b2873d108",
+      "state": "STATIC_HEADLESS_PASS",
+      "evidence": "py_compile PASS; Zalo headless contract 4/4; live runtime profile/UIA tree pending"
+    },
+    {
+      "order": 30,
+      "id": "D2-MANAGED-APP-LIFECYCLE",
+      "file": "V7_9_WP_D2_MANAGED_APP_LIFECYCLE_IMPLEMENTED.review.diff",
+      "git_blob_sha": "518d0016c215d4ea442c95d6bdfbff9172b3a510",
+      "source_commit": "a9bf515c39342d6ba9504ac0884cf75be0752ff6",
+      "state": "REVIEW_READY",
+      "evidence": "Hub lifecycle invariants ported; Windows candidate tests pending"
+    },
+    {
+      "order": 40,
+      "id": "D2-1-MANAGED-APP-STATUS",
+      "file": "V7_9_WP_D2_1_MANAGED_APP_STATUS_TOOL_IMPLEMENTED.review.diff",
+      "git_blob_sha": "a87b0132f98ad808325fcfb65921ed3e6d4703ef",
+      "source_commit": "4c694e62eab6ffdee1c49b629283773d385409be",
+      "state": "REVIEW_READY",
+      "evidence": "READ-only public lifecycle status; candidate regression pending"
+    },
+    {
+      "order": 50,
+      "id": "OPENCUT-CURRENT-REVALIDATION",
+      "file": "V7_9_WP_OPENCUT_CURRENT_REVALIDATION_IMPLEMENTED.review.diff",
+      "git_blob_sha": "519e47fdc47c1f2221c89d530663269aa8224023",
+      "source_commit": "f928da319e5b4a4c09afa1cdfae9b11bbb13bdb8",
+      "state": "WINDOWS_REVALIDATION_REQUIRED",
+      "evidence": "test covers save/reopen Date boundary, checkpoint/restore, transaction rollback, stale revision and export QC"
+    },
+    {
+      "order": 60,
+      "id": "OPENCUT-READ-SURFACE",
+      "file": "V7_9_WP_OPENCUT_READ_SURFACE_IMPLEMENTED.review.diff",
+      "git_blob_sha": "65c2d7c721ca07174220e00f2a07f255f66b4456",
+      "source_commit": "5d9cad333c160b332dad6c55bc48ee829c8f0f35",
+      "state": "REVIEW_READY",
+      "evidence": "status/capabilities/state/media/timeline/export-status READ tools only; no auto-launch"
+    }
+  ],
+  "zalo_pc_backup_discovery_hints": {
+    "registry_display": "Zalo 26.08.20",
+    "publisher": "VNG Corp.",
+    "launcher_sha256": "92309a33d64446ceccce088f0f93cd600d5f9970bd506a57f34fd2e9f4266595",
+    "runtime_version": "26.8.20",
+    "runtime_sha256": "573dfa4f227ee1e68b25ee25e4e301396dc24a2ffe256ca56de88aea321def84",
+    "authority": false,
+    "note": "Discovery hints from 2026-09-08 backup only; live hashes/version/window must be recomputed before pinning."
+  },
+  "gates": [
+    "base rc1 Gate #115: real local Approval A -> isolated build/test -> Approval B -> TrustedUpdate promote -> forced bad candidate rollback",
+    "apply rc2 components in listed order to isolated candidate only",
+    "run full static/headless regression",
+    "live-discover and locally pin current Zalo launcher/runtime identity",
+    "capture current Zalo PC Accessibility/UIA tree and build version-matched selector profile",
+    "run Zalo PC read-only live acceptance and persistent-UIA latency benchmark",
+    "run OpenCut current-source revalidation on exact bundled editor",
+    "only after all read gates pass, separately stage reversible Zalo classification and OpenCut mutation surfaces",
+    "promote rc2 only through TrustedUpdate with rollback proof"
+  ],
+  "online_update": {
+    "source_of_truth": "V7_9_ONLINE_UPDATE_SOURCE_OF_TRUTH_20260909.md",
+    "distribution_decision": "V7_9_ONLINE_UPDATE_DISTRIBUTION_ORIGIN_DECISION.md",
+    "private_lane": "V7_9_SUPABASE_PRIVATE_RELEASE_LANE_SPEC.md",
+    "feed_schema": "V7_9_UPDATE_FEED_V2.schema.json",
+    "state": "DESIGN_COMPLETE_IMPLEMENTATION_NOT_INCLUDED_IN_THIS_RC2_COMPONENT_SET",
+    "note": "Do not claim automatic online installation until its executable updater implementation passes the same self-maintenance/rollback gates."
+  }
+}
