@@ -1,0 +1,152 @@
+# V7.9 OpenCut — READ-FIRST PUBLIC SEMANTIC SURFACE
+# Date: 2026-09-09
+# Purpose: expose the already-existing OpenCut bridge through bounded READ tools before mutation promotion.
+# Does not auto-launch OpenCut or connector; opening remains pc.open_app under approved executable policy.
+# Does not expose local media paths or raw command schemas.
+# Mutation tools remain hidden until current-source revalidation (#116) passes.
+# REVIEW-ONLY until Gate #115.
+
+--- /dev/null
++++ b/agent/opencut_service.py
+@@ -0,0 +1,109 @@
++"""Bounded read surface over the existing OpenCut Classic bridge."""
++import urllib.error
++from src.connectors.opencut.adapter import OpenCutAdapter
++
++def _adapter(host):return OpenCutAdapter(host.config())
++
++def _health(adapter):
++    try:
++        result=adapter.call('/health')
++        if not isinstance(result,dict):return {'ok':False,'ready':False,'state':'invalid_health'}
++        return result
++    except (urllib.error.URLError,OSError,TimeoutError):
++        return {'ok':False,'ready':False,'state':'connector_offline'}
++
++def _require_ready(adapter):
++    health=_health(adapter)
++    if not health.get('ok') or not health.get('ready') or health.get('editor')!='ready':raise ValueError('OPENCUT_NOT_READY')
++    return health
++
++def _command(adapter,command,args=None):
++    # Avoid OpenCutAdapter.command(), which auto-starts the connector. READ tools
++    # must not create a process as a hidden side effect.
++    _require_ready(adapter)
++    return adapter.call('/execute',{'command':command,'args':args or {}})
++
++def _media_summary(media):
++    allow=('id','name','type','duration','width','height','fps','available','mime','size')
++    return [{k:item.get(k) for k in allow if item.get(k) is not None} for item in media]
++
++def _timeline_summary(result):
++    tracks=[]
++    for item in result.get('tracks',[]):
++        tracks.append({k:item.get(k) for k in ('id','name','type','visible','muted','locked') if item.get(k) is not None})
++    clips=[]
++    for item in result.get('clips',[]):
++        clips.append({k:item.get(k) for k in ('id','track_id','type','start','duration','source_in','source_out','name','muted') if item.get(k) is not None})
++    return {'tracks':tracks,'clips':clips,'duration':result.get('duration'),'revision':result.get('revision')}
++
++def preflight_opencut(action,payload,host,cfg):
++    if action not in {'status','capabilities','state','media','timeline','export_status'}:raise ValueError('TOOL_NOT_FOUND')
++    # Status itself is allowed when the connector is offline; every other read
++    # requires the already-running exact local bridge.
++    if action!='status':_require_ready(_adapter(host))
++
++def execute_opencut(action,payload,semantic):
++    adapter=_adapter(semantic.host)
++    if action=='status':
++        health=_health(adapter)
++        return {
++            'ok':True,'schema':'opencut.status.v1',
++            'ready':bool(health.get('ok') and health.get('ready') and health.get('editor')=='ready'),
++            'connector':health.get('state','online' if health.get('ok') else 'offline'),
++            'editor':health.get('editor'),'busy':health.get('busy'),
++            'transport':health.get('transport'),'version':health.get('version'),
++        }
++    if action=='capabilities':
++        result=_command(adapter,'capabilities')
++        if not result.get('ok'):return result
++        return {
++            'ok':True,'schema':'opencut.capabilities.v1',
++            'commands':result.get('commands',[]),'effects':result.get('effects',[]),
++            'renderer':result.get('renderer'),'export':result.get('export'),
++        }
++    if action=='state':
++        result=_command(adapter,'state',{'detail':'summary'})
++        if not result.get('ok'):return result
++        state=result['state']
++        return {'ok':True,'schema':'opencut.state.v1','state':{
++            k:state.get(k) for k in ('project_id','project_name','revision','duration','fps','canvas','selection','playhead','editor_ready','renderer') if state.get(k) is not None
++        }}
++    if action=='media':
++        result=_command(adapter,'media.list')
++        if not result.get('ok'):return result
++        return {'ok':True,'schema':'opencut.media.v1','media':_media_summary(result.get('media',result.get('assets',[])))}
++    if action=='timeline':
++        result=_command(adapter,'timeline.get')
++        if not result.get('ok'):return result
++        return {'ok':True,'schema':'opencut.timeline.v1',**_timeline_summary(result)}
++    if action=='export_status':
++        result=_command(adapter,'export.status',{'job_id':payload['job_id']})
++        if not result.get('ok'):return result
++        return {'ok':True,'schema':'opencut.export-status.v1',**{k:result.get(k) for k in ('job_id','state','bytes','duration','width','height','codec','error') if result.get(k) is not None}}
++    raise ValueError('TOOL_NOT_FOUND')
+--- a/agent/protocol_catalog.py
++++ b/agent/protocol_catalog.py
+@@
+ add('pc.app_lifecycle_status','Read the locally approved ManagedApp identity/profile/lifecycle health. This does not repair, update, launch or grant permissions.','READ','managed_app','lifecycle_status',{'app':string(minLength=1,maxLength=120)},('app',))
++add('pc.opencut_status','Read OpenCut Classic connector/editor readiness without launching it.','READ','opencut','status')
++add('pc.opencut_capabilities','Read a bounded OpenCut capability summary; raw internal schemas are not returned.','READ','opencut','capabilities')
++add('pc.opencut_state','Read current OpenCut project summary and revision.','READ','opencut','state')
++add('pc.opencut_media','Read current project media summary without local filesystem paths.','READ','opencut','media')
++add('pc.opencut_timeline','Read current OpenCut tracks/clips/duration/revision.','READ','opencut','timeline')
++add('pc.opencut_export_status','Read one OpenCut export job status.','READ','opencut','export_status',{'job_id':string(minLength=1,maxLength=120)},('job_id',))
+ add('pc.zalo_status','Read installed Zalo PC discovery/profile/runtime readiness without reading cookies, tokens or private databases.','READ','zalo','zalo_status')
+--- a/agent/semantic_host.py
++++ b/agent/semantic_host.py
+@@
+     elif spec['kind']=='managed_app':
+         if spec['action']!='lifecycle_status':raise ValueError('TOOL_NOT_FOUND')
+         approved_app(payload['app'],cfg)
++    elif spec['kind']=='opencut':
++        from opencut_service import preflight_opencut
++        preflight_opencut(spec['action'],payload,host,cfg)
+     return spec,payload
+@@
+         if spec['kind']=='managed_app':
+             from managed_app_lifecycle import inspect
+             return inspect(payload['app'],self.host.config())
++        if spec['kind']=='opencut':
++            from opencut_service import execute_opencut
++            return execute_opencut(action,payload,self)
+         if action=='state':return self.state()
+--- a/agent/public_errors.py
++++ b/agent/public_errors.py
+@@
+-    APP_BINARY_CHANGED='APP_BINARY_CHANGED';PROFILE_NOT_READY='PROFILE_NOT_READY';PROFILE_STALE='PROFILE_STALE'
++    APP_BINARY_CHANGED='APP_BINARY_CHANGED';PROFILE_NOT_READY='PROFILE_NOT_READY';PROFILE_STALE='PROFILE_STALE';APP_NOT_READY='APP_NOT_READY'
+@@
+  'ZALO_RUNTIME_CHANGED':'APP_BINARY_CHANGED','ZALO_PROFILE_NOT_READY':'PROFILE_NOT_READY',
++ 'OPENCUT_NOT_READY':'APP_NOT_READY',
+@@
+-    hints={
++    hints={
+@@
+-        'PROFILE_STALE':'reobserve_and_reprofile_app','APP_BINARY_CHANGED':'reobserve_and_reprofile_app'}
++        'PROFILE_STALE':'reobserve_and_reprofile_app','APP_BINARY_CHANGED':'reobserve_and_reprofile_app','APP_NOT_READY':'open_or_focus_approved_app_then_retry'}
+--- a/tests/semantic_contract.py
++++ b/tests/semantic_contract.py
+@@
+     def test_managed_app_lifecycle_surface_is_read_only(self):
+         spec=CATALOG['pc.app_lifecycle_status']
+         self.assertEqual(spec['risk'],'READ')
+         self.assertEqual(spec['kind'],'managed_app')
+         self.assertEqual(spec['action'],'lifecycle_status')
++    def test_opencut_public_phase_starts_read_only(self):
++        names={name for name in CATALOG if name.startswith('pc.opencut_')}
++        self.assertEqual(names,{
++            'pc.opencut_status','pc.opencut_capabilities','pc.opencut_state',
++            'pc.opencut_media','pc.opencut_timeline','pc.opencut_export_status',
++        })
++        for name in names:self.assertEqual(CATALOG[name]['risk'],'READ')
