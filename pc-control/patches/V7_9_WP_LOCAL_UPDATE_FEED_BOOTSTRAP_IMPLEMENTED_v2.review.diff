@@ -1,0 +1,57 @@
+# V7.9 — LOCAL UPDATE FEED BOOTSTRAP v2
+# Date: 2026-09-09
+# Apply after WP-C1. Development/staging only; production installs never infer an update source.
+# v2 bounds manifest/package size before reading or hashing.
+
+--- a/agent/provision.py
++++ b/agent/provision.py
+@@
+ from secure_store import atomic_bytes,write_secret,read_secret,read_config
++
++def file_sha256(path):
++    digest=hashlib.sha256()
++    with pathlib.Path(path).open('rb') as stream:
++        for chunk in iter(lambda:stream.read(1024*1024),b''):digest.update(chunk)
++    return digest.hexdigest()
+@@
+     maintenance_source=(candidate_source if root.name.casefold()=='stage' and root.parent.name.casefold()=='.build'
+         and (candidate_source/'agent/protocol_catalog.py').is_file() and (candidate_source/'scripts/build_all.ps1').is_file()
+         and (candidate_source/'VERSION.json').is_file() else None)
++    # A staging build may trust only its fixed sibling feed, and only after
++    # verifying the manifest/package pair locally. No URL or path comes from a
++    # remote caller. TrustedUpdate will re-verify the same pinned SHA on use.
++    local_update_source=None
++    if maintenance_source is not None:
++        feed=root.parent/'update-manifest.json';package=root.parent/'payload.zip'
++        try:
++            feed_size=feed.stat().st_size
++            if not 0<feed_size<=100_000 or not package.is_file():raise ValueError('invalid local feed')
++            raw=feed.read_bytes();parsed=json.loads(raw);pkg=parsed.get('package') or {};expected=str(pkg.get('sha256','')).casefold();size=int(pkg.get('size',-1))
++            if pkg.get('url')!='payload.zip' or not 0<size<=700_000_000 or len(expected)!=64 or any(c not in '0123456789abcdef' for c in expected):raise ValueError('invalid local package pin')
++            if package.stat().st_size!=size or file_sha256(package)!=expected:raise ValueError('local package mismatch')
++            local_update_source={'manifest':str(feed.resolve()),'sha256':hashlib.sha256(raw).hexdigest()}
++        except (OSError,ValueError,TypeError,json.JSONDecodeError):local_update_source=None
+@@
+         if maintenance_source is not None:cfg['maintenance_source_root']=str(maintenance_source)
++        if local_update_source is not None:cfg['update_source']=local_update_source
+@@
+         if maintenance_source is not None:cfg.setdefault('maintenance_source_root',str(maintenance_source))
++        if local_update_source is not None and not cfg.get('update_source'):cfg['update_source']=local_update_source
+         atomic_bytes(data/'config.json',json.dumps(cfg).encode())
+
+--- a/tests/maintenance_contract.py
++++ b/tests/maintenance_contract.py
+@@
+ class MaintenanceContract(unittest.TestCase):
+@@
+     def test_status_is_bounded_and_source_path_is_not_disclosed(self):
+@@
+             self.assertTrue(value['enabled']);self.assertEqual(value['phase'],'ANALYZE_ONLY');self.assertNotIn(str(source),json.dumps(value));self.assertLessEqual(len(value['proposals']),20)
++    def test_update_feed_contract_is_local_hash_pinned_and_bounded(self):
++        # Live staging acceptance verifies provision-result config contains an
++        # absolute .build/update-manifest.json path plus its SHA-256, never a
++        # caller URL. TrustedUpdate.Check remains the second verification gate.
++        provision=(APP/'agent/provision.py').read_text(encoding='utf-8-sig')
++        self.assertIn('feed_size<=100_000',provision);self.assertIn('size<=700_000_000',provision)
++        self.assertIn("pkg.get('url')!='payload.zip'",provision);self.assertIn("file_sha256(package)!=expected",provision)
++        self.assertIn("'sha256':hashlib.sha256(raw).hexdigest()",provision)
