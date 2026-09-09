@@ -1,0 +1,20 @@
+# V7.9 — VERSION SYNC FIX v2
+# Date: 2026-09-09
+# Ensures VERSION.json is the build-time source of truth for both raw agent and semantic catalog.
+
+--- a/scripts/sync_version.py
++++ b/scripts/sync_version.py
+@@
+ p=APP/'agent/pc_control_agent_v6.py';code=p.read_text(encoding='utf-8-sig');code=re.sub(r'^(VERSION|BUILD) = .*$',lambda m:f'{m[1]} = "{version}"',code,flags=re.M);p.write_text(code,encoding='utf-8')
++p=APP/'agent/protocol_catalog.py';code=p.read_text(encoding='utf-8-sig');code=re.sub(r"^VERSION='[^']+'$",f"VERSION='{version}'",code,flags=re.M);p.write_text(code,encoding='utf-8')
+ p=APP/'desktop/app.manifest';code=p.read_text();code=re.sub(r'assemblyIdentity version="[^"]+"','assemblyIdentity version="'+version.split('-')[0]+'.0"',code);p.write_text(code)
+
+--- a/scripts/build_all.ps1
++++ b/scripts/build_all.ps1
+@@
+  & $taskSystemPython scripts/prepare_runtime.py --offline
+  if($LASTEXITCODE -ne 0){throw 'Private runtime build failed'}
+  }
++ & $taskPython scripts/sync_version.py
++ if($LASTEXITCODE -ne 0){throw 'Version synchronization failed'}
+  & $taskPython scripts/snapshot_pc_source.py
