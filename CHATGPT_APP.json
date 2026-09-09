@@ -1,0 +1,11 @@
+{
+  "schema": "chatgpt.app.v1",
+  "id": "stockradar",
+  "role": "production",
+  "canonical": true,
+  "manager": "ChatGPT",
+  "codex": "fallback_only",
+  "current_scripts": {"visual_qa": "npm run visual-qa"},
+  "required_safe_recipes": ["stockradar.test", "stockradar.visual_qa", "stockradar.build", "stockradar.start"],
+  "secrets_policy": "external_only"
+}
