@@ -5,6 +5,7 @@ import concurrent.futures as cf
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import re
 import time
 from typing import Any
 
@@ -17,11 +18,21 @@ SOURCE_ID = "KBS_PUBLIC_BOOTSTRAP_INTERNAL_ONLY"
 TIMEOUT = 30
 MAX_PAGES = 10
 PAGE_SIZE = 20
+TITLE_TICKER_PREFIX_RE = re.compile(r"^\s*([A-Z0-9]{3})\s*[:\-–—]\s*", re.IGNORECASE)
 
 
 def clean_symbol(value: Any) -> str:
     s = str(value or "").strip().upper()
     return s if len(s) == 3 and s.isascii() and s.isalnum() and any(ch.isalpha() for ch in s) else ""
+
+
+def explicit_title_ticker(title: str, universe: set[str]) -> str:
+    """Return an explicit HOSE ticker prefix such as 'VUA:' when present."""
+    match = TITLE_TICKER_PREFIX_RE.match(str(title or ""))
+    if not match:
+        return ""
+    prefix = clean_symbol(match.group(1))
+    return prefix if prefix in universe else ""
 
 
 def get_json(session: requests.Session, path: str, params=None, retries=4):
@@ -107,14 +118,21 @@ def fetch_one(ticker):
         return ticker, [], [], str(exc)
 
 
-def event_candidates(ticker, articles):
+def event_candidates(ticker, articles, universe: set[str]):
     keywords = (
         "cổ tức", "ngày đăng ký cuối cùng", "giao dịch không hưởng quyền", "phát hành", "quyền mua",
         "esop", "chia cổ phiếu", "thưởng cổ phiếu", "tạm ngừng giao dịch", "hủy niêm yết", "đăng ký giao dịch bổ sung"
     )
     rows = []
+    rejected_cross_ticker = 0
     for item in articles:
         title = str(item.get("Title") or "")
+        explicit_ticker = explicit_title_ticker(title, universe)
+        if explicit_ticker and explicit_ticker != ticker:
+            # The per-ticker KBS news endpoint can return related-company stories.
+            # Never reinterpret an explicitly prefixed different HOSE ticker as this ticker's capital action.
+            rejected_cross_ticker += 1
+            continue
         if any(k in title.lower() for k in keywords):
             rows.append({
                 "ticker": ticker,
@@ -125,7 +143,7 @@ def event_candidates(ticker, articles):
                 "source": SOURCE_ID,
                 "verification_state": "NEWS_DERIVED_UNVERIFIED",
             })
-    return rows
+    return rows, rejected_cross_ticker
 
 
 def main():
@@ -134,8 +152,10 @@ def main():
     tickers = fetch_universe()
     if len(tickers) < 405:
         raise RuntimeError(f"HOSE universe unexpectedly small: {len(tickers)}")
+    ticker_universe = set(tickers)
 
     news_rows, insider_rows, event_rows, errors = [], [], [], []
+    cross_ticker_event_candidates_rejected = 0
     with cf.ThreadPoolExecutor(max_workers=10) as ex:
         futures = [ex.submit(fetch_one, t) for t in tickers]
         for fut in cf.as_completed(futures):
@@ -144,7 +164,9 @@ def main():
                 errors.append({"ticker": ticker, "error": err})
             news_rows.append({"ticker": ticker, "source": SOURCE_ID, "item_count": len(news), "payload": json.dumps(news, ensure_ascii=False, separators=(",", ":"), default=str)})
             insider_rows.append({"ticker": ticker, "source": SOURCE_ID, "item_count": len(insider), "payload": json.dumps(insider, ensure_ascii=False, separators=(",", ":"), default=str)})
-            event_rows.extend(event_candidates(ticker, news))
+            candidates, rejected = event_candidates(ticker, news, ticker_universe)
+            event_rows.extend(candidates)
+            cross_ticker_event_candidates_rejected += rejected
 
     pd.DataFrame(news_rows).sort_values("ticker").to_csv(out / "company_news_depth_v2.csv", index=False, encoding="utf-8-sig")
     pd.DataFrame(insider_rows).sort_values("ticker").to_csv(out / "insider_trading_depth_v2.csv", index=False, encoding="utf-8-sig")
@@ -158,6 +180,7 @@ def main():
         "insider_tickers": len(insider_rows),
         "insider_items": sum(r["item_count"] for r in insider_rows),
         "news_derived_event_candidates": len(event_rows),
+        "cross_ticker_event_candidates_rejected": cross_ticker_event_candidates_rejected,
         "event_candidates_are_verified": False,
         "publication_allowed": False,
         "errors": errors,
