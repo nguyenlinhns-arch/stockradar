@@ -57,6 +57,28 @@ async function sha256Hex(value: Uint8Array): Promise<string> {
   return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 function validTicker(value: string): boolean { return /^[A-Z0-9]{3}$/.test(value) && /[A-Z]/.test(value); }
+function explicitTitleTicker(value: unknown, universe: Set<string>): string {
+  const match = String(value || "").trim().toUpperCase().match(/^([A-Z0-9]{3})\s*[:\-–—]\s*/);
+  if (!match) return "";
+  return universe.has(match[1]) ? match[1] : "";
+}
+function sanitizeCrossTickerCapitalAction(row: JsonObject, ticker: string, universe: Set<string>): { payload: JsonObject; quarantined: boolean } {
+  const researchRaw = row.research_v7;
+  if (!researchRaw || typeof researchRaw !== "object" || Array.isArray(researchRaw)) return { payload: row, quarantined: false };
+  const research = researchRaw as JsonObject;
+  const prefix = explicitTitleTicker(research.latest_news_derived_capital_action_title_v7, universe);
+  if (!prefix || prefix === ticker) return { payload: row, quarantined: false };
+
+  const payload = structuredClone(row) as JsonObject;
+  const cleanResearch = payload.research_v7 as JsonObject;
+  cleanResearch.news_derived_capital_action_items_90d_v7 = 0;
+  cleanResearch.news_derived_capital_action_items_45d_v7 = 0;
+  cleanResearch.news_derived_capital_action_review_required_v7 = false;
+  cleanResearch.latest_news_derived_capital_action_time_v7 = null;
+  cleanResearch.latest_news_derived_capital_action_title_v7 = null;
+  cleanResearch.capital_action_news_verification_state_v7 = "CROSS_TICKER_REJECTED";
+  return { payload, quarantined: true };
+}
 
 Deno.serve(async (req: Request) => {
   if (req.method !== "POST") return jsonResponse({ status: "METHOD_NOT_ALLOWED" }, 405);
@@ -86,14 +108,19 @@ Deno.serve(async (req: Request) => {
   const priceStatus = String(bundle.price_snapshot_status || "").trim();
   if (!generatedAt || !/^\d{4}-\d{2}-\d{2}$/.test(asOfDate) || !priceStatus) return jsonResponse({ status: "INVALID_REQUEST", reason: "FRESHNESS_METADATA_MISSING" }, 400);
 
+  const canonicalTickers = new Set(Object.keys(tickerRows).map((value) => value.trim().toUpperCase()));
   const allRows: ContextRow[] = [];
+  let crossTickerQuarantined = 0;
   for (const [rawTicker, rawRow] of Object.entries(tickerRows)) {
     const ticker = rawTicker.trim().toUpperCase();
     if (!validTicker(ticker) || !rawRow || typeof rawRow !== "object" || Array.isArray(rawRow)) return jsonResponse({ status: "INVALID_REQUEST", reason: "INVALID_TICKER_ROW", ticker }, 400);
     const row = rawRow as JsonObject;
-    const release = row.release && typeof row.release === "object" && !Array.isArray(row.release) ? row.release as JsonObject : {};
+    const sanitized = sanitizeCrossTickerCapitalAction(row, ticker, canonicalTickers);
+    if (sanitized.quarantined) crossTickerQuarantined++;
+    const payload = sanitized.payload;
+    const release = payload.release && typeof payload.release === "object" && !Array.isArray(payload.release) ? payload.release as JsonObject : {};
     if (release.public_action_allowed !== false) return jsonResponse({ status: "INVALID_REQUEST", reason: "ROW_PUBLIC_ACTION_NOT_CLOSED", ticker }, 400);
-    allRows.push({ ticker, payload: row, researchReady: release.internal_research_ready === true });
+    allRows.push({ ticker, payload, researchReady: release.internal_research_ready === true });
   }
   if (allRows.length !== EXPECTED_HOSE_UNIVERSE) return jsonResponse({ status: "INVALID_REQUEST", reason: "VALID_HOSE_ROWS_MISMATCH" }, 400);
   const eligible = allRows.filter((row) => row.researchReady);
@@ -128,7 +155,7 @@ Deno.serve(async (req: Request) => {
 
   if (failures.length) {
     console.error("stock-research-sync partial failure", failures.slice(0, 12));
-    return jsonResponse({ status: "PARTIAL", snapshot_id: snapshotId, universe_count: allRows.length, reference_synced_rows: referenceSynced, eligible_rows: eligible.length, synced_rows: researchSynced, failed_rows: failures.length, failed_tickers: failures.slice(0, 20), prune_performed: false }, 500);
+    return jsonResponse({ status: "PARTIAL", snapshot_id: snapshotId, universe_count: allRows.length, reference_synced_rows: referenceSynced, eligible_rows: eligible.length, synced_rows: researchSynced, failed_rows: failures.length, failed_tickers: failures.slice(0, 20), cross_ticker_news_ca_quarantined: crossTickerQuarantined, prune_performed: false }, 500);
   }
 
   if (bundle.data_layer) {
@@ -142,7 +169,7 @@ Deno.serve(async (req: Request) => {
     serviceClient.rpc("prune_stockradar_internal_research_context", { p_allowed_tickers: eligible.map(({ ticker }) => ticker) }),
     serviceClient.rpc("prune_stockradar_internal_reference_context", { p_allowed_tickers: allRows.map(({ ticker }) => ticker) }),
   ]);
-  if (pruneResearchError || pruneReferenceError) return jsonResponse({ status: "PRUNE_FAILED", snapshot_id: snapshotId, reason: String(pruneResearchError?.code || pruneReferenceError?.code || "RPC_FAILED") }, 500);
+  if (pruneResearchError || pruneReferenceError) return jsonResponse({ status: "PRUNE_FAILED", snapshot_id: snapshotId, reason: String(pruneResearchError?.code || pruneReferenceError?.code || "RPC_FAILED"), cross_ticker_news_ca_quarantined: crossTickerQuarantined }, 500);
 
-  return jsonResponse({ status: "SYNCED", snapshot_id: snapshotId, source_sha256: digest, as_of_date: asOfDate, price_snapshot_status: priceStatus, universe_count: allRows.length, reference_synced_rows: referenceSynced, reference_pruned_rows: Number(prunedReference || 0), eligible_rows: eligible.length, synced_rows: researchSynced, pruned_rows: Number(prunedResearch || 0), cache_replace_complete: true });
+  return jsonResponse({ status: "SYNCED", snapshot_id: snapshotId, source_sha256: digest, as_of_date: asOfDate, price_snapshot_status: priceStatus, universe_count: allRows.length, reference_synced_rows: referenceSynced, reference_pruned_rows: Number(prunedReference || 0), eligible_rows: eligible.length, synced_rows: researchSynced, pruned_rows: Number(prunedResearch || 0), cross_ticker_news_ca_quarantined: crossTickerQuarantined, cache_replace_complete: true });
 });
