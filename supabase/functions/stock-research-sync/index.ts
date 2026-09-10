@@ -60,7 +60,8 @@ function validTicker(value: string): boolean { return /^[A-Z0-9]{3}$/.test(value
 function explicitTitleTicker(value: unknown, universe: Set<string>): string {
   const match = String(value || "").trim().toUpperCase().match(/^([A-Z0-9]{3})\s*[:\-–—]\s*/);
   if (!match) return "";
-  return universe.has(match[1]) ? match[1] : "";
+  const prefix = match[1];
+  return validTicker(prefix) ? prefix : "";
 }
 function sanitizeCrossTickerCapitalAction(row: JsonObject, ticker: string, universe: Set<string>): { payload: JsonObject; quarantined: boolean } {
   const researchRaw = row.research_v7;
