@@ -27,12 +27,11 @@ def clean_symbol(value: Any) -> str:
 
 
 def explicit_title_ticker(title: str, universe: set[str]) -> str:
-    """Return an explicit HOSE ticker prefix such as 'VUA:' when present."""
+    """Return any explicit stock-like ticker prefix such as 'VUA:' when present."""
     match = TITLE_TICKER_PREFIX_RE.match(str(title or ""))
     if not match:
         return ""
-    prefix = clean_symbol(match.group(1))
-    return prefix if prefix in universe else ""
+    return clean_symbol(match.group(1))
 
 
 def get_json(session: requests.Session, path: str, params=None, retries=4):
@@ -129,8 +128,9 @@ def event_candidates(ticker, articles, universe: set[str]):
         title = str(item.get("Title") or "")
         explicit_ticker = explicit_title_ticker(title, universe)
         if explicit_ticker and explicit_ticker != ticker:
-            # The per-ticker KBS news endpoint can return related-company stories.
-            # Never reinterpret an explicitly prefixed different HOSE ticker as this ticker's capital action.
+            # Per-ticker KBS news can contain related-company stories, including symbols
+            # outside the canonical HOSE universe. An explicit different ticker prefix
+            # must never be reinterpreted as this HOSE ticker's capital action.
             rejected_cross_ticker += 1
             continue
         if any(k in title.lower() for k in keywords):
