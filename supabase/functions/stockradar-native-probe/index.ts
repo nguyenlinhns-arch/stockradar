@@ -4,6 +4,7 @@ import { createClient } from 'npm:@supabase/supabase-js@2.95.0';
 import widget from './widget.ts';
 
 const URI='ui://stockradar/native-project-queue-trigger-v3.html';
+const V2_URI='ui://stockradar/native-project-queue-trigger-v2.html';
 const LEGACY_URI='ui://stockradar/native-message-probe-v1.html';
 const MIME='text/html;profile=mcp-app';
 const SUPABASE_ORIGIN='https://xamviatbxufjlpiwhebb.supabase.co';
@@ -22,8 +23,9 @@ async function pendingSignal(){
 }
 
 function createServer(){
- const server=new McpServer({name:'stockradar-native-probe',version:'0.3.0'});
+ const server=new McpServer({name:'stockradar-native-probe',version:'0.3.1'});
  server.registerResource('native-project-queue-trigger',URI,{mimeType:MIME},async()=>resource(URI));
+ server.registerResource('native-project-queue-trigger-v2',V2_URI,{mimeType:MIME},async()=>resource(V2_URI));
  server.registerResource('native-probe-widget-legacy',LEGACY_URI,{mimeType:MIME},async()=>resource(LEGACY_URI));
  server.registerTool('show_stockradar_native_probe',{title:'Mở cầu nối Native StockRadar',description:'Use this when the owner asks to link or continuously process StockRadar website questions in the current ChatGPT Project. It renders a watcher that sees only a boolean pending signal. Website question content remains in Supabase and is read by the authorized Project connector after the native message enters this conversation.',inputSchema:{},annotations:{readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true},_meta:{ui:{resourceUri:URI},'openai/outputTemplate':URI,'openai/toolInvocation/invoking':'Mở cầu nối Project','openai/toolInvocation/invoked':'Cầu nối Native đã mở'}},async()=>({structuredContent:{test:'native_project_queue_trigger',state:'READY_TO_ENABLE',native_queue_trigger_ready:true,website_queue_data_read_by_app:false,pending_signal_only:true,uses_model_api:false},content:[{type:'text',text:'Đã mở cầu nối Native. Widget chỉ nhận tín hiệu có/không có câu hỏi chờ; nội dung câu hỏi vẫn chỉ được đọc trong Project qua Supabase đã cấp quyền.'}]}));
  return server;
