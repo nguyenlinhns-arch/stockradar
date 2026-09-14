@@ -1,4 +1,5 @@
 """Validate observed data at an explicit checkpoint; a cron is never scan evidence."""
+# Operational refresh marker: 2026-09-14 delayed scheduler recovery; no gate semantics changed.
 from __future__ import annotations
 
 import argparse
