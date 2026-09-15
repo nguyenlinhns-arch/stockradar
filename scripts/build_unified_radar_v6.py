@@ -109,6 +109,7 @@ def build(args):
     x["private_action_candidate_v6"] = (
         x.private_action_candidate_v5.fillna(False).astype(bool)
         & x.operational_research_ready_v6
+        & ~x.research_flow_optional_v6
     )
     x["public_action_allowed_v6"] = False
     x["public_gate_v6"] = "BLOCKED_PENDING_CURRENT_EVENTS_DATA_RIGHTS_COMPLIANCE_ACTIVE_MANIFEST"
@@ -172,8 +173,9 @@ def build(args):
         "note": (
             "Ranking and recommendation are separate. Missing intraday-only flow may be neutral-imputed for "
             "AI-only research when every non-flow factor is present; reported coverage remains unchanged. "
-            "Decision, scan-SLA, corporate-action and public gates remain fail-closed. Catalyst and institutional "
-            "alpha remain zero until evidence depth/freshness passes; corporate actions are a gate."
+            "Rows using the flow-optional research exception are never action candidates. Decision, scan-SLA, "
+            "corporate-action and public gates remain fail-closed. Catalyst and institutional alpha remain zero "
+            "until evidence depth/freshness passes; corporate actions are a gate."
         ),
     }
     Path(args.manifest).write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
