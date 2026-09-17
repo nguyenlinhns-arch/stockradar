@@ -8,6 +8,19 @@ const EXPECTED_REF = "refs/heads/main";
 const EXPECTED_WORKFLOW = "nguyenlinhns-arch/stockradar/.github/workflows/sync-stockradar-research-cache.yml@refs/heads/main";
 const EXPECTED_HOSE_UNIVERSE = 405;
 const ACCEPTED_DATA_ROLES = new Set(["INTERNAL_BACKEND_RESEARCH", "INTERNAL_BACKEND_RESEARCH_POSTCLOSE", "INTERNAL_RESEARCH"]);
+const ACTION_NUMERIC_FIELDS = [
+  "buy_zone_low_v5",
+  "buy_zone_high_v5",
+  "stop_loss_v5",
+  "target_near_rr2_v5",
+  "target_3_6m_v5",
+  "target_12m_v5",
+  "rr_to_base_v5",
+  "downside_to_stop_pct_v5",
+  "upside_from_entry_to_base_pct_v5",
+  "position_initial_pct_v5",
+];
+const AI_ONLY_ACTION_GATE = "BLOCKED_AI_ONLY_PENDING_FORMAL_LEGAL_CLEARANCE";
 type JsonObject = Record<string, unknown>;
 type ContextRow = { ticker: string; payload: JsonObject; researchReady: boolean };
 
@@ -61,7 +74,7 @@ function explicitTitleTicker(value: unknown, universe: Set<string>): string {
   const match = String(value || "").trim().toUpperCase().match(/^([A-Z0-9]{3})\s*[:\-–—]\s*/);
   if (!match) return "";
   const prefix = match[1];
-  return validTicker(prefix) ? prefix : "";
+  return validTicker(prefix) && universe.has(prefix) ? prefix : "";
 }
 function sanitizeCrossTickerCapitalAction(row: JsonObject, ticker: string, universe: Set<string>): { payload: JsonObject; quarantined: boolean } {
   const researchRaw = row.research_v7;
@@ -79,6 +92,50 @@ function sanitizeCrossTickerCapitalAction(row: JsonObject, ticker: string, unive
   cleanResearch.latest_news_derived_capital_action_title_v7 = null;
   cleanResearch.capital_action_news_verification_state_v7 = "CROSS_TICKER_REJECTED";
   return { payload, quarantined: true };
+}
+function sanitizeAiOnlyActionOutputs(row: JsonObject): JsonObject {
+  const payload = structuredClone(row) as JsonObject;
+  delete payload.trade_plan;
+
+  const researchRaw = payload.research_v7;
+  if (researchRaw && typeof researchRaw === "object" && !Array.isArray(researchRaw)) {
+    const research = researchRaw as JsonObject;
+    for (const field of ACTION_NUMERIC_FIELDS) delete research[field];
+    delete research.new_position_state_v5;
+    delete research.holding_state_v5;
+    research.private_action_candidate_v6 = false;
+    research.decision_candidate_v7 = false;
+    research.execution_ready_internal_v7 = false;
+    research.public_action_allowed_v6 = false;
+    research.public_action_allowed_v7 = false;
+    research.action_output_gate_v7 = AI_ONLY_ACTION_GATE;
+    const status = String(research.radar_status_v7 || "");
+    if (status.startsWith("DECISION_CANDIDATE") || status.startsWith("PRIVATE_EXECUTION")) {
+      research.radar_status_v7 = research.operational_research_ready_v7 === true ? "AI_ONLY_RESEARCH_READY" : "AI_ONLY_RESEARCH_CONTEXT_ONLY";
+    }
+  }
+
+  const setupRaw = payload.setup;
+  if (setupRaw && typeof setupRaw === "object" && !Array.isArray(setupRaw)) {
+    const setup = setupRaw as JsonObject;
+    delete setup.new_position_state_v5;
+    delete setup.holding_state_v5;
+    const status = String(setup.radar_status_v7 || "");
+    if (status.startsWith("DECISION_CANDIDATE") || status.startsWith("PRIVATE_EXECUTION")) setup.radar_status_v7 = "AI_ONLY_RESEARCH_READY";
+    setup.action_output_gate_v7 = AI_ONLY_ACTION_GATE;
+  }
+
+  const releaseRaw = payload.release;
+  if (releaseRaw && typeof releaseRaw === "object" && !Array.isArray(releaseRaw)) {
+    const release = releaseRaw as JsonObject;
+    release.decision_candidate_v7 = false;
+    release.internal_execution_ready = false;
+    release.public_action_allowed = false;
+    release.public_release_allowed = false;
+    release.actionable_output_allowed = false;
+    release.action_output_gate = AI_ONLY_ACTION_GATE;
+  }
+  return payload;
 }
 
 Deno.serve(async (req: Request) => {
@@ -112,15 +169,17 @@ Deno.serve(async (req: Request) => {
   const canonicalTickers = new Set(Object.keys(tickerRows).map((value) => value.trim().toUpperCase()));
   const allRows: ContextRow[] = [];
   let crossTickerQuarantined = 0;
+  let aiOnlySanitizedRows = 0;
   for (const [rawTicker, rawRow] of Object.entries(tickerRows)) {
     const ticker = rawTicker.trim().toUpperCase();
     if (!validTicker(ticker) || !rawRow || typeof rawRow !== "object" || Array.isArray(rawRow)) return jsonResponse({ status: "INVALID_REQUEST", reason: "INVALID_TICKER_ROW", ticker }, 400);
     const row = rawRow as JsonObject;
-    const sanitized = sanitizeCrossTickerCapitalAction(row, ticker, canonicalTickers);
-    if (sanitized.quarantined) crossTickerQuarantined++;
-    const payload = sanitized.payload;
+    const crossTickerSanitized = sanitizeCrossTickerCapitalAction(row, ticker, canonicalTickers);
+    if (crossTickerSanitized.quarantined) crossTickerQuarantined++;
+    const payload = sanitizeAiOnlyActionOutputs(crossTickerSanitized.payload);
+    aiOnlySanitizedRows++;
     const release = payload.release && typeof payload.release === "object" && !Array.isArray(payload.release) ? payload.release as JsonObject : {};
-    if (release.public_action_allowed !== false) return jsonResponse({ status: "INVALID_REQUEST", reason: "ROW_PUBLIC_ACTION_NOT_CLOSED", ticker }, 400);
+    if (release.public_action_allowed !== false || release.public_release_allowed !== false || release.actionable_output_allowed !== false) return jsonResponse({ status: "INVALID_REQUEST", reason: "ROW_ACTION_GATE_NOT_CLOSED", ticker }, 400);
     allRows.push({ ticker, payload, researchReady: release.internal_research_ready === true });
   }
   if (allRows.length !== EXPECTED_HOSE_UNIVERSE) return jsonResponse({ status: "INVALID_REQUEST", reason: "VALID_HOSE_ROWS_MISMATCH" }, 400);
@@ -156,21 +215,21 @@ Deno.serve(async (req: Request) => {
 
   if (failures.length) {
     console.error("stock-research-sync partial failure", failures.slice(0, 12));
-    return jsonResponse({ status: "PARTIAL", snapshot_id: snapshotId, universe_count: allRows.length, reference_synced_rows: referenceSynced, eligible_rows: eligible.length, synced_rows: researchSynced, failed_rows: failures.length, failed_tickers: failures.slice(0, 20), cross_ticker_news_ca_quarantined: crossTickerQuarantined, prune_performed: false }, 500);
+    return jsonResponse({ status: "PARTIAL", snapshot_id: snapshotId, universe_count: allRows.length, reference_synced_rows: referenceSynced, eligible_rows: eligible.length, synced_rows: researchSynced, failed_rows: failures.length, failed_tickers: failures.slice(0, 20), cross_ticker_news_ca_quarantined: crossTickerQuarantined, ai_only_action_sanitized_rows: aiOnlySanitizedRows, prune_performed: false }, 500);
   }
 
   if (bundle.data_layer) {
     const detail = bundle.data_layer as JsonObject;
-    if (detail.as_of_date !== asOfDate) return jsonResponse({status:'DATA_LAYER_DATE_MISMATCH'},400);
-    const {error} = await serviceClient.rpc('import_stockradar_data_layer',{p_bundle:detail});
-    if (error) return jsonResponse({status:'DATA_LAYER_IMPORT_FAILED',reason:String(error.code||'RPC_FAILED')},500);
+    if (detail.as_of_date !== asOfDate) return jsonResponse({ status: "DATA_LAYER_DATE_MISMATCH" }, 400);
+    const { error } = await serviceClient.rpc("import_stockradar_data_layer", { p_bundle: detail });
+    if (error) return jsonResponse({ status: "DATA_LAYER_IMPORT_FAILED", reason: String(error.code || "RPC_FAILED") }, 500);
   }
 
   const [{ data: prunedResearch, error: pruneResearchError }, { data: prunedReference, error: pruneReferenceError }] = await Promise.all([
     serviceClient.rpc("prune_stockradar_internal_research_context", { p_allowed_tickers: eligible.map(({ ticker }) => ticker) }),
     serviceClient.rpc("prune_stockradar_internal_reference_context", { p_allowed_tickers: allRows.map(({ ticker }) => ticker) }),
   ]);
-  if (pruneResearchError || pruneReferenceError) return jsonResponse({ status: "PRUNE_FAILED", snapshot_id: snapshotId, reason: String(pruneResearchError?.code || pruneReferenceError?.code || "RPC_FAILED"), cross_ticker_news_ca_quarantined: crossTickerQuarantined }, 500);
+  if (pruneResearchError || pruneReferenceError) return jsonResponse({ status: "PRUNE_FAILED", snapshot_id: snapshotId, reason: String(pruneResearchError?.code || pruneReferenceError?.code || "RPC_FAILED"), cross_ticker_news_ca_quarantined: crossTickerQuarantined, ai_only_action_sanitized_rows: aiOnlySanitizedRows }, 500);
 
-  return jsonResponse({ status: "SYNCED", snapshot_id: snapshotId, source_sha256: digest, as_of_date: asOfDate, price_snapshot_status: priceStatus, universe_count: allRows.length, reference_synced_rows: referenceSynced, reference_pruned_rows: Number(prunedReference || 0), eligible_rows: eligible.length, synced_rows: researchSynced, pruned_rows: Number(prunedResearch || 0), cross_ticker_news_ca_quarantined: crossTickerQuarantined, cache_replace_complete: true });
+  return jsonResponse({ status: "SYNCED", snapshot_id: snapshotId, source_sha256: digest, as_of_date: asOfDate, price_snapshot_status: priceStatus, universe_count: allRows.length, reference_synced_rows: referenceSynced, reference_pruned_rows: Number(prunedReference || 0), eligible_rows: eligible.length, synced_rows: researchSynced, pruned_rows: Number(prunedResearch || 0), cross_ticker_news_ca_quarantined: crossTickerQuarantined, ai_only_action_sanitized_rows: aiOnlySanitizedRows, cache_replace_complete: true });
 });
