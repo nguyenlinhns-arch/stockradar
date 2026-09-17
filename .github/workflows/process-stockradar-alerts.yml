@@ -1,9 +1,9 @@
 name: Process StockRadar Action Alerts
 
 on:
-  workflow_run:
-    workflows: ["Sync StockRadar Research Cache"]
-    types: [completed]
+  # AI-only production mode: keep this workflow manual/audit-only.
+  # Automatic workflow_run and schedule triggers stay disabled until a future
+  # compliance decision explicitly opens actionable notification delivery.
   workflow_dispatch:
   push:
     branches: [main]
@@ -14,13 +14,6 @@ on:
       - "engine/tests/test_action_alert_contract.py"
       - "supabase/migrations/*stockradar*signal*"
       - "supabase/migrations/*stockradar*notification*"
-  schedule:
-    # Run shortly after the official intraday scan checkpoints (Vietnam time).
-    # 10:35, 11:20, 13:35, 14:20 ICT = UTC+7.
-    - cron: "35 3 * * 1-5"
-    - cron: "20 4 * * 1-5"
-    - cron: "35 6 * * 1-5"
-    - cron: "20 7 * * 1-5"
 
 permissions:
   contents: read
@@ -32,7 +25,6 @@ concurrency:
 
 jobs:
   process:
-    if: ${{ github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main' && github.event.workflow_run.head_repository.full_name == github.repository) }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -55,7 +47,7 @@ jobs:
           echo "::add-mask::${TOKEN}"
           echo "token=${TOKEN}" >> "${GITHUB_OUTPUT}"
 
-      - name: Process approved StockRadar report transitions
+      - name: Audit StockRadar report transitions without notification delivery
         env:
           GITHUB_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
         shell: bash
@@ -64,7 +56,7 @@ jobs:
           curl --fail-with-body --silent --show-error --retry 2 \
             -H "Authorization: Bearer ${GITHUB_OIDC_TOKEN}" \
             -H "Content-Type: application/json" \
-            --data '{"emit_notifications":true,"enqueue_emails":true}' \
+            --data '{"emit_notifications":false,"enqueue_emails":false}' \
             "https://xamviatbxufjlpiwhebb.supabase.co/functions/v1/stock-alert-orchestrator" \
             | tee /tmp/stockradar-alert-result.json
           python - <<'PY'
@@ -74,6 +66,8 @@ jobs:
               raise SystemExit(f"Unexpected alert orchestrator status: {data}")
           result = data.get('result') or {}
           print(json.dumps(data, ensure_ascii=False, indent=2))
-          if int(result.get('emails_enqueued', 0)) > int(result.get('notifications_created', 0)):
-              raise SystemExit('Email enqueue count cannot exceed in-app notifications created')
+          if int(result.get('emails_enqueued', 0)) != 0:
+              raise SystemExit('AI-only safety gate: emails_enqueued must remain zero')
+          if int(result.get('notifications_created', 0)) != 0:
+              raise SystemExit('AI-only safety gate: notifications_created must remain zero')
           PY
