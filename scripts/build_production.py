@@ -31,4 +31,5 @@ for step in steps:
  if step=='optimize_home_asset_budget_v1':
   subprocess.run(['node','scripts/minify_funnel_assets.cjs','.pages-site'],check=True)
  run('scripts/'+step+'.py','.pages-site')
+run('scripts/apply_email_report_first_v1.py','.pages-site')
 print('Production build and artifact contracts: PASS')
