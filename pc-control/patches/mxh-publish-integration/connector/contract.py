@@ -6,6 +6,7 @@ from typing import Any
 MXH_BRIDGE_PREFIX = "MXH_V1:"
 MXH_ACTIONS = frozenset({
     "status",
+    "readiness",
     "list_edited",
     "resolve_title",
     "content_readback",
@@ -13,9 +14,11 @@ MXH_ACTIONS = frozenset({
     "create_or_reuse_plan",
     "native_schedule",
     "job_readback",
+    "schedule_exact_title",
 })
 MXH_READ_ACTIONS = frozenset({
     "status",
+    "readiness",
     "list_edited",
     "resolve_title",
     "content_readback",
@@ -52,6 +55,6 @@ def parse_mxh_bridge(goal: Any) -> tuple[str, dict[str, Any]] | None:
 def mxh_action_risk(action: str) -> str:
     if action in MXH_READ_ACTIONS:
         return "READ"
-    if action in {"create_or_reuse_plan", "native_schedule"}:
+    if action in {"create_or_reuse_plan", "native_schedule", "schedule_exact_title"}:
         return "MODIFY"
     raise MxhContractError("MXH_BRIDGE_ACTION_INVALID")
