@@ -5,7 +5,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Iterable
 
@@ -41,11 +41,10 @@ class ScheduleRequest:
 
 
 class MxhHubAdapter:
-    """Loopback-only adapter from V7 to the existing Hub/MXH publisher.
+    """Loopback-only V7 adapter to the existing Hub/MXH publisher.
 
-    It does not launch MXH Video Tools, does not use UI automation, and never
-    accepts an arbitrary host. All write actions reuse Hub CSRF, idempotency,
-    plan, mutation-guard and provider receipt enforcement.
+    No MXH GUI automation is used. The adapter deliberately reuses Hub plan,
+    mutation guard, idempotency, native scheduling and provider receipt logic.
     """
 
     def __init__(self, base_url: str = HUB_BASE_URL, timeout: int = DEFAULT_TIMEOUT_SECONDS) -> None:
@@ -53,6 +52,56 @@ class MxhHubAdapter:
             raise MxhHubError("MXH_HUB_HOST_NOT_ALLOWED")
         self.base_url = HUB_BASE_URL
         self.timeout = max(1, min(int(timeout), 120))
+
+    def execute(self, action: str, arguments: dict[str, Any]) -> dict[str, Any]:
+        if action == "status":
+            return {"ok": True, "action": action, "result": self.status()}
+        if action == "list_edited":
+            rows = [asdict(item) for item in self.edited_videos(int(arguments.get("limit", 200)))]
+            return {"ok": True, "action": action, "result": {"entries": rows}}
+        if action == "resolve_title":
+            item = self.resolve_exact_title(str(arguments.get("title", "")), limit=int(arguments.get("limit", 200)))
+            return {"ok": True, "action": action, "result": asdict(item)}
+        if action == "content_readback":
+            result = self.read_content(str(arguments.get("video_sha256", "")), int(arguments.get("flow_id", 0)))
+            return {"ok": True, "action": action, "result": result}
+        if action == "plan_readback":
+            result = self.read_plan(str(arguments.get("plan_id", "")), summary=True)
+            return {"ok": True, "action": action, "result": result}
+        if action == "job_readback":
+            result = self.job(str(arguments.get("job_id", "")))
+            return {"ok": True, "action": action, "result": result}
+        if action == "create_or_reuse_plan":
+            req = ScheduleRequest(
+                artifact_job_id=str(arguments.get("artifact_job_id", "")),
+                title=str(arguments.get("title", "")),
+                caption=str(arguments.get("caption", "")),
+                hashtags=str(arguments.get("hashtags", "")),
+                platforms=tuple(arguments.get("platforms") or ()),
+                flow_id=int(arguments.get("flow_id", 0)),
+                scheduled_at=str(arguments.get("scheduled_at", "")),
+                timezone=str(arguments.get("timezone") or DEFAULT_TIMEZONE),
+            )
+            result = self.create_or_reuse_plan(
+                req,
+                idempotency_key=str(arguments.get("idempotency_key") or self.stable_key(
+                    req.artifact_job_id, req.title, str(req.flow_id), req.scheduled_at
+                )),
+            )
+            return {"ok": True, "action": action, "result": result}
+        if action == "native_schedule":
+            result = self.native_schedule(
+                str(arguments.get("plan_id", "")),
+                tuple(arguments.get("platforms") or ()),
+                idempotency_key=str(arguments.get("idempotency_key") or self.stable_key(
+                    str(arguments.get("plan_id", "")),
+                    ",".join(sorted(str(p) for p in arguments.get("platforms") or ())),
+                    "native_schedule",
+                )),
+                timeout_seconds=int(arguments.get("timeout_seconds", 1200)),
+            )
+            return {"ok": True, "action": action, "result": result}
+        raise MxhHubError("MXH_ACTION_INVALID")
 
     def _request(
         self,
@@ -80,9 +129,7 @@ class MxhHubAdapter:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 raw = response.read().decode("utf-8", errors="replace")
                 ctype = response.headers.get("content-type", "")
-                if "json" in ctype:
-                    return json.loads(raw)
-                return raw
+                return json.loads(raw) if "json" in ctype else raw
         except urllib.error.HTTPError as exc:
             raw = exc.read().decode("utf-8", errors="replace")
             try:
@@ -112,7 +159,12 @@ class MxhHubAdapter:
             path = str(entry.get("path") or "").strip()
             name = str(entry.get("name") or "").strip()
             sha = str(entry.get("sha256") or "").strip().lower()
-            title = str(entry.get("title") or entry.get("publishTitle") or name).strip()
+            title = str(
+                entry.get("title")
+                or entry.get("publishTitle")
+                or entry.get("caption")
+                or self._title_from_filename(name)
+            ).strip()
             if artifact_id and path and name and len(sha) == 64:
                 videos.append(EditedVideo(artifact_id, path, name, sha, title))
         return videos
@@ -121,13 +173,9 @@ class MxhHubAdapter:
         wanted = title.strip()
         if not wanted:
             raise MxhHubError("MXH_TITLE_REQUIRED")
-        matches = []
+        matches: list[EditedVideo] = []
         for item in self.edited_videos(limit):
-            normalized_name = item.name
-            for suffix in (".mp4", "__edited", "_edited", " - edited"):
-                if normalized_name.casefold().endswith(suffix.casefold()):
-                    normalized_name = normalized_name[: -len(suffix)]
-            candidates = {item.title.strip(), normalized_name.strip()}
+            candidates = {item.title.strip(), self._title_from_filename(item.name)}
             if wanted.casefold() in {value.casefold() for value in candidates if value}:
                 matches.append(item)
         if len(matches) == 1:
@@ -151,8 +199,7 @@ class MxhHubAdapter:
         return self._request("GET", f"/api/gpt-control?{query}")
 
     def _csrf(self) -> str:
-        value = self._request("GET", "/api/dashboard/csrf")
-        token = str(value).strip()
+        token = str(self._request("GET", "/api/dashboard/csrf")).strip()
         if len(token) < 8 or len(token) > 256:
             raise MxhHubError("MXH_CSRF_INVALID")
         return token
@@ -163,11 +210,10 @@ class MxhHubAdapter:
         title = self._clean_text(request.title, "title", 1, 160)
         caption = self._clean_text(request.caption, "caption", 1, 2200)
         hashtags = self._clean_text(request.hashtags, "hashtags", 0, 800)
-        scheduled_at = self._validate_iso_future(request.scheduled_at)
+        scheduled_at = self._validate_iso(request.scheduled_at)
         timezone_name = self._bounded(request.timezone, "timezone", 1, 80)
         artifact_job_id = self._bounded(request.artifact_job_id, "artifact_job_id", 1, 128)
         key = self._bounded(idempotency_key, "idempotency_key", 8, 160)
-        csrf = self._csrf()
         return self._request(
             "POST",
             "/api/video-publish/plans",
@@ -183,7 +229,7 @@ class MxhHubAdapter:
                 "scheduledAt": scheduled_at,
                 "timezone": timezone_name,
             },
-            headers={"idempotency-key": key, "x-hub-csrf": csrf},
+            headers={"idempotency-key": key, "x-hub-csrf": self._csrf()},
         )
 
     def native_schedule(
@@ -202,7 +248,6 @@ class MxhHubAdapter:
             if platform not in ALLOWED_PLATFORMS:
                 raise MxhHubError("MXH_PLATFORM_INVALID")
         key = self._bounded(idempotency_key, "idempotency_key", 8, 160)
-        csrf = self._csrf()
         return self._request(
             "POST",
             "/api/jobs",
@@ -219,7 +264,7 @@ class MxhHubAdapter:
             headers={
                 "idempotency-key": key,
                 "x-hub-ui-intent": "user-content",
-                "x-hub-csrf": csrf,
+                "x-hub-csrf": self._csrf(),
             },
         )
 
@@ -234,21 +279,21 @@ class MxhHubAdapter:
     def schedule_verified(plan_summary: Any, required_platforms: Iterable[str]) -> bool:
         if not isinstance(plan_summary, dict):
             return False
-        platforms = plan_summary.get("platforms")
-        if not isinstance(platforms, list):
+        rows: Any = plan_summary.get("platforms")
+        if isinstance(rows, list) and rows and all(isinstance(row, str) for row in rows):
+            rows = None
+        if not isinstance(rows, list):
             native = plan_summary.get("nativeSchedules") or plan_summary.get("native_schedule_json")
-            if isinstance(native, dict):
-                platforms = native.get("platforms")
-        if not isinstance(platforms, list):
+            rows = native.get("platforms") if isinstance(native, dict) else None
+        if not isinstance(rows, list):
             return False
         verified: set[str] = set()
-        for row in platforms:
+        for row in rows:
             if not isinstance(row, dict):
                 continue
             platform = str(row.get("platform") or "").lower()
             status = str(row.get("status") or "").lower()
-            schedule_verified = row.get("scheduleVerified")
-            if status == "scheduled" and schedule_verified is True:
+            if status == "scheduled" and row.get("scheduleVerified") is True:
                 verified.add(platform)
         return all(str(platform).lower() in verified for platform in required_platforms)
 
@@ -261,6 +306,18 @@ class MxhHubAdapter:
     def flow1_time(flow2_iso: str, days: int = 2) -> str:
         instant = datetime.fromisoformat(flow2_iso.replace("Z", "+00:00"))
         return (instant + timedelta(days=max(2, int(days)))).astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+    @staticmethod
+    def _title_from_filename(name: str) -> str:
+        value = str(name).removesuffix(".mp4")
+        if "__" in value:
+            parts = value.split("__")
+            if len(parts) >= 2 and parts[0].replace("-", "").isdigit():
+                value = parts[1]
+        for suffix in ("__edited", "_edited", " - edited"):
+            if value.casefold().endswith(suffix.casefold()):
+                value = value[: -len(suffix)]
+        return value.strip()
 
     @staticmethod
     def _validate_sha(value: str) -> None:
@@ -288,7 +345,7 @@ class MxhHubAdapter:
         if any(ord(ch) < 32 and ch not in "\n\r\t" for ch in text):
             raise MxhHubError(f"MXH_{name.upper()}_CONTROL_CHAR")
         lowered = text.casefold()
-        if name in {"title", "caption"} and ("__edited" in lowered or "yyyy" in lowered):
+        if name in {"title", "caption"} and ("__edited" in lowered or "__final" in lowered):
             raise MxhHubError("MXH_TECHNICAL_METADATA_BLOCKED")
         return text
 
@@ -308,7 +365,7 @@ class MxhHubAdapter:
         return tuple(result)
 
     @staticmethod
-    def _validate_iso_future(value: str) -> str:
+    def _validate_iso(value: str) -> str:
         text = str(value).strip()
         try:
             instant = datetime.fromisoformat(text.replace("Z", "+00:00"))
