@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - v7-mxh-publish-integration
+      - v7-mxh-direct-control-v2
     paths:
       - 'pc-control/patches/mxh-publish-integration/**'
       - '.github/workflows/v7-mxh-integration-ci.yml'

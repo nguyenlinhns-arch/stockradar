@@ -66,3 +66,33 @@ Không patch runtime trực tiếp. Source patch phải:
 4. cài qua trusted updater/full version candidate;
 5. health PASS;
 6. rollback nếu health fail.
+
+
+## Direct Control V2
+
+V2 keeps the same loopback-only Hub boundary but removes the multi-call control
+overhead for the common publish path.
+
+New actions:
+
+- `readiness` (READ): checks Hub + the MXH edited-video catalog in one V7 call.
+- `schedule_exact_title` (MODIFY): exact-title resolve -> content readback ->
+  create/reuse plan -> skip already verified platforms -> native schedule ->
+  authoritative plan readback.
+
+The V7 command returns one of:
+
+- `SCHEDULED_VERIFIED`: every requested platform has Hub/provider readback with
+  `status=scheduled` and `scheduleVerified=true`.
+- `SUBMITTED_UNVERIFIED`: Hub accepted the job but final provider receipt is not
+  verified yet. Do not blind-retry; use `job_readback` / `plan_readback`.
+- `FAILED`: the observed native job reached a terminal failure state.
+
+The MXH Video Tools GUI is no longer required in the execution path. It may stay
+open as an operator/inspection surface; V7 talks to Hub directly at
+`127.0.0.1:4310`, and Hub reads the MXH edited-video catalog and native
+publisher.
+
+For a machine already on V1, run the signed/trusted deployment flow with
+`apply_v7_mxh_direct_v2.py --source-root <V7 source>`. The upgrader verifies the
+known V1 connector hashes, backs them up, compiles V2, and rolls back on failure.
