@@ -1,0 +1,55 @@
+        <!-- >>> V7_MXH_PUBLISH_INTEGRATION -->
+        <TabItem Header="MXH PUBLISH" x:Name="MxhPublishTab">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="18">
+                    <TextBlock Text="MXH PUBLISH · V7 → HUB DIRECT" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Margin="0,4,0,16" Foreground="#53606C" Text="Không mở MXH Video Tools. Gọi trực tiếp videoPublish / video_publish_bridge và receipt của Hub."/>
+                    <Border Padding="14" CornerRadius="8" BorderBrush="#D6DCE1" BorderThickness="1">
+                        <StackPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="Video đã edit" Width="130" VerticalAlignment="Center"/>
+                                <Button Content="LÀM MỚI" Width="100" DockPanel.Dock="Right" Click="MxhRefresh"/>
+                                <ComboBox x:Name="MxhVideoCombo" Margin="8,0,8,0" DisplayMemberPath="Value" SelectedValuePath="Key" SelectionChanged="MxhVideoChanged"/>
+                            </DockPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="Tiêu đề chính xác" Width="130" VerticalAlignment="Center"/>
+                                <TextBox x:Name="MxhTitle" Margin="8,0,0,0" IsReadOnly="True"/>
+                            </DockPanel>
+                            <DockPanel Margin="0,0,0,8">
+                                <TextBlock Text="Hashtag đã duyệt" Width="130" VerticalAlignment="Center"/>
+                                <TextBox x:Name="MxhHashtags" Margin="8,0,0,0"/>
+                            </DockPanel>
+                            <WrapPanel Margin="0,0,0,8">
+                                <TextBlock Text="Luồng" Width="130" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="MxhFlow" Width="110" SelectedIndex="1">
+                                    <ComboBoxItem Content="Luồng 1" Tag="1"/>
+                                    <ComboBoxItem Content="Luồng 2" Tag="2"/>
+                                </ComboBox>
+                                <CheckBox x:Name="MxhTikTok" Content="TikTok" Margin="18,3,0,0" IsChecked="True"/>
+                                <CheckBox x:Name="MxhFacebook" Content="Facebook" Margin="16,3,0,0" IsChecked="True"/>
+                                <CheckBox x:Name="MxhYoutube" Content="YouTube" Margin="16,3,0,0"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,0,0,8">
+                                <TextBlock Text="Ngày / giờ" Width="130" VerticalAlignment="Center"/>
+                                <TextBox x:Name="MxhDate" Width="110"/>
+                                <TextBox x:Name="MxhTime" Width="70" Margin="8,0,0,0" Text="09:00"/>
+                                <TextBlock Text="Asia/Ho_Chi_Minh" Margin="12,3,0,0" Foreground="#53606C"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,8,0,0">
+                                <Button Content="TẠO / DÙNG PLAN" Width="150" Height="34" Click="MxhCreatePlan"/>
+                                <Button Content="ĐẶT LỊCH NATIVE" Width="150" Height="34" Margin="8,0,0,0" Click="MxhNativeSchedule"/>
+                                <Button Content="LÀM MỚI RECEIPT" Width="150" Height="34" Margin="8,0,0,0" Click="MxhRefreshReceipt"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+                    <Border Margin="0,14,0,0" Padding="14" CornerRadius="8" BorderBrush="#D6DCE1" BorderThickness="1">
+                        <StackPanel>
+                            <TextBlock Text="Trạng thái" FontWeight="Bold"/>
+                            <TextBlock x:Name="MxhStatus" Margin="0,6,0,0" TextWrapping="Wrap" Text="Chưa đọc Hub."/>
+                            <TextBox x:Name="MxhReceipt" Margin="0,10,0,0" Height="180" FontFamily="Consolas" FontSize="12" IsReadOnly="True" AcceptsReturn="True" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </TabItem>
+        <!-- <<< V7_MXH_PUBLISH_INTEGRATION -->

@@ -1,0 +1,38 @@
+name: V7 MXH Integration CI
+
+on:
+  push:
+    branches:
+      - v7-mxh-publish-integration
+    paths:
+      - 'pc-control/patches/mxh-publish-integration/**'
+      - '.github/workflows/v7-mxh-integration-ci.yml'
+  pull_request:
+    paths:
+      - 'pc-control/patches/mxh-publish-integration/**'
+      - '.github/workflows/v7-mxh-integration-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile integration modules
+        run: |
+          python -m py_compile \
+            pc-control/patches/mxh-publish-integration/mxh_contract.py \
+            pc-control/patches/mxh-publish-integration/mxh_hub_adapter.py \
+            pc-control/patches/mxh-publish-integration/apply_v7_mxh_integration.py \
+            pc-control/patches/mxh-publish-integration/connector/contract.py \
+            pc-control/patches/mxh-publish-integration/connector/adapter.py
+      - name: Run MXH integration tests
+        run: |
+          python -m unittest discover -s pc-control/patches/mxh-publish-integration/tests -v
